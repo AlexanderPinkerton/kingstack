@@ -17,10 +17,13 @@ async function bootstrap() {
     origin: process.env.FRONTEND_URL || "http://localhost:3069",
     credentials: true,
   });
+
   // Set global prefix for API routes
   // app.setGlobalPrefix('api');
 
-  await app.listen(process.env.PORT ?? 3000);
+  // Bind this port to all available network interfaces, not just localhost.
+  // Kingtip: Inside Docker or any containerized environment: always use '0.0.0.0' instead of 'localhost'
+  await app.listen(process.env.PORT ?? 3000, "0.0.0.0");
 }
 
 bootstrap();
