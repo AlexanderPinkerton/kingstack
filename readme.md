@@ -117,6 +117,7 @@ bun run apps/backend/scripts/backfill-user-data.ts
 
 - A Supabase **trigger** automatically syncs users from the `auth.users` table into the `public.user` table (managed by Prisma).
 - This ensures internal application logic can use a fully controlled `user` model while still leveraging Supabase Auth.
+- Run this script to install the trigger: `apps/backend/scripts/install-custom-user-trigger.ts`
 
 ### ⚠️ User Schema Changes Require Trigger Updates
 
