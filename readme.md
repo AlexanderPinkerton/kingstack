@@ -3,12 +3,13 @@
 A modern full-stack TypeScript monorepo powered by:
 
 - 🧵 Yarn v4 Workspaces
-- ⚡️ Turborepo
+- ⚡️ Turborepo (monorepo)
+- ✅ ESLint 9 (shared config)
 - 🧠 NestJS (API backend)
 - 🌐 Next.js (frontend)
 - 🎨 ShadCN with Tailwind CSS
 - 🧬 Prisma (ORM)
-- ☁️ Supabase (auth + Postgres)
+- ☁️ Supabase (auth + db)
 - 🔨 Bun (local scripts)
 
 ---

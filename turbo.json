@@ -16,6 +16,12 @@
         "dist/**"
       ]
     },
+    "start": {
+      "cache": false,
+      "dependsOn": [
+        "build"
+      ]
+    },
     "lint": {
       "cache": false
     },
