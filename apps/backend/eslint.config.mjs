@@ -7,6 +7,9 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Log the current directory for debugging purposes
+console.log("Eslint Backend Dir:", __dirname);
+
 // Inject the proper tsconfig path for this app so type-aware linting works
 export default baseConfig.map((config) => {
     if (config.languageOptions?.parser === "@typescript-eslint/parser") {

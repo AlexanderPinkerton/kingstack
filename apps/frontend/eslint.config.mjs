@@ -9,6 +9,9 @@ import { fixupConfigRules } from "@eslint/compat"; // Patches older plugin APIs 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Log the current directory for debugging purposes
+console.log("Eslint Frontend Dir:", __dirname);
+
 // FlatCompat allows us to reuse existing eslint configs like 'next/core-web-vitals'
 const compat = new FlatCompat({
     baseDirectory: __dirname,
