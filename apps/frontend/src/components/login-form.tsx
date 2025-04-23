@@ -1,34 +1,32 @@
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from "@supabase/supabase-js";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-
   function onLogin(event: React.MouseEvent<HTMLButtonElement>) {
-
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    )
-    event.preventDefault()
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+    );
+    event.preventDefault();
 
-    console.log("Session: ", supabase.auth.getSession())
+    console.log("Session: ", supabase.auth.getSession());
 
     supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: "google",
       options: {
         // redirectTo: window.location.origin + '/login/callback',
         // scopes: 'email profile',
@@ -38,9 +36,8 @@ export function LoginForm({
         //   response_type: 'code',
         // },
       },
-    })
+    });
   }
-
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -94,5 +91,5 @@ export function LoginForm({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

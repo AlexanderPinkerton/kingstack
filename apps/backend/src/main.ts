@@ -1,20 +1,20 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { NestFactory } from "@nestjs/core";
+import { AppModule } from "./app.module";
 
 import {
   FastifyAdapter,
   NestFastifyApplication,
-} from '@nestjs/platform-fastify';
+} from "@nestjs/platform-fastify";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter()
+    new FastifyAdapter(),
   );
 
   // Enable CORS for the frontend
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3069',
+    origin: process.env.FRONTEND_URL || "http://localhost:3069",
     credentials: true,
   });
   // Set global prefix for API routes
