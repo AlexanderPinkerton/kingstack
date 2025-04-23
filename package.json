@@ -9,6 +9,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
+    "test": "turbo run test",
     "docker:build-backend": "docker build -f apps/backend/Dockerfile -t kingstack-backend ."
   },
   "packageManager": "yarn@4.9.1",
