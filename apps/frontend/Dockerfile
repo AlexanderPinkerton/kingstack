@@ -21,3 +21,6 @@ COPY --from=build /app/apps/frontend/package.json ./
 ENV NODE_ENV=production
 EXPOSE 3000
 CMD ["node_modules/.bin/next", "start"]
+
+
+## THIS DOES NOT WORK YET

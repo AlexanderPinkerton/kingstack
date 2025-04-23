@@ -26,3 +26,6 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/backend/package.json ./
 
 CMD ["node", "dist/main"]
+
+
+## THIS DOES NOT WORK YET
