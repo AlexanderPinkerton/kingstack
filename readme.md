@@ -1,4 +1,4 @@
-# 🌟 king-stack
+# 👑 kingstack
 
 A modern full-stack TypeScript monorepo powered by:
 
