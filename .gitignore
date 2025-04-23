@@ -1,0 +1,39 @@
+# Yarn v3+ (Berry)
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# DO NOT ignore these
+!.yarn/releases
+!.yarn/plugins
+!.yarn/patches
+!.yarn/versions
+
+# Standard stuff
+node_modules/
+
+# env files at any level
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+*/apps/*/.env
+*/packages/*/.env
+
+# Turbo
+.turbo/
+
+# Bun 
+.bun/
+
+# Mac OS
+.DS_Store
+
+# NextJS
+.next/
+
+# Backend Dist
+*/apps/backend/dist

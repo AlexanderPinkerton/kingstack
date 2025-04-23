@@ -1,0 +1,17 @@
+{
+  "private": true,
+  "name": "kingstack",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint"
+  },
+  "packageManager": "yarn@4.9.1",
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  }
+}
