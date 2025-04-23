@@ -36,4 +36,4 @@ node_modules/
 .next/
 
 # Backend Dist
-*/apps/backend/dist
+apps/backend/dist/*
