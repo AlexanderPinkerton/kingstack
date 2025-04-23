@@ -111,5 +111,25 @@ bun run apps/backend/scripts/backfill-user-data.ts
 
 ---
 
+## 🧠 Points of Interest
+
+### 🔄 Supabase Auth Sync
+
+- A Supabase **trigger** automatically syncs users from the `auth.users` table into the `public.user` table (managed by Prisma).
+- This ensures internal application logic can use a fully controlled `user` model while still leveraging Supabase Auth.
+
+### ⚠️ User Schema Changes Require Trigger Updates
+
+- The `user` table is updated by Supabase using a **custom SQL trigger**.
+- Any changes to the Prisma `user` model **must be reflected** in the trigger script.
+- 🔥 Failing to update the trigger when modifying `user` will break authentication and signup flows.
+
+### 🛠️ Bun Scripts Use Internal DB
+
+- Bun scripts (like `backfill-user-data.ts`) operate on the `public.user` table, not `auth.users`.
+- Ensure the trigger is installed and working before running any backfills or jobs that interact with `user`.
+
+---
+
 🌟 Let the kingdom reign. Long live the stack!
 
