@@ -1,6 +1,14 @@
 {
   "name": "@kingstack/frontend",
-  "version": "0.1.0",
+  "version": "0.0.1",
+  "author": "alexanderpinkerton.business@gmail.com",
+  "description": "NextJS frontend for KingStack",
+  "keywords": [
+    "nextjs",
+    "frontend",
+    "kingstack"
+  ],
+  "license": "UNLICENSED",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 3069",
