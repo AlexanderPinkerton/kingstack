@@ -1,8 +1,6 @@
 import sharedConfig from '@kingstack/eslint-config';
 
-const overrides = {
-    ...compat.extends("next/core-web-vitals", "next/typescript")
-}
+const overrides = {}
 
 const eslint_config = [...sharedConfig, overrides]
 
