@@ -3,6 +3,7 @@
         "//"
     ],
     "tasks": {
+        "start:prod": {},
         "build": {
             "dependsOn": [
                 "@kingstack/prisma#generate"
