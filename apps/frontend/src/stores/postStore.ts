@@ -88,20 +88,23 @@ export class PostStore {
     try {
       console.log("Creating post...");
 
-      const response = await fetch("http://localhost:3000/posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          // Add the supabase bearer token if needed
-          Authorization: `Bearer ${this.rootStore?.session?.access_token || "xxx"}`,
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_NEST_BACKEND_URL}/posts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            // Add the supabase bearer token if needed
+            Authorization: `Bearer ${this.rootStore?.session?.access_token || "xxx"}`,
+          },
+          body: JSON.stringify({
+            title: "Sample Post",
+            content: "This is a sample post content.",
+            published: true,
+          }),
         },
-        body: JSON.stringify({
-          title: "Sample Post",
-          content: "This is a sample post content.",
-          published: true,
-        }),
-      });
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
