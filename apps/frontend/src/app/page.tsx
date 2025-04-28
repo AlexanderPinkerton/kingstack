@@ -28,7 +28,7 @@ export default observer(function Page() {
             options: {
               redirectTo: window.location.origin,
               // redirectTo: window.location.origin + '/api/auth/loginComplete',
-              // scopes: 'email profile',
+              // scopes: 'email profile',clear
               // queryParams: {
               //   access_type: 'offline',
               //   prompt: 'consent',
