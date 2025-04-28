@@ -1,0 +1,12 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    // "buildCommand": "yarn turbo build --filter=@kingstack/backend",
+    "buildCommand": "yarn docker:build-backend"
+  },
+  "deploy": {
+    // "startCommand": "yarn turbo start:prod --filter=@kingstack/backend"
+    "startCommand": "yarn docker:run-backend"
+  }
+}

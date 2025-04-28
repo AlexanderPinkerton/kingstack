@@ -4,11 +4,66 @@
 FROM node:20 AS build
 WORKDIR /app
 
-# 👇 Copy the whole monorepo context
+
+# 1) Copy root-level manifests + Yarn config
+COPY package.json        ./package.json
+COPY yarn.lock           ./yarn.lock
+COPY .yarnrc.yml         ./.yarnrc.yml
+
+# 2) Copy your vendored Yarn binary & plugins
+COPY .yarn/releases/     ./.yarn/releases/
+# COPY .yarn/plugins/      ./.yarn/plugins/
+
+# 3) **Copy every workspace’s package.json** so Yarn can see them, otherwise it will fail with lockfile complaints.
+# This is crucial for the `--immutable` flag to work correctly.
+COPY apps/backend/package.json apps/backend/package.json
+COPY apps/frontend/package.json apps/frontend/package.json
+COPY packages/prisma/package.json packages/prisma/package.json
+COPY packages/eslint-config/package.json packages/eslint-config/package.json
+# └─ if you have more workspaces, repeat: COPY packages/foo/package.json packages/foo/package.json
+
+# 4) Activate the vendored Yarn (no network fetch)
+RUN corepack enable \
+    && corepack prepare yarn@stable --activate
+
+# 5) Now Yarn sees the full workspace graph — the immutable check will pass
+RUN yarn install --immutable
+
+# 6) Copy the rest of your source
 COPY . .
 
-# 👇 Install everything (monorepo-wide)
-RUN corepack enable && yarn install --immutable
+# # 1) Copy root manifest + lock + Yarn config
+# COPY package.json yarn.lock .yarnrc.yml ./
+
+# # 2) Copy your vendored Yarn binary
+# COPY .yarn/releases/ .yarn/releases/
+# # COPY .yarn/plugins/  .yarn/plugins/
+
+# # 3) Copy _each_ workspace package.json
+# COPY apps/backend/package.json apps/backend/package.json
+# # (repeat for apps/frontend, packages/*, etc.)
+
+# # 4) Activate vendored Yarn
+# RUN corepack enable \
+#     && corepack prepare yarn@stable --activate
+
+# # 5) Now Yarn can see _all_ manifests—install immutably
+# RUN yarn install --immutable --json
+
+# # 1. Copy only the files needed to run Yarn
+# COPY package.json yarn.lock .yarnrc.yml .yarn/releases/ ./
+
+# # 2. Activate the vendored Yarn without network fetch
+# RUN corepack enable && corepack prepare yarn@stable --activate
+
+# # 3. Install all dependencies
+# RUN yarn install --immutable
+
+# # 👇 Copy the whole monorepo context
+# COPY . .
+
+# # 👇 Install everything (monorepo-wide)
+# # RUN corepack enable && yarn install --immutable
 
 # 👇 Generate the Prisma client using the shared schema
 RUN yarn workspace @kingstack/prisma prisma generate

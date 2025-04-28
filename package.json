@@ -12,7 +12,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "docker:build-backend": "docker build -f apps/backend/Dockerfile -t kingstack-backend .",
-    "docker:run-backend": "docker run -p 3000:3000 --name kingstack-backend -d kingstack-backend",
+    "docker:run-backend": "docker run --rm -p 3000:3000 --name kingstack-backend --env-file apps/backend/.env -d kingstack-backend",
     "docker:compose": "docker-compose up --build",
     "docker:compose:down": "docker-compose down"
   },
