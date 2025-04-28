@@ -25,7 +25,10 @@ export class PostStore {
       // Fetch the posts from :3000
       // Assuming the backend is running on the same origin
 
-      console.log("Fetching posts from NEST backend...", this.rootStore.session);
+      console.log(
+        "Fetching posts from NEST backend...",
+        this.rootStore.session,
+      );
 
       const response = await fetchInternal(
         this.rootStore?.session?.access_token,
@@ -54,7 +57,10 @@ export class PostStore {
       // Fetch the posts from :3000
       // Assuming the backend is running on the same origin
 
-      console.log("Fetching posts from NEXT backend...", this.rootStore.session);
+      console.log(
+        "Fetching posts from NEXT backend...",
+        this.rootStore.session,
+      );
 
       const response = await fetchInternal(
         this.rootStore?.session?.access_token,
