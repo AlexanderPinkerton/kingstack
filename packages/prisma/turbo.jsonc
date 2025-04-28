@@ -3,12 +3,6 @@
         "//"
     ],
     "tasks": {
-        "build": {
-            // Nothing to build but we need make sure the prisma client is generated before
-            "dependsOn": [
-                "generate"
-            ]
-        },
         "generate": {
             "cache": false
         }
