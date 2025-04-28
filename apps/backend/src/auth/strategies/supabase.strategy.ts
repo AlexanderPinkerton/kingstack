@@ -6,6 +6,8 @@ import { ConfigService } from "@nestjs/config";
 @Injectable()
 export class SupabaseStrategy extends PassportStrategy(Strategy) {
   public constructor(private readonly configService: ConfigService) {
+    console.log("Initializing SupabaseStrategy", process.env.SUPA_JWT_SECRET);
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
