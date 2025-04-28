@@ -25,11 +25,11 @@ export class PostStore {
       // Fetch the posts from :3000
       // Assuming the backend is running on the same origin
 
-      console.log("Fetching posts from backend...", this.rootStore.session);
+      console.log("Fetching posts from NEST backend...", this.rootStore.session);
 
       const response = await fetchInternal(
         this.rootStore?.session?.access_token,
-        "http://localhost:3000/posts",
+        `${process.env.NEXT_PUBLIC_NEST_BACKEND_URL}/posts`,
         "GET",
       );
 
@@ -54,11 +54,11 @@ export class PostStore {
       // Fetch the posts from :3000
       // Assuming the backend is running on the same origin
 
-      console.log("Fetching posts from backend...", this.rootStore.session);
+      console.log("Fetching posts from NEXT backend...", this.rootStore.session);
 
       const response = await fetchInternal(
         this.rootStore?.session?.access_token,
-        "http://localhost:3069/api/post",
+        "/api/post",
         "GET",
       );
 
