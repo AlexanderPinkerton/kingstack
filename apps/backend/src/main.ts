@@ -23,6 +23,9 @@ async function bootstrap() {
 
   // Bind this port to all available network interfaces, not just localhost.
   // Kingtip: Inside Docker or any containerized environment: always use '0.0.0.0' instead of 'localhost'
+
+  console.log("Starting server on port", process.env.PORT ?? 3000);
+
   await app.listen(process.env.PORT ?? 3000, "0.0.0.0");
 }
 

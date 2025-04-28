@@ -22,9 +22,7 @@ export class PostStore {
 
   fetchPosts = async () => {
     try {
-      // Fetch the posts from :3000
-      // Assuming the backend is running on the same origin
-
+      // Fetch the posts from the backend
       console.log(
         "Fetching posts from NEST backend...",
         this.rootStore.session,
