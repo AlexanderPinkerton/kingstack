@@ -1,0 +1,3 @@
+{
+    "buildCommand": "yarn turbo build --filter=@kingstack/frontend"
+}

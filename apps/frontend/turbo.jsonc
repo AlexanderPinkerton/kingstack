@@ -1,0 +1,12 @@
+{
+    "extends": [
+        "//"
+    ],
+    "tasks": {
+        "build": {
+            "dependsOn": [
+                "^generate" // Ensure the Prisma client is generated before building
+            ]
+        }
+    }
+}
