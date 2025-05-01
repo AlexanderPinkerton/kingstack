@@ -5,9 +5,6 @@ import tseslint from "typescript-eslint";                  // Official flat conf
 import prettierPlugin from "eslint-plugin-prettier";       // Plugin to run Prettier as an ESLint rule
 import eslintConfigPrettierFlat from "eslint-config-prettier/flat"; // Disable ESLint rules that conflict with Prettier
 
-// pull in the official “recommended” Prettier bits
-const prettierRecommended = prettierPlugin.configs.recommended;
-
 // TypeScript ESLint config with Prettier rules added
 const tsEslintConfig = tseslint.config({
     files: ["**/*.ts", "**/*.tsx"],
