@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { ConfigService } from "@nestjs/config";
+import { FastifyRequest } from "fastify";
 
 @Injectable()
 export class SupabaseStrategy extends PassportStrategy(Strategy) {
@@ -9,7 +10,7 @@ export class SupabaseStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>("SUPA_JWT_SECRET"),
+      secretOrKey: configService.get<string>("SUPA_JWT_SECRET")!,
     });
   }
 
@@ -18,7 +19,8 @@ export class SupabaseStrategy extends PassportStrategy(Strategy) {
     return payload;
   }
 
-  authenticate(req) {
+  // Use any since we are using fastify and passport-jwt expects an express request
+  authenticate(req: any) {
     super.authenticate(req);
   }
 }

@@ -6,7 +6,7 @@ import prettierPlugin from "eslint-plugin-prettier";       // Plugin to run Pret
 import eslintConfigPrettier from "eslint-config-prettier"; // Disables ESLint rules that conflict with Prettier
 
 // TypeScript ESLint config with Prettier rules added
-const tsConfig = tseslint.config({
+const tsEslintConfig = tseslint.config({
     files: ["**/*.ts", "**/*.tsx"],
 
     languageOptions: {
@@ -35,7 +35,7 @@ const tsConfig = tseslint.config({
 // Export the combined config: recommended TS rules + our overrides + ignores
 export default [
     ...tseslint.configs.recommended, // Base rules from typescript-eslint
-    ...tsConfig,                     // Our overrides and Prettier integration
+    ...tsEslintConfig,                     // Our overrides and Prettier integration
     {
         ignores: [".next/", "dist/", "coverage/"], // Common ignored folders
     },

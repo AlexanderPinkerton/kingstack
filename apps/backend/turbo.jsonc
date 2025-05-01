@@ -5,6 +5,9 @@
     "tasks": {
         "start:prod": {},
         "build": {
+            "outputs": [
+                "dist/**"
+            ],
             "dependsOn": [
                 "@kingstack/prisma#generate"
             ]

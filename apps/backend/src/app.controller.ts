@@ -1,6 +1,7 @@
 import { Controller, Get, Req, UseGuards } from "@nestjs/common";
 import { AppService } from "./app.service";
 import { JwtAuthGuard } from "./auth/guards/jwt.auth.guard";
+import { FastifyRequest } from "fastify";
 
 @Controller()
 export class AppController {
@@ -13,7 +14,7 @@ export class AppController {
 
   @Get("/protected")
   @UseGuards(JwtAuthGuard)
-  protected(@Req() req) {
+  protected(@Req() req: FastifyRequest) {
     return {
       message: "AuthGuard works 🎉",
       authenticated_user: req.user,

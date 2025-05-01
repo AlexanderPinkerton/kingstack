@@ -1,0 +1,6 @@
+{
+    "name": "@kingstack/ts-config",
+    "version": "1.0.0",
+    "main": "base.json",
+    "private": true
+}
