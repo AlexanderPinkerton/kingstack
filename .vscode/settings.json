@@ -1,14 +1,29 @@
 {
     "eslint.useFlatConfig": true,
-    "eslint.validate": [
-        "typescript",
-        "typescriptreact",
-        "javascript",
-        "javascriptreact"
-    ],
     "eslint.workingDirectories": [
         {
             "mode": "auto"
         }
+    ],
+    // 1. Only run ESLint fixes on save (which now include Prettier)
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    },
+    // 2. Don’t let the Prettier extension also format
+    "[javascript]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    },
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    },
+    // 3. Make sure ESLint is enabled for the filetypes you care about
+    "eslint.validate": [
+        "javascript",
+        "typescript",
+        "typescriptreact",
+        "javascriptreact"
     ]
 }

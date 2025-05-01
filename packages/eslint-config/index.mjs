@@ -3,7 +3,10 @@
 
 import tseslint from "typescript-eslint";                  // Official flat config helper for TypeScript
 import prettierPlugin from "eslint-plugin-prettier";       // Plugin to run Prettier as an ESLint rule
-import eslintConfigPrettier from "eslint-config-prettier"; // Disables ESLint rules that conflict with Prettier
+import eslintConfigPrettierFlat from "eslint-config-prettier/flat"; // Disable ESLint rules that conflict with Prettier
+
+// pull in the official “recommended” Prettier bits
+const prettierRecommended = prettierPlugin.configs.recommended;
 
 // TypeScript ESLint config with Prettier rules added
 const tsEslintConfig = tseslint.config({
@@ -23,9 +26,9 @@ const tsEslintConfig = tseslint.config({
     plugins: {
         prettier: prettierPlugin,
     },
-
+    // THIS is the key: pull in both the “plugin:prettier” rule AND
+    // disable any ESLint rules that might conflict with Prettier
     rules: {
-        ...eslintConfigPrettier.rules,        // Disable conflicting formatting rules
         "prettier/prettier": "error",         // Run Prettier as an ESLint error
         "@typescript-eslint/no-explicit-any": "off",  // Allow 'any'
         "@typescript-eslint/no-unused-vars": "warn",  // Warn on unused vars
@@ -34,6 +37,7 @@ const tsEslintConfig = tseslint.config({
 
 // Export the combined config: recommended TS rules + our overrides + ignores
 export default [
+    eslintConfigPrettierFlat,
     ...tseslint.configs.recommended, // Base rules from typescript-eslint
     ...tsEslintConfig,                     // Our overrides and Prettier integration
     {
