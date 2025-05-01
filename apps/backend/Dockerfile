@@ -19,6 +19,7 @@ COPY apps/backend/package.json apps/backend/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
 COPY packages/prisma/package.json packages/prisma/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
+COPY packages/ts-config/package.json packages/ts-config/package.json
 # └─ if you have more workspaces, repeat: COPY packages/foo/package.json packages/foo/package.json
 
 # 4) Activate the vendored Yarn (no network fetch)
