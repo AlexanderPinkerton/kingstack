@@ -3,7 +3,7 @@
 import { useState, useEffect, useContext } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, User } from "lucide-react";
+import { Menu, X, LogOut, User, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -29,7 +29,7 @@ export const Navbar = observer(function Navbar({ navLinks = defaultNavLinks, cta
   const router = useRouter();
   // Default CTA if not provided
   const defaultCTA = (
-    <Button className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white border-0"
+    <Button className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white border-0"
     onClick={() => {
       router.push("/login");
     }}>
@@ -130,7 +130,7 @@ export const Navbar = observer(function Navbar({ navLinks = defaultNavLinks, cta
                   </Avatar>
                 </button>
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-xl bg-black/90 shadow-lg border border-slate-800 z-50">
+                  <div className="absolute right-0 mt-2 w-max rounded-xl bg-black/90 shadow-lg border border-slate-800 z-50">
                     <div className="px-4 py-2 text-xs text-slate-400 max-w-xs break-all whitespace-normal truncate" title={user?.email}>{user?.email || "No Email"}</div>
                     <button disabled className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 cursor-not-allowed flex items-center gap-2"><User size={16}/> Profile</button>
                     <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 flex items-center gap-2"><LogOut size={16}/> Logout</button>
@@ -190,7 +190,7 @@ export const Navbar = observer(function Navbar({ navLinks = defaultNavLinks, cta
                         {user?.email?.[0]?.toUpperCase() || <User size={16} />}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="ml-2 text-gray-300">{user?.email || "Account"}</span>
+                    <span className="ml-2 text-gray-300 flex items-center gap-1">{user?.email || "Account"} <Settings className="inline-block ml-1 text-slate-400" size={16} /></span>
                   </button>
                   {mobileDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-48 rounded-xl bg-black/90 shadow-lg border border-slate-800 z-50">
