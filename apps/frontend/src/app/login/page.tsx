@@ -3,7 +3,28 @@
 import { LoginForm } from "@/components/login-form";
 import { Navbar } from "@/components/core/navbar";
 
-export default function Page() {
+import { useContext, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { RootStoreContext } from "@/context/rootStoreContext";
+import { observer } from "mobx-react-lite";
+
+export default observer(function Page() {
+  const router = useRouter();
+
+  const rootStore = useContext(RootStoreContext);
+
+  useEffect(() => {
+
+    console.log("Login useEffect", rootStore);
+
+    if (rootStore.session) {
+      console.log("Session found", rootStore.session);
+
+      router.replace("/home");
+    }
+
+  }, [rootStore.session]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-slate-900 flex flex-col">
       <Navbar />
@@ -21,4 +42,4 @@ export default function Page() {
       </main>
     </div>
   );
-}
+});

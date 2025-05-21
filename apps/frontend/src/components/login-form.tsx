@@ -10,33 +10,42 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { createClient } from "@supabase/supabase-js";
+import { useContext, useState } from "react";
+import { SupabaseClientContext } from "@/context/supabaseClientContext";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  function onLogin(event: React.MouseEvent<HTMLButtonElement>) {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-    );
+  const supabase = useContext(SupabaseClientContext);
+  const [loading, setLoading] = useState(false);
+
+  async function onLogin(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
-
-    console.log("Session: ", supabase.auth.getSession());
-
-    supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        // redirectTo: window.location.origin + '/login/callback',
-        // scopes: 'email profile',
-        // queryParams: {
-        //   prompt: 'consent',
-        //   access_type: 'offline',
-        //   response_type: 'code',
-        // },
-      },
-    });
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin + "/login",
+          // redirectTo: window.location.origin + '/api/auth/loginComplete',
+          // scopes: 'email profile',
+          // queryParams: {
+          //   access_type: 'offline',
+          //   prompt: 'consent',
+          // },
+        },
+      });
+      if (error) {
+        console.error("Error signing in:", error);
+      } else {
+        console.log("Sign in initiated successfully");
+      }
+    } catch (err) {
+      console.error("Unexpected error during sign in:", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -76,8 +85,8 @@ export function LoginForm({
                 <Button type="submit" className="w-full">
                   Login
                 </Button>
-                <Button variant="outline" className="w-full" onClick={onLogin}>
-                  Login with Google
+                <Button variant="outline" className="w-full" onClick={onLogin} disabled={loading}>
+                  {loading ? "Redirecting..." : "Login with Google"}
                 </Button>
               </div>
             </div>

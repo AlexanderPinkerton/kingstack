@@ -1,4 +1,4 @@
-import { runInAction } from "mobx";
+import { makeAutoObservable, runInAction } from "mobx";
 import { PostStore } from "./postStore";
 
 import { createClient } from "@supabase/supabase-js";
@@ -13,9 +13,12 @@ export class RootStore {
   session: any;
 
   constructor() {
-    this.postStore = new PostStore(this);
 
-    this.session = supabase.auth.getSession();
+    console.log("RootStore constructor", Math.random());
+
+    this.postStore = new PostStore(this);
+    this.session = null;
+
     supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth state changed:", event, session);
       runInAction(() => {
@@ -23,6 +26,16 @@ export class RootStore {
       });
     });
 
+    
     console.log("RootStore initialized.");
+
+    makeAutoObservable(this);
+  }
+
+  async refreshSession() {
+    const result = await supabase.auth.getSession();
+    runInAction(() => {
+      this.session = result;
+    });
   }
 }
