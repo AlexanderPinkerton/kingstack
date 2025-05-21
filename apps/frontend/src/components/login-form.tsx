@@ -26,6 +26,7 @@ export function LoginForm({
   const [fullName, setFullName] = useState("");
   const [dob, setDob] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   async function onLogin(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -81,8 +82,23 @@ export function LoginForm({
             data: { fullName, dob },
           },
         });
-        if (error) setFormError(error.message);
-        // Optionally: call your backend to store KYC in a table
+        if (error) {
+          setFormError(error.message);
+        } else {
+          setSuccessMsg(
+            "Registration successful! Please check your email to confirm your account before logging in."
+          );
+          // Clear form fields
+          setEmail("");
+          setPassword("");
+          setFullName("");
+          setDob("");
+          // Optionally switch to login mode after a short delay
+          setTimeout(() => {
+            setMode("login");
+            setSuccessMsg(null);
+          }, 5000);
+        }
       }
     } catch (err: any) {
       setFormError(err.message || "Unexpected error");
@@ -179,6 +195,9 @@ export function LoginForm({
               </div>
               {formError && (
                 <div className="text-red-500 text-center text-sm mt-2">{formError}</div>
+              )}
+              {successMsg && (
+                <div className="text-green-500 text-center text-sm mt-2">{successMsg}</div>
               )}
             </div>
             <div className="mt-4 text-center text-sm">
