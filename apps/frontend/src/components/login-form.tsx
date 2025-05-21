@@ -1,14 +1,14 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
+import { NeonCard } from "@/components/ui/neon-card";
+import { GradientText } from "@/components/ui/gradient-text";
+import { ThemedInput } from "@/components/ui/themed-input";
+import { ThemedButton } from "@/components/ui/themed-button";
+import { ThemedOutlineButton } from "@/components/ui/themed-outline-button";
+import { ThemedLabel } from "@/components/ui/themed-label";
+import { ThemedErrorText } from "@/components/ui/themed-error-text";
+import { ThemedSuccessText } from "@/components/ui/themed-success-text";
 
 import { useContext, useState } from "react";
 import { SupabaseClientContext } from "@/context/supabaseClientContext";
@@ -108,105 +108,108 @@ export function LoginForm({
   }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle>{mode === "login" ? "Login to your account" : "Register for Kingstack"}</CardTitle>
-          <CardDescription>
-            {mode === "login"
-              ? "Enter your email below to login to your account"
-              : "Sign up with your email and complete KYC to get started."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit}>
+    <div className={cn("flex flex-col items-center justify-center min-h-screen", className)} {...props}>
+      <AnimatedBorderContainer className="max-w-md w-full">
+        <NeonCard className="bg-black/80 backdrop-blur border border-cyan-400/30 shadow-lg p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="mb-6 text-center">
+              <GradientText className="text-3xl font-bold tracking-tight">
+                {mode === "login" ? "Login to your account" : "Register for Kingstack"}
+              </GradientText>
+              <div className="mt-2 text-cyan-200 text-sm">
+                {mode === "login"
+                  ? "Enter your email below to login to your account"
+                  : "Sign up with your email and complete KYC to get started."}
+              </div>
+            </div>
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
-                <Label htmlFor="email">Email</Label>
-                <Input
+                <ThemedLabel htmlFor="email">Email</ThemedLabel>
+                <ThemedInput
                   id="email"
                   type="email"
                   placeholder="m@example.com"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                   required
                 />
               </div>
               <div className="grid gap-3">
                 <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
+                  <ThemedLabel htmlFor="password">Password</ThemedLabel>
                   {mode === "login" && (
-                    <a
-                      href="#"
-                      className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                    >
-                      Forgot your password?
-                    </a>
-                  )}
+  <a
+    href="#"
+    className="ml-auto inline-block text-sm underline-offset-4 text-cyan-300 hover:text-purple-400 hover:underline transition"
+  >
+    Forgot your password?
+  </a>
+)}
                 </div>
-                <Input
+                <ThemedInput
                   id="password"
                   type="password"
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   required
                 />
               </div>
               {mode === "register" && (
                 <>
                   <div className="grid gap-3">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <Input
+                    <ThemedLabel htmlFor="fullName">Full Name</ThemedLabel>
+                    <ThemedInput
                       id="fullName"
                       type="text"
                       placeholder="Your full name"
                       value={fullName}
-                      onChange={e => setFullName(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
                       required
                     />
                   </div>
                   <div className="grid gap-3">
-                    <Label htmlFor="dob">Date of Birth</Label>
-                    <Input
+                    <ThemedLabel htmlFor="dob">Date of Birth</ThemedLabel>
+                    <ThemedInput
                       id="dob"
                       type="date"
                       value={dob}
-                      onChange={e => setDob(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDob(e.target.value)}
                       required
                     />
                   </div>
                 </>
               )}
               <div className="flex flex-col gap-3">
-                <Button type="submit" className="w-full" disabled={loading}>
+                <ThemedButton
+                  type="submit"
+                  disabled={loading}
+                >
                   {loading
                     ? (mode === "login" ? "Logging in..." : "Registering...")
                     : (mode === "login" ? "Login" : "Register")}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
+                </ThemedButton>
+                <ThemedOutlineButton
                   onClick={onLogin}
                   disabled={loading}
                   type="button"
                 >
                   {loading ? "Redirecting..." : "Login with Google"}
-                </Button>
+                </ThemedOutlineButton>
               </div>
               {formError && (
-                <div className="text-red-500 text-center text-sm mt-2">{formError}</div>
+                <ThemedErrorText>{formError}</ThemedErrorText>
               )}
               {successMsg && (
-                <div className="text-green-500 text-center text-sm mt-2">{successMsg}</div>
+                <ThemedSuccessText>{successMsg}</ThemedSuccessText>
               )}
             </div>
-            <div className="mt-4 text-center text-sm">
+            <div className="mt-4 text-center text-sm text-cyan-200">
               {mode === "login" ? (
                 <>
                   Don&apos;t have an account?{' '}
                   <button
                     type="button"
-                    className="underline underline-offset-4 text-cyan-400 hover:text-purple-400"
+                    className="underline underline-offset-4 text-cyan-300 hover:text-purple-400 transition"
                     onClick={() => setMode("register")}
                   >
                     Sign up
@@ -217,7 +220,7 @@ export function LoginForm({
                   Already have an account?{' '}
                   <button
                     type="button"
-                    className="underline underline-offset-4 text-cyan-400 hover:text-purple-400"
+                    className="underline underline-offset-4 text-cyan-300 hover:text-purple-400 transition"
                     onClick={() => setMode("login")}
                   >
                     Login
@@ -226,8 +229,8 @@ export function LoginForm({
               )}
             </div>
           </form>
-        </CardContent>
-      </Card>
+        </NeonCard>
+      </AnimatedBorderContainer>
     </div>
   );
 }

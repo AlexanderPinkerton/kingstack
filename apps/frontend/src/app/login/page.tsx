@@ -33,14 +33,7 @@ export default observer(function Page() {
       <Navbar cta={[]}/>
       <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
         <div className="w-full max-w-md mx-auto">
-          <AnimatedBorderContainer>
-            <NeonCard className="p-8">
-              <h1 className="text-3xl font-extrabold text-center mb-6">
-                <GradientText>Welcome home, King.</GradientText>
-              </h1>
-              <LoginForm />
-            </NeonCard>
-          </AnimatedBorderContainer>
+          <LoginForm />
         </div>
       </main>
     </div>
