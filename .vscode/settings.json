@@ -7,7 +7,7 @@
     ],
     // 1. Only run ESLint fixes on save (which now include Prettier)
     "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": true
+        "source.fixAll.eslint": "explicit"
     },
     // 2. Don’t let the Prettier extension also format
     "[javascript]": {
