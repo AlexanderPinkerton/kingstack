@@ -22,7 +22,7 @@ export function HeroSection() {
                 entry.target.classList.add("transition-all");
                 entry.target.classList.add("duration-1000");
               }
-            }, 100);
+            }, 50);
           }
         });
       },

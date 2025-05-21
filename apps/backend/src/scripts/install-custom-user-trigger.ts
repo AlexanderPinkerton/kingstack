@@ -60,7 +60,7 @@ security definer set search_path = ''
 as $$
 begin
   insert into public.user (id, email, name)
-  values (new.id, new.raw_user_meta_data ->> 'email', new.raw_user_meta_data ->> 'name')
+  values (new.id, new.email, coalesce(new.raw_user_meta_data ->> 'fullName', new.raw_user_meta_data ->> 'name', null))
   on conflict (id) do nothing; -- Prevents error if user already exists
   return new;
 end;

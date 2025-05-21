@@ -19,6 +19,13 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const supabase = useContext(SupabaseClientContext);
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<'login' | 'register'>("login");
+  // Registration/KYC state
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [dob, setDob] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   async function onLogin(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -48,17 +55,55 @@ export function LoginForm({
     }
   }
 
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError(null);
+    setLoading(true);
+    try {
+      if (mode === "login") {
+        // Basic email/password login
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) setFormError(error.message);
+      } else {
+        // Registration with KYC
+        if (!email || !password || !fullName || !dob) {
+          setFormError("Please fill out all fields.");
+          setLoading(false);
+          return;
+        }
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { fullName, dob },
+          },
+        });
+        if (error) setFormError(error.message);
+        // Optionally: call your backend to store KYC in a table
+      }
+    } catch (err: any) {
+      setFormError(err.message || "Unexpected error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle>Login to your account</CardTitle>
+          <CardTitle>{mode === "login" ? "Login to your account" : "Register for Kingstack"}</CardTitle>
           <CardDescription>
-            Enter your email below to login to your account
+            {mode === "login"
+              ? "Enter your email below to login to your account"
+              : "Sign up with your email and complete KYC to get started."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={handleSubmit}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
@@ -66,35 +111,100 @@ export function LoginForm({
                   id="email"
                   type="email"
                   placeholder="m@example.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   required
                 />
               </div>
               <div className="grid gap-3">
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
-                  <a
-                    href="#"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </a>
+                  {mode === "login" && (
+                    <a
+                      href="#"
+                      className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                    >
+                      Forgot your password?
+                    </a>
+                  )}
                 </div>
-                <Input id="password" type="password" required />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                />
               </div>
+              {mode === "register" && (
+                <>
+                  <div className="grid gap-3">
+                    <Label htmlFor="fullName">Full Name</Label>
+                    <Input
+                      id="fullName"
+                      type="text"
+                      placeholder="Your full name"
+                      value={fullName}
+                      onChange={e => setFullName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-3">
+                    <Label htmlFor="dob">Date of Birth</Label>
+                    <Input
+                      id="dob"
+                      type="date"
+                      value={dob}
+                      onChange={e => setDob(e.target.value)}
+                      required
+                    />
+                  </div>
+                </>
+              )}
               <div className="flex flex-col gap-3">
-                <Button type="submit" className="w-full">
-                  Login
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading
+                    ? (mode === "login" ? "Logging in..." : "Registering...")
+                    : (mode === "login" ? "Login" : "Register")}
                 </Button>
-                <Button variant="outline" className="w-full" onClick={onLogin} disabled={loading}>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={onLogin}
+                  disabled={loading}
+                  type="button"
+                >
                   {loading ? "Redirecting..." : "Login with Google"}
                 </Button>
               </div>
+              {formError && (
+                <div className="text-red-500 text-center text-sm mt-2">{formError}</div>
+              )}
             </div>
             <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <a href="#" className="underline underline-offset-4">
-                Sign up
-              </a>
+              {mode === "login" ? (
+                <>
+                  Don&apos;t have an account?{' '}
+                  <button
+                    type="button"
+                    className="underline underline-offset-4 text-cyan-400 hover:text-purple-400"
+                    onClick={() => setMode("register")}
+                  >
+                    Sign up
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    className="underline underline-offset-4 text-cyan-400 hover:text-purple-400"
+                    onClick={() => setMode("login")}
+                  >
+                    Login
+                  </button>
+                </>
+              )}
             </div>
           </form>
         </CardContent>
