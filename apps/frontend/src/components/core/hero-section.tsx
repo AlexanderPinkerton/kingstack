@@ -41,9 +41,6 @@ export function HeroSection() {
   }, []);
 
   return (
-    <div className="relative min-h-screen flex flex-col">
-      <Navbar />
-
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
         <div
           ref={heroRef}
@@ -92,6 +89,5 @@ export function HeroSection() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

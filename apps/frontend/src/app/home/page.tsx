@@ -20,7 +20,7 @@ export default observer(function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-slate-900 text-white flex flex-col">
-      <Navbar />
+      <Navbar navLinks={[]} cta={[]}/>
       <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-24">
         <div className="relative w-full max-w-xl mx-auto">
           {/* Glowing animated border */}
