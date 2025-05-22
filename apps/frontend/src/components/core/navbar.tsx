@@ -93,7 +93,7 @@ export const Navbar = observer(function Navbar({ navLinks = defaultNavLinks, cta
         <div className="flex items-center justify-between h-16 w-full">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-600">
+            <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[var(--gradient-from)] to-[var(--gradient-to)]">
               KINGSTACK
             </span>
           </Link>

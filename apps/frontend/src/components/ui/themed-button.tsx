@@ -7,7 +7,7 @@ export const ThemedButton = forwardRef<HTMLButtonElement, ComponentPropsWithoutR
     ref={ref}
     {...props}
     className={
-      "w-full bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-semibold shadow-lg hover:from-cyan-400 hover:to-purple-500 focus:ring-2 focus:ring-cyan-400 focus:outline-none border-0 " +
+      "w-full bg-gradient-to-r from-[var(--gradient-from)] to-[var(--gradient-to)] text-white font-semibold shadow-lg hover:from-cyan-400 hover:to-purple-500 focus:ring-2 focus:ring-cyan-400 focus:outline-none border-0 " +
       (props.className || "")
     }
   />

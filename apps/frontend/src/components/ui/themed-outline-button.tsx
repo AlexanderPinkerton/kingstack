@@ -8,7 +8,7 @@ export const ThemedOutlineButton = forwardRef<HTMLButtonElement, ComponentPropsW
     variant="outline"
     {...props}
     className={
-      "w-full border-cyan-400 text-cyan-200 bg-gray-900/60 hover:bg-cyan-900/50 focus:ring-2 focus:ring-cyan-400 " +
+      "w-full border-[var(--gradient-from)] text-[var(--gradient-to)] bg-gray-900/60 hover:bg-[var(--gradient-from)]/50 focus:ring-2 focus:ring-[var(--gradient-from)] " +
       (props.className || "")
     }
   />

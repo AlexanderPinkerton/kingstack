@@ -15,6 +15,72 @@ import { SupabaseClientContext } from "@/context/supabaseClientContext";
 
 import { RootStoreContext } from "@/context/rootStoreContext";
 
+import { ThemedButton } from "@/components/ui/themed-button";
+
+// ThemeEditor: A simple live CSS variable editor
+import React, { useState } from "react";
+
+const COLOR_VARIABLES = [
+  { name: "--primary", label: "Primary" },
+  { name: "--background", label: "Background" },
+  { name: "--accent", label: "Accent" },
+  { name: "--foreground", label: "Foreground" },
+  { name: "--gradient-from", label: "Gradient From" },
+  { name: "--gradient-to", label: "Gradient To" },
+  { name: "--accent-1-m", label: "Accent 1" },
+  
+];
+
+function getCssVar(varName: string) {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+export const ThemeEditor: React.FC = () => {
+  // Get initial values from CSS variables
+  const [colors, setColors] = useState(() => {
+    const initial: Record<string, string> = {};
+    COLOR_VARIABLES.forEach(({ name }) => {
+      let val = getCssVar(name);
+      // Try to convert oklch to hex for color input, fallback to white
+      try {
+        if (val.startsWith('oklch')) {
+          // Optionally: parse oklch to hex (not natively supported by input[type=color])
+          // For now, fallback to #ffffff
+          val = "#ffffff";
+        }
+      } catch {}
+      initial[name] = val || "#ffffff";
+    });
+    return initial;
+  });
+
+  const handleChange = (varName: string, value: string) => {
+    setColors((prev) => ({ ...prev, [varName]: value }));
+    document.documentElement.style.setProperty(varName, value);
+  };
+
+  return (
+    <div style={{ background: "#222", color: "#eee", padding: 16, borderRadius: 8, margin: 16, maxWidth: 400 }}>
+      <h2 style={{ fontWeight: 700, marginBottom: 8 }}>Live Theme Editor</h2>
+      {COLOR_VARIABLES.map(({ name, label }) => (
+        <div key={name} style={{ marginBottom: 12, display: "flex", alignItems: "center" }}>
+          <label style={{ minWidth: 100 }}>{label}</label>
+          <input
+            type="color"
+            value={colors[name]}
+            onChange={(e) => handleChange(name, e.target.value)}
+            style={{ marginLeft: 12, width: 40, height: 32, border: "none", background: "none" }}
+          />
+          <span style={{ marginLeft: 12, fontSize: 12 }}>{name}</span>
+        </div>
+      ))}
+      <div style={{ fontSize: 12, color: "#aaa" }}>
+        Changes are live and only affect your session.
+      </div>
+    </div>
+  );
+};
+
 export default observer(function HomePage() {
   useAuthGuard();
 
@@ -34,66 +100,29 @@ export default observer(function HomePage() {
               <p className="text-lg text-slate-300 text-center mb-6">
                 You are logged in! Enjoy the futuristic experience.
               </p>
-              {/* sign in button */}
-              <Button
-                onClick={async () => {
-                  const { error } = await supabase.auth.signInWithOAuth({
-                    provider: "google",
-                    options: {
-                      redirectTo: window.location.origin,
-                      // redirectTo: window.location.origin + '/api/auth/loginComplete',
-                      // scopes: 'email profile',clear
-                      // queryParams: {
-                      //   access_type: 'offline',
-                      //   prompt: 'consent',
-                      // },
-                    },
-                  });
-                  if (error) {
-                    console.error("Error signing in:", error);
-                  } else {
-                    console.log("Sign in initiated successfully");
-                  }
-                }}
-              >
-                Sign In with Google
-              </Button>
-              {/* sign out button */}
-              <Button
-                onClick={async () => {
-                  const { error } = await supabase.auth.signOut();
-                  if (error) {
-                    console.error("Error signing out:", error);
-                  } else {
-                    console.log("Signed out successfully");
-                  }
-                }}
-              >
-                Sign Out
-              </Button>
               {/* Button which will fetch posts */}
-              <Button
+              <ThemedButton
                 onClick={async () => {
                   await rootStore.postStore.fetchPosts();
                 }}
               >
                 Fetch Posts
-              </Button>
-              <Button
+              </ThemedButton>
+              <ThemedButton
                 onClick={async () => {
                   await rootStore.postStore.fetchPosts2();
                 }}
               >
                 Fetch Posts 2
-              </Button>
+              </ThemedButton>
               {/* Button which will create posts */}
-              <Button
+              <ThemedButton
                 onClick={async () => {
                   await rootStore.postStore.createPost();
                 }}
               >
                 Create Posts
-              </Button>
+              </ThemedButton>
               {/* // Display posts */}
               <div>
                 <h2>Posts:</h2>
@@ -108,6 +137,9 @@ export default observer(function HomePage() {
                 </ul>
               </div>
               <span className="text-xs text-slate-500">(This page matches the neon/glassmorphism theme of the core components.)</span>
+            
+              <ThemeEditor />
+            
             </NeonCard>
           </AnimatedBorderContainer>
         </div>
