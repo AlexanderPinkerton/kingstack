@@ -13,7 +13,6 @@ export class RootStore {
   session: any;
 
   constructor() {
-
     console.log("RootStore constructor", Math.random());
 
     this.postStore = new PostStore(this);
@@ -26,7 +25,6 @@ export class RootStore {
       });
     });
 
-    
     console.log("RootStore initialized.");
 
     makeAutoObservable(this);

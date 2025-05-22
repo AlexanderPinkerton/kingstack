@@ -2,7 +2,10 @@ import { Input } from "@/components/ui/input";
 import { forwardRef } from "react";
 import type { ComponentPropsWithoutRef } from "react";
 
-export const ThemedInput = forwardRef<HTMLInputElement, ComponentPropsWithoutRef<"input">>((props, ref) => (
+export const ThemedInput = forwardRef<
+  HTMLInputElement,
+  ComponentPropsWithoutRef<"input">
+>((props, ref) => (
   <Input
     ref={ref}
     {...props}

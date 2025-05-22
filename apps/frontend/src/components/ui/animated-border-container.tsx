@@ -1,6 +1,12 @@
 import React from "react";
 
-export function AnimatedBorderContainer({ className = "", children }: { className?: string; children: React.ReactNode }) {
+export function AnimatedBorderContainer({
+  className = "",
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className={`relative ${className}`}>
       {/* Glowing animated border */}

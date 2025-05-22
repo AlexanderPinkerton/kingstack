@@ -2,7 +2,10 @@ import { Button } from "@/components/ui/button";
 import { forwardRef } from "react";
 import type { ComponentPropsWithoutRef } from "react";
 
-export const ThemedOutlineButton = forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<"button">>((props, ref) => (
+export const ThemedOutlineButton = forwardRef<
+  HTMLButtonElement,
+  ComponentPropsWithoutRef<"button">
+>((props, ref) => (
   <Button
     ref={ref}
     variant="outline"

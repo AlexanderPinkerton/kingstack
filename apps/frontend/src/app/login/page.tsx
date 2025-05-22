@@ -17,7 +17,6 @@ export default observer(function Page() {
   const rootStore = useContext(RootStoreContext);
 
   useEffect(() => {
-
     console.log("Login useEffect", rootStore);
 
     if (rootStore.session) {
@@ -25,12 +24,11 @@ export default observer(function Page() {
 
       router.replace("/home");
     }
-
   }, [rootStore.session]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-slate-900 flex flex-col">
-      <Navbar cta={[]}/>
+      <Navbar cta={[]} />
       <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
         <div className="w-full max-w-md mx-auto">
           <LoginForm />

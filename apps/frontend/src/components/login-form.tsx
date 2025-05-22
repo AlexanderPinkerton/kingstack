@@ -19,7 +19,7 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const supabase = useContext(SupabaseClientContext);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<'login' | 'register'>("login");
+  const [mode, setMode] = useState<"login" | "register">("login");
   // Registration/KYC state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -86,7 +86,7 @@ export function LoginForm({
           setFormError(error.message);
         } else {
           setSuccessMsg(
-            "Registration successful! Please check your email to confirm your account before logging in."
+            "Registration successful! Please check your email to confirm your account before logging in.",
           );
           // Clear form fields
           setEmail("");
@@ -108,13 +108,21 @@ export function LoginForm({
   }
 
   return (
-    <div className={cn("flex flex-col items-center justify-center min-h-screen", className)} {...props}>
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center min-h-screen",
+        className,
+      )}
+      {...props}
+    >
       <AnimatedBorderContainer className="max-w-md w-full">
         <NeonCard className="bg-black/80 backdrop-blur border border-cyan-400/30 shadow-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="mb-6 text-center">
               <GradientText className="text-3xl font-bold tracking-tight">
-                {mode === "login" ? "Login to your account" : "Register for Kingstack"}
+                {mode === "login"
+                  ? "Login to your account"
+                  : "Register for Kingstack"}
               </GradientText>
               <div className="mt-2 text-gray-300 text-sm">
                 {mode === "login"
@@ -130,7 +138,9 @@ export function LoginForm({
                   type="email"
                   placeholder="m@example.com"
                   value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setEmail(e.target.value)
+                  }
                   required
                 />
               </div>
@@ -138,19 +148,21 @@ export function LoginForm({
                 <div className="flex items-center">
                   <ThemedLabel htmlFor="password">Password</ThemedLabel>
                   {mode === "login" && (
-  <a
-    href="#"
-    className="ml-auto inline-block text-sm underline-offset-4 text-gray-300 hover:text-[var(--accent-mix)] hover:underline transition"
-  >
-    Forgot your password?
-  </a>
-)}
+                    <a
+                      href="#"
+                      className="ml-auto inline-block text-sm underline-offset-4 text-gray-300 hover:text-[var(--accent-mix)] hover:underline transition"
+                    >
+                      Forgot your password?
+                    </a>
+                  )}
                 </div>
                 <ThemedInput
                   id="password"
                   type="password"
                   value={password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setPassword(e.target.value)
+                  }
                   required
                 />
               </div>
@@ -163,7 +175,9 @@ export function LoginForm({
                       type="text"
                       placeholder="Your full name"
                       value={fullName}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setFullName(e.target.value)
+                      }
                       required
                     />
                   </div>
@@ -173,20 +187,23 @@ export function LoginForm({
                       id="dob"
                       type="date"
                       value={dob}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDob(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setDob(e.target.value)
+                      }
                       required
                     />
                   </div>
                 </>
               )}
               <div className="flex flex-col gap-3">
-                <ThemedButton
-                  type="submit"
-                  disabled={loading}
-                >
+                <ThemedButton type="submit" disabled={loading}>
                   {loading
-                    ? (mode === "login" ? "Logging in..." : "Registering...")
-                    : (mode === "login" ? "Login" : "Register")}
+                    ? mode === "login"
+                      ? "Logging in..."
+                      : "Registering..."
+                    : mode === "login"
+                      ? "Login"
+                      : "Register"}
                 </ThemedButton>
                 <ThemedOutlineButton
                   onClick={onLogin}
@@ -196,9 +213,7 @@ export function LoginForm({
                   {loading ? "Redirecting..." : "Login with Google"}
                 </ThemedOutlineButton>
               </div>
-              {formError && (
-                <ThemedErrorText>{formError}</ThemedErrorText>
-              )}
+              {formError && <ThemedErrorText>{formError}</ThemedErrorText>}
               {successMsg && (
                 <ThemedSuccessText>{successMsg}</ThemedSuccessText>
               )}
@@ -206,7 +221,7 @@ export function LoginForm({
             <div className="mt-4 text-center text-sm text-gray-300">
               {mode === "login" ? (
                 <>
-                  Don&apos;t have an account?{' '}
+                  Don&apos;t have an account?{" "}
                   <button
                     type="button"
                     className="underline underline-offset-4 text-[var(--accent-2-l)] hover:text-[var(--accent-mix)] transition"
@@ -217,7 +232,7 @@ export function LoginForm({
                 </>
               ) : (
                 <>
-                  Already have an account?{' '}
+                  Already have an account?{" "}
                   <button
                     type="button"
                     className="underline underline-offset-4 text-[var(--accent-2-l)] hover:text-[var(--accent-mix)] transition"

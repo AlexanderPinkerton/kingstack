@@ -22,7 +22,7 @@ export const ThemeSelector: React.FC = () => {
   useEffect(() => {
     if (typeof document !== "undefined") {
       document.documentElement.classList.remove(
-        ...THEMES.map((t) => t.key).filter(Boolean)
+        ...THEMES.map((t) => t.key).filter(Boolean),
       );
       if (theme) document.documentElement.classList.add(theme);
       localStorage.setItem("kingstack-theme", theme);
@@ -30,16 +30,27 @@ export const ThemeSelector: React.FC = () => {
   }, [theme]);
 
   return (
-    <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "16px 0" }}>
-      <label htmlFor="theme-select" style={{ fontWeight: 600 }}>Theme:</label>
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+        alignItems: "center",
+        margin: "16px 0",
+      }}
+    >
+      <label htmlFor="theme-select" style={{ fontWeight: 600 }}>
+        Theme:
+      </label>
       <select
         id="theme-select"
         value={theme}
-        onChange={e => setTheme(e.target.value)}
+        onChange={(e) => setTheme(e.target.value)}
         style={{ padding: 6, borderRadius: 6 }}
       >
         {THEMES.map(({ key, label }) => (
-          <option key={key} value={key}>{label}</option>
+          <option key={key} value={key}>
+            {label}
+          </option>
         ))}
       </select>
     </div>

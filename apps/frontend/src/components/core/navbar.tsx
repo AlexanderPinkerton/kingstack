@@ -25,14 +25,20 @@ const defaultNavLinks = [
   { name: "About", href: "#about" },
 ];
 
-export const Navbar = observer(function Navbar({ navLinks = defaultNavLinks, cta, showLogin = true }: NavbarProps) {
+export const Navbar = observer(function Navbar({
+  navLinks = defaultNavLinks,
+  cta,
+  showLogin = true,
+}: NavbarProps) {
   const router = useRouter();
   // Default CTA if not provided
   const defaultCTA = (
-    <Button className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white border-0"
-    onClick={() => {
-      router.push("/login");
-    }}>
+    <Button
+      className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white border-0"
+      onClick={() => {
+        router.push("/login");
+      }}
+    >
       Get Started
     </Button>
   );
@@ -40,7 +46,7 @@ export const Navbar = observer(function Navbar({ navLinks = defaultNavLinks, cta
 
   const rootStore = useContext(RootStoreContext);
   const supabase = useContext(SupabaseClientContext);
-  const session = rootStore.session
+  const session = rootStore.session;
   const user = session?.user;
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -114,35 +120,58 @@ export const Navbar = observer(function Navbar({ navLinks = defaultNavLinks, cta
             {renderCTA}
           </div>
           {/* Desktop auth controls */}
-          {showLogin && <div className="hidden md:flex items-center ml-6">
-            {session ? (
-              <div className="relative">
-                <button
-                  onClick={() => setDropdownOpen((v) => !v)}
-                  className="flex items-center focus:outline-none"
-                  aria-label="Open user menu"
+          {showLogin && (
+            <div className="hidden md:flex items-center ml-6">
+              {session ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setDropdownOpen((v) => !v)}
+                    className="flex items-center focus:outline-none"
+                    aria-label="Open user menu"
+                  >
+                    <Avatar>
+                      <AvatarImage
+                        src={user?.user_metadata?.avatar_url || undefined}
+                        alt={user?.email || "avatar"}
+                      />
+                      <AvatarFallback>
+                        {user?.email?.[0]?.toUpperCase() || <User size={16} />}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                  {dropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-max rounded-xl bg-black/90 shadow-lg border border-slate-800 z-50">
+                      <div
+                        className="px-4 py-2 text-xs text-slate-400 max-w-xs break-all whitespace-normal truncate"
+                        title={user?.email}
+                      >
+                        {user?.email || "No Email"}
+                      </div>
+                      <button
+                        disabled
+                        className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 cursor-not-allowed flex items-center gap-2"
+                      >
+                        <User size={16} /> Profile
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 flex items-center gap-2"
+                      >
+                        <LogOut size={16} /> Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Button
+                  onClick={handleLogin}
+                  className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white border-0"
                 >
-                  <Avatar>
-                    <AvatarImage src={user?.user_metadata?.avatar_url || undefined} alt={user?.email || "avatar"} />
-                    <AvatarFallback>
-                      {user?.email?.[0]?.toUpperCase() || <User size={16} />}
-                    </AvatarFallback>
-                  </Avatar>
-                </button>
-                {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-max rounded-xl bg-black/90 shadow-lg border border-slate-800 z-50">
-                    <div className="px-4 py-2 text-xs text-slate-400 max-w-xs break-all whitespace-normal truncate" title={user?.email}>{user?.email || "No Email"}</div>
-                    <button disabled className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 cursor-not-allowed flex items-center gap-2"><User size={16}/> Profile</button>
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 flex items-center gap-2"><LogOut size={16}/> Logout</button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Button onClick={handleLogin} className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white border-0">
-                Login
-              </Button>
-            )}
-          </div>}
+                  Login
+                </Button>
+              )}
+            </div>
+          )}
           {/* Mobile menu button */}
           <div className="md:hidden">
             <button
@@ -173,39 +202,68 @@ export const Navbar = observer(function Navbar({ navLinks = defaultNavLinks, cta
                 {link.name}
               </Link>
             ))}
-            {renderCTA && (
-              <div className="pt-2">{renderCTA}</div>
-            )}
-            {showLogin && <div className="pt-2">
-              {session ? (
-                <div className="relative">
-                  <button
-                    onClick={() => setMobileDropdownOpen((v) => !v)}
-                    className="flex items-center w-full focus:outline-none px-3 py-2"
-                    aria-label="Open user menu"
+            {renderCTA && <div className="pt-2">{renderCTA}</div>}
+            {showLogin && (
+              <div className="pt-2">
+                {session ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setMobileDropdownOpen((v) => !v)}
+                      className="flex items-center w-full focus:outline-none px-3 py-2"
+                      aria-label="Open user menu"
+                    >
+                      <Avatar>
+                        <AvatarImage
+                          src={user?.user_metadata?.avatar_url || undefined}
+                          alt={user?.email || "avatar"}
+                        />
+                        <AvatarFallback>
+                          {user?.email?.[0]?.toUpperCase() || (
+                            <User size={16} />
+                          )}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="ml-2 text-gray-300 flex items-center gap-1">
+                        {user?.email || "Account"}{" "}
+                        <Settings
+                          className="inline-block ml-1 text-slate-400"
+                          size={16}
+                        />
+                      </span>
+                    </button>
+                    {mobileDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-48 rounded-xl bg-black/90 shadow-lg border border-slate-800 z-50">
+                        <div
+                          className="px-4 py-2 text-xs text-slate-400 max-w-xs break-all whitespace-normal truncate"
+                          title={user?.email}
+                        >
+                          {user?.email || "No Email"}
+                        </div>
+                        <button
+                          disabled
+                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 cursor-not-allowed flex items-center gap-2"
+                        >
+                          <User size={16} /> Profile
+                        </button>
+                        <button
+                          onClick={handleLogout}
+                          className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 flex items-center gap-2"
+                        >
+                          <LogOut size={16} /> Logout
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    onClick={handleLogin}
+                    className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white border-0"
                   >
-                    <Avatar>
-                      <AvatarImage src={user?.user_metadata?.avatar_url || undefined} alt={user?.email || "avatar"} />
-                      <AvatarFallback>
-                        {user?.email?.[0]?.toUpperCase() || <User size={16} />}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="ml-2 text-gray-300 flex items-center gap-1">{user?.email || "Account"} <Settings className="inline-block ml-1 text-slate-400" size={16} /></span>
-                  </button>
-                  {mobileDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 rounded-xl bg-black/90 shadow-lg border border-slate-800 z-50">
-                      <div className="px-4 py-2 text-xs text-slate-400 max-w-xs break-all whitespace-normal truncate" title={user?.email}>{user?.email || "No Email"}</div>
-                      <button disabled className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 cursor-not-allowed flex items-center gap-2"><User size={16}/> Profile</button>
-                      <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 flex items-center gap-2"><LogOut size={16}/> Logout</button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Button onClick={handleLogin} className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white border-0">
-                  Login
-                </Button>
-              )}
-            </div>}
+                    Login
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

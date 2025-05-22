@@ -32,7 +32,9 @@ function getCssVar(varName: string) {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return ""; // Or a sensible fallback
   }
-  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(varName)
+    .trim();
 }
 
 export const ThemeEditor: React.FC = () => {
@@ -43,7 +45,7 @@ export const ThemeEditor: React.FC = () => {
       let val = getCssVar(name);
       // Try to convert oklch to hex for color input, fallback to white
       try {
-        if (val.startsWith('oklch')) {
+        if (val.startsWith("oklch")) {
           // Optionally: parse oklch to hex (not natively supported by input[type=color])
           // For now, fallback to #ffffff
           val = "#ffffff";
@@ -60,16 +62,34 @@ export const ThemeEditor: React.FC = () => {
   };
 
   return (
-    <div style={{ background: "#222", color: "#eee", padding: 16, borderRadius: 8, margin: 16, maxWidth: 400 }}>
+    <div
+      style={{
+        background: "#222",
+        color: "#eee",
+        padding: 16,
+        borderRadius: 8,
+        margin: 16,
+        maxWidth: 400,
+      }}
+    >
       <h2 style={{ fontWeight: 700, marginBottom: 8 }}>Live Theme Editor</h2>
       {COLOR_VARIABLES.map(({ name, label }) => (
-        <div key={name} style={{ marginBottom: 12, display: "flex", alignItems: "center" }}>
+        <div
+          key={name}
+          style={{ marginBottom: 12, display: "flex", alignItems: "center" }}
+        >
           <label style={{ minWidth: 100 }}>{label}</label>
           <input
             type="color"
             value={colors[name]}
             onChange={(e) => handleChange(name, e.target.value)}
-            style={{ marginLeft: 12, width: 40, height: 32, border: "none", background: "none" }}
+            style={{
+              marginLeft: 12,
+              width: 40,
+              height: 32,
+              border: "none",
+              background: "none",
+            }}
           />
           <span style={{ marginLeft: 12, fontSize: 12 }}>{name}</span>
         </div>
@@ -89,67 +109,68 @@ export default observer(function HomePage() {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-b from-black to-slate-900 text-white flex flex-col">
-      <Navbar navLinks={[]} cta={[]}/>
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-24">
-        <div className="w-full max-w-xl mx-auto">
-          <AnimatedBorderContainer>
-            <NeonCard className="p-12 flex flex-col">
-              <h1 className="text-4xl font-extrabold text-center mb-4">
-                <GradientText>Welcome to Kingstack</GradientText>
-              </h1>
-              <p className="text-lg text-slate-300 text-center mb-6">
-                You are logged in! Enjoy the futuristic experience.
-              </p>
-              {/* Button which will fetch posts */}
-              <ThemedButton
-                onClick={async () => {
-                  await rootStore.postStore.fetchPosts();
-                }}
-              >
-                Fetch Posts
-              </ThemedButton>
-              <ThemedButton
-                onClick={async () => {
-                  await rootStore.postStore.fetchPosts2();
-                }}
-              >
-                Fetch Posts 2
-              </ThemedButton>
-              {/* Button which will create posts */}
-              <ThemedButton
-                onClick={async () => {
-                  await rootStore.postStore.createPost();
-                }}
-              >
-                Create Posts
-              </ThemedButton>
-              {/* // Display posts */}
-              <div>
-                <div className="mt-4 flex flex-col gap-4 w-full">
-  {rootStore.postStore.getPosts().map((post, index) => (
-    <PostCard
-      key={index}
-      title={post.title}
-      content={post.content}
-      published={post.published}
-      author={post.author}
-      timestamp={post.timestamp}
-    />
-  ))}
-</div>
-              </div>
-              <span className="text-xs text-slate-500">(This page matches the neon/glassmorphism theme of the core components.)</span>
-            
-              <ThemeEditor />
+        <Navbar navLinks={[]} cta={[]} />
+        <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-24">
+          <div className="w-full max-w-xl mx-auto">
+            <AnimatedBorderContainer>
+              <NeonCard className="p-12 flex flex-col">
+                <h1 className="text-4xl font-extrabold text-center mb-4">
+                  <GradientText>Welcome to Kingstack</GradientText>
+                </h1>
+                <p className="text-lg text-slate-300 text-center mb-6">
+                  You are logged in! Enjoy the futuristic experience.
+                </p>
+                {/* Button which will fetch posts */}
+                <ThemedButton
+                  onClick={async () => {
+                    await rootStore.postStore.fetchPosts();
+                  }}
+                >
+                  Fetch Posts
+                </ThemedButton>
+                <ThemedButton
+                  onClick={async () => {
+                    await rootStore.postStore.fetchPosts2();
+                  }}
+                >
+                  Fetch Posts 2
+                </ThemedButton>
+                {/* Button which will create posts */}
+                <ThemedButton
+                  onClick={async () => {
+                    await rootStore.postStore.createPost();
+                  }}
+                >
+                  Create Posts
+                </ThemedButton>
+                {/* // Display posts */}
+                <div>
+                  <div className="mt-4 flex flex-col gap-4 w-full">
+                    {rootStore.postStore.getPosts().map((post, index) => (
+                      <PostCard
+                        key={index}
+                        title={post.title}
+                        content={post.content}
+                        published={post.published}
+                        author={post.author}
+                        timestamp={post.timestamp}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <span className="text-xs text-slate-500">
+                  (This page matches the neon/glassmorphism theme of the core
+                  components.)
+                </span>
 
-              <ThemeSelector />
-            
-            </NeonCard>
-          </AnimatedBorderContainer>
-        </div>
-      </main>
-    </div>
+                <ThemeEditor />
+
+                <ThemeSelector />
+              </NeonCard>
+            </AnimatedBorderContainer>
+          </div>
+        </main>
+      </div>
     </>
-    );
+  );
 });
-
