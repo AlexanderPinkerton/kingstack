@@ -7,7 +7,7 @@ export const ThemedLabel = forwardRef<HTMLLabelElement, ComponentPropsWithoutRef
     ref={ref}
     {...props}
     className={
-      "text-[var(--gradient-to)] font-medium " + (props.className || "")
+      "text-[var(--accent-1-sl)] font-medium " + (props.className || "")
     }
   />
 ));

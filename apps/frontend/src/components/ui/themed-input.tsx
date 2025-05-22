@@ -7,7 +7,7 @@ export const ThemedInput = forwardRef<HTMLInputElement, ComponentPropsWithoutRef
     ref={ref}
     {...props}
     className={
-      "bg-gray-900/80 border border-[var(--accent-1-d)] text-cyan-100 placeholder:text-cyan-400/60 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 rounded-md " +
+      "bg-gray-900/80 border border-[var(--accent-1-d)] text-[var(--accent-1-m)] placeholder:text-[var(--accent-1-d)] focus:ring-2 focus:ring-[var(--accent-1-l)] focus:border-[var(--accent-1-l)] rounded-md " +
       (props.className || "")
     }
   />

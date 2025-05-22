@@ -6,12 +6,9 @@ import { observer } from "mobx-react-lite";
 
 import { useContext } from "react";
 
-import { Button } from "@/components/ui/button";
 import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
 import { NeonCard } from "@/components/ui/neon-card";
 import { GradientText } from "@/components/ui/gradient-text";
-
-import { SupabaseClientContext } from "@/context/supabaseClientContext";
 
 import { RootStoreContext } from "@/context/rootStoreContext";
 
@@ -85,7 +82,6 @@ export const ThemeEditor: React.FC = () => {
 export default observer(function HomePage() {
   useAuthGuard();
 
-  const supabase = useContext(SupabaseClientContext);
   const rootStore = useContext(RootStoreContext);
 
   return (

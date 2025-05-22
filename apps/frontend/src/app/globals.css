@@ -97,9 +97,11 @@
   /* purple color */
   --accent-2-sl: oklch(from var(--accent-2-m) calc(l + 0.50) c h);
   --accent-2-l: oklch(from var(--accent-2-m) calc(l + 0.25) c h);
-  --accent-2-m: oklch(0.6268 0.2325 303.9);
+  --accent-2-m: oklch(0.4982 0.2325 303.9);
   --accent-2-d: oklch(from var(--accent-2-m) calc(l - 0.25) c h);
   --accent-2-sd: oklch(from var(--accent-2-m) calc(l - 0.50) c h);
+
+  --accent-mix: color-mix(in oklch, var(--accent-1-m), var(--accent-2-m));
 
 
   /* cyan: {

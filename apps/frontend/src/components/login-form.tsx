@@ -116,7 +116,7 @@ export function LoginForm({
               <GradientText className="text-3xl font-bold tracking-tight">
                 {mode === "login" ? "Login to your account" : "Register for Kingstack"}
               </GradientText>
-              <div className="mt-2 text-cyan-200 text-sm">
+              <div className="mt-2 text-gray-300 text-sm">
                 {mode === "login"
                   ? "Enter your email below to login to your account"
                   : "Sign up with your email and complete KYC to get started."}
@@ -140,7 +140,7 @@ export function LoginForm({
                   {mode === "login" && (
   <a
     href="#"
-    className="ml-auto inline-block text-sm underline-offset-4 text-cyan-300 hover:text-purple-400 hover:underline transition"
+    className="ml-auto inline-block text-sm underline-offset-4 text-gray-300 hover:text-[var(--accent-mix)] hover:underline transition"
   >
     Forgot your password?
   </a>
@@ -203,13 +203,13 @@ export function LoginForm({
                 <ThemedSuccessText>{successMsg}</ThemedSuccessText>
               )}
             </div>
-            <div className="mt-4 text-center text-sm text-cyan-200">
+            <div className="mt-4 text-center text-sm text-gray-300">
               {mode === "login" ? (
                 <>
                   Don&apos;t have an account?{' '}
                   <button
                     type="button"
-                    className="underline underline-offset-4 text-cyan-300 hover:text-purple-400 transition"
+                    className="underline underline-offset-4 text-[var(--accent-2-l)] hover:text-[var(--accent-mix)] transition"
                     onClick={() => setMode("register")}
                   >
                     Sign up
@@ -220,7 +220,7 @@ export function LoginForm({
                   Already have an account?{' '}
                   <button
                     type="button"
-                    className="underline underline-offset-4 text-cyan-300 hover:text-purple-400 transition"
+                    className="underline underline-offset-4 text-[var(--accent-2-l)] hover:text-[var(--accent-mix)] transition"
                     onClick={() => setMode("login")}
                   >
                     Login

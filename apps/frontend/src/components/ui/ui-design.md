@@ -108,6 +108,43 @@ To keep the UI consistent and DRY, use the following themed components for all f
 
 ---
 
+## 🎨 Color System & Theme Variables
+
+All color values for the Kingstack UI are centrally managed in the `globals.css` file using CSS custom properties (variables). This approach ensures:
+
+- **Consistency:** All components reference the same source of truth for colors.
+- **Dynamic theming:** Changing a single accent or base color will automatically update all related shades and UI elements.
+- **Scalability:** Adding new colors or modifying the palette is straightforward and immediately reflected everywhere.
+
+### How to Use Colors
+- **Always reference colors via CSS variables** (e.g., `var(--accent-1-m)`, `var(--gradient-from)`) in your component styles and Tailwind class overrides.
+- **Do not hardcode color values** in components. If you need a new color, add it to `globals.css` first.
+- **Calculated shades:** Many color variables in `globals.css` use OKLCH color math to generate lighter/darker variants from a single base color. This keeps the UI harmonious and makes theme changes easy.
+- **Example:**
+  ```css
+  :root {
+    --accent-1-m: oklch(0.7971 0.1339 211.53); /* base accent */
+    --accent-1-l: oklch(from var(--accent-1-m) calc(l + 0.25) c h); /* lighter */
+    --accent-1-d: oklch(from var(--accent-1-m) calc(l - 0.25) c h); /* darker */
+    --gradient-from: var(--accent-1-m);
+    --gradient-to: var(--accent-2-m);
+    --accent-mix: color-mix(in oklch, var(--accent-1-m), var(--accent-2-m));
+  }
+  ```
+- **Component usage:**
+  ```tsx
+  <button className="bg-[var(--gradient-from)] text-[var(--accent-1-sl)] ...">Click</button>
+  ```
+
+### Adding New Colors
+- Define new base colors and their calculated shades directly in `globals.css`.
+- Use OKLCH or color-mix for perceptually consistent scales.
+- Reference the new variables in your components and Tailwind class overrides.
+
+**By following these practices, you ensure the entire stack remains visually consistent, easily themeable, and future-proof.**
+
+---
+
 ## 📝 Sample Page Structure
 
 ```tsx
