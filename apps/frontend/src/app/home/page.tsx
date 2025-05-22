@@ -9,6 +9,7 @@ import { useContext } from "react";
 import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
 import { NeonCard } from "@/components/ui/neon-card";
 import { GradientText } from "@/components/ui/gradient-text";
+import { PostCard } from "@/components/core/PostCard";
 
 import { RootStoreContext } from "@/context/rootStoreContext";
 
@@ -92,7 +93,7 @@ export default observer(function HomePage() {
       <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-24">
         <div className="w-full max-w-xl mx-auto">
           <AnimatedBorderContainer>
-            <NeonCard className="p-12 flex flex-col items-center">
+            <NeonCard className="p-12 flex flex-col">
               <h1 className="text-4xl font-extrabold text-center mb-4">
                 <GradientText>Welcome to Kingstack</GradientText>
               </h1>
@@ -124,16 +125,18 @@ export default observer(function HomePage() {
               </ThemedButton>
               {/* // Display posts */}
               <div>
-                <h2>Posts:</h2>
-                <ul>
-                  {rootStore.postStore.getPosts().map((post, index) => (
-                    <li key={index}>
-                      <h3>{post.title}</h3>
-                      <p>{post.content}</p>
-                      <p>Published: {post.published ? "Yes" : "No"}</p>
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-4 flex flex-col gap-4 w-full">
+  {rootStore.postStore.getPosts().map((post, index) => (
+    <PostCard
+      key={index}
+      title={post.title}
+      content={post.content}
+      published={post.published}
+      author={post.author}
+      timestamp={post.timestamp}
+    />
+  ))}
+</div>
               </div>
               <span className="text-xs text-slate-500">(This page matches the neon/glassmorphism theme of the core components.)</span>
             

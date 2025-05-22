@@ -8,7 +8,7 @@ import { fetchInternal } from "../lib/utils";
 export class PostStore {
   rootStore: RootStore;
 
-  private posts = [];
+  private posts: PostDSS[] = [];
 
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
@@ -41,8 +41,26 @@ export class PostStore {
 
       console.log("Fetched posts:", data);
 
+    //   {
+    //     "id": "cmaywxtmi00058ot6dygzewtr",
+    //     "title": "Sample Post",
+    //     "content": "This is a sample post content.",
+    //     "published": true,
+    //     "author_id": "211154bd-0bfb-40eb-884b-df5ae1d3e2a2",
+    //     "created_at": "2025-05-22T05:10:09.210Z"
+    // }
+
+      // Convert the data to PostDSS[]
+      const posts = data.map((post: any) => ({
+        title: post.title,
+        content: post.content,
+        published: post.published,
+        author: post.author_id,
+        timestamp: post.created_at,
+      }));
+
       runInAction(() => {
-        this.posts = data;
+        this.posts = posts;
         console.log("Posts fetched successfully:", this.posts);
       });
     } catch (error) {
