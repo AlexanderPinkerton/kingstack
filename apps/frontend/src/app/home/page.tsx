@@ -13,6 +13,7 @@ import { GradientText } from "@/components/ui/gradient-text";
 import { RootStoreContext } from "@/context/rootStoreContext";
 
 import { ThemedButton } from "@/components/ui/themed-button";
+import { ThemeSelector } from "@/components/ui/ThemeSelector";
 
 // ThemeEditor: A simple live CSS variable editor
 import React, { useState } from "react";
@@ -85,7 +86,8 @@ export default observer(function HomePage() {
   const rootStore = useContext(RootStoreContext);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black to-slate-900 text-white flex flex-col">
+    <>
+      <div className="min-h-screen bg-gradient-to-b from-black to-slate-900 text-white flex flex-col">
       <Navbar navLinks={[]} cta={[]}/>
       <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-24">
         <div className="w-full max-w-xl mx-auto">
@@ -136,11 +138,15 @@ export default observer(function HomePage() {
               <span className="text-xs text-slate-500">(This page matches the neon/glassmorphism theme of the core components.)</span>
             
               <ThemeEditor />
+
+              <ThemeSelector />
             
             </NeonCard>
           </AnimatedBorderContainer>
         </div>
       </main>
     </div>
-  );
-});   
+    </>
+    );
+});
+

@@ -103,19 +103,32 @@
 
   --accent-mix: color-mix(in oklch, var(--accent-1-m), var(--accent-2-m));
 
+}
 
-  /* cyan: {
-    400: "#22d3ee",
-    500: "#06b6d4",
-    600: "#0891b2",
-  },
-  purple: {
-    500: "#a855f7",
-    600: "#9333ea",
-    700: "#7e22ce",
-  }, */
+/* === Theme Variants === */
 
+/* Futuristic Green Theme */
+.theme-green {
+  --accent-1-m: oklch(0.75 0.18 140);   /* Green */
+  --accent-2-m: oklch(0.65 0.14 170);   /* Teal */
+}
 
+/* Solarized Orange Theme */
+.theme-orange {
+  --accent-1-m: oklch(0.8 0.18 60);    /* Orange */
+  --accent-2-m: oklch(0.7 0.14 90);    /* Yellow-Orange */
+}
+
+/* Classic Blue Theme */
+.theme-blue {
+  --accent-1-m: oklch(0.7 0.15 250);   /* Blue */
+  --accent-2-m: oklch(0.6 0.13 270);   /* Indigo */
+}
+
+/* Magenta Dream Theme */
+.theme-magenta {
+  --accent-1-m: oklch(0.75 0.19 340);  /* Magenta */
+  --accent-2-m: oklch(0.65 0.16 320);  /* Pink */
 }
 
 @layer base {
