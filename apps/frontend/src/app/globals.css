@@ -77,8 +77,8 @@
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
 
-  --gradient-from: var(--accent-1-sl);
-  --gradient-to: var(--accent-2-2);
+  --gradient-from: var(--accent-1-m);
+  --gradient-to: var(--accent-2-m);
 
   /* Accent Color 1 - 5 Shades ( 2 dark, 2 light, 1 mid) */
   /*
@@ -88,18 +88,18 @@
   d - dark
   sd - super dark
   */
-  --accent-1-sl: oklch(from var(--accent-1-m) calc(l/2 + .5) c h);
-  --accent-1-l: oklch(from var(--accent-1-m) calc(l/2 + .25) c h);
+  --accent-1-sl: oklch(from var(--accent-1-m) calc(l + 0.50) c h);
+  --accent-1-l: oklch(from var(--accent-1-m) calc(l + 0.25) c h);
   --accent-1-m: oklch(0.7971 0.1339 211.53);
-  --accent-1-d: oklch(from var(--accent-1-m) calc(l/2 - .25) c h);
-  --accent-1-sd: oklch(from var(--accent-1-m) calc(l/2 - .5) c h);
-
-  
+  --accent-1-d: oklch(from var(--accent-1-m) calc(l - 0.25) c h);
+  --accent-1-sd: oklch(from var(--accent-1-m) calc(l - 0.50) c h);
 
   /* purple color */
-  --accent-2-1: oklch(0.6268 0.2325 303.9);
-  --accent-2-2: oklch(0.5575 0.2525 302.32);
-  --accent-2-3: oklch(0.4955 0.2369 301.92);
+  --accent-2-sl: oklch(from var(--accent-2-m) calc(l + 0.50) c h);
+  --accent-2-l: oklch(from var(--accent-2-m) calc(l + 0.25) c h);
+  --accent-2-m: oklch(0.6268 0.2325 303.9);
+  --accent-2-d: oklch(from var(--accent-2-m) calc(l - 0.25) c h);
+  --accent-2-sd: oklch(from var(--accent-2-m) calc(l - 0.50) c h);
 
 
   /* cyan: {

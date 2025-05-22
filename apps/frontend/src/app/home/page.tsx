@@ -25,13 +25,14 @@ const COLOR_VARIABLES = [
   { name: "--background", label: "Background" },
   { name: "--accent", label: "Accent" },
   { name: "--foreground", label: "Foreground" },
-  { name: "--gradient-from", label: "Gradient From" },
-  { name: "--gradient-to", label: "Gradient To" },
   { name: "--accent-1-m", label: "Accent 1" },
-  
+  { name: "--accent-2-m", label: "Accent 2" },
 ];
 
 function getCssVar(varName: string) {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return ""; // Or a sensible fallback
+  }
   return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 }
 
