@@ -2,18 +2,24 @@ import postgres from "postgres";
 
 // psql -h aws-0-us-east-1.pooler.supabase.com -p 6543 -d postgres -U postgres.gswnatmjldebpgufckjt
 
-const sqlClient = postgres({
-  host: process.env.SUPABASE_POOLER_HOST, // e.g., aws-0-us-east-1.pooler.supabase.com
-  port: 6543, // Default port for Supabase pooler
-  database: "postgres", // Default database for Supabase
-  username: process.env.SUPABASE_POOLER_USER, // Default username for Supabase
-  password: process.env.SUPABASE_DB_PASSWORD, // Replace with your actual password
-  ssl: {
-    rejectUnauthorized: false, // This is often required for Supabase connections
-  },
-  max: 1, // Optional: set the maximum number of connections in the pool
-  idle_timeout: 10, // Optional: set the idle timeout for connections
-});
+// const sqlClient = postgres({
+//   host: process.env.SUPABASE_POOLER_HOST, // e.g., aws-0-us-east-1.pooler.supabase.com
+//   port: 6543, // Default port for Supabase pooler
+//   database: "postgres", // Default database for Supabase
+//   username: process.env.SUPABASE_POOLER_USER, // Default username for Supabase
+//   password: process.env.SUPABASE_DB_PASSWORD, // Replace with your actual password
+//   ssl: {
+//     rejectUnauthorized: false, // This is often required for Supabase connections
+//   },
+//   max: 1, // Optional: set the maximum number of connections in the pool
+//   idle_timeout: 10, // Optional: set the idle timeout for connections
+// });
+
+if (!process.env.SUPABASE_DB_POOL_URL) {
+  throw new Error("SUPABASE_DB_POOL_URL is not defined");
+}
+
+const sqlClient = postgres(process.env.SUPABASE_DB_POOL_URL);
 
 // const sqlClient = postgres({
 //     host: process.env.SUPABASE_PROJECT_HOST,
