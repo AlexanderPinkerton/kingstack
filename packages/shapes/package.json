@@ -1,0 +1,31 @@
+{
+  "name": "@kingstack/shapes",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types and shapes for kingstack",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc",
+    "clean": "rm -rf dist",
+    "lint": "eslint \"{karma,payout,post,settlement,test}/**/*.ts\" --fix",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@kingstack/eslint-config": "workspace:*",
+    "@kingstack/prisma": "workspace:*",
+    "@kingstack/ts-config": "workspace:*",
+    "eslint": "^9",
+    "typescript": "^5.0.0"
+  },
+  "private": true
+}
