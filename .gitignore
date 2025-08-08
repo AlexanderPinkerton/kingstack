@@ -23,6 +23,10 @@ node_modules/
 .env.docker.backend
 .env.backend
 
+**/.env.*
+
+secrets/.env.*
+
 # Turbo
 .turbo/
 
