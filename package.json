@@ -11,13 +11,23 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "docker:build-backend": "docker build -f apps/backend/Dockerfile -t kingstack-backend .",
-    "docker:run-backend": "docker run --rm -p 3000:3000 --name kingstack-backend --env-file apps/backend/.env -d kingstack-backend",
+    "docker:build-backend": "docker build -f apps/backend/Dockerfile -t scrilla-backend .",
+    "docker:run-backend": "docker run --rm -p 3000:3000 --name scrilla-backend --env-file apps/backend/.env -d scrilla-backend",
     "docker:compose": "docker-compose up --build",
-    "docker:compose:down": "docker-compose down"
+    "docker:compose:down": "docker-compose down",
+    "prisma:generate": "yarn workspace @scrilla/prisma prisma generate",
+    "prisma:migrate": "yarn workspace @scrilla/prisma prisma migrate dev",
+    "env:development": "bun scripts/swap-env.ts development",
+    "env:production": "bun scripts/swap-env.ts production",
+    "env:current": "bun scripts/swap-env.ts --current"
   },
   "packageManager": "yarn@4.9.1",
   "dependencies": {
-    "turbo": "^2.5.2"
+    "turbo": "^2.5.2",
+    "pg": "^8.16.3",
+    "@types/pg": "^8.15.4"
+  },
+  "devDependencies": {
+    "vercel": "^44.4.0"
   }
 }

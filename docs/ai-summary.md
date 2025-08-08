@@ -88,7 +88,7 @@ kingstack/
    ```
 2. **Generate Prisma client:**
    ```bash
-   yarn workspace @kingstack/prisma prisma generate
+   yarn workspace @scrilla/prisma prisma generate
    ```
 3. **Start development:**
    ```bash
