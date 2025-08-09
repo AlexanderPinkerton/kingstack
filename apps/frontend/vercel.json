@@ -1,3 +1,9 @@
 {
-    "buildCommand": "turbo build --filter=@kingstack/frontend"
+    "buildCommand": "turbo build --filter=@kingstack/frontend",
+    "git": {
+        "deploymentEnabled": {
+            "main": false,
+            "development": false
+        }
+    }
 }
