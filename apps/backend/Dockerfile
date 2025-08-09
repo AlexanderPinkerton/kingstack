@@ -20,6 +20,7 @@ COPY apps/frontend/package.json apps/frontend/package.json
 COPY packages/prisma/package.json packages/prisma/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
 COPY packages/ts-config/package.json packages/ts-config/package.json
+COPY packages/shapes/package.json packages/shapes/package.json
 # └─ if you have more workspaces, repeat: COPY packages/foo/package.json packages/foo/package.json
 
 # 4) Activate the vendored Yarn (no network fetch)
@@ -31,6 +32,9 @@ RUN yarn install --immutable
 
 # 6) Copy the rest of your source
 COPY . .
+
+# Build the shared code package
+RUN yarn workspace @kingstack/shapes build
 
 # 👇 Generate the Prisma client using the shared schema
 RUN yarn workspace @kingstack/prisma prisma generate
@@ -50,5 +54,6 @@ WORKDIR /app
 COPY --from=build /app/apps/backend/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/backend/package.json ./
+COPY --from=build /app/packages/shapes ./packages/shapes
 
 CMD ["node", "dist/main"]
