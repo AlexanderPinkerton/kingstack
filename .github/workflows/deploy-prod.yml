@@ -1,0 +1,70 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  run-migrations:
+    environment: production
+    env:
+      SUPABASE_DB_DIRECT_URL: ${{ secrets.SUPABASE_DB_DIRECT_URL }}
+      SUPABASE_DB_POOL_URL: ${{ secrets.SUPABASE_DB_POOL_URL }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: Cache Yarn
+        uses: actions/cache@v4
+        with:
+          path: |
+            .yarn/cache
+            .yarn/install-state.gz
+            .yarn/unplugged
+            .pnp.*
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Run Prisma Migrations
+        run: npx prisma migrate deploy --schema=packages/prisma/schema.prisma
+
+  deploy:
+    environment: production
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    runs-on: ubuntu-latest
+    needs: run-migrations
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: Cache Yarn
+        uses: actions/cache@v4
+        with:
+          path: |
+            .yarn/cache
+            .yarn/install-state.gz
+            .yarn/unplugged
+            .pnp.*
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Link Vercel Project
+        run: npx vercel link --yes --cwd apps/frontend --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID
+      - name: Deploy to Vercel
+        run: npx vercel deploy --prod --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID --yes
