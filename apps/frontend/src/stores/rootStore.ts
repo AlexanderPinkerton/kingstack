@@ -64,15 +64,21 @@ export class RootStore {
         "/api/user",
         "GET",
       );
-      
+
       if (userResponse.ok) {
         const userData = await userResponse.json();
         runInAction(() => {
           this.userData = userData;
-          console.log("✅ RootStore: User data fetched successfully:", userData);
+          console.log(
+            "✅ RootStore: User data fetched successfully:",
+            userData,
+          );
         });
       } else {
-        console.error("❌ RootStore: Failed to fetch user data:", userResponse.status);
+        console.error(
+          "❌ RootStore: Failed to fetch user data:",
+          userResponse.status,
+        );
       }
     } catch (error) {
       console.error("❌ RootStore: Error fetching user data:", error);
