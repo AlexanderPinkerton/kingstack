@@ -20,7 +20,7 @@ datasource db {
 model user {
     id                  String    @id @default(cuid())
     email               String    @unique
-    username            String?   @unique @db.VarChar(40)
+    username            String    @unique @db.VarChar(40)
     username_changed_at DateTime?
     previous_usernames  String[]
     posts               post[]
