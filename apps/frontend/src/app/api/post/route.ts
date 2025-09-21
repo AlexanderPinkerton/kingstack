@@ -1,25 +1,25 @@
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { PrismaClient } from "@prisma/client";
 
-import { createClient } from "@/lib/supabase/serverClient";
+import { getUserAuthDetails } from "@/lib/admin-utils";
 
 const prisma: PrismaClient = new PrismaClient();
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
     // Get the session JWT token from the request headers
-    const jwt = request.headers.get("Authorization")?.replace("Bearer ", "");
+    const jwt =
+      request.headers.get("Authorization")?.replace("Bearer ", "") || null;
 
-    const user = await supabase.auth.getUser(jwt);
+    const authDetails = await getUserAuthDetails(jwt);
 
-    if (!user.data.user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (!authDetails.isAuthenticated) {
+      return NextResponse.json(
+        { error: authDetails.error || "Unauthorized" },
+        { status: 401 },
+      );
     }
-
-    console.log("USER:", user);
 
     const posts = await prisma.post.findMany();
 

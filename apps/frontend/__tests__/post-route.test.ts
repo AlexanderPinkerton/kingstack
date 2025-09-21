@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, expect, vi, type Mock } from 'vitest';
 import { GET as getPosts } from '../src/app/api/post/route';
 import { PrismaClient } from '@prisma/client';
-import { createClient } from '@/lib/supabase/serverClient';
+import { getUserAuthDetails } from '@/lib/admin-utils';
 
 // --- Prisma Mock ---
 vi.mock('@prisma/client', () => {
@@ -15,9 +15,9 @@ vi.mock('@prisma/client', () => {
   };
 });
 
-// --- Supabase Mock ---
-vi.mock('@/lib/supabase/serverClient', () => ({
-  createClient: vi.fn(),
+// --- Admin Utils Mock ---
+vi.mock('@/lib/admin-utils', () => ({
+  getUserAuthDetails: vi.fn(),
 }));
 
 // --- Test Data ---
@@ -47,6 +47,13 @@ const fakeUser = {
   role: 'authenticated',
 };
 
+const fakeAuthDetails = {
+  isAuthenticated: true,
+  userId: 'user1',
+  userEmail: 'user1@example.com',
+  isAdmin: false,
+};
+
 function mockRequest(headers: Record<string, string> = {}) {
   return {
     headers: {
@@ -56,7 +63,6 @@ function mockRequest(headers: Record<string, string> = {}) {
 }
 
 describe('GET /api/post', () => {
-  let mockSupabase: any;
   let mockPrisma: any;
 
   beforeEach(() => {
@@ -65,22 +71,16 @@ describe('GET /api/post', () => {
     // Get the mocked Prisma instance
     mockPrisma = new PrismaClient();
     
-    // Setup Supabase mock with default behavior
-    mockSupabase = {
-      auth: {
-        getUser: vi.fn().mockResolvedValue({
-          data: { user: null },
-        }),
-      },
-    };
-    (createClient as any).mockResolvedValue(mockSupabase);
+    // Setup default mock behavior for getUserAuthDetails
+    (getUserAuthDetails as any).mockResolvedValue({
+      isAuthenticated: false,
+      error: 'No JWT token provided',
+    });
   });
 
   it('successfully returns posts when user is authenticated', async () => {
     // Mock successful authentication
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: { user: fakeUser },
-    });
+    (getUserAuthDetails as any).mockResolvedValue(fakeAuthDetails);
 
     // Mock successful database query
     mockPrisma.post.findMany.mockResolvedValue(fakePosts);
@@ -91,14 +91,15 @@ describe('GET /api/post', () => {
 
     expect(res.status).toBe(200);
     expect(json).toEqual(fakePosts);
-    expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('mocktoken');
+    expect(getUserAuthDetails).toHaveBeenCalledWith('mocktoken');
     expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
   });
 
   it('returns 401 when user is not authenticated', async () => {
     // Mock failed authentication
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: { user: null },
+    (getUserAuthDetails as any).mockResolvedValue({
+      isAuthenticated: false,
+      error: 'Invalid user data',
     });
 
     const req = mockRequest({ Authorization: 'Bearer invalidtoken' });
@@ -106,8 +107,8 @@ describe('GET /api/post', () => {
     const json = await res.json();
 
     expect(res.status).toBe(401);
-    expect(json).toEqual({ error: 'Unauthorized' });
-    expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('invalidtoken');
+    expect(json).toEqual({ error: 'Invalid user data' });
+    expect(getUserAuthDetails).toHaveBeenCalledWith('invalidtoken');
     expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
   });
 
@@ -117,27 +118,30 @@ describe('GET /api/post', () => {
     const json = await res.json();
 
     expect(res.status).toBe(401);
-    expect(json).toEqual({ error: 'Unauthorized' });
-    expect(mockSupabase.auth.getUser).toHaveBeenCalledWith(undefined);
+    expect(json).toEqual({ error: 'No JWT token provided' });
+    expect(getUserAuthDetails).toHaveBeenCalledWith(null);
     expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
   });
 
   it('returns 401 when authorization header is malformed', async () => {
+    (getUserAuthDetails as any).mockResolvedValue({
+      isAuthenticated: false,
+      error: 'Invalid user data',
+    });
+
     const req = mockRequest({ Authorization: 'InvalidFormat' });
     const res = await getPosts(req);
     const json = await res.json();
 
     expect(res.status).toBe(401);
-    expect(json).toEqual({ error: 'Unauthorized' });
-    expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('InvalidFormat');
+    expect(json).toEqual({ error: 'Invalid user data' });
+    expect(getUserAuthDetails).toHaveBeenCalledWith('InvalidFormat');
     expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
   });
 
   it('returns empty array when no posts exist', async () => {
     // Mock successful authentication
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: { user: fakeUser },
-    });
+    (getUserAuthDetails as any).mockResolvedValue(fakeAuthDetails);
 
     // Mock empty database result
     mockPrisma.post.findMany.mockResolvedValue([]);
@@ -148,15 +152,13 @@ describe('GET /api/post', () => {
 
     expect(res.status).toBe(200);
     expect(json).toEqual([]);
-    expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('mocktoken');
+    expect(getUserAuthDetails).toHaveBeenCalledWith('mocktoken');
     expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
   });
 
   it('handles database errors gracefully', async () => {
     // Mock successful authentication
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: { user: fakeUser },
-    });
+    (getUserAuthDetails as any).mockResolvedValue(fakeAuthDetails);
 
     // Mock database error
     const dbError = new Error('Database connection failed');
@@ -168,30 +170,30 @@ describe('GET /api/post', () => {
 
     expect(res.status).toBe(500);
     expect(json).toEqual({ error: 'Internal server error' });
-    expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('mocktoken');
+    expect(getUserAuthDetails).toHaveBeenCalledWith('mocktoken');
     expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
   });
 
-  it('handles Supabase auth errors gracefully', async () => {
-    // Mock Supabase auth error
-    const authError = new Error('Supabase auth error');
-    mockSupabase.auth.getUser.mockRejectedValue(authError);
+  it('handles auth errors gracefully', async () => {
+    // Mock auth error
+    (getUserAuthDetails as any).mockResolvedValue({
+      isAuthenticated: false,
+      error: 'Supabase auth error',
+    });
 
     const req = mockRequest({ Authorization: 'Bearer mocktoken' });
     const res = await getPosts(req);
     const json = await res.json();
 
-    expect(res.status).toBe(500);
-    expect(json).toEqual({ error: 'Internal server error' });
-    expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('mocktoken');
+    expect(res.status).toBe(401);
+    expect(json).toEqual({ error: 'Supabase auth error' });
+    expect(getUserAuthDetails).toHaveBeenCalledWith('mocktoken');
     expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
   });
 
   it('correctly extracts JWT token from Authorization header', async () => {
     // Mock successful authentication
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: { user: fakeUser },
-    });
+    (getUserAuthDetails as any).mockResolvedValue(fakeAuthDetails);
 
     // Mock successful database query
     mockPrisma.post.findMany.mockResolvedValue(fakePosts);
@@ -200,14 +202,12 @@ describe('GET /api/post', () => {
     const res = await getPosts(req);
 
     expect(res.status).toBe(200);
-    expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+    expect(getUserAuthDetails).toHaveBeenCalledWith('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
   });
 
   it('handles case when posts array is null', async () => {
     // Mock successful authentication
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: { user: fakeUser },
-    });
+    (getUserAuthDetails as any).mockResolvedValue(fakeAuthDetails);
 
     // Mock null database result
     mockPrisma.post.findMany.mockResolvedValue(null);
@@ -218,7 +218,7 @@ describe('GET /api/post', () => {
 
     expect(res.status).toBe(200);
     expect(json).toBeNull();
-    expect(mockSupabase.auth.getUser).toHaveBeenCalledWith('mocktoken');
+    expect(getUserAuthDetails).toHaveBeenCalledWith('mocktoken');
     expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
   });
 });
