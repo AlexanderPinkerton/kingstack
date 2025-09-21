@@ -1,9 +1,11 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import { useContext } from "react";
+import { io, Socket } from "socket.io-client";
 import { PostStore } from "./postStore";
 import { createClient } from "@/lib/supabase/browserClient";
 import { fetchInternal } from "@/lib/utils";
 import { RootStoreContext } from "@/context/rootStoreContext";
+import { RealtimeStore } from "./interfaces/RealtimeStore";
 
 const supabase = createClient();
 
@@ -11,6 +13,10 @@ export class RootStore {
   postStore: PostStore;
   session: any = null;
   userData: any = null;
+  
+  // WebSocket connection management
+  socket: Socket | null = null;
+  browserId: string = Math.random().toString(36).substring(7);
 
   constructor() {
     console.log("🔧 RootStore: Constructor called", Math.random());
@@ -39,15 +45,15 @@ export class RootStore {
         if (session?.access_token && event === "SIGNED_IN") {
           // Handle auth-required setup here
           console.log("✅ RootStore: Session established, setting up realtime");
-          // Setup realtime for posts
-          this.postStore.setupRealtime(session.access_token);
+          // Setup realtime connection
+          this.setupRealtime(session.access_token);
           // Fetch user data when session is established
           this.fetchUserData();
         } else if (!session?.access_token) {
           // Handle auth-required teardown here
           console.log("❌ RootStore: Session lost, tearing down realtime");
-          // Teardown realtime for posts
-          this.postStore.teardownRealtime();
+          // Teardown realtime connection
+          this.teardownRealtime();
           // Clear user data when session is lost
           this.userData = null;
         }
@@ -55,6 +61,59 @@ export class RootStore {
     });
 
     console.log("🔧 RootStore: Initialized");
+  }
+
+  setupRealtime(token: string) {
+    console.log("[RootStore] setupRealtime called");
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    
+    const REALTIME_SERVER_URL =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    
+    this.socket = io(REALTIME_SERVER_URL, {
+      transports: ["websocket"],
+      autoConnect: true,
+    });
+    
+    this.socket.on("connect", () => {
+      console.log("[RootStore] Realtime socket connected");
+      this.socket?.emit("register", {
+        token,
+        browserId: this.browserId,
+      });
+      
+      // Setup domain-specific event handlers
+      this.setupDomainEventHandlers();
+    });
+    
+    this.socket.on("disconnect", () => {
+      console.log("[RootStore] Realtime socket disconnected");
+    });
+  }
+
+  teardownRealtime() {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+  }
+
+  private setupDomainEventHandlers() {
+    if (!this.socket) return;
+    
+    // Get all domain stores that implement RealtimeStore
+    const realtimeStores: RealtimeStore[] = [
+      this.postStore,
+      // Add other domain stores here as they are created
+    ];
+    
+    // Setup event handlers for each domain store
+    realtimeStores.forEach(store => {
+      store.setupRealtimeHandlers(this.socket!);
+    });
   }
 
   async fetchUserData() {

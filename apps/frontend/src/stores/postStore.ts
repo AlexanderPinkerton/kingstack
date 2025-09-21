@@ -1,11 +1,12 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import { type RootStore } from "./rootStore";
-import { io, Socket } from "socket.io-client";
+import { Socket } from "socket.io-client";
 
 import type { PostDSS, FullPostData } from "../../../../packages/shapes/post/PostDSS";
 import { fetchWithAuth } from "../lib/utils";
+import { RealtimeStore } from "./interfaces/RealtimeStore";
 
-export class PostStore {
+export class PostStore implements RealtimeStore {
   rootStore: RootStore;
 
   // Map of postId to PostDSS (cache)
@@ -13,47 +14,19 @@ export class PostStore {
   loading = false;
   error: string | null = null;
 
-  socket: Socket | null = null;
-  browserId: string = Math.random().toString(36).substring(7);
-
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     makeAutoObservable(this);
   }
 
-  setupRealtime(token: string) {
-    console.log("[PostStore] setupRealtime called");
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-    }
-    const REALTIME_SERVER_URL =
-      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-    this.socket = io(REALTIME_SERVER_URL, {
-      transports: ["websocket"],
-      autoConnect: true,
-    });
-    this.socket.on("connect", () => {
-      console.log("[PostStore] Realtime socket connected");
-      this.socket?.emit("register", {
-        token,
-        browserId: this.browserId,
-      });
-    });
-    this.socket.on("post_update", (data: any) => {
+  setupRealtimeHandlers(socket: Socket) {
+    console.log("[PostStore] Setting up realtime handlers");
+    
+    // Listen for post updates
+    socket.on("post_update", (data: any) => {
       console.log("[PostStore] Received post_update:", data);
       this.handleRealtimePostUpdate(data);
     });
-    this.socket.on("disconnect", () => {
-      console.log("[PostStore] Realtime socket disconnected");
-    });
-  }
-
-  teardownRealtime() {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-    }
   }
 
   // Handle realtime post updates
