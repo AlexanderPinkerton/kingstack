@@ -4,9 +4,10 @@ generator client {
 }
 
 datasource db {
-    provider  = "postgresql"
-    url       = env("SUPABASE_DB_POOL_URL")
-    directUrl = env("SUPABASE_DB_DIRECT_URL")
+    provider          = "postgresql"
+    url               = env("SUPABASE_DB_POOL_URL")
+    directUrl         = env("SUPABASE_DB_DIRECT_URL")
+    shadowDatabaseUrl = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 }
 
 // 🔥 Golden Rules:
@@ -17,11 +18,13 @@ datasource db {
 // Always update the db triggers in scripts/install-custom-user-trigger.ts if you change the user model 
 // ❗❗❗ Not doing this will BREAK ALL AUTH FOR THE APP ❗❗❗ 
 model user {
-    id         String   @id @default(cuid())
-    email      String   @unique
-    name       String?
-    posts      post[]
-    created_at DateTime @default(now())
+    id                  String    @id @default(cuid())
+    email               String    @unique
+    username            String?   @unique @db.VarChar(40)
+    username_changed_at DateTime?
+    previous_usernames  String[]
+    posts               post[]
+    created_at          DateTime  @default(now())
 }
 
 model post {
