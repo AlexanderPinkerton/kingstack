@@ -1,13 +1,14 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import { PostStore } from "./postStore";
-
 import { createClient } from "@/lib/supabase/browserClient";
+import { fetchInternal } from "@/lib/utils";
 
 const supabase = createClient();
 
 export class RootStore {
   postStore: PostStore;
   session: any = null;
+  userData: any = null;
 
   constructor() {
     console.log("🔧 RootStore: Constructor called", Math.random());
@@ -15,9 +16,10 @@ export class RootStore {
     this.postStore = new PostStore(this);
     this.session = null;
 
-    // Make session observable before setting up auth listener
+    // Make session and userData observable before setting up auth listener
     makeAutoObservable(this, {
       session: true, // Ensure session is observable
+      userData: true, // Ensure userData is observable
     });
 
     supabase.auth.onAuthStateChange((event: any, session: any) => {
@@ -35,14 +37,46 @@ export class RootStore {
         if (session?.access_token && event === "SIGNED_IN") {
           // Handle auth-required setup here
           console.log("✅ RootStore: Session established");
+          // Fetch user data when session is established
+          this.fetchUserData();
         } else if (!session?.access_token) {
           // Handle auth-required teardown here
           console.log("❌ RootStore: Session lost");
+          // Clear user data when session is lost
+          this.userData = null;
         }
       });
     });
 
     console.log("🔧 RootStore: Initialized");
+  }
+
+  async fetchUserData() {
+    if (!this.session?.access_token) {
+      console.log("🔄 RootStore: No session available for user data fetch");
+      return;
+    }
+
+    console.log("🔄 RootStore: Fetching user data");
+    try {
+      const userResponse = await fetchInternal(
+        this.session.access_token,
+        "/api/user",
+        "GET",
+      );
+      
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        runInAction(() => {
+          this.userData = userData;
+          console.log("✅ RootStore: User data fetched successfully:", userData);
+        });
+      } else {
+        console.error("❌ RootStore: Failed to fetch user data:", userResponse.status);
+      }
+    } catch (error) {
+      console.error("❌ RootStore: Error fetching user data:", error);
+    }
   }
 
   async refreshSession() {
@@ -63,9 +97,12 @@ export class RootStore {
             userEmail: this.session?.user?.email,
           });
         });
+        // Fetch user data for new session
+        this.fetchUserData();
       } else if (this.session && !result.data.session) {
         runInAction(() => {
           this.session = null;
+          this.userData = null;
           console.log("🔄 RootStore: Session cleared from refresh");
         });
       } else {

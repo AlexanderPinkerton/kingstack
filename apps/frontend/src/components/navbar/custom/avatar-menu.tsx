@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useContext, useState, useEffect, useCallback } from "react";
+import React, { useContext, useCallback } from "react";
 import Link from "next/link";
 import { User, LogOut } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { RootStoreContext } from "@/context/rootStoreContext";
 import { observer } from "mobx-react-lite";
 import { createClient } from "@/lib/supabase/browserClient";
-import { fetchInternal } from "@/lib/utils";
 
 interface AvatarMenuProps {
   className?: string;
@@ -29,33 +28,6 @@ export const AvatarMenu = observer(function AvatarMenu({
   const supabase = createClient();
   const session = rootStore.session;
   const user = session?.user;
-
-  // TODO: GET DATA FROM STORE
-  const [userData, setUserData] = useState<any>(null);
-
-  // Fetch user data
-  const fetchUserData = useCallback(async () => {
-    if (session?.user) {
-      try {
-        // Fetch user data
-        const userResponse = await fetchInternal(
-          session?.access_token,
-          "/api/user",
-          "GET",
-        );
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          setUserData(userData);
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    }
-  }, [session?.user]);
-
-  useEffect(() => {
-    fetchUserData();
-  }, [fetchUserData]);
 
   const handleLogout = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
@@ -106,7 +78,7 @@ export const AvatarMenu = observer(function AvatarMenu({
             </DropdownMenuLabel>
             <div className="mb-2">
               <div className="text-sm text-slate-200 font-medium">
-                {userData?.username || "No username"}
+                {rootStore.userData?.username || "No username"}
               </div>
               <div
                 className="text-xs text-slate-400 max-w-xs break-all whitespace-normal truncate"
