@@ -52,19 +52,21 @@ export default observer(function HomePage() {
                     await rootStore.postStore.fetchPosts();
                   }}
                 >
-                  Fetch Posts
-                </ThemedButton>
-                <ThemedButton
-                  onClick={async () => {
-                    await rootStore.postStore.fetchPosts2();
-                  }}
-                >
-                  Fetch Posts 2
+                  Load Posts
                 </ThemedButton>
                 {/* Button which will create posts */}
                 <ThemedButton
                   onClick={async () => {
-                    await rootStore.postStore.createPost();
+                    try {
+                      await rootStore.postStore.createPost({
+                        title: `Test Post ${Date.now()}`,
+                        content: "This is a test post created from the home page",
+                        published: true,
+                      });
+                      // Real-time updates will handle adding the post to the UI
+                    } catch (error) {
+                      console.error("Failed to create post:", error);
+                    }
                   }}
                 >
                   Create Posts
@@ -74,12 +76,12 @@ export default observer(function HomePage() {
                   <div className="mt-4 flex flex-col gap-4 w-full">
                     {rootStore.postStore.getPosts().map((post, index) => (
                       <PostCard
-                        key={index}
+                        key={post.id}
                         title={post.title}
-                        content={post.content}
+                        content={post.content || ""}
                         published={post.published}
-                        author={post.author}
-                        timestamp={post.timestamp}
+                        author={post.author_id}
+                        timestamp={post.created_at}
                       />
                     ))}
                   </div>

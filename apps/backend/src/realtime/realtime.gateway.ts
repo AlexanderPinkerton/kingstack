@@ -156,24 +156,36 @@ export class RealtimeGateway
   private async handlePostRealtime(payload: any) {
     try {
       const post = payload.new || payload.old;
+      const eventType = payload.eventType;
 
       if (!post) {
         this.logger.log("No post data in payload");
         return;
       }
 
-      // Only broadcast if the post is published
-      if (post.published === true) {
+      this.logger.log(`Post realtime event: ${eventType} - ${post.id} - ${post.title} - published: ${post.published}`);
+
+      // For INSERT and UPDATE events, only broadcast if the post is published
+      if ((eventType === "INSERT" || eventType === "UPDATE") && post.published === true) {
         this.logger.log(`Broadcasting post update: ${post.id} - ${post.title}`);
 
         // Send to all connected clients
         this.broadcastToAllClients({
           type: "post_update",
-          event: payload.eventType,
+          event: eventType,
+          post: post,
+        });
+      } else if (eventType === "DELETE") {
+        // For DELETE events, always broadcast regardless of published status
+        this.logger.log(`Broadcasting post deletion: ${post.id}`);
+
+        this.broadcastToAllClients({
+          type: "post_update",
+          event: eventType,
           post: post,
         });
       } else {
-        this.logger.log(`Post ${post.id} is not published, skipping broadcast`);
+        this.logger.log(`Post ${post.id} is not published or event is not relevant, skipping broadcast`);
       }
     } catch (err) {
       this.logger.error("Error handling post realtime update:", err);

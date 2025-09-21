@@ -21,3 +21,31 @@ export function fetchInternal(
     body: body ? JSON.stringify(body) : undefined,
   });
 }
+
+export function fetchWithAuth(
+  token: string,
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) {
+  if (!token) {
+    throw new Error("No token provided");
+  }
+
+  const headers = new Headers(init?.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+
+  // Set default Content-Type if not already set
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  // Set default Accept if not already set
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
+
+  return fetch(input, {
+    ...init,
+    headers,
+  });
+}

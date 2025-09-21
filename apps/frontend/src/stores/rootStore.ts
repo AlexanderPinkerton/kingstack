@@ -1,7 +1,9 @@
 import { makeAutoObservable, runInAction } from "mobx";
+import { useContext } from "react";
 import { PostStore } from "./postStore";
 import { createClient } from "@/lib/supabase/browserClient";
 import { fetchInternal } from "@/lib/utils";
+import { RootStoreContext } from "@/context/rootStoreContext";
 
 const supabase = createClient();
 
@@ -36,12 +38,16 @@ export class RootStore {
 
         if (session?.access_token && event === "SIGNED_IN") {
           // Handle auth-required setup here
-          console.log("✅ RootStore: Session established");
+          console.log("✅ RootStore: Session established, setting up realtime");
+          // Setup realtime for posts
+          this.postStore.setupRealtime(session.access_token);
           // Fetch user data when session is established
           this.fetchUserData();
         } else if (!session?.access_token) {
           // Handle auth-required teardown here
-          console.log("❌ RootStore: Session lost");
+          console.log("❌ RootStore: Session lost, tearing down realtime");
+          // Teardown realtime for posts
+          this.postStore.teardownRealtime();
           // Clear user data when session is lost
           this.userData = null;
         }

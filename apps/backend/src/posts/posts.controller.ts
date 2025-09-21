@@ -20,7 +20,11 @@ export class PostsController {
   async getPosts() {
     // Use the Prisma client to fetch posts from the database
     console.log("Fetching posts from the database...");
-    const posts = await this.prisma.post.findMany();
+    const posts = await this.prisma.post.findMany({
+      orderBy: {
+        created_at: "desc",
+      },
+    });
     console.log("Fetched posts:", posts);
     // Return the posts
     return posts;
