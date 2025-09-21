@@ -47,13 +47,22 @@ export default observer(function HomePage() {
                   You are logged in! Enjoy the futuristic experience.
                 </p>
                 {/* Button which will fetch posts */}
-                <ThemedButton
-                  onClick={async () => {
-                    await rootStore.postStore.fetchPosts();
-                  }}
-                >
-                  Load Posts
-                </ThemedButton>
+                  <ThemedButton
+                    onClick={async () => {
+                      await rootStore.postStore.fetchPosts();
+                    }}
+                  >
+                    Load Posts
+                  </ThemedButton>
+                  <ThemedButton
+                    onClick={async () => {
+                      await rootStore.postStore.fetchPosts({ 
+                        nestjs: true 
+                      });
+                    }}
+                  >
+                    Load Posts (NestJS)
+                  </ThemedButton>
                 {/* Button which will create posts */}
                 <ThemedButton
                   onClick={async () => {

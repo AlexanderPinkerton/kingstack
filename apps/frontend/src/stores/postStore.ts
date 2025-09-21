@@ -83,14 +83,20 @@ export class PostStore implements RealtimeStore {
   }
 
   // Fetch posts from the API endpoint
-  async fetchPosts() {
+  async fetchPosts(options: { nestjs: boolean } = { nestjs: false }) {
     this.loading = true;
     this.error = null;
     
     try {
+
+      let url = "/api/post";
+      if (options.nestjs) {
+        url = process.env.NEXT_PUBLIC_NEST_BACKEND_URL + "/posts";
+      }
+
       const response = await fetchWithAuth(
         this.rootStore.session?.access_token,
-        "/api/post"
+        url
       );
 
       if (!response.ok)
