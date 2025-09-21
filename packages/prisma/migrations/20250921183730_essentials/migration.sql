@@ -1,4 +1,4 @@
--- Fix supabase breaking after prisma reset
+-- This is an empty migration.-- Fix supabase breaking after prisma reset
 grant usage on schema public to postgres, anon, authenticated, service_role;
 
 grant all privileges on all tables in schema public to postgres, anon, authenticated, service_role;
