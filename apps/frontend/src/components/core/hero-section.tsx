@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Navbar } from "./navbar";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 

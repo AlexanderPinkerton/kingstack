@@ -1,0 +1,1 @@
+export { UsernameGenerator } from './UsernameGenerator';

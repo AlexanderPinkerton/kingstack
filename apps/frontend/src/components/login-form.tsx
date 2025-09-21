@@ -10,23 +10,67 @@ import { ThemedLabel } from "@/components/ui/themed-label";
 import { ThemedErrorText } from "@/components/ui/themed-error-text";
 import { ThemedSuccessText } from "@/components/ui/themed-success-text";
 
-import { useContext, useState } from "react";
-import { SupabaseClientContext } from "@/context/supabaseClientContext";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/browserClient";
+import { UsernameGenerator } from "@kingstack/shapes";
+import { APPNAME } from "@kingstack/shapes";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const supabase = useContext(SupabaseClientContext);
+  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "register">("login");
-  // Registration/KYC state
+  // Registration state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [dob, setDob] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Username validation and suggestions
+  const validateUsername = async (username: string) => {
+    if (!username) {
+      setUsernameError(null);
+      return;
+    }
+
+    const validation = UsernameGenerator.validateUsername(username);
+    if (!validation.isValid) {
+      setUsernameError(validation.error || "Invalid username");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/username/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+
+      if (response.ok) {
+        setUsernameError(null);
+      } else {
+        const data = await response.json();
+        setUsernameError(data.error || "Username is not available");
+      }
+    } catch (error) {
+      console.error("Username validation error:", error);
+      setUsernameError("Error checking username availability");
+    }
+  };
+
+  // Debounced username validation
+  useEffect(() => {
+    if (mode === "register" && username) {
+      const timeoutId = setTimeout(() => {
+        validateUsername(username);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [username, mode]);
 
   async function onLogin(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -69,17 +113,27 @@ export function LoginForm({
         });
         if (error) setFormError(error.message);
       } else {
-        // Registration with KYC
-        if (!email || !password || !fullName || !dob) {
+        // Registration with username
+        if (!email || !password || !username) {
           setFormError("Please fill out all fields.");
           setLoading(false);
           return;
         }
+
+        // Check if username is valid and available
+        if (usernameError) {
+          setFormError("Please fix the username error before continuing.");
+          setLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: { fullName, dob },
+            data: {
+              username: username,
+            },
           },
         });
         if (error) {
@@ -91,8 +145,8 @@ export function LoginForm({
           // Clear form fields
           setEmail("");
           setPassword("");
-          setFullName("");
-          setDob("");
+          setUsername("");
+          setUsernameError(null);
           // Optionally switch to login mode after a short delay
           setTimeout(() => {
             setMode("login");
@@ -122,21 +176,23 @@ export function LoginForm({
               <GradientText className="text-3xl font-bold tracking-tight">
                 {mode === "login"
                   ? "Login to your account"
-                  : "Register for Kingstack"}
+                  : "Register for " + APPNAME}
               </GradientText>
               <div className="mt-2 text-gray-300 text-sm">
                 {mode === "login"
                   ? "Enter your email below to login to your account"
-                  : "Sign up with your email and complete KYC to get started."}
+                  : "Sign up with your email to get started. You'll verify your identity after registration."}
               </div>
             </div>
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
-                <ThemedLabel htmlFor="email">Email</ThemedLabel>
+                <ThemedLabel htmlFor="email" className="text-gray-300">
+                  Email
+                </ThemedLabel>
                 <ThemedInput
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
+                  placeholder=""
                   value={email}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setEmail(e.target.value)
@@ -144,9 +200,35 @@ export function LoginForm({
                   required
                 />
               </div>
+              {mode === "register" && (
+                <div className="grid gap-3">
+                  <ThemedLabel htmlFor="username" className="text-gray-300">
+                    Username
+                  </ThemedLabel>
+                  <ThemedInput
+                    id="username"
+                    type="text"
+                    placeholder="Choose a unique username"
+                    value={username}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      setUsername(e.target.value);
+                    }}
+                    required
+                  />
+                  {usernameError && (
+                    <ThemedErrorText>{usernameError}</ThemedErrorText>
+                  )}
+                  <div className="text-xs text-gray-400">
+                    3-40 characters, letters, numbers, underscores, and hyphens
+                    only
+                  </div>
+                </div>
+              )}
               <div className="grid gap-3">
                 <div className="flex items-center">
-                  <ThemedLabel htmlFor="password">Password</ThemedLabel>
+                  <ThemedLabel htmlFor="password" className="text-gray-300">
+                    Password
+                  </ThemedLabel>
                   {mode === "login" && (
                     <a
                       href="#"
@@ -166,35 +248,6 @@ export function LoginForm({
                   required
                 />
               </div>
-              {mode === "register" && (
-                <>
-                  <div className="grid gap-3">
-                    <ThemedLabel htmlFor="fullName">Full Name</ThemedLabel>
-                    <ThemedInput
-                      id="fullName"
-                      type="text"
-                      placeholder="Your full name"
-                      value={fullName}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setFullName(e.target.value)
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-3">
-                    <ThemedLabel htmlFor="dob">Date of Birth</ThemedLabel>
-                    <ThemedInput
-                      id="dob"
-                      type="date"
-                      value={dob}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setDob(e.target.value)
-                      }
-                      required
-                    />
-                  </div>
-                </>
-              )}
               <div className="flex flex-col gap-3">
                 <ThemedButton type="submit" disabled={loading}>
                   {loading
@@ -205,13 +258,13 @@ export function LoginForm({
                       ? "Login"
                       : "Register"}
                 </ThemedButton>
-                <ThemedOutlineButton
+                {/* <ThemedOutlineButton
                   onClick={onLogin}
                   disabled={loading}
                   type="button"
                 >
                   {loading ? "Redirecting..." : "Login with Google"}
-                </ThemedOutlineButton>
+                </ThemedOutlineButton> */}
               </div>
               {formError && <ThemedErrorText>{formError}</ThemedErrorText>}
               {successMsg && (
@@ -227,7 +280,7 @@ export function LoginForm({
                     className="underline underline-offset-4 text-[var(--accent-2-l)] hover:text-[var(--accent-mix)] transition"
                     onClick={() => setMode("register")}
                   >
-                    Sign up
+                    Register
                   </button>
                 </>
               ) : (

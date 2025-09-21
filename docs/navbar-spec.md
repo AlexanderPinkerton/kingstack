@@ -52,7 +52,6 @@ The desktop view should be as follows:
 - Right Section
     - Nav Links: A dynamic listing of links passed in by the navlinks prop ( title & href )
     - CTAs: A dynamic rendering of themed buttons passed in by the cta prop ( title & callback function )
-    - Scrilla Display: A specialty component - showing how much scrilla the user currently has
     - Avatar: A specialty component - A display of the user's avatar with a menu dropdown
 
 
@@ -62,7 +61,6 @@ The mobile view should be as follows:
 - Middle Secion
     - Empty
 - Right Section
-    - Scrilla Display: A specialty component - showing how much scrilla the user currently has
     - Hamburger button / X button ( depending on if nav list is open or closed)
 - Expanding nav list ( vertically under the navbar )
     - Nav Links: A dynamic listing of links passed in by the navlinks prop ( title & href )
@@ -112,4 +110,3 @@ I am envisioning a structure where there is a
 - presets/marketing.tsx - A wrapper around navbar with the links/ctas/specialty stuff already configured for marketing sites
 - custom/ - A folder to store all custom or specialty navbar components
 - custom/avatar-menu.tsx - The avatar icon w/ dropdown menu and all its advanced sections
-- custom/scrilla-counter.tsx - A view for showing the scrilla icon with a dynamic counter w/ animations
