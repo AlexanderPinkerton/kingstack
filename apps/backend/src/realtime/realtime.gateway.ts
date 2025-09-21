@@ -115,7 +115,7 @@ export class RealtimeGateway
     try {
       // First verify we can access the database
       const { data, error } = await this.supabase
-        .from("match_user_data")
+        .from("post")
         .select("id")
         .limit(1);
 
@@ -125,15 +125,15 @@ export class RealtimeGateway
       }
 
       this.subscriptionChannel = this.supabase
-        .channel("ween")
+        .channel("posts")
         .on(
           "postgres_changes",
           {
             event: "*",
             schema: "public",
-            table: "match_user_data", // Be specific about the table
+            table: "post",
           },
-          (payload: any) => this.handleDatabasePayload(payload),
+          (payload: any) => this.handlePostRealtime(payload),
         )
         .subscribe((status: any) => {
           this.logger.log(`Supabase channel status: ${status}`);
@@ -153,65 +153,46 @@ export class RealtimeGateway
     }
   }
 
-  private async handleDatabasePayload(payload: any) {
-    const matchId = payload.new?.match_id;
-    if (!matchId) return;
-    let matchUserData = null;
-    let matchData = null;
+  private async handlePostRealtime(payload: any) {
     try {
-      const mudResponse = await this.supabase
-        .from("match_user_data")
-        .select("*")
-        .eq("match_id", matchId);
-      if (!mudResponse.error) {
-        matchUserData = mudResponse.data;
+      const post = payload.new || payload.old;
+
+      if (!post) {
+        this.logger.log("No post data in payload");
+        return;
       }
-      const matchResponse = await this.supabase
-        .from("match")
-        .select("*")
-        .eq("id", matchId);
-      if (!matchResponse.error) {
-        matchData = matchResponse.data[0];
-      }
-      const userIds = mudResponse.error
-        ? [payload.new.user_id]
-        : mudResponse.data.map((mud: any) => mud.user_id);
-      const updatedPayload = {
-        ...payload,
-        matchUserData,
-        matchData,
-      };
-      for (const userId of userIds) {
-        const opponentUserId = userIds.find((id: any) => id !== userId);
-        let opponentUser = null;
-        if (opponentUserId) {
-          const opponentUserResp = await this.supabase
-            .from("user")
-            .select("*")
-            .eq("id", opponentUserId);
-          if (!opponentUserResp.error) {
-            opponentUser = opponentUserResp.data[0];
-          }
-        }
-        updatedPayload.opponentUser = opponentUser;
-        this.sendPayloadToUser(userId, updatedPayload);
+
+      // Only broadcast if the post is published
+      if (post.published === true) {
+        this.logger.log(`Broadcasting post update: ${post.id} - ${post.title}`);
+
+        // Send to all connected clients
+        this.broadcastToAllClients({
+          type: "post_update",
+          event: payload.eventType,
+          post: post,
+        });
+      } else {
+        this.logger.log(`Post ${post.id} is not published, skipping broadcast`);
       }
     } catch (err) {
-      this.logger.error("Error handling DB payload", err);
+      this.logger.error("Error handling post realtime update:", err);
     }
   }
 
-  private sendPayloadToUser(userId: string, payload: any) {
-    const userSocketMap = this.userSockets.get(userId);
-    if (!userSocketMap) {
-      this.logger.log(`No sockets found for user ${userId}`);
-      return;
+  private broadcastToAllClients(payload: any) {
+    let totalClients = 0;
+
+    for (const [userId, userSocketMap] of this.userSockets.entries()) {
+      for (const [browserId, socket] of Object.entries(userSocketMap)) {
+        this.logger.log(
+          `Sending post update to user ${userId}, browser ${browserId}`,
+        );
+        socket.emit("post_update", payload);
+        totalClients++;
+      }
     }
-    for (const [browserId, socket] of Object.entries(userSocketMap)) {
-      this.logger.log(
-        `Sending payload to user ${userId}, browser ${browserId}`,
-      );
-      socket.emit("db_update", payload);
-    }
+
+    this.logger.log(`Broadcasted post update to ${totalClients} clients`);
   }
 }
