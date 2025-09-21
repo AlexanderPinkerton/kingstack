@@ -28,13 +28,7 @@ export default observer(function Page() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-slate-900 flex flex-col">
-      <DefaultNavbar
-        navLinks={[
-          { title: "For Gamers", href: "/" },
-          { title: "For Developers", href: "/developers" },
-        ]}
-        ctas={[]} // No CTAs for login page
-      />
+      <DefaultNavbar navLinks={[]} ctas={[]} specialtyComponents={[]} />
       <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
         <div className="w-full max-w-md mx-auto">
           <LoginForm />

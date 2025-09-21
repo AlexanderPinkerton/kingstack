@@ -15,7 +15,7 @@ import { RootStoreContext } from "@/context/rootStoreContext";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { ThemeSelector } from "@/components/ui/ThemeSelector";
 
-import { DefaultNavbar } from "@/components/navbar/presets/default";
+import { AppNavbar } from "@/components/navbar/presets/app";
 
 // ThemeEditor: A simple live CSS variable editor
 import React from "react";
@@ -30,12 +30,7 @@ export default observer(function HomePage() {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-b from-black to-slate-900 text-white flex flex-col">
-        <DefaultNavbar
-          navLinks={[
-            { title: "For Gamers", href: "/" },
-            { title: "For Developers", href: "/developers" },
-          ]}
-        />
+        <AppNavbar/>
         <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-24">
           <div className="w-full max-w-xl mx-auto">
             <AnimatedBorderContainer>

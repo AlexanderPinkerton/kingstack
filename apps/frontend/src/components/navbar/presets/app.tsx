@@ -11,7 +11,7 @@ import { GradientText } from "@/components/ui/gradient-text";
 
 import { AvatarMenu } from "../custom/avatar-menu";
 
-interface DefaultNavbarProps {
+interface AppNavbarProps {
   className?: string;
   onNavLinkClick?: (href: string) => void;
   // Allow extending the default nav links and CTAs
@@ -20,17 +20,15 @@ interface DefaultNavbarProps {
   // Allow overriding the default nav links and CTAs completely
   navLinks?: NavLink[];
   ctas?: CTA[];
-  specialtyComponents?: React.ReactNode[];
 }
 
-export function DefaultNavbar({
+export function AppNavbar({
   className = "",
   navLinks,
   ctas,
   additionalNavLinks = [],
   additionalCtas = [],
-  specialtyComponents = [],
-}: DefaultNavbarProps) {
+}: AppNavbarProps) {
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -51,24 +49,13 @@ export function DefaultNavbar({
     </Link>
   ) : null;
 
-  // Navigation links for marketing pages
+  // Navigation links
   const presetNavLinks: NavLink[] = [
-    {
-      title: "Features",
-      href: "#features",
-      onClick: () => {
-        const element = document.getElementById("features");
-        element?.scrollIntoView({ behavior: "smooth" });
-      },
-    },
+    
   ];
 
-  // CTAs for marketing
+  // CTAs
   const presetCtas: CTA[] = [
-    {
-      title: "Log In",
-      onClick: () => (window.location.href = "/login"),
-    },
   ];
 
   const allNavLinks = [...presetNavLinks, ...additionalNavLinks];
@@ -77,10 +64,7 @@ export function DefaultNavbar({
   const finalNavLinks = navLinks !== undefined ? navLinks : allNavLinks;
   const finalCtas = ctas !== undefined ? ctas : allCtas;
 
-  const finalSpecialtyComponents =
-    specialtyComponents !== undefined
-      ? specialtyComponents
-      : [<AvatarMenu key="avatar-menu" />].filter(Boolean);
+  const specialtyComponents = [<AvatarMenu key="avatar" />].filter(Boolean);
 
   return (
     <Navbar
@@ -89,7 +73,7 @@ export function DefaultNavbar({
       ctas={finalCtas}
       className={className}
       transparent={true} // Marketing navbars are often transparent
-      specialtyComponents={finalSpecialtyComponents}
+      specialtyComponents={specialtyComponents}
     />
   );
 }
