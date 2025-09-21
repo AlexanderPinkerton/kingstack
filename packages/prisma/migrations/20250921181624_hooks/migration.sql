@@ -32,7 +32,7 @@ begin
   values (
     new.id,
     new.email,
-    new.raw_user_meta_data ->> 'username';
+    new.raw_user_meta_data ->> 'username'
   )
   on conflict (id) do nothing; -- Prevents error if user already exists
   return new;
