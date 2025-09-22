@@ -1,13 +1,12 @@
-// Generic Optimistic Store Pattern
-// A reusable framework for MobX + TanStack Query with optimistic updates
+// Generic Optimistic Store Pattern with Data Transformations
+// A reusable framework for MobX + TanStack Query with optimistic updates and API/UI data transformation
 
 import { makeAutoObservable, runInAction } from "mobx";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
 import { useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+// Note: Import TanStack Query types based on your installation
+// import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 // ---------- Core Types ----------
 
@@ -15,11 +14,20 @@ export interface Entity {
   id: string;
 }
 
-export interface EntityAPI<T extends Entity, TCreate = Omit<T, "id">, TUpdate = Partial<T>> {
-  list(): Promise<T[]>;
-  create(data: TCreate): Promise<T>;
-  update(id: string, data: TUpdate): Promise<T>;
+// Separate API and UI data types
+export interface EntityAPI<TApiData extends Entity, TCreate = Omit<TApiData, "id">, TUpdate = Partial<TApiData>> {
+  list(): Promise<TApiData[]>;
+  create(data: TCreate): Promise<TApiData>;
+  update(id: string, data: TUpdate): Promise<TApiData>;
   delete(id: string): Promise<{ id: string }>;
+}
+
+// Transformation interface
+export interface DataTransformer<TApiData extends Entity, TUiData extends Entity> {
+  toUi(apiData: TApiData): TUiData;
+  toApi(uiData: TUiData): TApiData;
+  // For partial updates - transform only the changed fields
+  toApiUpdate(uiData: Partial<TUiData>): Partial<TApiData>;
 }
 
 export interface OptimisticAction<TParams = any, TResult = any> {
@@ -66,6 +74,23 @@ export class OptimisticStore<T extends Entity> {
 
     // If membership changed, fall back to replaceAll
     this.replaceAll(list);
+  }
+
+  // Transform and store server data
+  replaceAllFromApi<TApiData extends Entity>(
+    apiList: TApiData[], 
+    transformer: DataTransformer<TApiData, T>
+  ) {
+    const uiList = apiList.map(transformer.toUi);
+    this.replaceAll(uiList);
+  }
+
+  reconcileFromApiServer<TApiData extends Entity>(
+    apiList: TApiData[], 
+    transformer: DataTransformer<TApiData, T>
+  ) {
+    const uiList = apiList.map(transformer.toUi);
+    this.reconcileFromServer(uiList);
   }
 
   upsert(entity: T) {
@@ -125,156 +150,184 @@ export class OptimisticStore<T extends Entity> {
   }
 }
 
-// ---------- Controller Factory ----------
+// ---------- Controller Factory (Template) ----------
 
-export interface ControllerConfig<T extends Entity, TCreate, TUpdate> {
+export interface ControllerConfig<TApiData extends Entity, TUiData extends Entity, TCreate, TUpdate> {
   queryKey: string[];
-  api: EntityAPI<T, TCreate, TUpdate>;
-  store: OptimisticStore<T>;
+  api: EntityAPI<TApiData, TCreate, TUpdate>;
+  store: OptimisticStore<TUiData>;
+  transformer?: DataTransformer<TApiData, TUiData>;
   staleTime?: number;
   customActions?: Record<string, OptimisticAction>;
 }
 
-export function createEntityController<
-  T extends Entity,
-  TCreate = Omit<T, "id">,
-  TUpdate = Partial<T>
->(config: ControllerConfig<T, TCreate, TUpdate>) {
-  return function useEntityController() {
-    const qc = useQueryClient();
-    const { queryKey, api, store, staleTime = 5_000, customActions = {} } = config;
 
-    // 1) Hydrate store from server
-    const query = useQuery({
-      queryKey,
-      queryFn: api.list,
-      staleTime,
-    });
-
-    useEffect(() => {
-      if (query.data) {
-        runInAction(() => {
-          store.reconcileFromServer(query.data!);
-        });
-      }
-    }, [query.data]);
-
-    // 2) Standard mutations
-    const create = useMutation({
-      mutationFn: api.create,
-      onMutate: async (data: TCreate) => {
-        await qc.cancelQueries({ queryKey });
-        store.pushSnapshot();
-        
-        // Create optimistic entity
-        const tempId = `temp_${Math.random().toString(36).slice(2, 7)}`;
-        const optimisticEntity = { id: tempId, ...data } as unknown as T;
-        store.upsert(optimisticEntity);
-        
-        return { tempId };
-      },
-      onError: () => store.rollback(),
-      onSuccess: (result: T, _vars: TCreate, ctx: any) => {
-        if (ctx?.tempId) store.remove(ctx.tempId);
-        store.upsert(result);
-      },
-      onSettled: () => {
-        store.commit();
-        qc.invalidateQueries({ queryKey });
-      },
-    });
-
-    const update = useMutation({
-      mutationFn: ({ id, data }: { id: string; data: TUpdate }) => api.update(id, data),
-      onMutate: async ({ id, data }: { id: string; data: TUpdate }) => {
-        await qc.cancelQueries({ queryKey });
-        store.pushSnapshot();
-        store.update(id, data as Partial<T>);
-        return { id, data };
-      },
-      onError: () => store.rollback(),
-      onSuccess: (result: T) => store.upsert(result),
-      onSettled: () => {
-        store.commit();
-        qc.invalidateQueries({ queryKey });
-      },
-    });
-
-    const remove = useMutation({
-      mutationFn: api.delete,
-      onMutate: async (id: string) => {
-        await qc.cancelQueries({ queryKey });
-        store.pushSnapshot();
-        store.remove(id);
-        return { id };
-      },
-      onError: () => store.rollback(),
-      onSuccess: () => { /* already removed optimistically */ },
-      onSettled: () => {
-        store.commit();
-        qc.invalidateQueries({ queryKey });
-      },
-    });
-
-    // 3) Custom actions
-    const customMutations = Object.entries(customActions).reduce((acc, [key, action]) => {
-      acc[key] = useMutation({
-        mutationFn: action.mutationFn,
-        onMutate: async (params: any) => {
+ export function createEntityController<
+   TApiData extends Entity,
+   TUiData extends Entity = TApiData,
+   TCreate = Omit<TApiData, "id">,
+   TUpdate = Partial<TApiData>
+ >(config: ControllerConfig<TApiData, TUiData, TCreate, TUpdate>) {
+   return function useEntityController() {
+     const qc = useQueryClient();
+     const { queryKey, api, store, transformer, staleTime = 5_000, customActions = {} } = config;
+ 
+     // 1) Hydrate store from server
+     const query = useQuery({
+       queryKey,
+       queryFn: api.list,
+       staleTime,
+     });
+ 
+     useEffect(() => {
+       if (query.data) {
+         runInAction(() => {
+           if (transformer) {
+             store.reconcileFromApiServer(query.data!, transformer);
+           } else {
+             store.reconcileFromServer(query.data! as unknown as TUiData[]);
+           }
+         });
+       }
+     }, [query.data]);
+ 
+     // 2) Standard mutations with transformation support
+     const create = useMutation({
+       mutationFn: api.create,
+       onMutate: async (data: TCreate) => {
+         await qc.cancelQueries({ queryKey });
+         store.pushSnapshot();
+         
+         const tempId = `temp_${Math.random().toString(36).slice(2, 7)}`;
+         let optimisticEntity: TUiData;
+         
+         if (transformer) {
+           const apiData = { id: tempId, ...data } as unknown as TApiData;
+           optimisticEntity = transformer.toUi(apiData);
+         } else {
+           optimisticEntity = { id: tempId, ...data } as unknown as TUiData;
+         }
+         
+         store.upsert(optimisticEntity);
+         return { tempId };
+       },
+       onError: () => store.rollback(),
+       onSuccess: (result: TApiData, _vars: TCreate, ctx: any) => {
+         if (ctx?.tempId) store.remove(ctx.tempId);
+         const uiResult = transformer ? transformer.toUi(result) : (result as unknown as TUiData);
+         store.upsert(uiResult);
+       },
+       onSettled: () => {
+         store.commit();
+         qc.invalidateQueries({ queryKey });
+       },
+     });
+ 
+      const update = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: TUpdate }) => api.update(id, data),
+        onMutate: async ({ id, data }: { id: string; data: TUpdate }) => {
           await qc.cancelQueries({ queryKey });
           store.pushSnapshot();
-          action.onOptimistic?.(params, store);
-          return params;
+          
+          // Transform update data if needed
+          if (transformer) {
+            // This is tricky - we need to convert UI partial updates to API partial updates
+            // For now, we'll do a simple cast, but this could be enhanced
+            const uiUpdates = data as unknown as Partial<TUiData>;
+            store.update(id, uiUpdates);
+          } else {
+            store.update(id, data as unknown as Partial<TUiData>);
+          }
+          
+          return { id, data };
         },
-        onError: (error: Error, params: any) => {
-          store.rollback();
-          action.onError?.(error, params, store);
-        },
-        onSuccess: (result: any, params: any) => {
-          action.onSuccess?.(result, params, store);
+        onError: () => store.rollback(),
+        onSuccess: (result: TApiData) => {
+          const uiResult = transformer ? transformer.toUi(result) : (result as unknown as TUiData);
+          store.upsert(uiResult);
         },
         onSettled: () => {
           store.commit();
           qc.invalidateQueries({ queryKey });
         },
       });
-      return acc;
-    }, {} as Record<string, any>);
 
-    // 4) Status aggregation
-    const mutations = [create, update, remove, ...Object.values(customMutations)];
-    const isPending = mutations.some(m => m.isPending);
-    const isSyncing = isPending || query.isFetching;
+      const remove = useMutation({
+        mutationFn: api.delete,
+        onMutate: async (id: string) => {
+          await qc.cancelQueries({ queryKey });
+          store.pushSnapshot();
+          store.remove(id);
+          return { id };
+        },
+        onError: () => store.rollback(),
+        onSuccess: () => { /* already removed optimistically */ },
+        onSettled: () => {
+          store.commit();
+          qc.invalidateQueries({ queryKey });
+        },
+      });
 
-    return {
-      store,
-      actions: {
-        create: (data: TCreate) => create.mutate(data),
-        update: (id: string, data: TUpdate) => update.mutate({ id, data }),
-        remove: (id: string) => remove.mutate(id),
-        refetch: () => query.refetch(),
-        ...Object.entries(customMutations).reduce((acc, [key, mutation]) => {
-          acc[key] = (params: any) => mutation.mutate(params);
-          return acc;
-        }, {} as Record<string, any>),
-      },
-      status: {
-        isLoading: query.isLoading,
-        isError: query.isError,
-        error: (query.error as Error) ?? null,
-        isPending,
-        isSyncing,
-        createPending: create.isPending,
-        updatePending: update.isPending,
-        deletePending: remove.isPending,
-        ...Object.entries(customMutations).reduce((acc, [key, mutation]) => {
-          acc[`${key}Pending`] = mutation.isPending;
-          return acc;
-        }, {} as Record<string, boolean>),
-      },
-    } as const;
-  };
-}
+      // 3) Custom actions
+      const customMutations = Object.entries(customActions).reduce((acc, [key, action]) => {
+        acc[key] = useMutation({
+          mutationFn: action.mutationFn,
+          onMutate: async (params: any) => {
+            await qc.cancelQueries({ queryKey });
+            store.pushSnapshot();
+            action.onOptimistic?.(params, store);
+            return params;
+          },
+          onError: (error: Error, params: any) => {
+            store.rollback();
+            action.onError?.(error, params, store);
+          },
+          onSuccess: (result: any, params: any) => {
+            action.onSuccess?.(result, params, store);
+          },
+          onSettled: () => {
+            store.commit();
+            qc.invalidateQueries({ queryKey });
+          },
+        });
+        return acc;
+      }, {} as Record<string, any>);
+
+      // 4) Status aggregation
+      const mutations = [create, update, remove, ...Object.values(customMutations)];
+      const isPending = mutations.some(m => m.isPending);
+      const isSyncing = isPending || query.isFetching;
+
+      return {
+        store,
+        actions: {
+          create: (data: TCreate) => create.mutate(data),
+          update: (id: string, data: TUpdate) => update.mutate({ id, data }),
+          remove: (id: string) => remove.mutate(id),
+          refetch: () => query.refetch(),
+          ...Object.entries(customMutations).reduce((acc, [key, mutation]) => {
+            acc[key] = (params: any) => mutation.mutate(params);
+            return acc;
+          }, {} as Record<string, any>),
+        },
+        status: {
+          isLoading: query.isLoading,
+          isError: query.isError,
+          error: (query.error as Error) ?? null,
+          isPending,
+          isSyncing,
+          createPending: create.isPending,
+          updatePending: update.isPending,
+          deletePending: remove.isPending,
+          ...Object.entries(customMutations).reduce((acc, [key, mutation]) => {
+            acc[`${key}Pending`] = mutation.isPending;
+            return acc;
+          }, {} as Record<string, boolean>),
+        },
+      } as const;
+   };
+ }
+ 
 
 // ---------- Convenience Helpers ----------
 
@@ -326,5 +379,14 @@ export function createReadOnlyController<T extends Entity>(
         isSyncing: query.isFetching,
       },
     } as const;
+  };
+}
+
+// Identity transformer (no transformation)
+export function identityTransformer<T extends Entity>(): DataTransformer<T, T> {
+  return {
+    toUi: (data: T) => data,
+    toApi: (data: T) => data,
+    toApiUpdate: (data: Partial<T>) => data,
   };
 }
