@@ -21,17 +21,25 @@ export interface UpdateTodoDto {
 
 export class TodoAPI implements EntityAPI<Todo, CreateTodoDto, UpdateTodoDto> {
   private baseUrl: string;
-  private token: string;
   
-  constructor(token: string) {
+  constructor() {
     // Use the same backend URL pattern as the existing postStore
     this.baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || 'http://localhost:3000';
-    this.token = token;
+  }
+
+  private getToken(): string {
+    // Get token from localStorage (same as existing auth flow)
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+    return token;
   }
 
   private makeRequest = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
+    const token = this.getToken();
     const response = await fetchWithAuth(
-      this.token,
+      token,
       `${this.baseUrl}${endpoint}`,
       options
     );

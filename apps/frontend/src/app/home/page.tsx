@@ -2,8 +2,7 @@
 
 import useAuthGuard from "@/hooks/useAuthGuard";
 import { observer } from "mobx-react-lite";
-import { useState, useContext, useMemo } from "react";
-import { RootStoreContext } from "@/context/rootStoreContext";
+import { useState } from "react";
 
 import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
 import { NeonCard } from "@/components/ui/neon-card";
@@ -11,51 +10,48 @@ import { GradientText } from "@/components/ui/gradient-text";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { AppNavbar } from "@/components/navbar/presets/app";
 
-import { createEntityController } from "@/lib/optimistic-store-pattern";
-import { OptimisticStore } from "@/lib/optimistic-store-pattern";
-import { TodoAPI, Todo, CreateTodoDto, UpdateTodoDto } from "@/lib/api/todoAPI";
+import { createOptimisticStore } from "@/lib/optimistic-store-pattern";
+import { Todo } from "@/lib/api/todoAPI";
+import { fetchWithAuth } from "@/lib/utils";
+import { useContext } from "react";
+import { RootStoreContext } from "@/context/rootStoreContext";
 
-// Create store instance (stable across renders)
-const todoStore = new OptimisticStore<Todo>();
-
-// Create a proper React hook that handles token changes
-function useTodos(token?: string) {
-  // Memoize the API instance based on the token
-  const todoAPI = useMemo(() => {
-    // Always create a valid API instance - if no token, we'll disable the query
-    return new TodoAPI(token || 'placeholder');
-  }, [token]);
+// Create the optimistic store hook - SUPER SIMPLE! 🚀
+function useTodos() {
+  const rootStore = useContext(RootStoreContext);
+  const token = rootStore.session?.access_token || '';
   
-  const controller = createEntityController<Todo, Todo, CreateTodoDto, UpdateTodoDto>({
-    queryKey: ['todos'],
-    api: todoAPI,
-    store: todoStore,
+  const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || 'http://localhost:3000';
+  
+  return createOptimisticStore<Todo>({
+    name: 'todos',
+    queryFn: () => fetchWithAuth(token, `${baseUrl}/todos`).then(res => res.json()),
+    mutations: {
+      create: (data) => fetchWithAuth(token, `${baseUrl}/todos`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }).then(res => res.json()),
+      
+      update: ({ id, data }) => fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
+        method: 'PUT', 
+        body: JSON.stringify(data),
+      }).then(res => res.json()),
+      
+      remove: (id) => fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
+        method: 'DELETE',
+      }).then(() => ({ id })),
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!token, // Only enable the query if we have a valid token
-  });
-
-  // Return the result of the controller hook - always call it
-  return controller();
+    enabled: !!token, // Only run when we have a token
+  })();
 }
 
 export default observer(function HomePage() {
-  useAuthGuard();
+  useAuthGuard(); // This ensures user is logged in
   
-  const rootStore = useContext(RootStoreContext);
-  const token = rootStore.session?.access_token;
-  
-  // Always call the hook - it handles token validation internally
-  const { store, actions, status } = useTodos(token);
+  // Use the optimistic store - dead simple! 🚀
+  const { store, actions, status } = useTodos();
   const [newTodoTitle, setNewTodoTitle] = useState('');
-
-  // Early return if no token - but after all hooks are called
-  if (!token) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-black to-slate-900 text-white flex items-center justify-center">
-        <div className="text-slate-300">Loading...</div>
-      </div>
-    );
-  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,7 +152,7 @@ export default observer(function HomePage() {
                           <input
                             type="checkbox"
                             checked={todo.done}
-                            onChange={() => actions.update(todo.id, { done: !todo.done })}
+                            onChange={() => actions.update({ id: todo.id, data: { done: !todo.done } })}
                             className="w-5 h-5 rounded border-slate-500 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-0"
                           />
                           
