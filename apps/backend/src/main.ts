@@ -16,6 +16,8 @@ async function bootstrap() {
   app.enableCors({
     origin: process.env.FRONTEND_URL || "http://localhost:3069",
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   });
 
   // Set global prefix for API routes

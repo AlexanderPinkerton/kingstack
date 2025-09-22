@@ -34,8 +34,8 @@ export function fetchWithAuth(
   const headers = new Headers(init?.headers);
   headers.set("Authorization", `Bearer ${token}`);
 
-  // Set default Content-Type if not already set
-  if (!headers.has("Content-Type")) {
+  // Only set Content-Type if there's a body and it's not already set
+  if (init?.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
