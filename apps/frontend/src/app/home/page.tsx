@@ -11,10 +11,56 @@ import { ThemedButton } from "@/components/ui/themed-button";
 import { AppNavbar } from "@/components/navbar/presets/app";
 
 import { createOptimisticStore } from "@/lib/optimistic-store-pattern";
-import { Todo } from "@/lib/api/todoAPI";
 import { fetchWithAuth } from "@/lib/utils";
 import { useContext } from "react";
 import { RootStoreContext } from "@/context/rootStoreContext";
+import { DataTransformer } from "@/lib/optimistic-store-pattern";
+
+export interface TodoApiData {
+  id: string;
+  title: string;
+  done: boolean;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodoUiData {
+  id: string;
+  title: string;
+  done: boolean;
+  user_id: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+class TodoTransformer implements DataTransformer<TodoApiData, TodoUiData> {
+  toUi(apiData: TodoApiData): TodoUiData {
+    return {
+      ...apiData,
+      done: apiData.done,
+      created_at: new Date(apiData.created_at),
+      updated_at: new Date(apiData.updated_at),
+    };
+  }
+  toApi(uiData: TodoUiData): TodoApiData {
+    return {
+      ...uiData,
+      done: uiData.done,
+      created_at: uiData.created_at.toISOString(),
+      updated_at: uiData.updated_at.toISOString(),
+    };
+  }
+  toApiUpdate(data: Partial<TodoUiData>): Partial<TodoApiData> {
+    return {
+      ...data,
+      done: data.done,
+      created_at: data.created_at?.toISOString(),
+      updated_at: data.updated_at?.toISOString(),
+    };
+  }
+}
+
 
 // Create the optimistic store hook - SUPER SIMPLE! 🚀
 function useTodos() {
@@ -23,7 +69,7 @@ function useTodos() {
   
   const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || 'http://localhost:3000';
   
-  return createOptimisticStore<Todo>({
+  return createOptimisticStore<TodoApiData, TodoUiData>({
     name: 'todos',
     queryFn: () => fetchWithAuth(token, `${baseUrl}/todos`).then(res => res.json()),
     mutations: {
@@ -41,6 +87,7 @@ function useTodos() {
         method: 'DELETE',
       }).then(() => ({ id })),
     },
+    transformer: new TodoTransformer(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: !!token, // Only run when we have a token
   })();
@@ -136,7 +183,7 @@ export default observer(function HomePage() {
                     <div className="text-center mb-6 text-slate-400 relative">
                       <span className="text-2xl font-bold text-white">{store.count}</span> total, {' '}
                       <span className="text-xl font-semibold text-purple-300">
-                        {store.filter((t: Todo) => !t.done).length}
+                        {store.filter((t: TodoUiData) => !t.done).length}
                       </span> remaining
                       {/* Subtle sync indicator */}
                       {status.isSyncing && (
@@ -148,7 +195,7 @@ export default observer(function HomePage() {
 
                     {/* Todo list */}
                     <div className="space-y-3">
-                      {store.list.map((todo: Todo) => (
+                      {store.list.map((todo: TodoUiData) => (
                         <div 
                           key={todo.id} 
                           className={`flex items-center gap-4 p-4 rounded-lg border transition-all relative ${

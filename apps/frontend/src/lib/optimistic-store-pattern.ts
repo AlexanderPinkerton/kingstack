@@ -18,6 +18,48 @@ export interface DataTransformer<TApiData extends Entity, TUiData extends Entity
   toApiUpdate(data: Partial<TUiData>): any;
 }
 
+// Default transformer for common data type conversions
+export function createDefaultTransformer<TApiData extends Entity, TUiData extends Entity>(
+  customTransform?: (apiData: TApiData) => Partial<TUiData>
+): DataTransformer<TApiData, TUiData> {
+  return {
+    toUi(apiData: TApiData): TUiData {
+      const baseTransform = {
+        // Convert common API patterns to UI patterns
+        id: (apiData as any).id || (apiData as any)._id || (apiData as any).ID,
+        // Convert snake_case to camelCase
+        ...Object.keys(apiData).reduce((acc, key) => {
+          const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+          acc[camelKey] = (apiData as any)[key];
+          return acc;
+        }, {} as any),
+        // Apply custom transformations
+        ...(customTransform ? customTransform(apiData) : {}),
+      };
+      return baseTransform as TUiData;
+    },
+    
+    toApi(uiData: TUiData): TApiData {
+      // Convert camelCase back to snake_case for API
+      const apiData = Object.keys(uiData).reduce((acc, key) => {
+        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        acc[snakeKey] = (uiData as any)[key];
+        return acc;
+      }, {} as any);
+      return apiData as TApiData;
+    },
+    
+    toApiUpdate(data: Partial<TUiData>): any {
+      // Convert partial UI data to API format
+      return Object.keys(data).reduce((acc, key) => {
+        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        acc[snakeKey] = (data as any)[key];
+        return acc;
+      }, {} as any);
+    },
+  };
+}
+
 // ---------- MobX Store ----------
 
 export class OptimisticStore<T extends Entity> {
@@ -74,21 +116,20 @@ export class OptimisticStore<T extends Entity> {
     }
   }
 
-  // Server reconciliation
-  reconcileFromServer(serverData: T[]): void {
-    this.clear();
-    serverData.forEach(item => this.upsert(item));
-    this.snapshots = []; // Clear snapshots after successful sync
-  }
-
-  reconcileFromApiServer<TApiData extends Entity>(
+  // Server reconciliation - unified function that handles all cases
+  reconcile<TApiData extends Entity = T>(
     serverData: TApiData[], 
-    transformer: DataTransformer<TApiData, T>
+    transformer?: DataTransformer<TApiData, T>
   ): void {
     this.clear();
     serverData.forEach(apiItem => {
-      const uiItem = transformer.toUi(apiItem);
-      this.upsert(uiItem);
+      if (transformer) {
+        const uiItem = transformer.toUi(apiItem);
+        this.upsert(uiItem);
+      } else {
+        // No transformation needed - data is already in UI shape
+        this.upsert(apiItem as unknown as T);
+      }
     });
     this.snapshots = []; // Clear snapshots after successful sync
   }
@@ -100,6 +141,26 @@ export class OptimisticStore<T extends Entity> {
 
   find(predicate: (entity: T) => boolean): T | undefined {
     return this.list.find(predicate);
+  }
+}
+
+// ---------- Helper Functions ----------
+
+/**
+ * Creates the appropriate transformer based on config
+ */
+function createTransformer<TApiData extends Entity, TUiData extends Entity>(
+  transformer: DataTransformer<TApiData, TUiData> | false | undefined
+): DataTransformer<TApiData, TUiData> | undefined {
+  if (transformer === false) {
+    // No transformation needed - data is already in UI shape
+    return undefined;
+  } else if (transformer) {
+    // Custom transformer provided
+    return transformer;
+  } else {
+    // No transformer specified - use default transformer
+    return createDefaultTransformer<TApiData, TUiData>();
   }
 }
 
@@ -116,8 +177,8 @@ export interface OptimisticStoreConfig<TApiData extends Entity, TUiData extends 
     update: (params: { id: string; data: any }) => Promise<TApiData>;
     remove: (id: string) => Promise<{ id: string } | void>;
   };
-  /** Optional: Transform data between API and UI formats */
-  transformer?: DataTransformer<TApiData, TUiData>;
+  /** Optional: Transform data between API and UI formats. Defaults to createDefaultTransformer() if not provided. Set to false to disable transformation. */
+  transformer?: DataTransformer<TApiData, TUiData> | false;
   /** Optional: Custom store class (creates basic OptimisticStore if not provided) */
   storeClass?: new () => OptimisticStore<TUiData>;
   /** Optional: Cache time in milliseconds (default: 5 minutes) */
@@ -130,18 +191,17 @@ export interface OptimisticStoreConfig<TApiData extends Entity, TUiData extends 
  * Creates a fully configured optimistic store with minimal setup.
  * Just provide your query function and mutation functions - no API wrapper needed!
  * 
- * Basic usage:
- * ```ts
- * const useTodos = createOptimisticStore({
- *   name: 'todos',
- *   queryFn: () => fetchWithAuth(token, '/todos').then(res => res.json()),
- *   mutations: {
- *     create: (data) => fetchWithAuth(token, '/todos', { method: 'POST', body: JSON.stringify(data) }).then(res => res.json()),
- *     update: ({ id, data }) => fetchWithAuth(token, `/todos/${id}`, { method: 'PUT', body: JSON.stringify(data) }).then(res => res.json()),
- *     remove: (id) => fetchWithAuth(token, `/todos/${id}`, { method: 'DELETE' }).then(() => ({ id })),
- *   }
- * });
- * ```
+ * Features:
+ * - Single reconcile() method handles all data transformation cases
+ * - Smart transformer defaults: uses createDefaultTransformer() by default
+ * - Easy customization: pass DataTransformer object or false to disable
+ * - Automatic optimistic updates with rollback on errors
+ * - Full TypeScript support
+ * 
+ * Transformer options:
+ * - undefined (default): Uses createDefaultTransformer() for snake_case → camelCase conversion
+ * - false: No transformation - data is already in UI shape
+ * - DataTransformer object: Custom transformer conforming to DataTransformer interface
  */
 export function createOptimisticStore<
   TApiData extends Entity,
@@ -157,6 +217,12 @@ export function createOptimisticStore<
       storeRef.current = new StoreClass() as TStore;
     }
     
+    // Create transformer once using useRef to keep it stable across renders
+    const transformerRef = React.useRef<DataTransformer<TApiData, TUiData> | undefined | null>(null);
+    if (transformerRef.current === null) {
+      transformerRef.current = createTransformer(config.transformer);
+    }
+    
     // 1) Hydrate store from server
     const query = useQuery({
       queryKey: [config.name],
@@ -168,11 +234,7 @@ export function createOptimisticStore<
     useEffect(() => {
       if (query.data) {
         runInAction(() => {
-          if (config.transformer) {
-            storeRef.current!.reconcileFromApiServer(query.data!, config.transformer);
-          } else {
-            storeRef.current!.reconcileFromServer(query.data! as unknown as TUiData[]);
-          }
+          storeRef.current!.reconcile(query.data!, transformerRef.current!);
         });
       }
     }, [query.data]);
@@ -199,8 +261,13 @@ export function createOptimisticStore<
         runInAction(() => {
           // Remove temp item and add real one
           storeRef.current!.remove(context.tempId);
-          const uiData = config.transformer ? config.transformer.toUi(result) : result as unknown as TUiData;
-          storeRef.current!.upsert(uiData);
+          
+          if (transformerRef.current) {
+            const uiData = transformerRef.current.toUi(result);
+            storeRef.current!.upsert(uiData);
+          } else {
+            storeRef.current!.upsert(result as unknown as TUiData);
+          }
         });
       },
       onError: () => {
@@ -225,8 +292,12 @@ export function createOptimisticStore<
       },
       onSuccess: (result: TApiData) => {
         runInAction(() => {
-          const uiData = config.transformer ? config.transformer.toUi(result) : result as unknown as TUiData;
-          storeRef.current!.upsert(uiData);
+          if (transformerRef.current) {
+            const uiData = transformerRef.current.toUi(result);
+            storeRef.current!.upsert(uiData);
+          } else {
+            storeRef.current!.upsert(result as unknown as TUiData);
+          }
         });
       },
       onError: () => {
