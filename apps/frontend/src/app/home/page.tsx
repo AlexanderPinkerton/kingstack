@@ -103,39 +103,47 @@ export default observer(function HomePage() {
 
                 {!status.isLoading && (
                   <>
-                    {/* Sync indicator */}
-                    {status.isSyncing && (
-                      <div className="bg-blue-900/20 border border-blue-500/50 rounded-lg p-3 mb-6">
-                        <div className="text-blue-300 text-sm">
-                          🔄 Syncing with server...
-                        </div>
-                      </div>
-                    )}
 
                     {/* Create form */}
-                    <form onSubmit={handleSubmit} className="flex gap-3 mb-8">
-                      <input
-                        type="text"
-                        placeholder="What needs to be done?"
-                        value={newTodoTitle}
-                        onChange={(e) => setNewTodoTitle(e.target.value)}
-                        className="flex-1 px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      />
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-3 mb-8 max-w-full">
+                      <div className="flex-1 min-w-0 relative">
+                        <input
+                          id="newTodoTitle"
+                          name="newTodoTitle"
+                          type="text"
+                          placeholder="What needs to be done?"
+                          value={newTodoTitle}
+                          onChange={(e) => setNewTodoTitle(e.target.value)}
+                          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        />
+                        {/* Non-invasive loading indicator */}
+                        {status.isSyncing && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <div className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
+                          </div>
+                        )}
+                      </div>
                       <ThemedButton 
                         type="submit" 
                         disabled={status.createPending || !newTodoTitle.trim()}
-                        className="px-6"
+                        className="px-6 py-3 whitespace-nowrap flex-shrink-0"
                       >
                         {status.createPending ? 'Adding...' : 'Add'}
                       </ThemedButton>
                     </form>
 
                     {/* Stats */}
-                    <div className="text-center mb-6 text-slate-400">
+                    <div className="text-center mb-6 text-slate-400 relative">
                       <span className="text-2xl font-bold text-white">{store.count}</span> total, {' '}
                       <span className="text-xl font-semibold text-purple-300">
                         {store.filter((t: Todo) => !t.done).length}
                       </span> remaining
+                      {/* Subtle sync indicator */}
+                      {status.isSyncing && (
+                        <div className="absolute -right-6 top-1/2 transform -translate-y-1/2">
+                          <div className="w-3 h-3 border border-purple-500/40 border-t-purple-500 rounded-full animate-spin"></div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Todo list */}
@@ -143,7 +151,7 @@ export default observer(function HomePage() {
                       {store.list.map((todo: Todo) => (
                         <div 
                           key={todo.id} 
-                          className={`flex items-center gap-4 p-4 rounded-lg border transition-all ${
+                          className={`flex items-center gap-4 p-4 rounded-lg border transition-all relative ${
                             todo.done 
                               ? 'bg-slate-800/30 border-slate-700/50' 
                               : 'bg-slate-800/50 border-slate-600/50 hover:border-purple-500/50'
@@ -153,7 +161,7 @@ export default observer(function HomePage() {
                             type="checkbox"
                             checked={todo.done}
                             onChange={() => actions.update({ id: todo.id, data: { done: !todo.done } })}
-                            className="w-5 h-5 rounded border-slate-500 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-0"
+                            className="w-5 h-5 rounded border-slate-500 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 disabled:opacity-50"
                           />
                           
                           <span className={`flex-1 transition-all ${
@@ -164,9 +172,9 @@ export default observer(function HomePage() {
                             {todo.title}
                           </span>
                           
+                          
                           <button
                             onClick={() => actions.remove(todo.id)}
-                            disabled={status.deletePending}
                             className="px-3 py-1 text-xs bg-red-600/20 text-red-300 border border-red-500/50 rounded hover:bg-red-600/30 transition-colors disabled:opacity-50"
                           >
                             Delete
