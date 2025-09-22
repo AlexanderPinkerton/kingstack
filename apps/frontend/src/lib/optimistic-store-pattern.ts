@@ -159,6 +159,7 @@ export interface ControllerConfig<TApiData extends Entity, TUiData extends Entit
   transformer?: DataTransformer<TApiData, TUiData>;
   staleTime?: number;
   customActions?: Record<string, OptimisticAction<any, any, TStore>>;
+  enabled?: boolean; // Allow disabling the query
 }
 
 
@@ -171,13 +172,14 @@ export function createEntityController<
 >(config: ControllerConfig<TApiData, TUiData, TCreate, TUpdate, TStore>) {
    return function useEntityController() {
      const qc = useQueryClient();
-     const { queryKey, api, store, transformer, staleTime = 5_000, customActions = {} } = config;
- 
+     const { queryKey, api, store, transformer, staleTime = 5_000, customActions = {}, enabled = true } = config;
+
      // 1) Hydrate store from server
      const query = useQuery({
        queryKey,
        queryFn: api.list,
        staleTime,
+       enabled, // Disable query if enabled is false
      });
  
      useEffect(() => {

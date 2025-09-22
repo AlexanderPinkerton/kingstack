@@ -24,6 +24,7 @@ model user {
     username_changed_at DateTime?
     previous_usernames  String[]
     posts               post[]
+    todos               todo[]
     created_at          DateTime  @default(now())
 }
 
@@ -35,6 +36,16 @@ model post {
     author_id  String
     author     user     @relation(fields: [author_id], references: [id])
     created_at DateTime @default(now())
+}
+
+model todo {
+    id         String   @id @default(cuid())
+    title      String
+    done       Boolean  @default(false)
+    user_id    String
+    user       user     @relation(fields: [user_id], references: [id])
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
 }
 
 model test {
