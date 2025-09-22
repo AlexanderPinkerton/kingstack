@@ -335,7 +335,104 @@ export function createEntityController<
  }
  
 
-// ---------- Convenience Helpers ----------
+// ---------- Simple API for Common Use Cases ----------
+
+/**
+ * Simple configuration for the most common use case
+ */
+export interface SimpleOptimisticConfig<TApiData extends Entity, TUiData extends Entity = TApiData> {
+  /** Unique identifier for this data type (used for query keys) */
+  name: string;
+  /** Your API implementation */
+  api: EntityAPI<TApiData>;
+  /** Optional: Custom transformer (auto-detected if not provided) */
+  transformer?: DataTransformer<TApiData, TUiData>;
+  /** Optional: Custom store class (creates basic OptimisticStore if not provided) */
+  storeClass?: new () => OptimisticStore<TUiData>;
+  /** Optional: Cache time in milliseconds (default: 5 minutes) */
+  staleTime?: number;
+}
+
+/**
+ * Creates a fully configured optimistic store with minimal setup.
+ * 
+ * For simple cases where API data === UI data:
+ * ```ts
+ * const useTodos = createOptimisticStore({
+ *   name: 'todos',
+ *   api: todoAPI
+ * });
+ * ```
+ * 
+ * For cases with data transformation:
+ * ```ts
+ * const useTodos = createOptimisticStore<TodoApiData, TodoUiData>({
+ *   name: 'todos', 
+ *   api: todoAPI,
+ *   transformer: todoTransformer
+ * });
+ * ```
+ */
+export function createOptimisticStore<
+  TApiData extends Entity,
+  TUiData extends Entity = TApiData,
+  TStore extends OptimisticStore<TUiData> = OptimisticStore<TUiData>
+>(config: SimpleOptimisticConfig<TApiData, TUiData>) {
+  // Create store instance
+  const StoreClass = config.storeClass as any || OptimisticStore<TUiData>;
+  const store = new StoreClass() as TStore;
+  
+  // Create the controller
+  const controller = createEntityController<TApiData, TUiData, Omit<TApiData, 'id'>, Partial<TApiData>, TStore>({
+    queryKey: [config.name],
+    api: config.api,
+    store,
+    transformer: config.transformer,
+    staleTime: config.staleTime ?? 5 * 60 * 1000, // 5 minutes default
+  });
+
+  return controller;
+}
+
+// ---------- Advanced API for Power Users ----------
+
+/**
+ * Advanced configuration with full control over custom actions, queries, etc.
+ */
+export interface AdvancedOptimisticConfig<
+  TApiData extends Entity, 
+  TUiData extends Entity, 
+  TStore extends OptimisticStore<TUiData>
+> extends SimpleOptimisticConfig<TApiData, TUiData> {
+  /** Custom actions beyond basic CRUD */
+  customActions?: Record<string, OptimisticAction<any, any, TStore>>;
+  /** Custom store instance (overrides storeClass) */
+  store?: TStore;
+}
+
+/**
+ * Advanced version with full customization options
+ */
+export function createAdvancedOptimisticStore<
+  TApiData extends Entity,
+  TUiData extends Entity = TApiData,
+  TStore extends OptimisticStore<TUiData> = OptimisticStore<TUiData>
+>(config: AdvancedOptimisticConfig<TApiData, TUiData, TStore>) {
+  // Use provided store or create from class or default
+  const store = config.store || 
+    (config.storeClass ? new (config.storeClass as any)() : new OptimisticStore<TUiData>()) as TStore;
+  
+  return createEntityController<TApiData, TUiData, Omit<TApiData, 'id'>, Partial<TApiData>, TStore>({
+    queryKey: [config.name],
+    api: config.api,
+    store,
+    transformer: config.transformer,
+    staleTime: config.staleTime ?? 5 * 60 * 1000,
+    customActions: config.customActions,
+  });
+}
+
+// ---------- Legacy Convenience Helpers ----------
 
 export function createStandardController<T extends Entity>(
   queryKey: string[],

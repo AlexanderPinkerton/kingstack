@@ -17,7 +17,7 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react-lite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { EntityAPI, OptimisticStore, createEntityController, DataTransformer, OptimisticAction } from "../optimistic-store-pattern";
+import { EntityAPI, OptimisticStore, createEntityController, DataTransformer } from "../optimistic-store-pattern";
 
 // ---------- API Types (what comes from server) ----------
 export interface TodoApiData {
