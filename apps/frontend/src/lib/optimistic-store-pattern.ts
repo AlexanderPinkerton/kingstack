@@ -30,11 +30,11 @@ export interface DataTransformer<TApiData extends Entity, TUiData extends Entity
   toApiUpdate(uiData: Partial<TUiData>): Partial<TApiData>;
 }
 
-export interface OptimisticAction<TParams = any, TResult = any> {
+export interface OptimisticAction<TParams = any, TResult = any, TStore = OptimisticStore<any>> {
   mutationFn: (params: TParams) => Promise<TResult>;
-  onOptimistic?: (params: TParams, store: OptimisticStore<any>) => void;
-  onSuccess?: (result: TResult, params: TParams, store: OptimisticStore<any>) => void;
-  onError?: (error: Error, params: TParams, store: OptimisticStore<any>) => void;
+  onOptimistic?: (params: TParams, store: TStore) => void;
+  onSuccess?: (result: TResult, params: TParams, store: TStore) => void;
+  onError?: (error: Error, params: TParams, store: TStore) => void;
 }
 
 // ---------- Generic Store ----------
@@ -152,22 +152,23 @@ export class OptimisticStore<T extends Entity> {
 
 // ---------- Controller Factory (Template) ----------
 
-export interface ControllerConfig<TApiData extends Entity, TUiData extends Entity, TCreate, TUpdate> {
+export interface ControllerConfig<TApiData extends Entity, TUiData extends Entity, TCreate, TUpdate, TStore extends OptimisticStore<TUiData> = OptimisticStore<TUiData>> {
   queryKey: string[];
   api: EntityAPI<TApiData, TCreate, TUpdate>;
-  store: OptimisticStore<TUiData>;
+  store: TStore;
   transformer?: DataTransformer<TApiData, TUiData>;
   staleTime?: number;
-  customActions?: Record<string, OptimisticAction>;
+  customActions?: Record<string, OptimisticAction<any, any, TStore>>;
 }
 
 
- export function createEntityController<
-   TApiData extends Entity,
-   TUiData extends Entity = TApiData,
-   TCreate = Omit<TApiData, "id">,
-   TUpdate = Partial<TApiData>
- >(config: ControllerConfig<TApiData, TUiData, TCreate, TUpdate>) {
+export function createEntityController<
+  TApiData extends Entity,
+  TUiData extends Entity = TApiData,
+  TCreate = Omit<TApiData, "id">,
+  TUpdate = Partial<TApiData>,
+  TStore extends OptimisticStore<TUiData> = OptimisticStore<TUiData>
+>(config: ControllerConfig<TApiData, TUiData, TCreate, TUpdate, TStore>) {
    return function useEntityController() {
      const qc = useQueryClient();
      const { queryKey, api, store, transformer, staleTime = 5_000, customActions = {} } = config;
@@ -269,7 +270,7 @@ export interface ControllerConfig<TApiData extends Entity, TUiData extends Entit
       });
 
       // 3) Custom actions
-      const customMutations = Object.entries(customActions).reduce((acc, [key, action]) => {
+      const customMutations = Object.entries(customActions || {}).reduce((acc, [key, action]) => {
         acc[key] = useMutation({
           mutationFn: action.mutationFn,
           onMutate: async (params: any) => {
@@ -298,6 +299,17 @@ export interface ControllerConfig<TApiData extends Entity, TUiData extends Entit
       const isPending = mutations.some(m => m.isPending);
       const isSyncing = isPending || query.isFetching;
 
+      // Build custom action functions with proper typing
+      const customActionFunctions = Object.entries(customMutations).reduce((acc, [key, mutation]) => {
+        acc[key] = (params: any) => mutation.mutate(params);
+        return acc;
+      }, {} as Record<string, (params: any) => void>);
+
+      const customStatusFlags = Object.entries(customMutations).reduce((acc, [key, mutation]) => {
+        acc[`${key}Pending`] = mutation.isPending;
+        return acc;
+      }, {} as Record<string, boolean>);
+
       return {
         store,
         actions: {
@@ -305,10 +317,7 @@ export interface ControllerConfig<TApiData extends Entity, TUiData extends Entit
           update: (id: string, data: TUpdate) => update.mutate({ id, data }),
           remove: (id: string) => remove.mutate(id),
           refetch: () => query.refetch(),
-          ...Object.entries(customMutations).reduce((acc, [key, mutation]) => {
-            acc[key] = (params: any) => mutation.mutate(params);
-            return acc;
-          }, {} as Record<string, any>),
+          ...customActionFunctions,
         },
         status: {
           isLoading: query.isLoading,
@@ -319,12 +328,9 @@ export interface ControllerConfig<TApiData extends Entity, TUiData extends Entit
           createPending: create.isPending,
           updatePending: update.isPending,
           deletePending: remove.isPending,
-          ...Object.entries(customMutations).reduce((acc, [key, mutation]) => {
-            acc[`${key}Pending`] = mutation.isPending;
-            return acc;
-          }, {} as Record<string, boolean>),
+          ...customStatusFlags,
         },
-      } as const;
+      };
    };
  }
  
