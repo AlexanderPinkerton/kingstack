@@ -71,15 +71,6 @@ const useCustomSmartTodos = createOptimisticStore({
       is_archived: uiData.is_archived.toString(),
       metadata: JSON.stringify(uiData.metadata),
     }),
-    toApiUpdate: (data) => ({
-      task_name: data.task_name,
-      is_completed: data.is_completed?.toString(),
-      priority_level: data.priority_level,
-      due_date: data.due_date?.toISOString(),
-      tags: data.tags?.join(','),
-      estimated_hours: data.estimated_hours?.toString(),
-      is_archived: data.is_archived?.toString(),
-    }),
   },
 });
 

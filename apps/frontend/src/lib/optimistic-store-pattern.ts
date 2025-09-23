@@ -15,7 +15,6 @@ export interface Entity {
 export interface DataTransformer<TApiData extends Entity, TUiData extends Entity> {
   toUi(apiData: TApiData): TUiData;
   toApi(uiData: TUiData): TApiData;
-  toApiUpdate(data: Partial<TUiData>): any;
 }
 
 // Default transformer for common data type conversions
@@ -96,32 +95,6 @@ export function createDefaultTransformer<TApiData extends Entity, TUiData extend
       return apiData as TApiData;
     },
     
-    toApiUpdate(data: Partial<TUiData>): any {
-      // Handle reverse conversions while keeping original field names
-      return Object.keys(data).reduce((acc, key) => {
-        const value = (data as any)[key];
-        
-        // Reverse conversions for API updates
-        if (value instanceof Date) {
-          // Convert Date objects back to ISO strings
-          acc[key] = value.toISOString();
-        } else if (Array.isArray(value)) {
-          // Convert arrays back to CSV strings
-          acc[key] = value.join(',');
-        } else if (typeof value === 'boolean') {
-          // Convert booleans back to strings
-          acc[key] = value.toString();
-        } else if (typeof value === 'number') {
-          // Keep numbers as numbers
-          acc[key] = value;
-        } else {
-          // Default: keep the value as is
-          acc[key] = value;
-        }
-        
-        return acc;
-      }, {} as any);
-    },
   };
 }
 

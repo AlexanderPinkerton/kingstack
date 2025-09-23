@@ -49,11 +49,6 @@ const useCustomTodos = createOptimisticStore({
       created_at: uiData.createdAt.toISOString(),
       priority_level: uiData.priority,
     }),
-    toApiUpdate: (data) => ({
-      task_name: data.title,
-      completed: data.done ? 'yes' : 'no',
-      priority_level: data.priority,
-    }),
   },
 });
 
@@ -80,11 +75,6 @@ const useComplexTodos = createOptimisticStore({
       completed: uiData.done ? 'yes' : 'no',
       created_at: uiData.createdAt.toISOString(),
       priority_level: uiData.priority,
-    }),
-    toApiUpdate: (data) => ({
-      task_name: data.title,
-      completed: data.done ? 'yes' : 'no',
-      priority_level: data.priority,
     }),
   },
 });
