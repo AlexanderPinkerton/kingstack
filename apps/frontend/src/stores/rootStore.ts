@@ -13,7 +13,7 @@ export class RootStore {
   postStore: PostStore;
   session: any = null;
   userData: any = null;
-  
+
   // WebSocket connection management
   socket: Socket | null = null;
   browserId: string = Math.random().toString(36).substring(7);
@@ -69,26 +69,26 @@ export class RootStore {
       this.socket.disconnect();
       this.socket = null;
     }
-    
+
     const REALTIME_SERVER_URL =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-    
+
     this.socket = io(REALTIME_SERVER_URL, {
       transports: ["websocket"],
       autoConnect: true,
     });
-    
+
     this.socket.on("connect", () => {
       console.log("[RootStore] Realtime socket connected");
       this.socket?.emit("register", {
         token,
         browserId: this.browserId,
       });
-      
+
       // Setup domain-specific event handlers
       this.setupDomainEventHandlers();
     });
-    
+
     this.socket.on("disconnect", () => {
       console.log("[RootStore] Realtime socket disconnected");
     });
@@ -103,15 +103,15 @@ export class RootStore {
 
   private setupDomainEventHandlers() {
     if (!this.socket) return;
-    
+
     // Get all domain stores that implement RealtimeStore
     const realtimeStores: RealtimeStore[] = [
       this.postStore,
       // Add other domain stores here as they are created
     ];
-    
+
     // Setup event handlers for each domain store
-    realtimeStores.forEach(store => {
+    realtimeStores.forEach((store) => {
       store.setupRealtimeHandlers(this.socket!);
     });
   }

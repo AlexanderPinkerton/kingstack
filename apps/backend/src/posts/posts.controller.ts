@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Put, Delete, Request, Param } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Request,
+  Param,
+} from "@nestjs/common";
 
 import { UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt.auth.guard";
@@ -25,9 +34,9 @@ export class PostsController {
           select: {
             id: true,
             username: true,
-            email: true
-          }
-        }
+            email: true,
+          },
+        },
       },
       orderBy: {
         created_at: "desc",
@@ -54,22 +63,26 @@ export class PostsController {
           select: {
             id: true,
             username: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     return post;
   }
 
   @Put(":id")
-  async updatePost(@Param("id") id: string, @Request() req: any, @Body() body: any) {
+  async updatePost(
+    @Param("id") id: string,
+    @Request() req: any,
+    @Body() body: any,
+  ) {
     const userId = req.user.sub;
 
     // Verify the post belongs to the user
     const existingPost = await this.prisma.post.findFirst({
-      where: { id, author_id: userId }
+      where: { id, author_id: userId },
     });
 
     if (!existingPost) {
@@ -88,10 +101,10 @@ export class PostsController {
           select: {
             id: true,
             username: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     return post;
@@ -103,7 +116,7 @@ export class PostsController {
 
     // Verify the post belongs to the user
     const existingPost = await this.prisma.post.findFirst({
-      where: { id, author_id: userId }
+      where: { id, author_id: userId },
     });
 
     if (!existingPost) {
@@ -111,7 +124,7 @@ export class PostsController {
     }
 
     await this.prisma.post.delete({
-      where: { id }
+      where: { id },
     });
 
     return { id, message: "Post deleted successfully" };

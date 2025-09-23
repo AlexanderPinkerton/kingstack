@@ -2,7 +2,10 @@ import { makeAutoObservable, runInAction } from "mobx";
 import { type RootStore } from "./rootStore";
 import { Socket } from "socket.io-client";
 
-import type { PostDSS, FullPostData } from "../../../../packages/shapes/post/PostDSS";
+import type {
+  PostDSS,
+  FullPostData,
+} from "../../../../packages/shapes/post/PostDSS";
 import { fetchWithAuth } from "../lib/utils";
 import { RealtimeStore } from "./interfaces/RealtimeStore";
 
@@ -21,7 +24,7 @@ export class PostStore implements RealtimeStore {
 
   setupRealtimeHandlers(socket: Socket) {
     console.log("[PostStore] Setting up realtime handlers");
-    
+
     // Listen for post updates
     socket.on("post_update", (data: any) => {
       console.log("[PostStore] Received post_update:", data);
@@ -32,10 +35,10 @@ export class PostStore implements RealtimeStore {
   // Handle realtime post updates
   private handleRealtimePostUpdate(data: any) {
     console.log("[PostStore] handleRealtimePostUpdate called", data);
-    
+
     if (data.type === "post_update" && data.post) {
       const post = data.post;
-      
+
       // Only process published posts
       if (post.published === true) {
         const postDSS: PostDSS = {
@@ -86,9 +89,8 @@ export class PostStore implements RealtimeStore {
   async fetchPosts(options: { nestjs: boolean } = { nestjs: false }) {
     this.loading = true;
     this.error = null;
-    
-    try {
 
+    try {
       let url = "/api/post";
       if (options.nestjs) {
         url = process.env.NEXT_PUBLIC_NEST_BACKEND_URL + "/posts";
@@ -96,18 +98,18 @@ export class PostStore implements RealtimeStore {
 
       const response = await fetchWithAuth(
         this.rootStore.session?.access_token,
-        url
+        url,
       );
 
       if (!response.ok)
         throw new Error(`Failed to fetch posts: ${response.status}`);
-      
+
       const data = await response.json();
-      
+
       runInAction(() => {
         // Clear existing posts
         this.posts.clear();
-        
+
         // Add all posts from the response
         for (const post of data) {
           const postDSS: PostDSS = {
@@ -174,7 +176,7 @@ export class PostStore implements RealtimeStore {
         {
           method: "POST",
           body: JSON.stringify(postData),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -183,7 +185,7 @@ export class PostStore implements RealtimeStore {
 
       const data = await response.json();
       console.log("Post created successfully:", data);
-      
+
       // The realtime update will handle adding the post to the store
       return data;
     } catch (error) {

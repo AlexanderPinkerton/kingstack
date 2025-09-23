@@ -34,31 +34,35 @@ export interface TodoUiData {
   updated_at: Date;
 }
 
-
 // Create the optimistic store hook - SUPER SIMPLE! 🚀
 function useTodos() {
   const rootStore = useContext(RootStoreContext);
-  const token = rootStore.session?.access_token || '';
-  
-  const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || 'http://localhost:3000';
-  
+  const token = rootStore.session?.access_token || "";
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+
   return createOptimisticStore<TodoApiData, TodoUiData>({
-    name: 'todos',
-    queryFn: () => fetchWithAuth(token, `${baseUrl}/todos`).then(res => res.json()),
+    name: "todos",
+    queryFn: () =>
+      fetchWithAuth(token, `${baseUrl}/todos`).then((res) => res.json()),
     mutations: {
-      create: (data) => fetchWithAuth(token, `${baseUrl}/todos`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }).then(res => res.json()),
-      
-      update: ({ id, data }) => fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
-        method: 'PUT', 
-        body: JSON.stringify(data),
-      }).then(res => res.json()),
-      
-      remove: (id) => fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
-        method: 'DELETE',
-      }).then(() => ({ id })),
+      create: (data) =>
+        fetchWithAuth(token, `${baseUrl}/todos`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }).then((res) => res.json()),
+
+      update: ({ id, data }) =>
+        fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }).then((res) => res.json()),
+
+      remove: (id) =>
+        fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
+          method: "DELETE",
+        }).then(() => ({ id })),
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: !!token, // Only run when we have a token
@@ -67,31 +71,33 @@ function useTodos() {
 
 export default observer(function HomePage() {
   useAuthGuard(); // This ensures user is logged in
-  
+
   // Tab state
-  const [activeTab, setActiveTab] = useState<'todos' | 'posts'>('todos');
-  
+  const [activeTab, setActiveTab] = useState<"todos" | "posts">("todos");
+
   // Use the optimistic store - dead simple! 🚀
   const { store, actions, status } = useTodos();
-  const [newTodoTitle, setNewTodoTitle] = useState('');
+  const [newTodoTitle, setNewTodoTitle] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTodoTitle.trim()) return;
-    
-    actions.create({ 
-      title: newTodoTitle.trim()
+
+    actions.create({
+      title: newTodoTitle.trim(),
     });
-    
-    setNewTodoTitle('');
+
+    setNewTodoTitle("");
   };
 
   return (
     <>
       <div className="min-h-screen bg-gradient-to-b from-black to-slate-900 text-white flex flex-col">
-        <AppNavbar/>
+        <AppNavbar />
         <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-24">
-          <div className={`w-full mx-auto ${activeTab === 'posts' ? 'max-w-6xl' : 'max-w-2xl'}`}>
+          <div
+            className={`w-full mx-auto ${activeTab === "posts" ? "max-w-6xl" : "max-w-2xl"}`}
+          >
             <AnimatedBorderContainer>
               <NeonCard className="p-8 flex flex-col">
                 <div className="text-center mb-8">
@@ -110,36 +116,42 @@ export default observer(function HomePage() {
                 <div className="flex justify-center mb-8">
                   <div className="flex bg-slate-800/50 border border-slate-600/50 rounded-lg p-1">
                     <button
-                      onClick={() => setActiveTab('todos')}
+                      onClick={() => setActiveTab("todos")}
                       className={`px-6 py-3 rounded-md font-medium transition-all ${
-                        activeTab === 'todos'
-                          ? 'bg-purple-600 text-white shadow-lg'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                        activeTab === "todos"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "text-slate-400 hover:text-white hover:bg-slate-700/50"
                       }`}
                     >
                       Simple Example
-                      <div className="text-xs opacity-75 mt-1">Todos with Default Transformer</div>
+                      <div className="text-xs opacity-75 mt-1">
+                        Todos with Default Transformer
+                      </div>
                     </button>
                     <button
-                      onClick={() => setActiveTab('posts')}
+                      onClick={() => setActiveTab("posts")}
                       className={`px-6 py-3 rounded-md font-medium transition-all ${
-                        activeTab === 'posts'
-                          ? 'bg-purple-600 text-white shadow-lg'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                        activeTab === "posts"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "text-slate-400 hover:text-white hover:bg-slate-700/50"
                       }`}
                     >
                       Advanced Example
-                      <div className="text-xs opacity-75 mt-1">Posts with Custom Store & Transformer</div>
+                      <div className="text-xs opacity-75 mt-1">
+                        Posts with Custom Store & Transformer
+                      </div>
                     </button>
                   </div>
                 </div>
 
                 {/* Tab Content */}
-                {activeTab === 'todos' && (
+                {activeTab === "todos" && (
                   <>
                     {status.isLoading && (
                       <div className="text-center py-8">
-                        <div className="animate-pulse text-slate-300">Loading your todos...</div>
+                        <div className="animate-pulse text-slate-300">
+                          Loading your todos...
+                        </div>
                       </div>
                     )}
 
@@ -148,7 +160,10 @@ export default observer(function HomePage() {
                         <div className="text-red-300 mb-2">
                           ❌ Error: {status.error?.message}
                         </div>
-                        <ThemedButton onClick={() => actions.refetch()} className="text-sm px-3 py-1">
+                        <ThemedButton
+                          onClick={() => actions.refetch()}
+                          className="text-sm px-3 py-1"
+                        >
                           Retry
                         </ThemedButton>
                       </div>
@@ -157,14 +172,20 @@ export default observer(function HomePage() {
                     {!status.isLoading && (
                       <>
                         <div className="text-center mb-6">
-                          <h2 className="text-2xl font-bold text-white mb-2">Simple Todo Example</h2>
+                          <h2 className="text-2xl font-bold text-white mb-2">
+                            Simple Todo Example
+                          </h2>
                           <p className="text-slate-400 text-sm">
-                            Basic CRUD with default transformer - just one line of config! 🚀
+                            Basic CRUD with default transformer - just one line
+                            of config! 🚀
                           </p>
                         </div>
 
                         {/* Create form */}
-                        <form onSubmit={handleSubmit} className="flex flex-col gap-3 mb-8 max-w-full">
+                        <form
+                          onSubmit={handleSubmit}
+                          className="flex flex-col gap-3 mb-8 max-w-full"
+                        >
                           <div className="flex-1 min-w-0 relative">
                             <input
                               id="newTodoTitle"
@@ -182,21 +203,27 @@ export default observer(function HomePage() {
                               </div>
                             )}
                           </div>
-                          <ThemedButton 
-                            type="submit" 
-                            disabled={status.createPending || !newTodoTitle.trim()}
+                          <ThemedButton
+                            type="submit"
+                            disabled={
+                              status.createPending || !newTodoTitle.trim()
+                            }
                             className="px-6 py-3 whitespace-nowrap flex-shrink-0"
                           >
-                            {status.createPending ? 'Adding...' : 'Add'}
+                            {status.createPending ? "Adding..." : "Add"}
                           </ThemedButton>
                         </form>
 
                         {/* Stats */}
                         <div className="text-center mb-6 text-slate-400 relative">
-                          <span className="text-2xl font-bold text-white">{store.count}</span> total, {' '}
+                          <span className="text-2xl font-bold text-white">
+                            {store.count}
+                          </span>{" "}
+                          total,{" "}
                           <span className="text-xl font-semibold text-purple-300">
                             {store.filter((t: TodoUiData) => !t.done).length}
-                          </span> remaining
+                          </span>{" "}
+                          remaining
                           {/* Subtle sync indicator */}
                           {status.isSyncing && (
                             <div className="absolute -right-6 top-1/2 transform -translate-y-1/2">
@@ -208,30 +235,36 @@ export default observer(function HomePage() {
                         {/* Todo list */}
                         <div className="space-y-3">
                           {store.list.map((todo: TodoUiData) => (
-                            <div 
-                              key={todo.id} 
+                            <div
+                              key={todo.id}
                               className={`flex items-center gap-4 p-4 rounded-lg border transition-all relative ${
-                                todo.done 
-                                  ? 'bg-slate-800/30 border-slate-700/50' 
-                                  : 'bg-slate-800/50 border-slate-600/50 hover:border-purple-500/50'
+                                todo.done
+                                  ? "bg-slate-800/30 border-slate-700/50"
+                                  : "bg-slate-800/50 border-slate-600/50 hover:border-purple-500/50"
                               }`}
                             >
                               <input
                                 type="checkbox"
                                 checked={todo.done}
-                                onChange={() => actions.update({ id: todo.id, data: { done: !todo.done } })}
+                                onChange={() =>
+                                  actions.update({
+                                    id: todo.id,
+                                    data: { done: !todo.done },
+                                  })
+                                }
                                 className="w-5 h-5 rounded border-slate-500 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 disabled:opacity-50"
                               />
-                              
-                              <span className={`flex-1 transition-all ${
-                                todo.done 
-                                  ? 'text-slate-500 line-through' 
-                                  : 'text-white'
-                              }`}>
+
+                              <span
+                                className={`flex-1 transition-all ${
+                                  todo.done
+                                    ? "text-slate-500 line-through"
+                                    : "text-white"
+                                }`}
+                              >
                                 {todo.title}
                               </span>
-                              
-                              
+
                               <button
                                 onClick={() => actions.remove(todo.id)}
                                 className="px-3 py-1 text-xs bg-red-600/20 text-red-300 border border-red-500/50 rounded hover:bg-red-600/30 transition-colors disabled:opacity-50"
@@ -255,10 +288,12 @@ export default observer(function HomePage() {
                         <div className="mt-8 pt-6 border-t border-slate-700/50">
                           <div className="text-xs text-slate-500 text-center space-y-1">
                             <div>
-                              ✅ Optimistic updates • ✅ Auto rollback on errors • ✅ Background sync
+                              ✅ Optimistic updates • ✅ Auto rollback on errors
+                              • ✅ Background sync
                             </div>
                             <div>
-                              ✅ Loading states • ✅ Full type safety • ✅ MobX reactivity
+                              ✅ Loading states • ✅ Full type safety • ✅ MobX
+                              reactivity
                             </div>
                           </div>
                         </div>
@@ -267,12 +302,15 @@ export default observer(function HomePage() {
                   </>
                 )}
 
-                {activeTab === 'posts' && (
+                {activeTab === "posts" && (
                   <>
                     <div className="text-center mb-6">
-                      <h2 className="text-2xl font-bold text-white mb-2">Advanced Posts Example</h2>
+                      <h2 className="text-2xl font-bold text-white mb-2">
+                        Advanced Posts Example
+                      </h2>
                       <p className="text-slate-400 text-sm">
-                        Custom store, transformer, search, filtering, and rich analytics 🧠
+                        Custom store, transformer, search, filtering, and rich
+                        analytics 🧠
                       </p>
                     </div>
                     <AdvancedPostsExample />

@@ -55,10 +55,7 @@ export async function POST(request: NextRequest) {
     const { title, content, published = false } = body;
 
     if (!title) {
-      return NextResponse.json(
-        { error: "Title is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
     // Create the post

@@ -1,10 +1,13 @@
 // Example showing the enhanced createDefaultTransformer with smart type conversions
-import { createOptimisticStore, createDefaultTransformer } from '../optimistic-store-pattern';
+import {
+  createOptimisticStore,
+  createDefaultTransformer,
+} from "../optimistic-store-pattern";
 
 // Example API data that would come from a typical REST API
 const mockApiData = {
   id: "123",
-  user_id: "456", 
+  user_id: "456",
   task_name: "Complete project",
   is_completed: "true",
   priority_level: "high",
@@ -14,12 +17,12 @@ const mockApiData = {
   tags: "urgent,work,frontend",
   estimated_hours: "8.5",
   is_archived: "false",
-  metadata: '{"version": "1.0", "category": "development"}'
+  metadata: '{"version": "1.0", "category": "development"}',
 };
 
 // Example showing smart type conversions
 const useSmartTodos = createOptimisticStore({
-  name: 'smart-todos',
+  name: "smart-todos",
   queryFn: () => Promise.resolve([mockApiData]), // Mock API response
   mutations: {
     create: (data) => Promise.resolve(data),
@@ -31,7 +34,7 @@ const useSmartTodos = createOptimisticStore({
 
 // Example with full custom transformer for complex transformations
 const useCustomSmartTodos = createOptimisticStore({
-  name: 'custom-smart-todos',
+  name: "custom-smart-todos",
   queryFn: () => Promise.resolve([mockApiData]),
   mutations: {
     create: (data) => Promise.resolve(data),
@@ -44,17 +47,17 @@ const useCustomSmartTodos = createOptimisticStore({
       id: apiData.id,
       user_id: apiData.user_id,
       task_name: apiData.task_name,
-      is_completed: apiData.is_completed === 'true',
+      is_completed: apiData.is_completed === "true",
       priority_level: apiData.priority_level,
       created_at: new Date(apiData.created_at),
       updated_at: new Date(apiData.updated_at),
       due_date: new Date(apiData.due_date),
-      tags: apiData.tags.split(',').map((item: string) => item.trim()),
+      tags: apiData.tags.split(",").map((item: string) => item.trim()),
       estimated_hours: Number(apiData.estimated_hours),
-      is_archived: apiData.is_archived === 'false',
+      is_archived: apiData.is_archived === "false",
       // Add custom transformations
       metadata: JSON.parse(apiData.metadata),
-      isUrgent: apiData.tags.includes('urgent'),
+      isUrgent: apiData.tags.includes("urgent"),
       formattedDueDate: new Date(apiData.due_date).toLocaleDateString(),
     }),
     toApi: (uiData) => ({
@@ -66,7 +69,7 @@ const useCustomSmartTodos = createOptimisticStore({
       created_at: uiData.created_at.toISOString(),
       updated_at: uiData.updated_at.toISOString(),
       due_date: uiData.due_date.toISOString(),
-      tags: uiData.tags.join(','),
+      tags: uiData.tags.join(","),
       estimated_hours: uiData.estimated_hours.toString(),
       is_archived: uiData.is_archived.toString(),
       metadata: JSON.stringify(uiData.metadata),
@@ -75,22 +78,22 @@ const useCustomSmartTodos = createOptimisticStore({
 });
 
 // Example showing what the transformed data looks like
-console.log('Original API data:', mockApiData);
+console.log("Original API data:", mockApiData);
 
 // This would be the transformed UI data:
 const transformedData = {
-  id: "123",                    // ✅ ID mapping
-  user_id: "456",               // ✅ Kept original field name
+  id: "123", // ✅ ID mapping
+  user_id: "456", // ✅ Kept original field name
   task_name: "Complete project", // ✅ Kept original field name
-  is_completed: true,           // ✅ "true" string → boolean
-  priority_level: "high",       // ✅ Kept original field name
+  is_completed: true, // ✅ "true" string → boolean
+  priority_level: "high", // ✅ Kept original field name
   created_at: new Date("2024-01-15T10:30:00Z"), // ✅ ISO string → Date
   updated_at: new Date("2024-01-16T14:45:00Z"), // ✅ ISO string → Date
-  due_date: new Date("2024-01-20T23:59:59Z"),   // ✅ ISO string → Date
-  tags: ["urgent", "work", "frontend"],         // ✅ CSV string → array
-  estimated_hours: 8.5,         // ✅ "8.5" string → number
-  is_archived: false,           // ✅ "false" string → boolean
-  metadata: '{"version": "1.0", "category": "development"}' // ✅ Kept as string (no conversion)
+  due_date: new Date("2024-01-20T23:59:59Z"), // ✅ ISO string → Date
+  tags: ["urgent", "work", "frontend"], // ✅ CSV string → array
+  estimated_hours: 8.5, // ✅ "8.5" string → number
+  is_archived: false, // ✅ "false" string → boolean
+  metadata: '{"version": "1.0", "category": "development"}', // ✅ Kept as string (no conversion)
 };
 
 export { useSmartTodos, useCustomSmartTodos, transformedData };

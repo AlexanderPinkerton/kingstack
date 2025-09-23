@@ -50,13 +50,10 @@ export function AppNavbar({
   ) : null;
 
   // Navigation links
-  const presetNavLinks: NavLink[] = [
-    
-  ];
+  const presetNavLinks: NavLink[] = [];
 
   // CTAs
-  const presetCtas: CTA[] = [
-  ];
+  const presetCtas: CTA[] = [];
 
   const allNavLinks = [...presetNavLinks, ...additionalNavLinks];
   const allCtas = [...presetCtas, ...additionalCtas];

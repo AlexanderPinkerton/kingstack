@@ -6,7 +6,7 @@ import { AppNavbar } from "@/components/navbar/presets/app";
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-black to-slate-900 text-white">
-      <AppNavbar/>
+      <AppNavbar />
       <HeroSection />
       <FeaturesSection />
       <CtaSection />

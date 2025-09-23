@@ -1,7 +1,14 @@
 // Simple MobX + TanStack Query Optimistic Store Pattern
 // A minimal bridge between MobX stores and TanStack Query with automatic optimistic updates
 
-import { makeObservable, observable, computed, action, runInAction } from "mobx";
+import {
+  makeAutoObservable,
+  makeObservable,
+  observable,
+  computed,
+  action,
+  runInAction,
+} from "mobx";
 import React, { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -11,14 +18,38 @@ export interface Entity {
   id: string;
 }
 
+// Optimistic state configuration
+export interface OptimisticDefaults<
+  TApiData extends Entity,
+  TUiData extends Entity,
+> {
+  /** Function to generate default API data for optimistic updates */
+  createOptimisticApiData?: (
+    userInput: any,
+    context?: any,
+  ) => Partial<TApiData>;
+  /** Function to generate default UI data directly (alternative to transformer approach) */
+  createOptimisticUiData?: (userInput: any, context?: any) => TUiData;
+  /** Fields that should show loading/pending states instead of defaults */
+  pendingFields?: (keyof TUiData)[];
+}
+
 // Transformation interface for API ↔ UI data conversion
-export interface DataTransformer<TApiData extends Entity, TUiData extends Entity> {
+export interface DataTransformer<
+  TApiData extends Entity,
+  TUiData extends Entity,
+> {
   toUi(apiData: TApiData): TUiData;
   toApi(uiData: TUiData): TApiData;
+  /** Optional: Define optimistic defaults */
+  optimisticDefaults?: OptimisticDefaults<TApiData, TUiData>;
 }
 
 // Default transformer for common data type conversions
-export function createDefaultTransformer<TApiData extends Entity, TUiData extends Entity>(): DataTransformer<TApiData, TUiData> {
+export function createDefaultTransformer<
+  TApiData extends Entity,
+  TUiData extends Entity,
+>(): DataTransformer<TApiData, TUiData> {
   return {
     toUi(apiData: TApiData): TUiData {
       const baseTransform = {
@@ -27,38 +58,43 @@ export function createDefaultTransformer<TApiData extends Entity, TUiData extend
         // Apply smart type conversions while keeping original field names
         ...Object.keys(apiData).reduce((acc, key) => {
           const value = (apiData as any)[key];
-          
+
           // Smart type conversions
-          if (typeof value === 'string') {
+          if (typeof value === "string") {
             // Convert ISO date strings to Date objects
-            if (key.includes('date') || key.includes('time') || key.includes('at') || 
-                (key.includes('created') || key.includes('updated')) && key.includes('_')) {
+            if (
+              key.includes("date") ||
+              key.includes("time") ||
+              key.includes("at") ||
+              ((key.includes("created") || key.includes("updated")) &&
+                key.includes("_"))
+            ) {
               const date = new Date(value);
               if (!isNaN(date.getTime())) {
                 acc[key] = date;
                 return acc;
               }
             }
-            
+
             // Convert boolean strings to boolean values
-            if (value === 'true' || value === 'false') {
-              acc[key] = value === 'true';
+            if (value === "true" || value === "false") {
+              acc[key] = value === "true";
               return acc;
             }
-            
+
             // Convert number strings to numbers
-            if (!isNaN(Number(value)) && value !== '') {
+            if (!isNaN(Number(value)) && value !== "") {
               acc[key] = Number(value);
               return acc;
             }
-            
+
             // Convert CSV strings to arrays
-            if (value.includes(',') && !value.includes(' ')) {
-              acc[key] = value.split(',').map(item => item.trim());
+            if (value.includes(",") && !value.includes(" ")) {
+              acc[key] = value.split(",").map((item) => item.trim());
               return acc;
             }
           }
-          
+
           // Default: keep the original key and value
           acc[key] = value;
           return acc;
@@ -66,48 +102,52 @@ export function createDefaultTransformer<TApiData extends Entity, TUiData extend
       };
       return baseTransform as TUiData;
     },
-    
+
     toApi(uiData: TUiData): TApiData {
       // Handle reverse conversions while keeping original field names
       const apiData = Object.keys(uiData).reduce((acc, key) => {
         const value = (uiData as any)[key];
-        
+
         // Reverse conversions for API
         if (value instanceof Date) {
           // Convert Date objects back to ISO strings
           acc[key] = value.toISOString();
         } else if (Array.isArray(value)) {
           // Convert arrays back to CSV strings
-          acc[key] = value.join(',');
-        } else if (typeof value === 'boolean') {
+          acc[key] = value.join(",");
+        } else if (typeof value === "boolean") {
           // Convert booleans back to strings
           acc[key] = value.toString();
-        } else if (typeof value === 'number') {
+        } else if (typeof value === "number") {
           // Keep numbers as numbers (or convert to string if API expects strings)
           acc[key] = value;
         } else {
           // Default: keep the value as is
           acc[key] = value;
         }
-        
+
         return acc;
       }, {} as any);
       return apiData as TApiData;
     },
-    
   };
 }
 
 // ---------- MobX Store ----------
 
 export class OptimisticStore<T extends Entity> {
-  private entities = new Map<string, T>();
+  /*
+   * All observables must be public or you must use this syntax to make them observable
+   * ----OR----
+   * This can be overcome by explicitly passing the relevant private fields as generic argument, like this:
+   * makeObservable<MyStore, "privateField" | "privateField2">(this, { privateField: observable, privateField2: observable })
+   */
+  public entities = new Map<string, T>();
   private snapshots: Map<string, T>[] = [];
 
   constructor() {
     makeObservable(this, {
       entities: observable,
-      snapshots: observable,
       list: computed,
       count: computed,
       upsert: action,
@@ -168,11 +208,11 @@ export class OptimisticStore<T extends Entity> {
 
   // Server reconciliation - unified function that handles all cases
   reconcile<TApiData extends Entity = T>(
-    serverData: TApiData[], 
-    transformer?: DataTransformer<TApiData, T>
+    serverData: TApiData[],
+    transformer?: DataTransformer<TApiData, T>,
   ): void {
     this.clear();
-    serverData.forEach(apiItem => {
+    serverData.forEach((apiItem) => {
       if (transformer) {
         const uiItem = transformer.toUi(apiItem);
         this.upsert(uiItem);
@@ -182,7 +222,7 @@ export class OptimisticStore<T extends Entity> {
       }
     });
     this.snapshots = []; // Clear snapshots after successful sync
-    console.log('reconciled', this.list);
+    console.log("reconciled", this.list);
   }
 
   // Utility methods
@@ -201,7 +241,7 @@ export class OptimisticStore<T extends Entity> {
  * Creates the appropriate transformer based on config
  */
 function createTransformer<TApiData extends Entity, TUiData extends Entity>(
-  transformer: DataTransformer<TApiData, TUiData> | false | undefined
+  transformer: DataTransformer<TApiData, TUiData> | false | undefined,
 ): DataTransformer<TApiData, TUiData> | undefined {
   if (transformer === false) {
     // No transformation needed - data is already in UI shape
@@ -217,7 +257,10 @@ function createTransformer<TApiData extends Entity, TUiData extends Entity>(
 
 // ---------- Main API ----------
 
-export interface OptimisticStoreConfig<TApiData extends Entity, TUiData extends Entity = TApiData> {
+export interface OptimisticStoreConfig<
+  TApiData extends Entity,
+  TUiData extends Entity = TApiData,
+> {
   /** Unique identifier for this data type (used for query keys) */
   name: string;
   /** Function to fetch all items - same as TanStack Query queryFn */
@@ -230,6 +273,10 @@ export interface OptimisticStoreConfig<TApiData extends Entity, TUiData extends 
   };
   /** Optional: Transform data between API and UI formats. Defaults to createDefaultTransformer() if not provided. Set to false to disable transformation. */
   transformer?: DataTransformer<TApiData, TUiData> | false;
+  /** Optional: Optimistic defaults configuration (can be provided here or in transformer) */
+  optimisticDefaults?: OptimisticDefaults<TApiData, TUiData>;
+  /** Optional: Context data for optimistic updates (e.g., current user, app state) */
+  optimisticContext?: any;
   /** Optional: Custom store class (creates basic OptimisticStore if not provided) */
   storeClass?: new () => OptimisticStore<TUiData>;
   /** Optional: Cache time in milliseconds (default: 5 minutes) */
@@ -241,14 +288,14 @@ export interface OptimisticStoreConfig<TApiData extends Entity, TUiData extends 
 /**
  * Creates a fully configured optimistic store with minimal setup.
  * Just provide your query function and mutation functions - no API wrapper needed!
- * 
+ *
  * Features:
  * - reconcile() method handles all data transformation cases
  * - Smart transformer defaults: uses createDefaultTransformer() by default
  * - Easy customization: pass DataTransformer object or false to disable
  * - Automatic optimistic updates with rollback on errors
  * - Full TypeScript support
- * 
+ *
  * Transformer options:
  * - undefined (default): Uses createDefaultTransformer() for smart type conversions
  * - false: No transformation - data is already in UI shape
@@ -257,23 +304,25 @@ export interface OptimisticStoreConfig<TApiData extends Entity, TUiData extends 
 export function createOptimisticStore<
   TApiData extends Entity,
   TUiData extends Entity = TApiData,
-  TStore extends OptimisticStore<TUiData> = OptimisticStore<TUiData>
+  TStore extends OptimisticStore<TUiData> = OptimisticStore<TUiData>,
 >(config: OptimisticStoreConfig<TApiData, TUiData>) {
   // Return a React hook that manages the store instance
   return function useOptimisticStore() {
     // Create store instance once using useRef to keep it stable across renders
     const storeRef = React.useRef<TStore | null>(null);
     if (!storeRef.current) {
-      const StoreClass = config.storeClass as any || OptimisticStore<TUiData>;
+      const StoreClass = (config.storeClass as any) || OptimisticStore<TUiData>;
       storeRef.current = new StoreClass() as TStore;
     }
-    
+
     // Create transformer once using useRef to keep it stable across renders
-    const transformerRef = React.useRef<DataTransformer<TApiData, TUiData> | undefined | null>(null);
+    const transformerRef = React.useRef<
+      DataTransformer<TApiData, TUiData> | undefined | null
+    >(null);
     if (transformerRef.current === null) {
       transformerRef.current = createTransformer(config.transformer);
     }
-    
+
     // 1) Hydrate store from server
     const query = useQuery({
       queryKey: [config.name],
@@ -292,43 +341,68 @@ export function createOptimisticStore<
 
     // 2) Set up mutations with optimistic updates
     const qc = useQueryClient();
-    
+
     const create = useMutation({
       mutationFn: config.mutations.create,
       onMutate: async (data: any) => {
         await qc.cancelQueries({ queryKey: [config.name] });
         storeRef.current!.pushSnapshot();
-        
+
         // Optimistic update - add to store immediately
         const tempId = `temp-${Date.now()}`;
-        
+
         // Create optimistic item with proper structure
         let optimisticItem: TUiData;
-        if (transformerRef.current) {
-          // If we have a transformer, create a mock API response and transform it
+
+        // Get optimistic defaults from transformer or config
+        const optimisticDefaults =
+          transformerRef.current?.optimisticDefaults ||
+          config.optimisticDefaults;
+
+        if (optimisticDefaults?.createOptimisticUiData) {
+          // Direct UI data creation
+          optimisticItem = optimisticDefaults.createOptimisticUiData(
+            data,
+            config.optimisticContext,
+          );
+        } else if (
+          optimisticDefaults?.createOptimisticApiData &&
+          transformerRef.current
+        ) {
+          // Create mock API data and transform it
+          const defaultApiData = optimisticDefaults.createOptimisticApiData(
+            data,
+            config.optimisticContext,
+          );
           const mockApiData = {
             id: tempId,
-            created_at: new Date().toISOString(),
-            author_id: (data as any).author_id || 'current-user', // Will be handled by transformer
-            ...data
+            ...defaultApiData,
+            ...data,
+          } as TApiData;
+          optimisticItem = transformerRef.current.toUi(mockApiData);
+        } else if (transformerRef.current) {
+          // Fallback: basic mock API data (less opinionated)
+          const mockApiData = {
+            id: tempId,
+            ...data,
           } as TApiData;
           optimisticItem = transformerRef.current.toUi(mockApiData);
         } else {
           // No transformer - use data as-is
           optimisticItem = { id: tempId, ...data } as TUiData;
         }
-        
+
         runInAction(() => {
           storeRef.current!.upsert(optimisticItem);
         });
-        
+
         return { tempId };
       },
       onSuccess: (result: TApiData, variables: any, context: any) => {
         runInAction(() => {
           // Remove temp item and add real one
           storeRef.current!.remove(context.tempId);
-          
+
           if (transformerRef.current) {
             const uiData = transformerRef.current.toUi(result);
             storeRef.current!.upsert(uiData);
@@ -349,12 +423,12 @@ export function createOptimisticStore<
       onMutate: async ({ id, data }: { id: string; data: any }) => {
         await qc.cancelQueries({ queryKey: [config.name] });
         storeRef.current!.pushSnapshot();
-        
+
         // Optimistic update
         runInAction(() => {
           storeRef.current!.update(id, data);
         });
-        
+
         return { id, data };
       },
       onSuccess: (result: TApiData) => {
@@ -379,12 +453,12 @@ export function createOptimisticStore<
       onMutate: async (id: string) => {
         await qc.cancelQueries({ queryKey: [config.name] });
         storeRef.current!.pushSnapshot();
-        
+
         // Optimistic update
         runInAction(() => {
           storeRef.current!.remove(id);
         });
-        
+
         return { id };
       },
       onSuccess: () => {

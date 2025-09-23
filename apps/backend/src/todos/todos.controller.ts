@@ -1,13 +1,13 @@
-import { 
-  Body, 
-  Controller, 
-  Get, 
-  Post, 
-  Put, 
-  Delete, 
-  Param, 
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
   Request,
-  UseGuards 
+  UseGuards,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt.auth.guard";
 import { TodosService } from "./todos.service";
@@ -42,7 +42,7 @@ export class TodosController {
   async updateTodo(
     @Request() req: any,
     @Param("id") id: string,
-    @Body() updateTodoDto: UpdateTodoDto
+    @Body() updateTodoDto: UpdateTodoDto,
   ) {
     const userId = req.user.sub;
     return this.todosService.update(userId, id, updateTodoDto);

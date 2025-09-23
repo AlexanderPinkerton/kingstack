@@ -163,10 +163,15 @@ export class RealtimeGateway
         return;
       }
 
-      this.logger.log(`Post realtime event: ${eventType} - ${post.id} - ${post.title} - published: ${post.published}`);
+      this.logger.log(
+        `Post realtime event: ${eventType} - ${post.id} - ${post.title} - published: ${post.published}`,
+      );
 
       // For INSERT and UPDATE events, only broadcast if the post is published
-      if ((eventType === "INSERT" || eventType === "UPDATE") && post.published === true) {
+      if (
+        (eventType === "INSERT" || eventType === "UPDATE") &&
+        post.published === true
+      ) {
         this.logger.log(`Broadcasting post update: ${post.id} - ${post.title}`);
 
         // Send to all connected clients
@@ -185,7 +190,9 @@ export class RealtimeGateway
           post: post,
         });
       } else {
-        this.logger.log(`Post ${post.id} is not published or event is not relevant, skipping broadcast`);
+        this.logger.log(
+          `Post ${post.id} is not published or event is not relevant, skipping broadcast`,
+        );
       }
     } catch (err) {
       this.logger.error("Error handling post realtime update:", err);

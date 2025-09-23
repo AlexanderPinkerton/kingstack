@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
 import { CreateTodoDto, UpdateTodoDto } from "./todos.controller";
 
@@ -38,7 +42,7 @@ export class TodosService {
 
   async update(userId: string, id: string, updateTodoDto: UpdateTodoDto) {
     console.log("Updating todo:", id, "for user:", userId, updateTodoDto);
-    
+
     // First, check if the todo exists and belongs to the user
     const existingTodo = await this.prisma.todo.findFirst({
       where: {
@@ -48,7 +52,9 @@ export class TodosService {
     });
 
     if (!existingTodo) {
-      throw new NotFoundException("Todo not found or you don't have permission to update it");
+      throw new NotFoundException(
+        "Todo not found or you don't have permission to update it",
+      );
     }
 
     const todo = await this.prisma.todo.update({
@@ -57,14 +63,14 @@ export class TodosService {
       },
       data: updateTodoDto,
     });
-    
+
     console.log("Updated todo:", todo);
     return todo;
   }
 
   async remove(userId: string, id: string) {
     console.log("Deleting todo:", id, "for user:", userId);
-    
+
     // First, check if the todo exists and belongs to the user
     const existingTodo = await this.prisma.todo.findFirst({
       where: {
@@ -74,7 +80,9 @@ export class TodosService {
     });
 
     if (!existingTodo) {
-      throw new NotFoundException("Todo not found or you don't have permission to delete it");
+      throw new NotFoundException(
+        "Todo not found or you don't have permission to delete it",
+      );
     }
 
     await this.prisma.todo.delete({
@@ -82,7 +90,7 @@ export class TodosService {
         id: id,
       },
     });
-    
+
     console.log("Deleted todo:", id);
   }
 }
