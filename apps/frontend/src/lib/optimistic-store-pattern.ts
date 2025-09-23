@@ -23,13 +23,8 @@ export interface OptimisticDefaults<
   TApiData extends Entity,
   TUiData extends Entity,
 > {
-  /** Function to generate default API data for optimistic updates */
-  createOptimisticApiData?: (
-    userInput: any,
-    context?: any,
-  ) => Partial<TApiData>;
-  /** Function to generate default UI data directly (alternative to transformer approach) */
-  createOptimisticUiData?: (userInput: any, context?: any) => TUiData;
+  /** Function to generate optimistic UI data from form input */
+  createOptimisticUiData: (userInput: any, context?: any) => TUiData;
   /** Fields that should show loading/pending states instead of defaults */
   pendingFields?: (keyof TUiData)[];
 }
@@ -290,16 +285,19 @@ export interface OptimisticStoreConfig<
  * Just provide your query function and mutation functions - no API wrapper needed!
  *
  * Features:
- * - reconcile() method handles all data transformation cases
- * - Smart transformer defaults: uses createDefaultTransformer() by default
- * - Easy customization: pass DataTransformer object or false to disable
+ * - Direct form data → optimistic UI data transformation
+ * - Smart transformer for server data reconciliation
  * - Automatic optimistic updates with rollback on errors
+ * - Flexible pending field states for server-generated data
  * - Full TypeScript support
  *
- * Transformer options:
- * - undefined (default): Uses createDefaultTransformer() for smart type conversions
- * - false: No transformation - data is already in UI shape
- * - DataTransformer object: Custom transformer conforming to DataTransformer interface
+ * Optimistic Update Flow:
+ * 1. User submits form data
+ * 2. createOptimisticUiData() transforms form data to complete UI data
+ * 3. UI updates immediately with optimistic data
+ * 4. Server processes same form data
+ * 5. Transformer converts server response to UI data
+ * 6. Optimistic data replaced with authoritative server data
  */
 export function createOptimisticStore<
   TApiData extends Entity,
@@ -360,35 +358,20 @@ export function createOptimisticStore<
           config.optimisticDefaults;
 
         if (optimisticDefaults?.createOptimisticUiData) {
-          // ✅ PREFERRED: Direct UI data creation - most efficient and clear
+          // ✅ Direct UI data creation - the right way to do optimistic updates
           optimisticItem = optimisticDefaults.createOptimisticUiData(
             data,
             config.optimisticContext,
           );
-        } else if (
-          optimisticDefaults?.createOptimisticApiData &&
-          transformerRef.current
-        ) {
-          // Legacy: Create mock API data and transform it (less efficient)
-          const defaultApiData = optimisticDefaults.createOptimisticApiData(
-            data,
-            config.optimisticContext,
-          );
-          const mockApiData = {
-            id: tempId,
-            ...defaultApiData,
-            ...data,
-          } as TApiData;
-          optimisticItem = transformerRef.current.toUi(mockApiData);
         } else if (transformerRef.current) {
-          // Fallback: basic mock API data (minimal approach)
+          // Fallback: minimal mock API data when no optimistic defaults provided
           const mockApiData = {
             id: tempId,
             ...data,
           } as TApiData;
           optimisticItem = transformerRef.current.toUi(mockApiData);
         } else {
-          // No transformer - use data as-is with temp ID
+          // No transformer or defaults - use form data as-is with temp ID
           optimisticItem = { id: tempId, ...data } as TUiData;
         }
 

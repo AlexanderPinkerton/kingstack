@@ -161,31 +161,31 @@ interface CommentUiData {
   depth: number;
 }
 
-// Context-aware optimistic defaults
+// ✅ Context-aware optimistic UI data creation
 const commentOptimisticDefaults: OptimisticDefaults<
   CommentApiData,
   CommentUiData
 > = {
-  createOptimisticApiData: (userInput, context) => {
+  createOptimisticUiData: (userInput, context) => {
     const { currentUser, postId, parentComment } = context || {};
 
     return {
-      created_at: new Date().toISOString(),
+      id: `temp-${Date.now()}`,
+      content: userInput.content,
       post_id: postId || userInput.post_id,
       author_id: currentUser?.id || "unknown",
       parent_id: parentComment?.id, // For replies
+      created_at: new Date(),
       likes_count: 0,
-      author: currentUser
-        ? {
-            id: currentUser.id,
-            username: currentUser.username || "You",
-            avatar_url: currentUser.avatar_url || "/default-avatar.png",
-          }
-        : {
-            id: "unknown",
-            username: "Anonymous",
-            avatar_url: "/default-avatar.png",
-          },
+      author: {
+        id: currentUser?.id || "unknown",
+        username: currentUser?.username || "You",
+        avatar_url: currentUser?.avatar_url || "/default-avatar.png",
+        displayName: currentUser?.username || "You",
+      },
+      // UI computed fields
+      isReply: !!parentComment,
+      depth: parentComment ? (parentComment.depth || 0) + 1 : 0,
     };
   },
 };
