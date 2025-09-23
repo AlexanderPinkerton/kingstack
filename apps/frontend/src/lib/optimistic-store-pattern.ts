@@ -1,7 +1,7 @@
 // Simple MobX + TanStack Query Optimistic Store Pattern
 // A minimal bridge between MobX stores and TanStack Query with automatic optimistic updates
 
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeObservable, observable, computed, action, runInAction } from "mobx";
 import React, { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -105,7 +105,19 @@ export class OptimisticStore<T extends Entity> {
   private snapshots: Map<string, T>[] = [];
 
   constructor() {
-    makeAutoObservable(this);
+    makeObservable(this, {
+      entities: observable,
+      snapshots: observable,
+      list: computed,
+      count: computed,
+      upsert: action,
+      update: action,
+      remove: action,
+      clear: action,
+      pushSnapshot: action,
+      rollback: action,
+      reconcile: action,
+    });
   }
 
   // Computed properties
@@ -231,7 +243,7 @@ export interface OptimisticStoreConfig<TApiData extends Entity, TUiData extends 
  * Just provide your query function and mutation functions - no API wrapper needed!
  * 
  * Features:
- * - Single reconcile() method handles all data transformation cases
+ * - reconcile() method handles all data transformation cases
  * - Smart transformer defaults: uses createDefaultTransformer() by default
  * - Easy customization: pass DataTransformer object or false to disable
  * - Automatic optimistic updates with rollback on errors
@@ -289,7 +301,23 @@ export function createOptimisticStore<
         
         // Optimistic update - add to store immediately
         const tempId = `temp-${Date.now()}`;
-        const optimisticItem = { id: tempId, ...data } as TUiData;
+        
+        // Create optimistic item with proper structure
+        let optimisticItem: TUiData;
+        if (transformerRef.current) {
+          // If we have a transformer, create a mock API response and transform it
+          const mockApiData = {
+            id: tempId,
+            created_at: new Date().toISOString(),
+            author_id: (data as any).author_id || 'current-user', // Will be handled by transformer
+            ...data
+          } as TApiData;
+          optimisticItem = transformerRef.current.toUi(mockApiData);
+        } else {
+          // No transformer - use data as-is
+          optimisticItem = { id: tempId, ...data } as TUiData;
+        }
+        
         runInAction(() => {
           storeRef.current!.upsert(optimisticItem);
         });
