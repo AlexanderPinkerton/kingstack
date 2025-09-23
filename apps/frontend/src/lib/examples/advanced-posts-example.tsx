@@ -238,8 +238,8 @@ export class PostTransformer
           ? new Date(userInput.created_at)
           : new Date();
 
-      // Determine if this is a new post (no existing ID)
-      const isNew = !userInput.id || userInput.id.startsWith('temp-');
+      // Determine if this is a new post using the same logic as the transformer
+      const isNew = this.isPostNew(createdAt.toISOString());
 
       return {
         id,
