@@ -9,7 +9,7 @@ import {
   DataTransformer,
   Entity,
   OptimisticDefaults,
-} from "@/lib/optimistic-store-pattern";
+} from "@/lib/optimistic-store-react";
 import { fetchWithAuth } from "@/lib/utils";
 import { makeObservable, observable, computed, action } from "mobx";
 
@@ -217,51 +217,56 @@ export class PostTransformer
   constructor() {}
 
   // Define optimistic defaults - create UI data directly
-  optimisticDefaults: OptimisticDefaults<PostApiData, PostUiData> = {
+  optimisticDefaults: OptimisticDefaults<PostUiData> = {
     createOptimisticUiData: (userInput: any, context?: any) => {
       const currentUser = context?.currentUser;
-      const content = userInput.content || '';
-      
+      const content = userInput.content || "";
+
       // Calculate UI fields immediately
       const wordCount = this.calculateWordCount(content);
       const readingTime = this.calculateReadingTime(wordCount);
       const excerpt = this.generateExcerpt(content);
       const tags = this.extractTags(content);
-      
+
       // Use existing ID if available (for updates), otherwise generate temp ID
       const id = userInput.id || `temp-${Date.now()}`;
-      
+
       // Use existing created_at if available (for updates), otherwise use current time
-      const createdAt = userInput.created_at instanceof Date 
-        ? userInput.created_at 
-        : userInput.created_at 
-          ? new Date(userInput.created_at)
-          : new Date();
+      const createdAt =
+        userInput.created_at instanceof Date
+          ? userInput.created_at
+          : userInput.created_at
+            ? new Date(userInput.created_at)
+            : new Date();
 
       // Determine if this is a new post using the same logic as the transformer
       const isNew = this.isPostNew(createdAt.toISOString());
 
       return {
         id,
-        title: userInput.title || '',
+        title: userInput.title || "",
         content,
         published: userInput.published ?? false,
-        author_id: userInput.author_id || currentUser?.id || 'unknown',
+        author_id: userInput.author_id || currentUser?.id || "unknown",
         created_at: createdAt,
         author: userInput.author || {
-          id: currentUser?.id || 'unknown',
-          username: currentUser?.user_metadata?.username || 
-                   currentUser?.email?.split('@')[0] || 'You',
-          email: currentUser?.email || 'unknown@example.com',
-          displayName: currentUser?.user_metadata?.username || 
-                      currentUser?.email?.split('@')[0] || 'You',
+          id: currentUser?.id || "unknown",
+          username:
+            currentUser?.user_metadata?.username ||
+            currentUser?.email?.split("@")[0] ||
+            "You",
+          email: currentUser?.email || "unknown@example.com",
+          displayName:
+            currentUser?.user_metadata?.username ||
+            currentUser?.email?.split("@")[0] ||
+            "You",
         },
         // Computed UI fields - always recalculated
         excerpt,
         readingTime,
         wordCount,
         isNew,
-        publishStatus: (userInput.published ?? false) ? 'published' : 'draft',
+        publishStatus: (userInput.published ?? false) ? "published" : "draft",
         tags,
       } as PostUiData;
     },
@@ -367,39 +372,50 @@ export class PostTransformer
 
 function useAdvancedPosts() {
   const rootStore = useContext(RootStoreContext);
-  const token = rootStore.session?.access_token || "";
-  const currentUser = rootStore.session?.user;
-
-  const baseUrl =
-    process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
 
   return createOptimisticStore<PostApiData, PostUiData, PostStore>({
     name: "advanced-posts",
-    queryFn: () =>
-      fetchWithAuth(token, `${baseUrl}/posts`).then((res) => res.json()),
+    queryFn: () => {
+      const token = rootStore.session?.access_token || "";
+      const baseUrl =
+        process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+      return fetchWithAuth(token, `${baseUrl}/posts`).then((res) => res.json());
+    },
     mutations: {
-      create: (data) =>
-        fetchWithAuth(token, `${baseUrl}/posts`, {
+      create: (data) => {
+        const token = rootStore.session?.access_token || "";
+        const baseUrl =
+          process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+        return fetchWithAuth(token, `${baseUrl}/posts`, {
           method: "POST",
           body: JSON.stringify(data),
-        }).then((res) => res.json()),
+        }).then((res) => res.json());
+      },
 
-      update: ({ id, data }) =>
-        fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
+      update: ({ id, data }) => {
+        const token = rootStore.session?.access_token || "";
+        const baseUrl =
+          process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+        return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
           method: "PUT",
           body: JSON.stringify(data),
-        }).then((res) => res.json()),
+        }).then((res) => res.json());
+      },
 
-      remove: (id) =>
-        fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
+      remove: (id) => {
+        const token = rootStore.session?.access_token || "";
+        const baseUrl =
+          process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+        return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
           method: "DELETE",
-        }).then(() => ({ id })),
+        }).then(() => ({ id }));
+      },
     },
     transformer: new PostTransformer(),
-    optimisticContext: { currentUser },
+    optimisticContext: () => ({ currentUser: rootStore.session?.user }),
     storeClass: PostStore,
     staleTime: 5 * 60 * 1000,
-    enabled: !!token,
+    enabled: () => !!(rootStore.session?.access_token),
   })();
 }
 

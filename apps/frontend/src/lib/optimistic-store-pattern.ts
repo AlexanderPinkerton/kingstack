@@ -1,16 +1,18 @@
-// Simple MobX + TanStack Query Optimistic Store Pattern
-// A minimal bridge between MobX stores and TanStack Query with automatic optimistic updates
+// Framework-Agnostic MobX + TanStack Query Core Optimistic Store Pattern
+// A minimal bridge between MobX stores and TanStack Query Core with automatic optimistic updates
 
 import {
-  makeAutoObservable,
   makeObservable,
   observable,
   computed,
   action,
   runInAction,
 } from "mobx";
-import React, { useEffect } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  QueryClient,
+  MutationObserver,
+  QueryObserver,
+} from "@tanstack/query-core";
 
 // ---------- Core Types ----------
 
@@ -19,10 +21,7 @@ export interface Entity {
 }
 
 // Optimistic state configuration
-export interface OptimisticDefaults<
-  TApiData extends Entity,
-  TUiData extends Entity,
-> {
+export interface OptimisticDefaults<TUiData extends Entity> {
   /** Function to generate optimistic UI data from form input */
   createOptimisticUiData: (userInput: any, context?: any) => TUiData;
   /** Fields that should show loading/pending states instead of defaults */
@@ -37,7 +36,7 @@ export interface DataTransformer<
   toUi(apiData: TApiData): TUiData;
   toApi(uiData: TUiData): TApiData;
   /** Optional: Define optimistic defaults */
-  optimisticDefaults?: OptimisticDefaults<TApiData, TUiData>;
+  optimisticDefaults?: OptimisticDefaults<TUiData>;
 }
 
 // Default transformer for common data type conversions
@@ -235,7 +234,7 @@ export class OptimisticStore<T extends Entity> {
 /**
  * Creates the appropriate transformer based on config
  */
-function createTransformer<TApiData extends Entity, TUiData extends Entity>(
+export function createTransformer<TApiData extends Entity, TUiData extends Entity>(
   transformer: DataTransformer<TApiData, TUiData> | false | undefined,
 ): DataTransformer<TApiData, TUiData> | undefined {
   if (transformer === false) {
@@ -258,9 +257,9 @@ export interface OptimisticStoreConfig<
 > {
   /** Unique identifier for this data type (used for query keys) */
   name: string;
-  /** Function to fetch all items - same as TanStack Query queryFn */
+  /** Function to fetch all items - same as TanStack Query queryFn. Can be dynamic to capture current context. */
   queryFn: () => Promise<TApiData[]>;
-  /** Mutation functions for CRUD operations */
+  /** Mutation functions for CRUD operations. Can be dynamic to capture current context. */
   mutations: {
     create: (data: any) => Promise<TApiData>;
     update: (params: { id: string; data: any }) => Promise<TApiData>;
@@ -269,19 +268,46 @@ export interface OptimisticStoreConfig<
   /** Optional: Transform data between API and UI formats. Defaults to createDefaultTransformer() if not provided. Set to false to disable transformation. */
   transformer?: DataTransformer<TApiData, TUiData> | false;
   /** Optional: Optimistic defaults configuration (can be provided here or in transformer) */
-  optimisticDefaults?: OptimisticDefaults<TApiData, TUiData>;
-  /** Optional: Context data for optimistic updates (e.g., current user, app state) */
-  optimisticContext?: any;
+  optimisticDefaults?: OptimisticDefaults<TUiData>;
+  /** Optional: Function to get current context data for optimistic updates (e.g., current user, app state) */
+  optimisticContext?: () => any;
   /** Optional: Custom store class (creates basic OptimisticStore if not provided) */
   storeClass?: new () => OptimisticStore<TUiData>;
   /** Optional: Cache time in milliseconds (default: 5 minutes) */
   staleTime?: number;
-  /** Optional: Enable/disable the query (default: true) */
-  enabled?: boolean;
+  /** Optional: Function to determine if query should be enabled (default: () => true) */
+  enabled?: () => boolean;
+}
+
+// ---------- Framework-Agnostic Store Manager ----------
+
+export interface OptimisticStoreManager<
+  TApiData extends Entity,
+  TUiData extends Entity,
+  TStore extends OptimisticStore<TUiData> = OptimisticStore<TUiData>,
+> {
+  store: TStore;
+  actions: {
+    create: (data: any) => Promise<TApiData>;
+    update: (params: { id: string; data: any }) => Promise<TApiData>;
+    remove: (id: string) => Promise<void | { id: string }>;
+    refetch: () => Promise<any>;
+  };
+  status: {
+    isLoading: boolean;
+    isError: boolean;
+    error: Error | null;
+    isSyncing: boolean;
+    createPending: boolean;
+    updatePending: boolean;
+    deletePending: boolean;
+  };
+  updateOptions: () => void;
+  destroy: () => void;
 }
 
 /**
- * Creates a fully configured optimistic store with minimal setup.
+ * Creates a fully configured framework-agnostic optimistic store with minimal setup.
  * Just provide your query function and mutation functions - no API wrapper needed!
  *
  * Features:
@@ -290,6 +316,7 @@ export interface OptimisticStoreConfig<
  * - Automatic optimistic updates with rollback on errors
  * - Flexible pending field states for server-generated data
  * - Full TypeScript support
+ * - Framework agnostic (works with React, Vue, Svelte, etc.)
  *
  * Optimistic Update Flow:
  * 1. User submits form data
@@ -299,201 +326,243 @@ export interface OptimisticStoreConfig<
  * 5. Transformer converts server response to UI data
  * 6. Optimistic data replaced with authoritative server data
  */
-export function createOptimisticStore<
+export function createOptimisticStoreManager<
   TApiData extends Entity,
   TUiData extends Entity = TApiData,
   TStore extends OptimisticStore<TUiData> = OptimisticStore<TUiData>,
->(config: OptimisticStoreConfig<TApiData, TUiData>) {
-  // Return a React hook that manages the store instance
-  return function useOptimisticStore() {
-    // Create store instance once using useRef to keep it stable across renders
-    const storeRef = React.useRef<TStore | null>(null);
-    if (!storeRef.current) {
-      const StoreClass = (config.storeClass as any) || OptimisticStore<TUiData>;
-      storeRef.current = new StoreClass() as TStore;
-    }
+>(
+  config: OptimisticStoreConfig<TApiData, TUiData>,
+  queryClient?: QueryClient,
+): OptimisticStoreManager<TApiData, TUiData, TStore> {
+  // Use provided query client or create a new one
+  const qc = queryClient || new QueryClient();
 
-    // Create transformer once using useRef to keep it stable across renders
-    const transformerRef = React.useRef<
-      DataTransformer<TApiData, TUiData> | undefined | null
-    >(null);
-    if (transformerRef.current === null) {
-      transformerRef.current = createTransformer(config.transformer);
-    }
+  // Create store instance
+  const StoreClass = (config.storeClass as any) || OptimisticStore<TUiData>;
+  const store = new StoreClass() as TStore;
 
-    // 1) Hydrate store from server
-    const query = useQuery({
-      queryKey: [config.name],
-      queryFn: config.queryFn,
-      staleTime: config.staleTime ?? 5 * 60 * 1000,
-      enabled: config.enabled,
+  // Create transformer
+  const transformer = createTransformer(config.transformer);
+
+  // Status tracking - make it observable so React components re-render
+  const status = observable({
+    isLoading: false,
+    isError: false,
+    error: null as Error | null,
+    isSyncing: false,
+    createPending: false,
+    updatePending: false,
+    deletePending: false,
+  });
+
+  // Create query observer for data fetching
+  const queryObserver = new QueryObserver(qc, {
+    queryKey: [config.name],
+    queryFn: config.queryFn,
+    staleTime: config.staleTime ?? 5 * 60 * 1000,
+    enabled: config.enabled ? config.enabled() : true,
+  });
+
+  // Subscribe to query changes
+  const unsubscribeQuery = queryObserver.subscribe((result) => {
+    runInAction(() => {
+      status.isLoading = result.isLoading;
+      status.isError = result.isError;
+      status.error = result.error as Error | null;
+      status.isSyncing = result.isFetching;
     });
 
-    useEffect(() => {
-      if (query.data) {
-        runInAction(() => {
-          storeRef.current!.reconcile(query.data!, transformerRef.current!);
-        });
-      }
-    }, [query.data]);
+    if (result.data) {
+      runInAction(() => {
+        store.reconcile(result.data!, transformer);
+      });
+    }
+  });
 
-    // 2) Set up mutations with optimistic updates
-    const qc = useQueryClient();
+  // Create mutation observers
+  const createMutationObserver = new MutationObserver(qc, {
+    mutationFn: config.mutations.create,
+    onMutate: async (data: any) => {
+      await qc.cancelQueries({ queryKey: [config.name] });
+      store.pushSnapshot();
 
-    const create = useMutation({
-      mutationFn: config.mutations.create,
-      onMutate: async (data: any) => {
-        await qc.cancelQueries({ queryKey: [config.name] });
-        storeRef.current!.pushSnapshot();
+      // Optimistic update - add to store immediately
+      const tempId = `temp-${Date.now()}`;
 
-        // Optimistic update - add to store immediately
-        const tempId = `temp-${Date.now()}`;
+      // Create optimistic item with proper structure
+      let optimisticItem: TUiData;
 
-        // Create optimistic item with proper structure
-        let optimisticItem: TUiData;
-
-        // Get optimistic defaults from transformer or config
-        const optimisticDefaults =
-          transformerRef.current?.optimisticDefaults ||
-          config.optimisticDefaults;
+      // Get optimistic defaults from transformer or config
+      const optimisticDefaults =
+        transformer?.optimisticDefaults || config.optimisticDefaults;
 
         if (optimisticDefaults?.createOptimisticUiData) {
           // ✅ Direct UI data creation - the right way to do optimistic updates
-          optimisticItem = optimisticDefaults.createOptimisticUiData(
-            data,
-            config.optimisticContext,
-          );
-        } else if (transformerRef.current) {
-          // Fallback: minimal mock API data when no optimistic defaults provided
-          const mockApiData = {
-            id: tempId,
-            ...data,
-          } as TApiData;
-          optimisticItem = transformerRef.current.toUi(mockApiData);
+          const context = config.optimisticContext ? config.optimisticContext() : undefined;
+          optimisticItem = optimisticDefaults.createOptimisticUiData(data, context);
+      } else if (transformer) {
+        // Fallback: minimal mock API data when no optimistic defaults provided
+        const mockApiData = {
+          id: tempId,
+          ...data,
+        } as TApiData;
+        optimisticItem = transformer.toUi(mockApiData);
+      } else {
+        // No transformer or defaults - use form data as-is with temp ID
+        optimisticItem = { id: tempId, ...data } as TUiData;
+      }
+
+      runInAction(() => {
+        store.upsert(optimisticItem);
+      });
+
+      return { tempId };
+    },
+    onSuccess: (result: TApiData, variables: any, context: any) => {
+      runInAction(() => {
+        // Remove temp item and add real one
+        store.remove(context.tempId);
+
+        if (transformer) {
+          const uiData = transformer.toUi(result);
+          store.upsert(uiData);
         } else {
-          // No transformer or defaults - use form data as-is with temp ID
-          optimisticItem = { id: tempId, ...data } as TUiData;
+          store.upsert(result as unknown as TUiData);
         }
+      });
+    },
+    onError: () => {
+      runInAction(() => {
+        store.rollback();
+      });
+    },
+  });
 
-        runInAction(() => {
-          storeRef.current!.upsert(optimisticItem);
-        });
+  const updateMutationObserver = new MutationObserver(qc, {
+    mutationFn: config.mutations.update,
+    onMutate: async ({ id, data }: { id: string; data: any }) => {
+      await qc.cancelQueries({ queryKey: [config.name] });
+      store.pushSnapshot();
 
-        return { tempId };
-      },
-      onSuccess: (result: TApiData, variables: any, context: any) => {
-        runInAction(() => {
-          // Remove temp item and add real one
-          storeRef.current!.remove(context.tempId);
+      // Get optimistic defaults for updates
+      const optimisticDefaults =
+        transformer?.optimisticDefaults || config.optimisticDefaults;
 
-          if (transformerRef.current) {
-            const uiData = transformerRef.current.toUi(result);
-            storeRef.current!.upsert(uiData);
-          } else {
-            storeRef.current!.upsert(result as unknown as TUiData);
+      // Optimistic update with proper UI data calculation
+      runInAction(() => {
+            if (optimisticDefaults?.createOptimisticUiData) {
+              // Get existing item to merge with updates
+              const existingItem = store.get(id);
+              if (existingItem) {
+                // Create updated form data by merging existing + updates
+                const updatedFormData = { ...existingItem, ...data };
+                // Generate fresh optimistic UI data with recalculated fields
+                const context = config.optimisticContext ? config.optimisticContext() : undefined;
+                const optimisticItem = optimisticDefaults.createOptimisticUiData(
+                  updatedFormData,
+                  context,
+                );
+            // Preserve the original ID (don't generate new temp ID)
+            optimisticItem.id = id;
+            store.upsert(optimisticItem);
           }
-        });
-      },
-      onError: () => {
-        runInAction(() => {
-          storeRef.current!.rollback();
-        });
-      },
-    });
+        } else {
+          // Fallback: basic update without recalculated fields
+          store.update(id, data);
+        }
+      });
 
-    const update = useMutation({
-      mutationFn: config.mutations.update,
-      onMutate: async ({ id, data }: { id: string; data: any }) => {
-        await qc.cancelQueries({ queryKey: [config.name] });
-        storeRef.current!.pushSnapshot();
+      return { id, data };
+    },
+    onSuccess: (result: TApiData) => {
+      runInAction(() => {
+        if (transformer) {
+          const uiData = transformer.toUi(result);
+          store.upsert(uiData);
+        } else {
+          store.upsert(result as unknown as TUiData);
+        }
+      });
+    },
+    onError: () => {
+      runInAction(() => {
+        store.rollback();
+      });
+    },
+  });
 
-        // Get optimistic defaults for updates
-        const optimisticDefaults =
-          transformerRef.current?.optimisticDefaults ||
-          config.optimisticDefaults;
+  const removeMutationObserver = new MutationObserver(qc, {
+    mutationFn: config.mutations.remove,
+    onMutate: async (id: string) => {
+      await qc.cancelQueries({ queryKey: [config.name] });
+      store.pushSnapshot();
 
-        // Optimistic update with proper UI data calculation
-        runInAction(() => {
-          if (optimisticDefaults?.createOptimisticUiData) {
-            // Get existing item to merge with updates
-            const existingItem = storeRef.current!.get(id);
-            if (existingItem) {
-              // Create updated form data by merging existing + updates
-              const updatedFormData = { ...existingItem, ...data };
-              // Generate fresh optimistic UI data with recalculated fields
-              const optimisticItem = optimisticDefaults.createOptimisticUiData(
-                updatedFormData,
-                config.optimisticContext,
-              );
-              // Preserve the original ID (don't generate new temp ID)
-              optimisticItem.id = id;
-              storeRef.current!.upsert(optimisticItem);
-            }
-          } else {
-            // Fallback: basic update without recalculated fields
-            storeRef.current!.update(id, data);
-          }
-        });
+      // Optimistic update
+      runInAction(() => {
+        store.remove(id);
+      });
 
-        return { id, data };
-      },
-      onSuccess: (result: TApiData) => {
-        runInAction(() => {
-          if (transformerRef.current) {
-            const uiData = transformerRef.current.toUi(result);
-            storeRef.current!.upsert(uiData);
-          } else {
-            storeRef.current!.upsert(result as unknown as TUiData);
-          }
-        });
-      },
-      onError: () => {
-        runInAction(() => {
-          storeRef.current!.rollback();
-        });
-      },
-    });
+      return { id };
+    },
+    onSuccess: () => {
+      // Item already removed optimistically
+    },
+    onError: () => {
+      runInAction(() => {
+        store.rollback();
+      });
+    },
+  });
 
-    const remove = useMutation({
-      mutationFn: config.mutations.remove,
-      onMutate: async (id: string) => {
-        await qc.cancelQueries({ queryKey: [config.name] });
-        storeRef.current!.pushSnapshot();
+  // Subscribe to mutation status changes
+  const unsubscribeCreateMutation = createMutationObserver.subscribe(
+    (result) => {
+      runInAction(() => {
+        status.createPending = result.isPending;
+      });
+    },
+  );
 
-        // Optimistic update
-        runInAction(() => {
-          storeRef.current!.remove(id);
-        });
+  const unsubscribeUpdateMutation = updateMutationObserver.subscribe(
+    (result) => {
+      runInAction(() => {
+        status.updatePending = result.isPending;
+      });
+    },
+  );
 
-        return { id };
-      },
-      onSuccess: () => {
-        // Item already removed optimistically
-      },
-      onError: () => {
-        runInAction(() => {
-          storeRef.current!.rollback();
-        });
-      },
-    });
+  const unsubscribeRemoveMutation = removeMutationObserver.subscribe(
+    (result) => {
+      runInAction(() => {
+        status.deletePending = result.isPending;
+      });
+    },
+  );
 
-    return {
-      store: storeRef.current,
-      actions: {
-        create: create.mutate,
-        update: update.mutate,
-        remove: remove.mutate,
-        refetch: () => query.refetch(),
-      },
-      status: {
-        isLoading: query.isLoading,
-        isError: query.isError,
-        error: (query.error as Error) ?? null,
-        isSyncing: query.isFetching,
-        createPending: create.isPending,
-        updatePending: update.isPending,
-        deletePending: remove.isPending,
-      },
-    } as const;
-  };
+  return {
+    store: store,
+    actions: {
+      create: (data: any) => createMutationObserver.mutate(data),
+      update: (params: { id: string; data: any }) =>
+        updateMutationObserver.mutate(params),
+      remove: (id: string) => removeMutationObserver.mutate(id),
+      refetch: () => queryObserver.refetch(),
+    },
+    status,
+    updateOptions: () => {
+      // Update query options with current enabled state
+      queryObserver.setOptions({
+        queryKey: [config.name],
+        queryFn: config.queryFn,
+        staleTime: config.staleTime ?? 5 * 60 * 1000,
+        enabled: config.enabled ? config.enabled() : true,
+      });
+    },
+    destroy: () => {
+      unsubscribeQuery();
+      unsubscribeCreateMutation();
+      unsubscribeUpdateMutation();
+      unsubscribeRemoveMutation();
+    },
+  } as const;
 }

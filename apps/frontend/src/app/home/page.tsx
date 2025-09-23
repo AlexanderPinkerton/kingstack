@@ -10,7 +10,7 @@ import { GradientText } from "@/components/ui/gradient-text";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { AppNavbar } from "@/components/navbar/presets/app";
 
-import { createOptimisticStore } from "@/lib/optimistic-store-pattern";
+import { createOptimisticStore } from "@/lib/optimistic-store-react";
 import { fetchWithAuth } from "@/lib/utils";
 import { useContext } from "react";
 import { RootStoreContext } from "@/context/rootStoreContext";
@@ -37,35 +37,47 @@ export interface TodoUiData {
 // Create the optimistic store hook - SUPER SIMPLE! 🚀
 function useTodos() {
   const rootStore = useContext(RootStoreContext);
-  const token = rootStore.session?.access_token || "";
-
-  const baseUrl =
-    process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
 
   return createOptimisticStore<TodoApiData, TodoUiData>({
     name: "todos",
-    queryFn: () =>
-      fetchWithAuth(token, `${baseUrl}/todos`).then((res) => res.json()),
+    queryFn: () => {
+      const token = rootStore.session?.access_token || "";
+      const baseUrl =
+        process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+      return fetchWithAuth(token, `${baseUrl}/todos`).then((res) => res.json());
+    },
     mutations: {
-      create: (data) =>
-        fetchWithAuth(token, `${baseUrl}/todos`, {
+      create: (data) => {
+        const token = rootStore.session?.access_token || "";
+        const baseUrl =
+          process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+        return fetchWithAuth(token, `${baseUrl}/todos`, {
           method: "POST",
           body: JSON.stringify(data),
-        }).then((res) => res.json()),
+        }).then((res) => res.json());
+      },
 
-      update: ({ id, data }) =>
-        fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
+      update: ({ id, data }) => {
+        const token = rootStore.session?.access_token || "";
+        const baseUrl =
+          process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+        return fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
           method: "PUT",
           body: JSON.stringify(data),
-        }).then((res) => res.json()),
+        }).then((res) => res.json());
+      },
 
-      remove: (id) =>
-        fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
+      remove: (id) => {
+        const token = rootStore.session?.access_token || "";
+        const baseUrl =
+          process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+        return fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
           method: "DELETE",
-        }).then(() => ({ id })),
+        }).then(() => ({ id }));
+      },
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!token, // Only run when we have a token
+    enabled: () => !!(rootStore.session?.access_token), // Only run when we have a token
   })();
 }
 
