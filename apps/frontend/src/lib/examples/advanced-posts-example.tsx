@@ -216,26 +216,43 @@ export class PostTransformer
 {
   constructor() {}
 
-  // Define optimistic defaults
+  // Define optimistic defaults - create UI data directly
   optimisticDefaults: OptimisticDefaults<PostApiData, PostUiData> = {
-    createOptimisticApiData: (userInput: any, context?: any) => {
+    createOptimisticUiData: (userInput: any, context?: any) => {
       const currentUser = context?.currentUser;
+      const content = userInput.content || '';
+      const tempId = `temp-${Date.now()}`;
+      
+      // Calculate UI fields immediately
+      const wordCount = this.calculateWordCount(content);
+      const readingTime = this.calculateReadingTime(wordCount);
+      const excerpt = this.generateExcerpt(content);
+      const tags = this.extractTags(content);
+      const createdAt = new Date();
+
       return {
-        created_at: new Date().toISOString(),
-        author_id: currentUser?.id || "unknown",
-        author: currentUser
-          ? {
-              id: currentUser.id,
-              username:
-                currentUser.user_metadata?.username ||
-                currentUser.email?.split("@")[0] ||
-                "You",
-              email: currentUser.email || "unknown@example.com",
-            }
-          : undefined,
-        // Provide any other server-side defaults
+        id: tempId,
+        title: userInput.title || '',
+        content,
         published: userInput.published ?? false,
-      };
+        author_id: currentUser?.id || 'unknown',
+        created_at: createdAt,
+        author: {
+          id: currentUser?.id || 'unknown',
+          username: currentUser?.user_metadata?.username || 
+                   currentUser?.email?.split('@')[0] || 'You',
+          email: currentUser?.email || 'unknown@example.com',
+          displayName: currentUser?.user_metadata?.username || 
+                      currentUser?.email?.split('@')[0] || 'You',
+        },
+        // Computed UI fields
+        excerpt,
+        readingTime,
+        wordCount,
+        isNew: true, // Always true for new posts
+        publishStatus: (userInput.published ?? false) ? 'published' : 'draft',
+        tags,
+      } as PostUiData;
     },
 
     // Fields that should show loading/pending states

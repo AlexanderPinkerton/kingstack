@@ -27,12 +27,15 @@ interface TodoUiData {
   isNew: boolean; // computed field
 }
 
-// Simple optimistic defaults - just provide what's missing
+// ✅ PREFERRED: Direct UI data creation - simple and efficient
 const todoOptimisticDefaults: OptimisticDefaults<TodoApiData, TodoUiData> = {
-  createOptimisticApiData: (userInput, context) => ({
-    created_at: new Date().toISOString(),
+  createOptimisticUiData: (userInput, context) => ({
+    id: `temp-${Date.now()}`,
+    title: userInput.title,
+    done: userInput.done ?? false,
     user_id: context?.currentUser?.id || "unknown",
-    done: false, // reasonable default
+    created_at: new Date(), // Already a Date object for UI
+    isNew: true, // Computed field - always true for new todos
   }),
 };
 
@@ -68,18 +71,27 @@ interface ProductUiData {
   isPending: boolean;
 }
 
-// Complex optimistic defaults with pending fields
+// ✅ PREFERRED: Direct UI data creation with pending fields
 const productOptimisticDefaults: OptimisticDefaults<
   ProductApiData,
   ProductUiData
 > = {
-  createOptimisticApiData: (userInput, context) => ({
-    created_at: new Date().toISOString(),
-    // Don't try to generate server-only fields
-    sku: null as any, // Will be marked as pending
-    inventory_count: null as any, // Will be marked as pending
-    seo_score: null as any, // Will be marked as pending
-    moderation_status: "pending", // Reasonable default
+  createOptimisticUiData: (userInput, context) => ({
+    id: `temp-${Date.now()}`,
+    name: userInput.name,
+    description: userInput.description,
+    price: userInput.price,
+    category_id: userInput.category_id,
+    created_at: new Date(),
+    // Server-generated fields marked as null (will show loading states)
+    sku: null,
+    inventory_count: null,
+    seo_score: null,
+    moderation_status: "pending",
+    // UI computed fields
+    priceFormatted: `$${userInput.price?.toFixed(2) || "0.00"}`,
+    isNew: true,
+    isPending: true, // Mark as pending until server confirms
   }),
 
   // These fields should show loading states instead of defaults

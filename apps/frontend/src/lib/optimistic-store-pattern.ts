@@ -360,7 +360,7 @@ export function createOptimisticStore<
           config.optimisticDefaults;
 
         if (optimisticDefaults?.createOptimisticUiData) {
-          // Direct UI data creation
+          // ✅ PREFERRED: Direct UI data creation - most efficient and clear
           optimisticItem = optimisticDefaults.createOptimisticUiData(
             data,
             config.optimisticContext,
@@ -369,7 +369,7 @@ export function createOptimisticStore<
           optimisticDefaults?.createOptimisticApiData &&
           transformerRef.current
         ) {
-          // Create mock API data and transform it
+          // Legacy: Create mock API data and transform it (less efficient)
           const defaultApiData = optimisticDefaults.createOptimisticApiData(
             data,
             config.optimisticContext,
@@ -381,14 +381,14 @@ export function createOptimisticStore<
           } as TApiData;
           optimisticItem = transformerRef.current.toUi(mockApiData);
         } else if (transformerRef.current) {
-          // Fallback: basic mock API data (less opinionated)
+          // Fallback: basic mock API data (minimal approach)
           const mockApiData = {
             id: tempId,
             ...data,
           } as TApiData;
           optimisticItem = transformerRef.current.toUi(mockApiData);
         } else {
-          // No transformer - use data as-is
+          // No transformer - use data as-is with temp ID
           optimisticItem = { id: tempId, ...data } as TUiData;
         }
 
