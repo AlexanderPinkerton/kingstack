@@ -25,7 +25,7 @@ const useApiTodos = createOptimisticStore({
   // transformer: undefined (default) - automatically uses createDefaultTransformer()
 });
 
-// Example 3: Custom transformer with default transformer + overrides
+// Example 3: Custom transformer for complex transformations
 const useCustomTodos = createOptimisticStore({
   name: 'custom-todos',
   queryFn: () => fetch('/api/todos').then(res => res.json()),
@@ -34,12 +34,27 @@ const useCustomTodos = createOptimisticStore({
     update: ({ id, data }) => fetch(`/api/todos/${id}`, { method: 'PUT', body: JSON.stringify(data) }).then(res => res.json()),
     remove: (id) => fetch(`/api/todos/${id}`, { method: 'DELETE' }).then(() => ({ id })),
   },
-  transformer: createDefaultTransformer((apiData) => ({
-    // Add custom transformations on top of defaults
-    createdAt: new Date(apiData.created_at),
-    isCompleted: apiData.completed === 'yes',
-    priority: apiData.priority_level || 'medium',
-  })),
+  transformer: {
+    toUi: (apiData) => ({
+      id: apiData.id,
+      title: apiData.task_name,
+      done: apiData.completed === 'yes',
+      createdAt: new Date(apiData.created_at),
+      priority: apiData.priority_level || 'medium',
+    }),
+    toApi: (uiData) => ({
+      id: uiData.id,
+      task_name: uiData.title,
+      completed: uiData.done ? 'yes' : 'no',
+      created_at: uiData.createdAt.toISOString(),
+      priority_level: uiData.priority,
+    }),
+    toApiUpdate: (data) => ({
+      task_name: data.title,
+      completed: data.done ? 'yes' : 'no',
+      priority_level: data.priority,
+    }),
+  },
 });
 
 // Example 4: Full custom transformer for complex transformations

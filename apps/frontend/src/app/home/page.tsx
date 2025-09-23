@@ -14,7 +14,6 @@ import { createOptimisticStore } from "@/lib/optimistic-store-pattern";
 import { fetchWithAuth } from "@/lib/utils";
 import { useContext } from "react";
 import { RootStoreContext } from "@/context/rootStoreContext";
-import { DataTransformer } from "@/lib/optimistic-store-pattern";
 
 export interface TodoApiData {
   id: string;
@@ -32,33 +31,6 @@ export interface TodoUiData {
   user_id: string;
   created_at: Date;
   updated_at: Date;
-}
-
-class TodoTransformer implements DataTransformer<TodoApiData, TodoUiData> {
-  toUi(apiData: TodoApiData): TodoUiData {
-    return {
-      ...apiData,
-      done: apiData.done,
-      created_at: new Date(apiData.created_at),
-      updated_at: new Date(apiData.updated_at),
-    };
-  }
-  toApi(uiData: TodoUiData): TodoApiData {
-    return {
-      ...uiData,
-      done: uiData.done,
-      created_at: uiData.created_at.toISOString(),
-      updated_at: uiData.updated_at.toISOString(),
-    };
-  }
-  toApiUpdate(data: Partial<TodoUiData>): Partial<TodoApiData> {
-    return {
-      ...data,
-      done: data.done,
-      created_at: data.created_at?.toISOString(),
-      updated_at: data.updated_at?.toISOString(),
-    };
-  }
 }
 
 
@@ -87,7 +59,6 @@ function useTodos() {
         method: 'DELETE',
       }).then(() => ({ id })),
     },
-    transformer: new TodoTransformer(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: !!token, // Only run when we have a token
   })();

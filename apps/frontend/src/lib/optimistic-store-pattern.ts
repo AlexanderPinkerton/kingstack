@@ -19,41 +19,106 @@ export interface DataTransformer<TApiData extends Entity, TUiData extends Entity
 }
 
 // Default transformer for common data type conversions
-export function createDefaultTransformer<TApiData extends Entity, TUiData extends Entity>(
-  customTransform?: (apiData: TApiData) => Partial<TUiData>
-): DataTransformer<TApiData, TUiData> {
+export function createDefaultTransformer<TApiData extends Entity, TUiData extends Entity>(): DataTransformer<TApiData, TUiData> {
   return {
     toUi(apiData: TApiData): TUiData {
       const baseTransform = {
         // Convert common API patterns to UI patterns
         id: (apiData as any).id || (apiData as any)._id || (apiData as any).ID,
-        // Convert snake_case to camelCase
+        // Apply smart type conversions while keeping original field names
         ...Object.keys(apiData).reduce((acc, key) => {
-          const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-          acc[camelKey] = (apiData as any)[key];
+          const value = (apiData as any)[key];
+          
+          // Smart type conversions
+          if (typeof value === 'string') {
+            // Convert ISO date strings to Date objects
+            if (key.includes('date') || key.includes('time') || key.includes('at') || 
+                (key.includes('created') || key.includes('updated')) && key.includes('_')) {
+              const date = new Date(value);
+              if (!isNaN(date.getTime())) {
+                acc[key] = date;
+                return acc;
+              }
+            }
+            
+            // Convert boolean strings to boolean values
+            if (value === 'true' || value === 'false') {
+              acc[key] = value === 'true';
+              return acc;
+            }
+            
+            // Convert number strings to numbers
+            if (!isNaN(Number(value)) && value !== '') {
+              acc[key] = Number(value);
+              return acc;
+            }
+            
+            // Convert CSV strings to arrays
+            if (value.includes(',') && !value.includes(' ')) {
+              acc[key] = value.split(',').map(item => item.trim());
+              return acc;
+            }
+          }
+          
+          // Default: keep the original key and value
+          acc[key] = value;
           return acc;
         }, {} as any),
-        // Apply custom transformations
-        ...(customTransform ? customTransform(apiData) : {}),
       };
       return baseTransform as TUiData;
     },
     
     toApi(uiData: TUiData): TApiData {
-      // Convert camelCase back to snake_case for API
+      // Handle reverse conversions while keeping original field names
       const apiData = Object.keys(uiData).reduce((acc, key) => {
-        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-        acc[snakeKey] = (uiData as any)[key];
+        const value = (uiData as any)[key];
+        
+        // Reverse conversions for API
+        if (value instanceof Date) {
+          // Convert Date objects back to ISO strings
+          acc[key] = value.toISOString();
+        } else if (Array.isArray(value)) {
+          // Convert arrays back to CSV strings
+          acc[key] = value.join(',');
+        } else if (typeof value === 'boolean') {
+          // Convert booleans back to strings
+          acc[key] = value.toString();
+        } else if (typeof value === 'number') {
+          // Keep numbers as numbers (or convert to string if API expects strings)
+          acc[key] = value;
+        } else {
+          // Default: keep the value as is
+          acc[key] = value;
+        }
+        
         return acc;
       }, {} as any);
       return apiData as TApiData;
     },
     
     toApiUpdate(data: Partial<TUiData>): any {
-      // Convert partial UI data to API format
+      // Handle reverse conversions while keeping original field names
       return Object.keys(data).reduce((acc, key) => {
-        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-        acc[snakeKey] = (data as any)[key];
+        const value = (data as any)[key];
+        
+        // Reverse conversions for API updates
+        if (value instanceof Date) {
+          // Convert Date objects back to ISO strings
+          acc[key] = value.toISOString();
+        } else if (Array.isArray(value)) {
+          // Convert arrays back to CSV strings
+          acc[key] = value.join(',');
+        } else if (typeof value === 'boolean') {
+          // Convert booleans back to strings
+          acc[key] = value.toString();
+        } else if (typeof value === 'number') {
+          // Keep numbers as numbers
+          acc[key] = value;
+        } else {
+          // Default: keep the value as is
+          acc[key] = value;
+        }
+        
         return acc;
       }, {} as any);
     },
@@ -132,6 +197,7 @@ export class OptimisticStore<T extends Entity> {
       }
     });
     this.snapshots = []; // Clear snapshots after successful sync
+    console.log('reconciled', this.list);
   }
 
   // Utility methods
@@ -199,7 +265,7 @@ export interface OptimisticStoreConfig<TApiData extends Entity, TUiData extends 
  * - Full TypeScript support
  * 
  * Transformer options:
- * - undefined (default): Uses createDefaultTransformer() for snake_case → camelCase conversion
+ * - undefined (default): Uses createDefaultTransformer() for smart type conversions
  * - false: No transformation - data is already in UI shape
  * - DataTransformer object: Custom transformer conforming to DataTransformer interface
  */
