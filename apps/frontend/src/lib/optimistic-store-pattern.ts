@@ -407,9 +407,32 @@ export function createOptimisticStore<
         await qc.cancelQueries({ queryKey: [config.name] });
         storeRef.current!.pushSnapshot();
 
-        // Optimistic update
+        // Get optimistic defaults for updates
+        const optimisticDefaults =
+          transformerRef.current?.optimisticDefaults ||
+          config.optimisticDefaults;
+
+        // Optimistic update with proper UI data calculation
         runInAction(() => {
-          storeRef.current!.update(id, data);
+          if (optimisticDefaults?.createOptimisticUiData) {
+            // Get existing item to merge with updates
+            const existingItem = storeRef.current!.get(id);
+            if (existingItem) {
+              // Create updated form data by merging existing + updates
+              const updatedFormData = { ...existingItem, ...data };
+              // Generate fresh optimistic UI data with recalculated fields
+              const optimisticItem = optimisticDefaults.createOptimisticUiData(
+                updatedFormData,
+                config.optimisticContext,
+              );
+              // Preserve the original ID (don't generate new temp ID)
+              optimisticItem.id = id;
+              storeRef.current!.upsert(optimisticItem);
+            }
+          } else {
+            // Fallback: basic update without recalculated fields
+            storeRef.current!.update(id, data);
+          }
         });
 
         return { id, data };
