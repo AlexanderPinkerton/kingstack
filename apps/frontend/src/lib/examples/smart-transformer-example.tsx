@@ -49,7 +49,7 @@ const useCustomSmartTodos = createOptimisticStore({
       created_at: new Date(apiData.created_at),
       updated_at: new Date(apiData.updated_at),
       due_date: new Date(apiData.due_date),
-      tags: apiData.tags.split(',').map(item => item.trim()),
+      tags: apiData.tags.split(',').map((item: string) => item.trim()),
       estimated_hours: Number(apiData.estimated_hours),
       is_archived: apiData.is_archived === 'false',
       // Add custom transformations
