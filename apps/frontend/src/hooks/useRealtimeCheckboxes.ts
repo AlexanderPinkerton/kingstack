@@ -69,8 +69,19 @@ export const useRealtimeCheckboxes = () => {
 
   // Handle checkbox changes with optimistic updates
   const handleCheckboxChange = (index: number, checked: boolean) => {
-    // Use the createOrUpdate mutation for checkboxes
-    optimisticStore.actions.create({ index, checked });
+    // Check if checkbox already exists
+    const existingCheckbox = getCheckbox(index);
+    
+    if (existingCheckbox) {
+      // Update existing checkbox
+      optimisticStore.actions.update({ 
+        id: existingCheckbox.id, 
+        data: { index, checked } 
+      });
+    } else {
+      // Create new checkbox
+      optimisticStore.actions.create({ index, checked });
+    }
   };
 
   // Get checkbox by index

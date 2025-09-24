@@ -1,4 +1,4 @@
-import { createOptimisticStore, OptimisticStore } from "@/lib/optimistic-store-pattern";
+import { createOptimisticStore, OptimisticStore, DataTransformer, OptimisticDefaults } from "@/lib/optimistic-store-pattern";
 import { CheckboxApiData, CheckboxUiData } from "./types/checkbox";
 
 // Get the backend URL
@@ -53,6 +53,33 @@ const removeCheckbox = async (id: string): Promise<{ id: string }> => {
   return { id };
 };
 
+// Transformer for API ↔ UI data conversion
+const checkboxTransformer: DataTransformer<CheckboxApiData, CheckboxUiData> = {
+  toUi: (apiData: CheckboxApiData): CheckboxUiData => ({
+    id: apiData.id,
+    index: apiData.index,
+    checked: apiData.checked,
+    created_at: new Date(apiData.created_at),
+    updated_at: new Date(apiData.updated_at),
+  }),
+  toApi: (uiData: CheckboxUiData): CheckboxApiData => ({
+    id: uiData.id,
+    index: uiData.index,
+    checked: uiData.checked,
+    created_at: uiData.created_at.toISOString(),
+    updated_at: uiData.updated_at.toISOString(),
+  }),
+  optimisticDefaults: {
+    createOptimisticUiData: (data: { index: number; checked: boolean }): CheckboxUiData => ({
+      id: `temp-${Date.now()}-${data.index}`, // Temporary ID for optimistic updates
+      index: data.index,
+      checked: data.checked,
+      created_at: new Date(),
+      updated_at: new Date(),
+    }),
+  },
+};
+
 // Custom store class that supports index-based access
 class CheckboxOptimisticStore extends OptimisticStore<CheckboxUiData> {
   // Override get method to support index-based access
@@ -76,5 +103,6 @@ export const useCheckboxOptimisticStore = createOptimisticStore<CheckboxApiData,
     update: updateCheckbox,
     remove: removeCheckbox,
   },
+  transformer: checkboxTransformer,
   storeClass: CheckboxOptimisticStore,
 });
