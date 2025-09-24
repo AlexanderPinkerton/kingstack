@@ -2,7 +2,7 @@
 
 import useAuthGuard from "@/hooks/useAuthGuard";
 import { observer } from "mobx-react-lite";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
 import { NeonCard } from "@/components/ui/neon-card";
@@ -41,22 +41,16 @@ export default observer(function HomePage() {
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"todos" | "posts">("todos");
-  const [isAuthInitialized, setIsAuthInitialized] = useState(false);
 
   // Use the optimistic store - dead simple! 🚀
-  const { store, actions, status } = rootStore.todoStore;
-
-  // Track authentication initialization to prevent hydration mismatch
-  useEffect(() => {
-    // Mark as initialized after first render to prevent hydration mismatch
-    setIsAuthInitialized(true);
-  }, []);
+  const todoStore = rootStore.todoStore;
+  const { store, actions, status } = todoStore;
 
   const [newTodoTitle, setNewTodoTitle] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTodoTitle.trim()) return;
+    if (!newTodoTitle.trim() || !actions) return;
 
     actions.create({
       title: newTodoTitle.trim(),
@@ -122,8 +116,17 @@ export default observer(function HomePage() {
                 {/* Tab Content */}
                 {activeTab === "todos" && (
                   <>
-                    {/* Show loading state only after auth is initialized to prevent hydration mismatch */}
-                    {isAuthInitialized && status.isLoading && (
+                    {/* Show loading state while store is not ready */}
+                    {!todoStore.isReady && (
+                      <div className="text-center py-8">
+                        <div className="animate-pulse text-slate-300">
+                          Initializing your todos...
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Show loading state when store is ready but data is loading */}
+                    {todoStore.isReady && status?.isLoading && (
                       <div className="text-center py-8">
                         <div className="animate-pulse text-slate-300">
                           Loading your todos...
@@ -131,14 +134,14 @@ export default observer(function HomePage() {
                       </div>
                     )}
 
-                    {/* Show error state only after auth is initialized */}
-                    {isAuthInitialized && status.isError && (
+                    {/* Show error state when store is ready */}
+                    {todoStore.isReady && status?.isError && (
                       <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 mb-6">
                         <div className="text-red-300 mb-2">
                           ❌ Error: {status.error?.message}
                         </div>
                         <ThemedButton
-                          onClick={() => actions.refetch()}
+                          onClick={() => actions?.refetch()}
                           className="text-sm px-3 py-1"
                         >
                           Retry
@@ -146,16 +149,8 @@ export default observer(function HomePage() {
                       </div>
                     )}
 
-                    {/* Show initial loading state during auth initialization */}
-                    {!isAuthInitialized && (
-                      <div className="text-center py-8">
-                        <div className="animate-pulse text-slate-300">
-                          Initializing...
-                        </div>
-                      </div>
-                    )}
-
-                    {isAuthInitialized && !status.isLoading && (
+                    {/* Show main content when store is ready and not loading */}
+                    {todoStore.isReady && !status?.isLoading && (
                       <>
                         <div className="text-center mb-6">
                           <h2 className="text-2xl font-bold text-white mb-2">
@@ -183,7 +178,7 @@ export default observer(function HomePage() {
                               className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             />
                             {/* Non-invasive loading indicator */}
-                            {status.isSyncing && (
+                            {status?.isSyncing && (
                               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                                 <div className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
                               </div>
@@ -192,26 +187,26 @@ export default observer(function HomePage() {
                           <ThemedButton
                             type="submit"
                             disabled={
-                              status.createPending || !newTodoTitle.trim()
+                              status?.createPending || !newTodoTitle.trim()
                             }
                             className="px-6 py-3 whitespace-nowrap flex-shrink-0"
                           >
-                            {status.createPending ? "Adding..." : "Add"}
+                            {status?.createPending ? "Adding..." : "Add"}
                           </ThemedButton>
                         </form>
 
                         {/* Stats */}
                         <div className="text-center mb-6 text-slate-400 relative">
                           <span className="text-2xl font-bold text-white">
-                            {store.count}
+                            {store?.count}
                           </span>{" "}
                           total,{" "}
                           <span className="text-xl font-semibold text-purple-300">
-                            {store.filter((t: TodoUiData) => !t.done).length}
+                            {store?.filter((t: TodoUiData) => !t.done).length}
                           </span>{" "}
                           remaining
                           {/* Subtle sync indicator */}
-                          {status.isSyncing && (
+                          {status?.isSyncing && (
                             <div className="absolute -right-6 top-1/2 transform -translate-y-1/2">
                               <div className="w-3 h-3 border border-purple-500/40 border-t-purple-500 rounded-full animate-spin"></div>
                             </div>
@@ -220,7 +215,7 @@ export default observer(function HomePage() {
 
                         {/* Todo list */}
                         <div className="space-y-3">
-                          {store.list.map((todo: TodoUiData) => (
+                          {store?.list.map((todo: TodoUiData) => (
                             <div
                               key={todo.id}
                               className={`flex items-center gap-4 p-4 rounded-lg border transition-all relative ${
@@ -233,7 +228,7 @@ export default observer(function HomePage() {
                                 type="checkbox"
                                 checked={todo.done}
                                 onChange={() =>
-                                  actions.update({
+                                  actions?.update({
                                     id: todo.id,
                                     data: { done: !todo.done },
                                   })
@@ -252,7 +247,7 @@ export default observer(function HomePage() {
                               </span>
 
                               <button
-                                onClick={() => actions.remove(todo.id)}
+                                onClick={() => actions?.remove(todo.id)}
                                 className="px-3 py-1 text-xs bg-red-600/20 text-red-300 border border-red-500/50 rounded hover:bg-red-600/30 transition-colors disabled:opacity-50"
                               >
                                 Delete
@@ -261,7 +256,7 @@ export default observer(function HomePage() {
                           ))}
                         </div>
 
-                        {store.count === 0 && !status.isLoading && (
+                        {store?.count === 0 && !status?.isLoading && (
                           <div className="text-center py-12">
                             <div className="text-6xl mb-4">📝</div>
                             <div className="text-slate-400 text-lg">

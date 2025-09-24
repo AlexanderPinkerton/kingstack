@@ -9,6 +9,7 @@ import { RealtimeStore } from "./interfaces/RealtimeStore";
 import { TodoApiData } from "@/app/home/page";
 import { TodoUiData } from "@/app/home/page";
 import { createOptimisticStoreManager } from "@/lib/optimistic-store-pattern";
+import { AdvancedTodoStore } from "./todoStore";
 
 const supabase = createClient();
 
@@ -16,7 +17,7 @@ export class RootStore {
   postStore: PostStore;
   session: any = null;
   userData: any = null;
-  todoStore: any = null;
+  todoStore: AdvancedTodoStore;
   // WebSocket connection management
   socket: Socket | null = null;
   browserId: string = Math.random().toString(36).substring(7);
@@ -26,53 +27,15 @@ export class RootStore {
 
     this.postStore = new PostStore(this);
     this.session = null;
-    this.todoStore = createOptimisticStoreManager<TodoApiData, TodoUiData>(
-      {
-        name: "todos",
-        queryFn: async () => {
-          const token = this.session?.access_token || "";
-          const baseUrl =
-            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-          return fetchWithAuth(token, `${baseUrl}/todos`).then((res) => res.json());
-        },
-        mutations: {
-          create: async (data) => {
-            const token = this.session?.access_token || "";
-            const baseUrl =
-              process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-            return fetchWithAuth(token, `${baseUrl}/todos`, {
-              method: "POST",
-              body: JSON.stringify(data),
-            }).then((res) => res.json());
-          },
     
-          update: async ({ id, data }) => {
-            const token = this.session?.access_token || "";
-            const baseUrl =
-              process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-            return fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
-              method: "PUT",
-              body: JSON.stringify(data),
-            }).then((res) => res.json());
-          },
-    
-          remove: async (id) => {
-            const token = this.session?.access_token || "";
-            const baseUrl =
-              process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-            return fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
-              method: "DELETE",
-            }).then(() => ({ id }));
-          },
-        },
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        enabled: () => !!(this.session?.access_token), // Only run when we have a token
-      });
+    // Always create the todoStore, but it won't be enabled until auth is available
+    this.todoStore = new AdvancedTodoStore();
 
     // Make session and userData observable before setting up auth listener
     makeAutoObservable(this, {
       session: true, // Ensure session is observable
       userData: true, // Ensure userData is observable
+      todoStore: true, // Make todoStore observable
     });
 
     supabase.auth.onAuthStateChange((event: any, session: any) => {
@@ -90,6 +53,8 @@ export class RootStore {
         if (session?.access_token && event === "SIGNED_IN") {
           // Handle auth-required setup here
           console.log("✅ RootStore: Session established, setting up realtime");
+          // Enable todoStore with new token
+          this.todoStore.enable(session.access_token);
           // Setup realtime connection
           this.setupRealtime(session.access_token);
           // Fetch user data when session is established
@@ -101,6 +66,8 @@ export class RootStore {
           this.teardownRealtime();
           // Clear user data when session is lost
           this.userData = null;
+          // Disable todoStore when session is lost
+          this.todoStore.disable();
         }
       });
     });
