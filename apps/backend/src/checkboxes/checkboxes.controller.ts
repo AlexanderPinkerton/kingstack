@@ -26,7 +26,6 @@ export class CheckboxesController {
         index: "asc",
       },
     });
-    console.log("Fetched checkboxes:", checkboxes);
     return checkboxes;
   }
 
