@@ -26,9 +26,11 @@ export class CheckboxesController {
   ) {
     const limitNum = limit ? parseInt(limit) : undefined;
     const offsetNum = offset ? parseInt(offset) : undefined;
-    
-    console.log(`Fetching checkboxes - limit: ${limitNum}, offset: ${offsetNum}`);
-    
+
+    console.log(
+      `Fetching checkboxes - limit: ${limitNum}, offset: ${offsetNum}`,
+    );
+
     const checkboxes = await this.prisma.checkbox.findMany({
       orderBy: {
         index: "asc",
@@ -36,13 +38,15 @@ export class CheckboxesController {
       take: limitNum,
       skip: offsetNum,
     });
-    
+
     return checkboxes;
   }
 
   // Create or update a checkbox
   @Post()
-  async createOrUpdateCheckbox(@Body() body: { index: number; checked: boolean }) {
+  async createOrUpdateCheckbox(
+    @Body() body: { index: number; checked: boolean },
+  ) {
     const { index, checked } = body;
 
     // Upsert the checkbox (create if doesn't exist, update if it does)
@@ -88,10 +92,10 @@ export class CheckboxesController {
   @Post("initialize")
   async initializeCheckboxes() {
     console.log("Initializing 200 checkboxes...");
-    
+
     // Delete all existing checkboxes first
     await this.prisma.checkbox.deleteMany({});
-    
+
     // Create 200 checkboxes with default values
     const checkboxes = [];
     for (let i = 0; i < 200; i++) {
@@ -106,26 +110,33 @@ export class CheckboxesController {
     });
 
     console.log(`Created ${result.count} checkboxes`);
-    return { message: `Initialized ${result.count} checkboxes`, count: result.count };
+    return {
+      message: `Initialized ${result.count} checkboxes`,
+      count: result.count,
+    };
   }
 
   // Initialize 5000 checkboxes for stress test
   @Post("initialize-stress")
   async initializeStressTest() {
     console.log("Initializing 5000 checkboxes for stress test...");
-    
+
     // Delete all existing checkboxes first
     await this.prisma.checkbox.deleteMany({});
-    
+
     // Create 5000 checkboxes in batches to avoid memory issues
     const batchSize = 1000;
     const totalCheckboxes = 5000;
     let totalCreated = 0;
-    
-    for (let batch = 0; batch < Math.ceil(totalCheckboxes / batchSize); batch++) {
+
+    for (
+      let batch = 0;
+      batch < Math.ceil(totalCheckboxes / batchSize);
+      batch++
+    ) {
       const startIndex = batch * batchSize;
       const endIndex = Math.min(startIndex + batchSize, totalCheckboxes);
-      
+
       const checkboxes = [];
       for (let i = startIndex; i < endIndex; i++) {
         checkboxes.push({
@@ -137,15 +148,19 @@ export class CheckboxesController {
       const result = await this.prisma.checkbox.createMany({
         data: checkboxes,
       });
-      
+
       totalCreated += result.count;
-      console.log(`Created batch ${batch + 1}: ${result.count} checkboxes (total: ${totalCreated})`);
+      console.log(
+        `Created batch ${batch + 1}: ${result.count} checkboxes (total: ${totalCreated})`,
+      );
     }
 
-    console.log(`Stress test initialization complete: ${totalCreated} checkboxes`);
-    return { 
-      message: `Initialized ${totalCreated} checkboxes for stress test`, 
-      count: totalCreated 
+    console.log(
+      `Stress test initialization complete: ${totalCreated} checkboxes`,
+    );
+    return {
+      message: `Initialized ${totalCreated} checkboxes for stress test`,
+      count: totalCreated,
     };
   }
 }

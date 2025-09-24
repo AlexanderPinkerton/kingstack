@@ -11,14 +11,14 @@ export default function Home() {
       <AppNavbar />
       <HeroSection />
       <FeaturesSection />
-      
+
       {/* Realtime Checkboxes Example */}
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <RealtimeCheckboxes />
         </div>
       </section>
-      
+
       <CtaSection />
       <Footer />
     </main>

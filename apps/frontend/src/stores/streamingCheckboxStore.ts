@@ -1,30 +1,37 @@
-import { createOptimisticStore, OptimisticStore, DataTransformer } from "@/lib/optimistic-store-pattern";
+import {
+  createOptimisticStore,
+  OptimisticStore,
+  DataTransformer,
+} from "@/lib/optimistic-store-pattern";
 import { CheckboxApiData, CheckboxUiData } from "./types/checkbox";
-import { experimental_streamedQuery as streamedQuery } from '@tanstack/react-query';
+import { experimental_streamedQuery as streamedQuery } from "@tanstack/react-query";
 
 // Get the backend URL
-const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+const baseUrl =
+  process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
 
 // Streaming function that yields data in chunks
 async function* streamCheckboxes(totalItems: number, chunkSize: number = 1000) {
   let offset = 0;
-  
+
   while (offset < totalItems) {
     const limit = Math.min(chunkSize, totalItems - offset);
     console.log(`Streaming checkboxes: ${offset} to ${offset + limit}`);
-    
-    const response = await fetch(`${baseUrl}/checkboxes?limit=${limit}&offset=${offset}`);
+
+    const response = await fetch(
+      `${baseUrl}/checkboxes?limit=${limit}&offset=${offset}`,
+    );
     if (!response.ok) {
       throw new Error(`Failed to fetch checkboxes at offset ${offset}`);
     }
-    
+
     const data = await response.json();
     yield data;
-    
+
     offset += limit;
-    
+
     // Small delay to prevent overwhelming the server
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
 
@@ -37,7 +44,10 @@ const fetchCheckboxes = async (): Promise<CheckboxApiData[]> => {
   return response.json();
 };
 
-const createCheckbox = async (data: { index: number; checked: boolean }): Promise<CheckboxApiData> => {
+const createCheckbox = async (data: {
+  index: number;
+  checked: boolean;
+}): Promise<CheckboxApiData> => {
   const response = await fetch(`${baseUrl}/checkboxes`, {
     method: "POST",
     headers: {
@@ -51,7 +61,13 @@ const createCheckbox = async (data: { index: number; checked: boolean }): Promis
   return response.json();
 };
 
-const updateCheckbox = async ({ id, data }: { id: string; data: { index: number; checked: boolean } }): Promise<CheckboxApiData> => {
+const updateCheckbox = async ({
+  id,
+  data,
+}: {
+  id: string;
+  data: { index: number; checked: boolean };
+}): Promise<CheckboxApiData> => {
   const response = await fetch(`${baseUrl}/checkboxes/${data.index}`, {
     method: "PUT",
     headers: {
@@ -93,7 +109,10 @@ const checkboxTransformer: DataTransformer<CheckboxApiData, CheckboxUiData> = {
     updated_at: uiData.updated_at.toISOString(),
   }),
   optimisticDefaults: {
-    createOptimisticUiData: (data: { index: number; checked: boolean }): CheckboxUiData => ({
+    createOptimisticUiData: (data: {
+      index: number;
+      checked: boolean;
+    }): CheckboxUiData => ({
       id: `temp-${Date.now()}-${data.index}`,
       index: data.index,
       checked: data.checked,
@@ -106,7 +125,7 @@ const checkboxTransformer: DataTransformer<CheckboxApiData, CheckboxUiData> = {
 // Custom store class that supports index-based access
 class StreamingCheckboxOptimisticStore extends OptimisticStore<CheckboxUiData> {
   getByIndex(index: number): CheckboxUiData | undefined {
-    return this.list.find(checkbox => checkbox.index === index);
+    return this.list.find((checkbox) => checkbox.index === index);
   }
 
   upsertByIndex(checkbox: CheckboxUiData): void {
@@ -115,20 +134,29 @@ class StreamingCheckboxOptimisticStore extends OptimisticStore<CheckboxUiData> {
 }
 
 // Create streaming query options
-export const createStreamingCheckboxQuery = (totalItems: number = 5000, chunkSize: number = 1000) => {
+export const createStreamingCheckboxQuery = (
+  totalItems: number = 5000,
+  chunkSize: number = 1000,
+) => {
   return {
-    queryKey: ['checkboxes-stream', totalItems, chunkSize],
+    queryKey: ["checkboxes-stream", totalItems, chunkSize],
     queryFn: streamedQuery({
       streamFn: () => streamCheckboxes(totalItems, chunkSize),
-      refetchMode: 'append' as const,
+      refetchMode: "append" as const,
       initialValue: [] as CheckboxApiData[],
-      reducer: (acc: CheckboxApiData[], chunk: CheckboxApiData[]) => [...acc, ...chunk],
+      reducer: (acc: CheckboxApiData[], chunk: CheckboxApiData[]) => [
+        ...acc,
+        ...chunk,
+      ],
     }),
   };
 };
 
 // Create the optimistic store hook (using regular query for mutations)
-export const useStreamingCheckboxOptimisticStore = createOptimisticStore<CheckboxApiData, CheckboxUiData>({
+export const useStreamingCheckboxOptimisticStore = createOptimisticStore<
+  CheckboxApiData,
+  CheckboxUiData
+>({
   name: "streaming-checkboxes",
   queryFn: fetchCheckboxes, // This won't be used when we use streaming
   mutations: {

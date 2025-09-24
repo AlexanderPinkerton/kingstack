@@ -12,7 +12,6 @@ import { AppNavbar } from "@/components/navbar/presets/app";
 import { AdvancedPostsExample } from "@/lib/examples/advanced-posts-example";
 import { SimpleTodosExample } from "@/lib/examples/simple-todos-example";
 
-
 export default observer(function HomePage() {
   useAuthGuard(); // This ensures user is logged in
 

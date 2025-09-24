@@ -150,9 +150,7 @@ export const SimpleTodosExample = observer(() => {
 
       {/* Stats */}
       <div className="text-center mb-6 text-slate-400 relative">
-        <span className="text-2xl font-bold text-white">
-          {store.count}
-        </span>{" "}
+        <span className="text-2xl font-bold text-white">{store.count}</span>{" "}
         total,{" "}
         <span className="text-xl font-semibold text-purple-300">
           {store.filter((t: TodoUiData) => !t.done).length}
@@ -191,9 +189,7 @@ export const SimpleTodosExample = observer(() => {
 
             <span
               className={`flex-1 transition-all ${
-                todo.done
-                  ? "text-slate-500 line-through"
-                  : "text-white"
+                todo.done ? "text-slate-500 line-through" : "text-white"
               }`}
             >
               {todo.title}

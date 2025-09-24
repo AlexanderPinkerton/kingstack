@@ -83,7 +83,7 @@ export class RootStore {
 
     this.socket.on("connect", () => {
       console.log("[RootStore] Realtime socket connected");
-      
+
       if (token) {
         // Register as authenticated user
         this.socket?.emit("register", {

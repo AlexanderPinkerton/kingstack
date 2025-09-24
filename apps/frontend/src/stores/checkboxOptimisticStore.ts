@@ -1,8 +1,14 @@
-import { createOptimisticStore, OptimisticStore, DataTransformer, OptimisticDefaults } from "@/lib/optimistic-store-pattern";
+import {
+  createOptimisticStore,
+  OptimisticStore,
+  DataTransformer,
+  OptimisticDefaults,
+} from "@/lib/optimistic-store-pattern";
 import { CheckboxApiData, CheckboxUiData } from "./types/checkbox";
 
 // Get the backend URL
-const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+const baseUrl =
+  process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
 
 // API functions
 const fetchCheckboxes = async (): Promise<CheckboxApiData[]> => {
@@ -13,7 +19,10 @@ const fetchCheckboxes = async (): Promise<CheckboxApiData[]> => {
   return response.json();
 };
 
-const createCheckbox = async (data: { index: number; checked: boolean }): Promise<CheckboxApiData> => {
+const createCheckbox = async (data: {
+  index: number;
+  checked: boolean;
+}): Promise<CheckboxApiData> => {
   const response = await fetch(`${baseUrl}/checkboxes`, {
     method: "POST",
     headers: {
@@ -27,7 +36,13 @@ const createCheckbox = async (data: { index: number; checked: boolean }): Promis
   return response.json();
 };
 
-const updateCheckbox = async ({ id, data }: { id: string; data: { index: number; checked: boolean } }): Promise<CheckboxApiData> => {
+const updateCheckbox = async ({
+  id,
+  data,
+}: {
+  id: string;
+  data: { index: number; checked: boolean };
+}): Promise<CheckboxApiData> => {
   const response = await fetch(`${baseUrl}/checkboxes/${data.index}`, {
     method: "PUT",
     headers: {
@@ -70,7 +85,10 @@ const checkboxTransformer: DataTransformer<CheckboxApiData, CheckboxUiData> = {
     updated_at: uiData.updated_at.toISOString(),
   }),
   optimisticDefaults: {
-    createOptimisticUiData: (data: { index: number; checked: boolean }): CheckboxUiData => ({
+    createOptimisticUiData: (data: {
+      index: number;
+      checked: boolean;
+    }): CheckboxUiData => ({
       id: `temp-${Date.now()}-${data.index}`, // Temporary ID for optimistic updates
       index: data.index,
       checked: data.checked,
@@ -85,7 +103,7 @@ class CheckboxOptimisticStore extends OptimisticStore<CheckboxUiData> {
   // Override get method to support index-based access
   getByIndex(index: number): CheckboxUiData | undefined {
     // Find checkbox by index in the list
-    return this.list.find(checkbox => checkbox.index === index);
+    return this.list.find((checkbox) => checkbox.index === index);
   }
 
   // Override upsert to ensure we can find by index
@@ -95,7 +113,10 @@ class CheckboxOptimisticStore extends OptimisticStore<CheckboxUiData> {
 }
 
 // Create the optimistic store hook
-export const useCheckboxOptimisticStore = createOptimisticStore<CheckboxApiData, CheckboxUiData>({
+export const useCheckboxOptimisticStore = createOptimisticStore<
+  CheckboxApiData,
+  CheckboxUiData
+>({
   name: "checkboxes",
   queryFn: fetchCheckboxes,
   mutations: {

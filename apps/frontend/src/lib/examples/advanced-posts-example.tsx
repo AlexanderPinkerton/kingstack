@@ -220,48 +220,53 @@ export class PostTransformer
   optimisticDefaults: OptimisticDefaults<PostApiData, PostUiData> = {
     createOptimisticUiData: (userInput: any, context?: any) => {
       const currentUser = context?.currentUser;
-      const content = userInput.content || '';
-      
+      const content = userInput.content || "";
+
       // Calculate UI fields immediately
       const wordCount = this.calculateWordCount(content);
       const readingTime = this.calculateReadingTime(wordCount);
       const excerpt = this.generateExcerpt(content);
       const tags = this.extractTags(content);
-      
+
       // Use existing ID if available (for updates), otherwise generate temp ID
       const id = userInput.id || `temp-${Date.now()}`;
-      
+
       // Use existing created_at if available (for updates), otherwise use current time
-      const createdAt = userInput.created_at instanceof Date 
-        ? userInput.created_at 
-        : userInput.created_at 
-          ? new Date(userInput.created_at)
-          : new Date();
+      const createdAt =
+        userInput.created_at instanceof Date
+          ? userInput.created_at
+          : userInput.created_at
+            ? new Date(userInput.created_at)
+            : new Date();
 
       // Determine if this is a new post using the same logic as the transformer
       const isNew = this.isPostNew(createdAt.toISOString());
 
       return {
         id,
-        title: userInput.title || '',
+        title: userInput.title || "",
         content,
         published: userInput.published ?? false,
-        author_id: userInput.author_id || currentUser?.id || 'unknown',
+        author_id: userInput.author_id || currentUser?.id || "unknown",
         created_at: createdAt,
         author: userInput.author || {
-          id: currentUser?.id || 'unknown',
-          username: currentUser?.user_metadata?.username || 
-                   currentUser?.email?.split('@')[0] || 'You',
-          email: currentUser?.email || 'unknown@example.com',
-          displayName: currentUser?.user_metadata?.username || 
-                      currentUser?.email?.split('@')[0] || 'You',
+          id: currentUser?.id || "unknown",
+          username:
+            currentUser?.user_metadata?.username ||
+            currentUser?.email?.split("@")[0] ||
+            "You",
+          email: currentUser?.email || "unknown@example.com",
+          displayName:
+            currentUser?.user_metadata?.username ||
+            currentUser?.email?.split("@")[0] ||
+            "You",
         },
         // Computed UI fields - always recalculated
         excerpt,
         readingTime,
         wordCount,
         isNew,
-        publishStatus: (userInput.published ?? false) ? 'published' : 'draft',
+        publishStatus: (userInput.published ?? false) ? "published" : "draft",
         tags,
       } as PostUiData;
     },
