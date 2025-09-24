@@ -3,8 +3,10 @@
 import React from "react";
 import { observer } from "mobx-react-lite";
 import { useRealtimeCheckboxes } from "@/hooks/useRealtimeCheckboxes";
+import { useRootStore } from "@/hooks/useRootStore";
 
 export const RealtimeCheckboxes = observer(() => {
+  const rootStore = useRootStore();
   const {
     checkboxes,
     count,
@@ -37,11 +39,11 @@ export const RealtimeCheckboxes = observer(() => {
   // If no checkboxes exist, show a message to initialize them
   if (count === 0) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">
+      <div className="p-8 bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700 shadow-2xl">
+        <h2 className="text-3xl font-bold mb-4 text-white">
           Realtime Checkboxes
         </h2>
-        <p className="text-gray-600 mb-6">
+        <p className="text-slate-300 mb-8 text-lg">
           No checkboxes found. Please initialize the database first.
         </p>
         <button
@@ -58,7 +60,7 @@ export const RealtimeCheckboxes = observer(() => {
               console.error("Failed to initialize checkboxes:", error);
             }
           }}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
         >
           Initialize 200 Checkboxes
         </button>
@@ -67,32 +69,30 @@ export const RealtimeCheckboxes = observer(() => {
   }
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">
+    <div className="p-8 bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700 shadow-2xl">
+      <h2 className="text-3xl font-bold mb-4 text-white">
         Realtime Checkboxes ({count} total)
       </h2>
-      <p className="text-gray-600 mb-6">
+      <p className="text-slate-300 mb-8 text-lg">
         Click any checkbox to toggle it. Changes are synced in real-time across all users!
       </p>
       
-      <div className="grid grid-cols-20 gap-1 max-h-96 overflow-y-auto">
+      <div className="grid grid-cols-20 gap-1 p-4 bg-slate-900/30 rounded-lg border border-slate-600">
         {Array.from({ length: 200 }, (_, i) => {
           const checkbox = getCheckbox(i);
           const isChecked = checkbox?.checked || false;
           const isPending = updatePending;
           
-          
-          
           return (
             <label
               key={i}
               className={`
-                flex items-center justify-center w-8 h-8 border-2 rounded cursor-pointer transition-all
+                group relative flex items-center justify-center w-6 h-6 border-2 rounded cursor-pointer transition-all duration-200 transform hover:scale-110
                 ${isChecked 
-                  ? 'bg-green-500 border-green-600 text-white' 
-                  : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-gradient-to-br from-emerald-500 to-green-600 border-emerald-400 text-white shadow-lg shadow-emerald-500/25' 
+                  : 'bg-slate-700/50 border-slate-500 text-slate-300 hover:bg-slate-600/50 hover:border-slate-400 hover:shadow-md'
                 }
-                ${isPending ? 'opacity-50' : ''}
+                ${isPending ? 'opacity-50 scale-95' : ''}
               `}
             >
               <input
@@ -104,7 +104,7 @@ export const RealtimeCheckboxes = observer(() => {
               />
               {isChecked && (
                 <svg 
-                  className="w-4 h-4" 
+                  className="w-3 h-3 drop-shadow-sm" 
                   fill="currentColor" 
                   viewBox="0 0 20 20"
                 >
@@ -115,20 +115,35 @@ export const RealtimeCheckboxes = observer(() => {
                   />
                 </svg>
               )}
+              
+              {/* Hover effect */}
+              <div className="absolute inset-0 rounded-lg bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
             </label>
           );
         })}
       </div>
       
-      <div className="mt-4 text-sm text-gray-500">
-        {isSyncing && "Syncing..."}
-        {updatePending && "Updating..."}
-      </div>
-      
-      {/* Debug info */}
-      <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-        <div>Socket connected: {typeof window !== 'undefined' && (window as any).io ? 'Yes' : 'No'}</div>
-        <div>Checkboxes loaded: {count}</div>
+      <div className="mt-6 flex items-center justify-between text-sm">
+        <div className="flex items-center space-x-4 text-slate-400">
+          {isSyncing && (
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+              <span>Syncing...</span>
+            </div>
+          )}
+          {updatePending && (
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+              <span>Updating...</span>
+            </div>
+          )}
+        </div>
+        
+        {/* Debug info - styled to match */}
+        <div className="text-xs text-slate-500 space-y-1">
+          <div>Socket: {rootStore.socket?.connected ? '🟢 Connected' : '🔴 Disconnected'}</div>
+          <div>Loaded: {count} checkboxes</div>
+        </div>
       </div>
     </div>
   );
