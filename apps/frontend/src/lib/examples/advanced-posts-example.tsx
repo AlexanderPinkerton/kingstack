@@ -1,7 +1,7 @@
 "use client";
 
 import { observer } from "mobx-react-lite";
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { RootStoreContext } from "@/context/rootStoreContext";
 import { PostApiData, PostUiData } from "@/stores/postStore";
 

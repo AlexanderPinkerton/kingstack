@@ -292,6 +292,7 @@ export interface OptimisticStoreManager<
     update: (params: { id: string; data: any }) => Promise<TApiData>;
     remove: (id: string) => Promise<void | { id: string }>;
     refetch: () => Promise<any>;
+    triggerQuery: () => void;
   };
   status: {
     isLoading: boolean;
@@ -303,6 +304,9 @@ export interface OptimisticStoreManager<
     deletePending: boolean;
   };
   updateOptions: () => void;
+  isEnabled: () => boolean;
+  enable: () => void;
+  disable: () => void;
   destroy: () => void;
 }
 
@@ -379,8 +383,20 @@ export function createOptimisticStoreManager<
     }
   });
 
-  // Refetch the query when the store is created
-  queryObserver.refetch();
+  // Auto-trigger query when enabled (like React hooks do)
+  const triggerQuery = () => {
+    if (config.enabled ? config.enabled() : true) {
+      queryObserver.refetch();
+    }
+  };
+
+  // Check if query is currently enabled
+  const isEnabled = () => {
+    return config.enabled ? config.enabled() : true;
+  };
+
+  // Initial trigger
+  triggerQuery();
 
   // Create mutation observers
   const createMutationObserver = new MutationObserver(qc, {
@@ -550,6 +566,7 @@ export function createOptimisticStoreManager<
         updateMutationObserver.mutate(params),
       remove: (id: string) => removeMutationObserver.mutate(id),
       refetch: () => queryObserver.refetch(),
+      triggerQuery: () => triggerQuery(),
     },
     status,
     updateOptions: () => {
@@ -559,6 +576,27 @@ export function createOptimisticStoreManager<
         queryFn: config.queryFn,
         staleTime: config.staleTime ?? 5 * 60 * 1000,
         enabled: config.enabled ? config.enabled() : true,
+      });
+      
+      // Re-trigger query if now enabled (like React hooks do)
+      triggerQuery();
+    },
+    isEnabled: () => isEnabled(),
+    enable: () => {
+      queryObserver.setOptions({
+        queryKey: [config.name],
+        queryFn: config.queryFn,
+        staleTime: config.staleTime ?? 5 * 60 * 1000,
+        enabled: true,
+      });
+      triggerQuery();
+    },
+    disable: () => {
+      queryObserver.setOptions({
+        queryKey: [config.name],
+        queryFn: config.queryFn,
+        staleTime: config.staleTime ?? 5 * 60 * 1000,
+        enabled: false,
       });
     },
     destroy: () => {

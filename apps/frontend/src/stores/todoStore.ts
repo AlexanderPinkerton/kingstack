@@ -91,4 +91,9 @@ export class AdvancedTodoStore {
     get isReady() {
         return this.storeManager !== null && this.isEnabled;
     }
+
+    // Manually trigger query (useful for debugging or manual refresh)
+    triggerQuery() {
+        this.storeManager?.actions?.triggerQuery();
+    }
 }
