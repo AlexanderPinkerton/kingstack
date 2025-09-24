@@ -398,6 +398,40 @@ export function createOptimisticStoreManager<
   // Initial trigger
   triggerQuery();
 
+  // // Add natural refetch triggers (like pure TanStack Query)
+  // const setupNaturalRefetch = () => {
+  //   // Refetch on window focus (like useQuery)
+  //   const handleWindowFocus = () => {
+  //     if (isEnabled()) {
+  //       queryObserver.refetch();
+  //     }
+  //   };
+
+  //   // Refetch on network reconnect (like useQuery)
+  //   const handleOnline = () => {
+  //     if (isEnabled()) {
+  //       queryObserver.refetch();
+  //     }
+  //   };
+
+  //   // Add event listeners
+  //   window.addEventListener('focus', handleWindowFocus);
+  //   window.addEventListener('online', handleOnline);
+
+  //   // Return cleanup function
+  //   return () => {
+  //     window.removeEventListener('focus', handleWindowFocus);
+  //     window.removeEventListener('online', handleOnline);
+  //   };
+  // };
+
+  // // Setup natural refetch triggers
+  // const cleanupNaturalRefetch = setupNaturalRefetch();
+
+  // Note: TanStack Query already handles stale time automatically
+  // The stale time is configured in the query observer options above
+  // No additional setup needed for stale time behavior
+
   // Create mutation observers
   const createMutationObserver = new MutationObserver(qc, {
     mutationFn: config.mutations.create,
@@ -604,6 +638,7 @@ export function createOptimisticStoreManager<
       unsubscribeCreateMutation();
       unsubscribeUpdateMutation();
       unsubscribeRemoveMutation();
+      // cleanupNaturalRefetch();
     },
   } as const;
 }

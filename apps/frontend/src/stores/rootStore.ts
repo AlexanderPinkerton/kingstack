@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/browserClient";
 import { fetchInternal, fetchWithAuth } from "@/lib/utils";
 import { RealtimeStore } from "./interfaces/RealtimeStore";
 import { AdvancedTodoStore } from "./todoStore";
-import { AdvancedPostStore2 } from "./postStore";
+import { AdvancedPostStore } from "./postStore";
 
 const supabase = createClient();
 
@@ -12,7 +12,7 @@ export class RootStore {
   session: any = null;
   userData: any = null;
   todoStore: AdvancedTodoStore;
-  postStore2: AdvancedPostStore2;
+  postStore2: AdvancedPostStore;
   // WebSocket connection management
   socket: Socket | null = null;
   browserId: string = Math.random().toString(36).substring(7);
@@ -24,7 +24,7 @@ export class RootStore {
     
     // Always create the stores, but they won't be enabled until auth is available
     this.todoStore = new AdvancedTodoStore();
-    this.postStore2 = new AdvancedPostStore2();
+    this.postStore2 = new AdvancedPostStore();
 
     // Make session and userData observable before setting up auth listener
     makeAutoObservable(this, {

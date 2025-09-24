@@ -191,7 +191,7 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
   }
 }
 
-export class AdvancedPostStore2 {
+export class AdvancedPostStore {
     private storeManager: OptimisticStoreManager<PostApiData, PostUiData> | null = null;
     private authToken: string | null = null;
     private isEnabled: boolean = false;
