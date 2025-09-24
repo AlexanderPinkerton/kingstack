@@ -2,7 +2,7 @@
 
 import useAuthGuard from "@/hooks/useAuthGuard";
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
 import { NeonCard } from "@/components/ui/neon-card";
@@ -34,61 +34,24 @@ export interface TodoUiData {
   updated_at: Date;
 }
 
-// Create the optimistic store hook - SUPER SIMPLE! 🚀
-function useTodos() {
-  const rootStore = useContext(RootStoreContext);
-
-  return createOptimisticStore<TodoApiData, TodoUiData>({
-    name: "todos",
-    queryFn: () => {
-      const token = rootStore.session?.access_token || "";
-      const baseUrl =
-        process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-      return fetchWithAuth(token, `${baseUrl}/todos`).then((res) => res.json());
-    },
-    mutations: {
-      create: (data) => {
-        const token = rootStore.session?.access_token || "";
-        const baseUrl =
-          process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-        return fetchWithAuth(token, `${baseUrl}/todos`, {
-          method: "POST",
-          body: JSON.stringify(data),
-        }).then((res) => res.json());
-      },
-
-      update: ({ id, data }) => {
-        const token = rootStore.session?.access_token || "";
-        const baseUrl =
-          process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-        return fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
-          method: "PUT",
-          body: JSON.stringify(data),
-        }).then((res) => res.json());
-      },
-
-      remove: (id) => {
-        const token = rootStore.session?.access_token || "";
-        const baseUrl =
-          process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-        return fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
-          method: "DELETE",
-        }).then(() => ({ id }));
-      },
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: () => !!(rootStore.session?.access_token), // Only run when we have a token
-  })();
-}
-
 export default observer(function HomePage() {
   useAuthGuard(); // This ensures user is logged in
 
+  const rootStore = useContext(RootStoreContext);
+
   // Tab state
   const [activeTab, setActiveTab] = useState<"todos" | "posts">("todos");
+  const [isAuthInitialized, setIsAuthInitialized] = useState(false);
 
   // Use the optimistic store - dead simple! 🚀
-  const { store, actions, status } = useTodos();
+  const { store, actions, status } = rootStore.todoStore;
+
+  // Track authentication initialization to prevent hydration mismatch
+  useEffect(() => {
+    // Mark as initialized after first render to prevent hydration mismatch
+    setIsAuthInitialized(true);
+  }, []);
+
   const [newTodoTitle, setNewTodoTitle] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -159,7 +122,8 @@ export default observer(function HomePage() {
                 {/* Tab Content */}
                 {activeTab === "todos" && (
                   <>
-                    {status.isLoading && (
+                    {/* Show loading state only after auth is initialized to prevent hydration mismatch */}
+                    {isAuthInitialized && status.isLoading && (
                       <div className="text-center py-8">
                         <div className="animate-pulse text-slate-300">
                           Loading your todos...
@@ -167,7 +131,8 @@ export default observer(function HomePage() {
                       </div>
                     )}
 
-                    {status.isError && (
+                    {/* Show error state only after auth is initialized */}
+                    {isAuthInitialized && status.isError && (
                       <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 mb-6">
                         <div className="text-red-300 mb-2">
                           ❌ Error: {status.error?.message}
@@ -181,7 +146,16 @@ export default observer(function HomePage() {
                       </div>
                     )}
 
-                    {!status.isLoading && (
+                    {/* Show initial loading state during auth initialization */}
+                    {!isAuthInitialized && (
+                      <div className="text-center py-8">
+                        <div className="animate-pulse text-slate-300">
+                          Initializing...
+                        </div>
+                      </div>
+                    )}
+
+                    {isAuthInitialized && !status.isLoading && (
                       <>
                         <div className="text-center mb-6">
                           <h2 className="text-2xl font-bold text-white mb-2">

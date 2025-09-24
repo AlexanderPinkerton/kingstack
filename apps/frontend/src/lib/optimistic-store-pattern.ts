@@ -379,6 +379,9 @@ export function createOptimisticStoreManager<
     }
   });
 
+  // Refetch the query when the store is created
+  queryObserver.refetch();
+
   // Create mutation observers
   const createMutationObserver = new MutationObserver(qc, {
     mutationFn: config.mutations.create,

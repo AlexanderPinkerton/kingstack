@@ -3,9 +3,12 @@ import { useContext } from "react";
 import { io, Socket } from "socket.io-client";
 import { PostStore } from "./postStore";
 import { createClient } from "@/lib/supabase/browserClient";
-import { fetchInternal } from "@/lib/utils";
+import { fetchInternal, fetchWithAuth } from "@/lib/utils";
 import { RootStoreContext } from "@/context/rootStoreContext";
 import { RealtimeStore } from "./interfaces/RealtimeStore";
+import { TodoApiData } from "@/app/home/page";
+import { TodoUiData } from "@/app/home/page";
+import { createOptimisticStoreManager } from "@/lib/optimistic-store-pattern";
 
 const supabase = createClient();
 
@@ -13,7 +16,7 @@ export class RootStore {
   postStore: PostStore;
   session: any = null;
   userData: any = null;
-
+  todoStore: any = null;
   // WebSocket connection management
   socket: Socket | null = null;
   browserId: string = Math.random().toString(36).substring(7);
@@ -23,6 +26,48 @@ export class RootStore {
 
     this.postStore = new PostStore(this);
     this.session = null;
+    this.todoStore = createOptimisticStoreManager<TodoApiData, TodoUiData>(
+      {
+        name: "todos",
+        queryFn: async () => {
+          const token = this.session?.access_token || "";
+          const baseUrl =
+            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+          return fetchWithAuth(token, `${baseUrl}/todos`).then((res) => res.json());
+        },
+        mutations: {
+          create: async (data) => {
+            const token = this.session?.access_token || "";
+            const baseUrl =
+              process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+            return fetchWithAuth(token, `${baseUrl}/todos`, {
+              method: "POST",
+              body: JSON.stringify(data),
+            }).then((res) => res.json());
+          },
+    
+          update: async ({ id, data }) => {
+            const token = this.session?.access_token || "";
+            const baseUrl =
+              process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+            return fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
+              method: "PUT",
+              body: JSON.stringify(data),
+            }).then((res) => res.json());
+          },
+    
+          remove: async (id) => {
+            const token = this.session?.access_token || "";
+            const baseUrl =
+              process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+            return fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
+              method: "DELETE",
+            }).then(() => ({ id }));
+          },
+        },
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        enabled: () => !!(this.session?.access_token), // Only run when we have a token
+      });
 
     // Make session and userData observable before setting up auth listener
     makeAutoObservable(this, {
