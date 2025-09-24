@@ -3,7 +3,7 @@
 import { observer } from "mobx-react-lite";
 import { useState, useContext } from "react";
 import { RootStoreContext } from "@/context/rootStoreContext";
-import { PostApiData, PostUiData } from "@/stores/postStore2";
+import { PostApiData, PostUiData } from "@/stores/postStore";
 
 // ---------- Advanced Types ----------
 // Types are now imported from postStore2.ts

@@ -1,196 +1,286 @@
-import { makeAutoObservable, runInAction } from "mobx";
-import { type RootStore } from "./rootStore";
-import { Socket } from "socket.io-client";
+import { createOptimisticStoreManager, OptimisticStoreManager, DataTransformer, OptimisticDefaults } from "@/lib/optimistic-store-pattern";
+import { fetchWithAuth } from "@/lib/utils";
 
-import type {
-  PostDSS,
-  FullPostData,
-} from "../../../../packages/shapes/post/PostDSS";
-import { fetchWithAuth } from "../lib/utils";
-import { RealtimeStore } from "./interfaces/RealtimeStore";
-
-export class PostStore implements RealtimeStore {
-  rootStore: RootStore;
-
-  // Map of postId to PostDSS (cache)
-  posts = new Map<string, PostDSS>();
-  loading = false;
-  error: string | null = null;
-
-  constructor(rootStore: RootStore) {
-    this.rootStore = rootStore;
-    makeAutoObservable(this);
-  }
-
-  setupRealtimeHandlers(socket: Socket) {
-    console.log("[PostStore] Setting up realtime handlers");
-
-    // Listen for post updates
-    socket.on("post_update", (data: any) => {
-      console.log("[PostStore] Received post_update:", data);
-      this.handleRealtimePostUpdate(data);
-    });
-  }
-
-  // Handle realtime post updates
-  private handleRealtimePostUpdate(data: any) {
-    console.log("[PostStore] handleRealtimePostUpdate called", data);
-
-    if (data.type === "post_update" && data.post) {
-      const post = data.post;
-
-      // Only process published posts
-      if (post.published === true) {
-        const postDSS: PostDSS = {
-          id: post.id,
-          title: post.title,
-          content: post.content,
-          published: post.published,
-          author_id: post.author_id,
-          created_at: post.created_at,
-        };
-
-        if (data.event === "INSERT") {
-          this.realtimeInsertPost(postDSS);
-        } else if (data.event === "UPDATE") {
-          this.realtimeUpdatePost(postDSS);
-        } else if (data.event === "DELETE") {
-          this.realtimeDeletePost(post.id);
-        }
-      }
-    }
-  }
-
-  // Real-time insert
-  realtimeInsertPost(post: PostDSS) {
-    console.log("[PostStore] realtimeInsertPost called", post);
-    runInAction(() => {
-      this.posts.set(post.id, post);
-    });
-  }
-
-  // Real-time update
-  realtimeUpdatePost(post: PostDSS) {
-    console.log("[PostStore] realtimeUpdatePost called", post);
-    runInAction(() => {
-      this.posts.set(post.id, post);
-    });
-  }
-
-  // Real-time delete
-  realtimeDeletePost(postId: string) {
-    console.log("[PostStore] realtimeDeletePost called", postId);
-    runInAction(() => {
-      this.posts.delete(postId);
-    });
-  }
-
-  // Fetch posts from the API endpoint
-  async fetchPosts(options: { nestjs: boolean } = { nestjs: false }) {
-    this.loading = true;
-    this.error = null;
-
-    try {
-      let url = "/api/post";
-      if (options.nestjs) {
-        url = process.env.NEXT_PUBLIC_NEST_BACKEND_URL + "/posts";
-      }
-
-      const response = await fetchWithAuth(
-        this.rootStore.session?.access_token,
-        url,
-      );
-
-      if (!response.ok)
-        throw new Error(`Failed to fetch posts: ${response.status}`);
-
-      const data = await response.json();
-
-      runInAction(() => {
-        // Clear existing posts
-        this.posts.clear();
-
-        // Add all posts from the response
-        for (const post of data) {
-          const postDSS: PostDSS = {
-            id: post.id,
-            title: post.title,
-            content: post.content,
-            published: post.published,
-            author_id: post.author_id,
-            created_at: post.created_at,
-          };
-          this.posts.set(post.id, postDSS);
-        }
-        this.loading = false;
-      });
-    } catch (e: any) {
-      runInAction(() => {
-        this.error = e.message || "Unknown error";
-        this.loading = false;
-      });
-    }
-  }
-
-  // Legacy method for backward compatibility
-  getPosts(): PostDSS[] {
-    return Array.from(this.posts.values());
-  }
-
-  // Remove a post from the store
-  removePost(postId: string) {
-    runInAction(() => {
-      this.posts.delete(postId);
-    });
-  }
-
-  // Update a post in the store
-  updatePost(postId: string, updatedPost: Partial<PostDSS>) {
-    runInAction(() => {
-      const existingPost = this.posts.get(postId);
-      if (existingPost) {
-        this.posts.set(postId, { ...existingPost, ...updatedPost });
-      }
-    });
-  }
-
-  // Add or update a post in the cache
-  upsertPost(post: PostDSS) {
-    runInAction(() => {
-      this.posts.set(post.id, post);
-    });
-  }
-
-  // Create post method
-  createPost = async (postData: {
-    title: string;
-    content?: string;
-    published?: boolean;
-  }) => {
-    try {
-      console.log("Creating post...", postData);
-
-      const response = await fetchWithAuth(
-        this.rootStore.session?.access_token,
-        "/api/post",
-        {
-          method: "POST",
-          body: JSON.stringify(postData),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Post created successfully:", data);
-
-      // The realtime update will handle adding the post to the store
-      return data;
-    } catch (error) {
-      console.error("Failed to create post:", error);
-      throw error;
-    }
+// API data structure (what comes from the server)
+export interface PostApiData {
+  id: string;
+  title: string;
+  content: string | null;
+  published: boolean;
+  author_id: string;
+  created_at: string; // ISO string from server
+  author: {
+    id: string;
+    username: string;
+    email: string;
   };
+}
+
+// UI data structure (enhanced for the frontend)
+export interface PostUiData {
+  id: string;
+  title: string;
+  content: string;
+  published: boolean;
+  author_id: string;
+  created_at: Date;
+  author: {
+    id: string;
+    username: string;
+    email: string;
+    displayName: string; // Computed field
+  };
+  // UI-only computed fields
+  excerpt: string;
+  readingTime: number; // in minutes
+  wordCount: number;
+  isNew: boolean; // Posts created in the last 24 hours
+  publishStatus: "draft" | "published";
+  tags: string[]; // Extracted from content
+}
+
+// Transformer to convert API data to UI data with computed fields
+class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
+  optimisticDefaults: OptimisticDefaults<PostUiData> = {
+    createOptimisticUiData: (userInput: any, context?: any) => {
+      const currentUser = context?.currentUser;
+      const content = userInput.content || "";
+
+      // Calculate UI fields immediately
+      const wordCount = this.calculateWordCount(content);
+      const readingTime = this.calculateReadingTime(wordCount);
+      const excerpt = this.generateExcerpt(content);
+      const tags = this.extractTags(content);
+
+      // Use existing ID if available (for updates), otherwise generate temp ID
+      const id = userInput.id || `temp-${Date.now()}`;
+
+      // Use existing created_at if available (for updates), otherwise use current time
+      const createdAt =
+        userInput.created_at instanceof Date
+          ? userInput.created_at
+          : userInput.created_at
+            ? new Date(userInput.created_at)
+            : new Date();
+
+      // Determine if this is a new post using the same logic as the transformer
+      const isNew = this.isPostNew(createdAt.toISOString());
+
+      return {
+        id,
+        title: userInput.title || "",
+        content,
+        published: userInput.published ?? false,
+        author_id: userInput.author_id || currentUser?.id || "unknown",
+        created_at: createdAt,
+        author: userInput.author || {
+          id: currentUser?.id || "unknown",
+          username:
+            currentUser?.user_metadata?.username ||
+            currentUser?.email?.split("@")[0] ||
+            "You",
+          email: currentUser?.email || "unknown@example.com",
+          displayName:
+            currentUser?.user_metadata?.username ||
+            currentUser?.email?.split("@")[0] ||
+            "You",
+        },
+        // Computed UI fields - always recalculated
+        excerpt,
+        readingTime,
+        wordCount,
+        isNew,
+        publishStatus: (userInput.published ?? false) ? "published" : "draft",
+        tags,
+      } as PostUiData;
+    },
+    pendingFields: [],
+  };
+
+  toUi(apiData: PostApiData): PostUiData {
+    const content = apiData.content || "";
+    const wordCount = this.calculateWordCount(content);
+    const readingTime = this.calculateReadingTime(wordCount);
+    const excerpt = this.generateExcerpt(content);
+    const tags = this.extractTags(content);
+    const isNew = this.isPostNew(apiData.created_at);
+
+    // Handle case where author data might be missing (optimistic updates)
+    const author = apiData.author || {
+      id: apiData.author_id || "unknown",
+      username: "Unknown User",
+      email: "unknown@example.com",
+    };
+
+    return {
+      id: apiData.id,
+      title: apiData.title,
+      content,
+      published: apiData.published,
+      author_id: apiData.author_id,
+      created_at: new Date(apiData.created_at),
+      author: {
+        ...author,
+        displayName: author.username || author.email.split("@")[0],
+      },
+      // Computed fields
+      excerpt,
+      readingTime,
+      wordCount,
+      isNew,
+      publishStatus: apiData.published ? "published" : "draft",
+      tags,
+    };
+  }
+
+  toApi(uiData: PostUiData): PostApiData {
+    return {
+      id: uiData.id,
+      title: uiData.title,
+      content: uiData.content,
+      published: uiData.published,
+      author_id: uiData.author_id,
+      created_at: uiData.created_at.toISOString(),
+      author: {
+        id: uiData.author.id,
+        username: uiData.author.username,
+        email: uiData.author.email,
+      },
+    };
+  }
+
+  private calculateWordCount(content: string): number {
+    return content
+      .trim()
+      .split(/\s+/)
+      .filter((word) => word.length > 0).length;
+  }
+
+  private calculateReadingTime(wordCount: number): number {
+    // Average reading speed: 200 words per minute
+    return Math.max(1, Math.ceil(wordCount / 200));
+  }
+
+  private generateExcerpt(content: string, maxLength: number = 150): string {
+    if (content.length <= maxLength) return content;
+
+    const truncated = content.substring(0, maxLength);
+    const lastSpace = truncated.lastIndexOf(" ");
+
+    return lastSpace > 0
+      ? truncated.substring(0, lastSpace) + "..."
+      : truncated + "...";
+  }
+
+  private extractTags(content: string): string[] {
+    // Simple tag extraction - look for #hashtags
+    const tagRegex = /#(\w+)/g;
+    const matches = content.match(tagRegex);
+
+    if (!matches) return [];
+
+    return [...new Set(matches.map((tag) => tag.substring(1).toLowerCase()))];
+  }
+
+  private isPostNew(createdAt: string): boolean {
+    const postDate = new Date(createdAt);
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+    return postDate > oneDayAgo;
+  }
+}
+
+export class AdvancedPostStore2 {
+    private storeManager: OptimisticStoreManager<PostApiData, PostUiData> | null = null;
+    private authToken: string | null = null;
+    private isEnabled: boolean = false;
+    
+    constructor() {
+        // Store is created but not enabled until auth is available
+        this.initialize();
+    }
+
+    private initialize() {
+        const transformer = new PostTransformer();
+        
+        this.storeManager = createOptimisticStoreManager<PostApiData, PostUiData>(
+            {
+                name: "advanced-posts",
+                queryFn: async () => {
+                    const token = this.authToken || "";
+                    const baseUrl =
+                        process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+                    return fetchWithAuth(token, `${baseUrl}/posts`).then((res) => res.json());
+                },
+                mutations: {
+                    create: async (data) => {
+                        const token = this.authToken || "";
+                        const baseUrl =
+                            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+                        return fetchWithAuth(token, `${baseUrl}/posts`, {
+                            method: "POST",
+                            body: JSON.stringify(data),
+                        }).then((res) => res.json());
+                    },
+
+                    update: async ({ id, data }) => {
+                        const token = this.authToken || "";
+                        const baseUrl =
+                            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+                        return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
+                            method: "PUT",
+                            body: JSON.stringify(data),
+                        }).then((res) => res.json());
+                    },
+
+                    remove: async (id) => {
+                        const token = this.authToken || "";
+                        const baseUrl =
+                            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+                        return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
+                            method: "DELETE",
+                        }).then(() => ({ id }));
+                    },
+                },
+                transformer: transformer,
+                optimisticContext: () => ({ currentUser: null }), // Will be set by the component
+                staleTime: 5 * 60 * 1000, // 5 minutes
+                enabled: () => this.isEnabled && !!(this.authToken), // Only run when enabled and we have a token
+            });
+    }
+
+    // Enable the store with auth token
+    enable(authToken: string) {
+        this.authToken = authToken;
+        this.isEnabled = true;
+        // Update the store manager options to enable the query
+        this.storeManager?.updateOptions();
+    }
+
+    // Disable the store
+    disable() {
+        this.isEnabled = false;
+        this.authToken = null;
+        // Update the store manager options to disable the query
+        this.storeManager?.updateOptions();
+    }
+
+    // Expose store manager properties directly for easy access
+    get store() {
+        return this.storeManager?.store || null;
+    }
+
+    get actions() {
+        return this.storeManager?.actions || null;
+    }
+
+    get status() {
+        return this.storeManager?.status || null;
+    }
+
+    // Check if store is ready and enabled
+    get isReady() {
+        return this.storeManager !== null && this.isEnabled;
+    }
 }

@@ -1,21 +1,14 @@
 import { makeAutoObservable, runInAction } from "mobx";
-import { useContext } from "react";
 import { io, Socket } from "socket.io-client";
-import { PostStore } from "./postStore";
 import { createClient } from "@/lib/supabase/browserClient";
 import { fetchInternal, fetchWithAuth } from "@/lib/utils";
-import { RootStoreContext } from "@/context/rootStoreContext";
 import { RealtimeStore } from "./interfaces/RealtimeStore";
-import { TodoApiData } from "@/app/home/page";
-import { TodoUiData } from "@/app/home/page";
-import { createOptimisticStoreManager } from "@/lib/optimistic-store-pattern";
 import { AdvancedTodoStore } from "./todoStore";
-import { AdvancedPostStore2 } from "./postStore2";
+import { AdvancedPostStore2 } from "./postStore";
 
 const supabase = createClient();
 
 export class RootStore {
-  postStore: PostStore;
   session: any = null;
   userData: any = null;
   todoStore: AdvancedTodoStore;
@@ -27,7 +20,6 @@ export class RootStore {
   constructor() {
     console.log("🔧 RootStore: Constructor called", Math.random());
 
-    this.postStore = new PostStore(this);
     this.session = null;
     
     // Always create the stores, but they won't be enabled until auth is available
@@ -124,7 +116,6 @@ export class RootStore {
 
     // Get all domain stores that implement RealtimeStore
     const realtimeStores: RealtimeStore[] = [
-      this.postStore,
       // Add other domain stores here as they are created
     ];
 

@@ -10,8 +10,6 @@ import { GradientText } from "@/components/ui/gradient-text";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { AppNavbar } from "@/components/navbar/presets/app";
 
-import { createOptimisticStore } from "@/lib/optimistic-store-react";
-import { fetchWithAuth } from "@/lib/utils";
 import { useContext } from "react";
 import { RootStoreContext } from "@/context/rootStoreContext";
 import { AdvancedPostsExample } from "@/lib/examples/advanced-posts-example";
