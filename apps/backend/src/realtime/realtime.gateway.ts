@@ -21,6 +21,10 @@ interface UserSocketMap {
   [browserId: string]: Socket;
 }
 
+interface PublicSocketMap {
+  [browserId: string]: Socket;
+}
+
 @Injectable()
 @WebSocketGateway({
   cors: {
@@ -32,6 +36,7 @@ export class RealtimeGateway
 {
   private logger = new Logger("RealtimeGateway");
   private userSockets: Map<string, UserSocketMap> = new Map();
+  private publicSockets: PublicSocketMap = {}; // For public checkbox updates
   private supabase: SupabaseClient;
   private subscriptionChannel: any = null;
   private readonly supabaseUrl = process.env.SUPABASE_URL!;
@@ -86,7 +91,20 @@ export class RealtimeGateway
     }
   }
 
+  @SubscribeMessage("register_public")
+  async handlePublicRegister(
+    @MessageBody() data: { browserId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.publicSockets[data.browserId] = client;
+    this.logger.log(`Registered public socket for browser ${data.browserId}`);
+    client.data.browserId = data.browserId;
+    client.data.isPublic = true;
+    return { status: "ok" };
+  }
+
   private removeSocketFromMap(client: Socket) {
+    // Remove from authenticated user sockets
     for (const [userId, userSocketMap] of this.userSockets.entries()) {
       for (const [browserId, socket] of Object.entries(userSocketMap)) {
         if (socket.id === client.id) {
@@ -99,6 +117,14 @@ export class RealtimeGateway
       if (Object.keys(userSocketMap).length === 0) {
         this.userSockets.delete(userId);
         this.logger.log(`Removed all sockets for user ${userId}`);
+      }
+    }
+
+    // Remove from public sockets
+    for (const [browserId, socket] of Object.entries(this.publicSockets)) {
+      if (socket.id === client.id) {
+        delete this.publicSockets[browserId];
+        this.logger.log(`Removed public socket for browser ${browserId}`);
       }
     }
   }
@@ -134,6 +160,15 @@ export class RealtimeGateway
             table: "post",
           },
           (payload: any) => this.handlePostRealtime(payload),
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "checkbox",
+          },
+          (payload: any) => this.handleCheckboxRealtime(payload),
         )
         .subscribe((status: any) => {
           this.logger.log(`Supabase channel status: ${status}`);
@@ -199,19 +234,64 @@ export class RealtimeGateway
     }
   }
 
+  private async handleCheckboxRealtime(payload: any) {
+    try {
+      const checkbox = payload.new || payload.old;
+      const eventType = payload.eventType;
+
+      if (!checkbox) {
+        this.logger.log("No checkbox data in payload");
+        return;
+      }
+
+      this.logger.log(
+        `Checkbox realtime event: ${eventType} - index: ${checkbox.index} - checked: ${checkbox.checked}`,
+      );
+
+      // Broadcast all checkbox events to all connected clients
+      this.broadcastToAllClients({
+        type: "checkbox_update",
+        event: eventType,
+        checkbox: checkbox,
+      });
+
+      this.logger.log(`Broadcasted checkbox update: index ${checkbox.index}`);
+    } catch (err) {
+      this.logger.error("Error handling checkbox realtime update:", err);
+    }
+  }
+
   private broadcastToAllClients(payload: any) {
     let totalClients = 0;
 
+    // Send to authenticated users
     for (const [userId, userSocketMap] of this.userSockets.entries()) {
       for (const [browserId, socket] of Object.entries(userSocketMap)) {
         this.logger.log(
-          `Sending post update to user ${userId}, browser ${browserId}`,
+          `Sending update to user ${userId}, browser ${browserId}`,
         );
-        socket.emit("post_update", payload);
+        // Send the appropriate event type based on payload type
+        if (payload.type === "checkbox_update") {
+          socket.emit("checkbox_update", payload);
+        } else {
+          socket.emit("post_update", payload);
+        }
         totalClients++;
       }
     }
 
-    this.logger.log(`Broadcasted post update to ${totalClients} clients`);
+    // Send to public clients (for checkbox updates)
+    for (const [browserId, socket] of Object.entries(this.publicSockets)) {
+      this.logger.log(`Sending update to public browser ${browserId}`);
+      // Send the appropriate event type based on payload type
+      if (payload.type === "checkbox_update") {
+        socket.emit("checkbox_update", payload);
+      } else {
+        socket.emit("post_update", payload);
+      }
+      totalClients++;
+    }
+
+    this.logger.log(`Broadcasted update to ${totalClients} clients`);
   }
 }

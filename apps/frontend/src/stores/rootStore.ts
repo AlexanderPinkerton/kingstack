@@ -45,25 +45,28 @@ export class RootStore {
         if (session?.access_token && event === "SIGNED_IN") {
           // Handle auth-required setup here
           console.log("✅ RootStore: Session established, setting up realtime");
-          // Setup realtime connection
+          // Setup realtime connection with auth
           this.setupRealtime(session.access_token);
           // Fetch user data when session is established
           this.fetchUserData();
         } else if (!session?.access_token) {
           // Handle auth-required teardown here
-          console.log("❌ RootStore: Session lost, tearing down realtime");
-          // Teardown realtime connection
-          this.teardownRealtime();
+          console.log("❌ RootStore: Session lost, setting up public realtime");
+          // Setup public realtime connection for checkbox updates
+          this.setupRealtime();
           // Clear user data when session is lost
           this.userData = null;
         }
       });
     });
 
+    // Setup public realtime connection for checkbox updates (works without auth)
+    this.setupRealtime();
+
     console.log("🔧 RootStore: Initialized");
   }
 
-  setupRealtime(token: string) {
+  setupRealtime(token?: string) {
     console.log("[RootStore] setupRealtime called");
     if (this.socket) {
       this.socket.disconnect();
@@ -80,10 +83,19 @@ export class RootStore {
 
     this.socket.on("connect", () => {
       console.log("[RootStore] Realtime socket connected");
-      this.socket?.emit("register", {
-        token,
-        browserId: this.browserId,
-      });
+      
+      if (token) {
+        // Register as authenticated user
+        this.socket?.emit("register", {
+          token,
+          browserId: this.browserId,
+        });
+      } else {
+        // Register as public user for checkbox updates
+        this.socket?.emit("register_public", {
+          browserId: this.browserId,
+        });
+      }
 
       // Setup domain-specific event handlers
       this.setupDomainEventHandlers();

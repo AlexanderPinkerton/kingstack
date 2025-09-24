@@ -217,7 +217,6 @@ export class OptimisticStore<T extends Entity> {
       }
     });
     this.snapshots = []; // Clear snapshots after successful sync
-    console.log("reconciled", this.list);
   }
 
   // Utility methods
