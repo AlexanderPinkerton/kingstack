@@ -86,6 +86,18 @@ export class RealtimeGateway
     }
   }
 
+  @SubscribeMessage("register_public")
+  async handleRegisterPublic(
+    @MessageBody() data: { browserId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.logger.log(
+      `Registered public socket for browser ${data.browserId}`,
+    );
+    client.data.browserId = data.browserId;
+    return { status: "ok" };
+  }
+
   private removeSocketFromMap(client: Socket) {
     for (const [userId, userSocketMap] of this.userSockets.entries()) {
       for (const [browserId, socket] of Object.entries(userSocketMap)) {
@@ -125,7 +137,7 @@ export class RealtimeGateway
       }
 
       this.subscriptionChannel = this.supabase
-        .channel("posts")
+        .channel("realtime_updates")
         .on(
           "postgres_changes",
           {
@@ -134,6 +146,15 @@ export class RealtimeGateway
             table: "post",
           },
           (payload: any) => this.handlePostRealtime(payload),
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "checkbox",
+          },
+          (payload: any) => this.handleCheckboxRealtime(payload),
         )
         .subscribe((status: any) => {
           this.logger.log(`Supabase channel status: ${status}`);
@@ -199,19 +220,46 @@ export class RealtimeGateway
     }
   }
 
+  private async handleCheckboxRealtime(payload: any) {
+    try {
+      const checkbox = payload.new || payload.old;
+      const eventType = payload.eventType;
+
+      if (!checkbox) {
+        this.logger.log("No checkbox data in payload");
+        return;
+      }
+
+      this.logger.log(
+        `Checkbox realtime event: ${eventType} - ${checkbox.id} - index: ${checkbox.index} - checked: ${checkbox.checked}`,
+      );
+
+      // Broadcast all checkbox events to all clients
+      this.broadcastToAllClients({
+        type: "checkbox_update",
+        event: eventType,
+        checkbox: checkbox,
+      });
+
+      this.logger.log(`Broadcasted checkbox update: ${checkbox.id} - index: ${checkbox.index}`);
+    } catch (err) {
+      this.logger.error("Error handling checkbox realtime update:", err);
+    }
+  }
+
   private broadcastToAllClients(payload: any) {
     let totalClients = 0;
 
     for (const [userId, userSocketMap] of this.userSockets.entries()) {
       for (const [browserId, socket] of Object.entries(userSocketMap)) {
         this.logger.log(
-          `Sending post update to user ${userId}, browser ${browserId}`,
+          `Sending update to user ${userId}, browser ${browserId}`,
         );
-        socket.emit("post_update", payload);
+        socket.emit(payload.type, payload);
         totalClients++;
       }
     }
 
-    this.logger.log(`Broadcasted post update to ${totalClients} clients`);
+    this.logger.log(`Broadcasted ${payload.type} to ${totalClients} clients`);
   }
 }

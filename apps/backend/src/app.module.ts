@@ -6,6 +6,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
 import { PostsModule } from "./posts/posts.module";
 import { TodosModule } from "./todos/todos.module";
+import { CheckboxesModule } from "./checkboxes/checkboxes.module";
 import { RealtimeModule } from "./realtime/realtime.module";
 
 @Module({
@@ -15,6 +16,7 @@ import { RealtimeModule } from "./realtime/realtime.module";
     ScheduleModule.forRoot(), // Used for scheduling tasks
     PostsModule, // Used to load environment variables globally
     TodosModule, // Todo CRUD operations
+    CheckboxesModule, // Checkbox CRUD operations
     RealtimeModule, // WebSocket realtime gateway
   ],
   controllers: [AppController],
