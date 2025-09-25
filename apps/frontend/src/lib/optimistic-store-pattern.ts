@@ -138,7 +138,6 @@ export class OptimisticStore<T extends Entity> {
    */
   public entities = new Map<string, T>();
   private snapshots: Map<string, T>[] = [];
-  public optimisticDeletions: Set<string> = new Set(); // Track items being deleted optimistically
 
   constructor() {
     makeObservable(this, {
@@ -182,8 +181,6 @@ export class OptimisticStore<T extends Entity> {
 
   remove(id: string): void {
     this.entities.delete(id);
-    this.optimisticDeletions.add(id); // Track this as an optimistic deletion
-    console.log("optimistic delete tracked:", id, "current deletions:", Array.from(this.optimisticDeletions));
   }
 
   // Remove item without tracking as optimistic deletion (for server-side removals)
@@ -194,7 +191,6 @@ export class OptimisticStore<T extends Entity> {
 
   clear(): void {
     this.entities.clear();
-    this.optimisticDeletions.clear();
   }
 
   // Optimistic update support
@@ -210,7 +206,7 @@ export class OptimisticStore<T extends Entity> {
     }
   }
 
-  // Server reconciliation - diff-based update that preserves optimistic updates
+  // Server reconciliation - simple clear and replace approach
   reconcile<TApiData extends Entity = T>(
     serverData: TApiData[],
     transformer?: DataTransformer<TApiData, T>,
@@ -226,59 +222,16 @@ export class OptimisticStore<T extends Entity> {
 
     console.log("reconciliation: server returned", serverUiData.length, "items:", serverUiData.map(item => item.id));
 
-    // Create a map of server data for quick lookup
-    const serverDataMap = new Map(serverUiData.map(item => [item.id, item]));
-
-    // Get current items that are NOT optimistic (exist on server)
-    const currentServerItems = this.list.filter(item => {
-      const serverItem = serverDataMap.get(item.id);
-      return !!serverItem; // This item exists on server
-    });
-
-    // Get optimistic items (don't exist on server yet)
-    const optimisticItems = this.list.filter(item => {
-      const serverItem = serverDataMap.get(item.id);
-      return !serverItem; // This item doesn't exist on server yet
-    });
-
-    // 1. Upsert all server data (updates existing + adds new)
-    // BUT skip items that are being optimistically deleted
-    serverUiData.forEach(item => {
-      if (!this.optimisticDeletions.has(item.id)) {
-        this.upsert(item);
-        console.log("reconciled: added/updated item", item.id);
-      } else {
-        console.log("reconciled: skipped optimistically deleted item", item.id);
-      }
-    });
-
-    // 2. Clear optimistic deletions for items that are confirmed deleted on server
-    const serverIds = new Set(serverUiData.map(item => item.id));
-    const confirmedDeletedIds: string[] = [];
-    this.optimisticDeletions.forEach(id => {
-      if (!serverIds.has(id)) {
-        // Item is not on server anymore, deletion is confirmed
-        this.optimisticDeletions.delete(id);
-        confirmedDeletedIds.push(id);
-      }
-    });
-    if (confirmedDeletedIds.length > 0) {
-      console.log("reconciled: confirmed deletions on server:", confirmedDeletedIds);
-    }
-
-    // 3. Remove items that no longer exist on server (but keep optimistic ones)
-    const optimisticIds = new Set(optimisticItems.map(item => item.id));
-    
-    // Only remove items that were on server before but aren't anymore
-    currentServerItems.forEach(item => {
-      if (!serverIds.has(item.id)) {
-        this.removeFromServer(item.id);
-      }
-    });
-
-    // Clear snapshots after successful sync
+    // Simple approach: clear current data and replace with server data
+    this.entities.clear();
     this.snapshots = [];
-    console.log("reconciled", this.list, "optimistic items preserved:", optimisticItems.length, "optimistic deletions:", Array.from(this.optimisticDeletions));
+
+    // Add all server data
+    serverUiData.forEach(item => {
+      this.entities.set(item.id, item);
+    });
+
+    console.log("reconciled: replaced with", this.list.length, "items from server");
   }
 
   // Utility methods
@@ -629,8 +582,6 @@ export function createOptimisticStoreManager<
     onError: (error: any, variables: string) => {
       runInAction(() => {
         store.rollback();
-        // Clear optimistic deletion on error
-        store.optimisticDeletions.delete(variables);
         console.log("delete mutation failed, rolled back and cleared from optimistic deletions:", variables);
       });
     },
