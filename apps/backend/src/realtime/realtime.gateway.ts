@@ -91,9 +91,7 @@ export class RealtimeGateway
     @MessageBody() data: { browserId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    this.logger.log(
-      `Registered public socket for browser ${data.browserId}`,
-    );
+    this.logger.log(`Registered public socket for browser ${data.browserId}`);
     client.data.browserId = data.browserId;
     return { status: "ok" };
   }
@@ -241,7 +239,9 @@ export class RealtimeGateway
         checkbox: checkbox,
       });
 
-      this.logger.log(`Broadcasted checkbox update: ${checkbox.id} - index: ${checkbox.index}`);
+      this.logger.log(
+        `Broadcasted checkbox update: ${checkbox.id} - index: ${checkbox.index}`,
+      );
     } catch (err) {
       this.logger.error("Error handling checkbox realtime update:", err);
     }

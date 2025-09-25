@@ -39,7 +39,10 @@ export class CheckboxesService {
     }
   }
 
-  async create(createCheckboxDto: { index: number; checked: boolean }): Promise<Checkbox> {
+  async create(createCheckboxDto: {
+    index: number;
+    checked: boolean;
+  }): Promise<Checkbox> {
     try {
       const { data, error } = await this.supabase
         .from("checkbox")
@@ -60,7 +63,10 @@ export class CheckboxesService {
     }
   }
 
-  async update(id: string, updateCheckboxDto: { index?: number; checked?: boolean }): Promise<Checkbox> {
+  async update(
+    id: string,
+    updateCheckboxDto: { index?: number; checked?: boolean },
+  ): Promise<Checkbox> {
     try {
       const { data, error } = await this.supabase
         .from("checkbox")
@@ -101,7 +107,9 @@ export class CheckboxesService {
     }
   }
 
-  async initializeCheckboxes(count: number): Promise<{ message: string; count: number }> {
+  async initializeCheckboxes(
+    count: number,
+  ): Promise<{ message: string; count: number }> {
     try {
       // First, clear existing checkboxes
       const { error: deleteError } = await this.supabase
@@ -111,7 +119,9 @@ export class CheckboxesService {
 
       if (deleteError) {
         this.logger.error("Error clearing existing checkboxes:", deleteError);
-        throw new Error(`Failed to clear existing checkboxes: ${deleteError.message}`);
+        throw new Error(
+          `Failed to clear existing checkboxes: ${deleteError.message}`,
+        );
       }
 
       // Create new checkboxes
@@ -131,7 +141,10 @@ export class CheckboxesService {
       }
 
       this.logger.log(`Initialized ${data.length} checkboxes`);
-      return { message: `Successfully initialized ${data.length} checkboxes`, count: data.length };
+      return {
+        message: `Successfully initialized ${data.length} checkboxes`,
+        count: data.length,
+      };
     } catch (error) {
       this.logger.error("Error in initializeCheckboxes:", error);
       throw error;

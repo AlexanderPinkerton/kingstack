@@ -1,4 +1,9 @@
-import { createOptimisticStoreManager, OptimisticStoreManager, DataTransformer, OptimisticDefaults } from "@/lib/optimistic-store-pattern";
+import {
+  createOptimisticStoreManager,
+  OptimisticStoreManager,
+  DataTransformer,
+  OptimisticDefaults,
+} from "@/lib/optimistic-store-pattern";
 import { fetchWithAuth } from "@/lib/utils";
 
 // API data structure (what comes from the server)
@@ -156,12 +161,12 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
     if (this.calculationCache.has(cacheKey)) {
       return this.calculationCache.get(cacheKey);
     }
-    
+
     const result = content
       .trim()
       .split(/\s+/)
       .filter((word) => word.length > 0).length;
-    
+
     this.calculationCache.set(cacheKey, result);
     return result;
   }
@@ -171,7 +176,7 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
     if (this.calculationCache.has(cacheKey)) {
       return this.calculationCache.get(cacheKey);
     }
-    
+
     // Average reading speed: 200 words per minute
     const result = Math.max(1, Math.ceil(wordCount / 200));
     this.calculationCache.set(cacheKey, result);
@@ -183,7 +188,7 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
     if (this.calculationCache.has(cacheKey)) {
       return this.calculationCache.get(cacheKey);
     }
-    
+
     if (content.length <= maxLength) {
       this.calculationCache.set(cacheKey, content);
       return content;
@@ -192,10 +197,11 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
     const truncated = content.substring(0, maxLength);
     const lastSpace = truncated.lastIndexOf(" ");
 
-    const result = lastSpace > 0
-      ? truncated.substring(0, lastSpace) + "..."
-      : truncated + "...";
-    
+    const result =
+      lastSpace > 0
+        ? truncated.substring(0, lastSpace) + "..."
+        : truncated + "...";
+
     this.calculationCache.set(cacheKey, result);
     return result;
   }
@@ -205,12 +211,14 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
     if (this.calculationCache.has(cacheKey)) {
       return this.calculationCache.get(cacheKey);
     }
-    
+
     // Simple tag extraction - look for #hashtags
     const tagRegex = /#(\w+)/g;
     const matches = content.match(tagRegex);
 
-    const result = !matches ? [] : [...new Set(matches.map((tag) => tag.substring(1).toLowerCase()))];
+    const result = !matches
+      ? []
+      : [...new Set(matches.map((tag) => tag.substring(1).toLowerCase()))];
     this.calculationCache.set(cacheKey, result);
     return result;
   }
@@ -230,95 +238,97 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
 }
 
 export class AdvancedPostStore {
-    private storeManager: OptimisticStoreManager<PostApiData, PostUiData> | null = null;
-    private authToken: string | null = null;
-    private isEnabled: boolean = false;
-    
-    constructor() {
-        // Store is created but not enabled until auth is available
-        this.initialize();
-    }
+  private storeManager: OptimisticStoreManager<PostApiData, PostUiData> | null =
+    null;
+  private authToken: string | null = null;
+  private isEnabled: boolean = false;
 
-    private initialize() {
-        const transformer = new PostTransformer();
-        
-        this.storeManager = createOptimisticStoreManager<PostApiData, PostUiData>(
-            {
-                name: "advanced-posts",
-                queryFn: async () => {
-                    const token = this.authToken || "";
-                    const baseUrl =
-                        process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-                    return fetchWithAuth(token, `${baseUrl}/posts`).then((res) => res.json());
-                },
-                mutations: {
-                    create: async (data) => {
-                        const token = this.authToken || "";
-                        const baseUrl =
-                            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-                        return fetchWithAuth(token, `${baseUrl}/posts`, {
-                            method: "POST",
-                            body: JSON.stringify(data),
-                        }).then((res) => res.json());
-                    },
+  constructor() {
+    // Store is created but not enabled until auth is available
+    this.initialize();
+  }
 
-                    update: async ({ id, data }) => {
-                        const token = this.authToken || "";
-                        const baseUrl =
-                            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-                        return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
-                            method: "PUT",
-                            body: JSON.stringify(data),
-                        }).then((res) => res.json());
-                    },
+  private initialize() {
+    const transformer = new PostTransformer();
 
-                    remove: async (id) => {
-                        const token = this.authToken || "";
-                        const baseUrl =
-                            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-                        return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
-                            method: "DELETE",
-                        }).then(() => ({ id }));
-                    },
-                },
-                transformer: transformer,
-                optimisticContext: () => ({ currentUser: null }), // Will be set by the component
-                staleTime: 5 * 60 * 1000, // 5 minutes
-                enabled: () => this.isEnabled && !!(this.authToken), // Only run when enabled and we have a token
-            });
-    }
+    this.storeManager = createOptimisticStoreManager<PostApiData, PostUiData>({
+      name: "advanced-posts",
+      queryFn: async () => {
+        const token = this.authToken || "";
+        const baseUrl =
+          process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+        return fetchWithAuth(token, `${baseUrl}/posts`).then((res) =>
+          res.json(),
+        );
+      },
+      mutations: {
+        create: async (data) => {
+          const token = this.authToken || "";
+          const baseUrl =
+            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+          return fetchWithAuth(token, `${baseUrl}/posts`, {
+            method: "POST",
+            body: JSON.stringify(data),
+          }).then((res) => res.json());
+        },
 
-    // Enable the store with auth token
-    enable(authToken: string) {
-        this.authToken = authToken;
-        this.isEnabled = true;
-        // Update the store manager options to enable the query
-        this.storeManager?.updateOptions();
-    }
+        update: async ({ id, data }) => {
+          const token = this.authToken || "";
+          const baseUrl =
+            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+          return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+          }).then((res) => res.json());
+        },
 
-    // Disable the store
-    disable() {
-        this.isEnabled = false;
-        this.authToken = null;
-        // Update the store manager options to disable the query
-        this.storeManager?.updateOptions();
-    }
+        remove: async (id) => {
+          const token = this.authToken || "";
+          const baseUrl =
+            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+          return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
+            method: "DELETE",
+          }).then(() => ({ id }));
+        },
+      },
+      transformer: transformer,
+      optimisticContext: () => ({ currentUser: null }), // Will be set by the component
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      enabled: () => this.isEnabled && !!this.authToken, // Only run when enabled and we have a token
+    });
+  }
 
-    // Expose store manager properties directly for easy access
-    get store() {
-        return this.storeManager?.store || null;
-    }
+  // Enable the store with auth token
+  enable(authToken: string) {
+    this.authToken = authToken;
+    this.isEnabled = true;
+    // Update the store manager options to enable the query
+    this.storeManager?.updateOptions();
+  }
 
-    get actions() {
-        return this.storeManager?.actions || null;
-    }
+  // Disable the store
+  disable() {
+    this.isEnabled = false;
+    this.authToken = null;
+    // Update the store manager options to disable the query
+    this.storeManager?.updateOptions();
+  }
 
-    get status() {
-        return this.storeManager?.status || null;
-    }
+  // Expose store manager properties directly for easy access
+  get store() {
+    return this.storeManager?.store || null;
+  }
 
-    // Check if store is ready and enabled
-    get isReady() {
-        return this.storeManager !== null && this.isEnabled;
-    }
+  get actions() {
+    return this.storeManager?.actions || null;
+  }
+
+  get status() {
+    return this.storeManager?.status || null;
+  }
+
+  // Check if store is ready and enabled
+  get isReady() {
+    return this.storeManager !== null && this.isEnabled;
+  }
 }

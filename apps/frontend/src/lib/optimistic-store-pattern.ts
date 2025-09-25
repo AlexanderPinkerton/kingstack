@@ -214,22 +214,24 @@ export class OptimisticStore<T extends Entity> {
   ): void {
     // Create a map of server data for efficient lookup
     const serverDataMap = new Map<string, T>();
-    
+
     for (const apiItem of serverData) {
-      const uiItem = transformer ? transformer.toUi(apiItem) : (apiItem as unknown as T);
+      const uiItem = transformer
+        ? transformer.toUi(apiItem)
+        : (apiItem as unknown as T);
       serverDataMap.set(uiItem.id, uiItem);
     }
 
     // Only update if data has actually changed
     const currentIds = new Set(this.entities.keys());
     const serverIds = new Set(serverDataMap.keys());
-    
+
     // Check if we need to do a full reconciliation
-    const needsFullReconcile = 
+    const needsFullReconcile =
       currentIds.size !== serverIds.size ||
-      [...currentIds].some(id => !serverIds.has(id)) ||
-      [...serverIds].some(id => !currentIds.has(id)) ||
-      [...serverIds].some(id => {
+      [...currentIds].some((id) => !serverIds.has(id)) ||
+      [...serverIds].some((id) => !currentIds.has(id)) ||
+      [...serverIds].some((id) => {
         const current = this.entities.get(id);
         const server = serverDataMap.get(id);
         return !current || !server || !this.shallowEqual(current, server);
@@ -258,41 +260,45 @@ export class OptimisticStore<T extends Entity> {
       }
     });
 
-    console.log("reconciled: updated with", this.list.length, "items from server");
+    console.log(
+      "reconciled: updated with",
+      this.list.length,
+      "items from server",
+    );
   }
 
   // Optimized shallow equality comparison with early exit and type checking
   private shallowEqual(a: T, b: T): boolean {
     // Quick reference equality check first
     if (a === b) return true;
-    
+
     // Handle null/undefined cases
     if (a == null || b == null) return a === b;
-    
+
     const keysA = Object.keys(a);
     const keysB = Object.keys(b);
-    
+
     // Quick length check
     if (keysA.length !== keysB.length) return false;
-    
+
     // Early exit for empty objects
     if (keysA.length === 0) return true;
-    
+
     // Optimized comparison with type checking
     for (let i = 0; i < keysA.length; i++) {
       const key = keysA[i];
       const valA = (a as any)[key];
       const valB = (b as any)[key];
-      
+
       // Quick reference equality
       if (valA === valB) continue;
-      
+
       // Handle Date objects
       if (valA instanceof Date && valB instanceof Date) {
         if (valA.getTime() !== valB.getTime()) return false;
         continue;
       }
-      
+
       // Handle arrays
       if (Array.isArray(valA) && Array.isArray(valB)) {
         if (valA.length !== valB.length) return false;
@@ -301,9 +307,14 @@ export class OptimisticStore<T extends Entity> {
         }
         continue;
       }
-      
+
       // Handle objects (shallow)
-      if (typeof valA === 'object' && typeof valB === 'object' && valA !== null && valB !== null) {
+      if (
+        typeof valA === "object" &&
+        typeof valB === "object" &&
+        valA !== null &&
+        valB !== null
+      ) {
         const valAKeys = Object.keys(valA);
         const valBKeys = Object.keys(valB);
         if (valAKeys.length !== valBKeys.length) return false;
@@ -312,11 +323,11 @@ export class OptimisticStore<T extends Entity> {
         }
         continue;
       }
-      
+
       // Default strict equality
       if (valA !== valB) return false;
     }
-    
+
     return true;
   }
 
@@ -335,7 +346,10 @@ export class OptimisticStore<T extends Entity> {
 /**
  * Creates the appropriate transformer based on config
  */
-export function createTransformer<TApiData extends Entity, TUiData extends Entity>(
+export function createTransformer<
+  TApiData extends Entity,
+  TUiData extends Entity,
+>(
   transformer: DataTransformer<TApiData, TUiData> | false | undefined,
 ): DataTransformer<TApiData, TUiData> | undefined {
   if (transformer === false) {
@@ -391,8 +405,8 @@ export function clearStoreManagerCache(): void {
 }
 
 // Cleanup on page unload to prevent memory leaks
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
     clearStoreManagerCache();
   });
 }
@@ -525,7 +539,7 @@ export function createOptimisticStoreManager<
 
   // Subscribe to query changes with optimized reconciliation
   let lastReconciledData: TApiData[] | undefined;
-  
+
   const unsubscribeQuery = queryObserver.subscribe((result) => {
     runInAction(() => {
       status.isLoading = result.isLoading;
@@ -537,7 +551,8 @@ export function createOptimisticStoreManager<
     // Only reconcile when we have fresh, non-stale data and it's actually different
     if (result.data && !result.isStale && !result.isFetching) {
       // More efficient data change detection
-      const dataChanged = !lastReconciledData || 
+      const dataChanged =
+        !lastReconciledData ||
         lastReconciledData.length !== result.data.length ||
         // Quick ID check first (most common case)
         lastReconciledData.some((item, index) => {
@@ -545,12 +560,12 @@ export function createOptimisticStoreManager<
           return !newItem || item.id !== newItem.id;
         }) ||
         // Only do deep comparison if IDs match but data might be different
-        (lastReconciledData.length === result.data.length && 
-         lastReconciledData.every((item, index) => {
-           const newItem = result.data![index];
-           return newItem && item.id === newItem.id;
-         }) &&
-         JSON.stringify(lastReconciledData) !== JSON.stringify(result.data));
+        (lastReconciledData.length === result.data.length &&
+          lastReconciledData.every((item, index) => {
+            const newItem = result.data![index];
+            return newItem && item.id === newItem.id;
+          }) &&
+          JSON.stringify(lastReconciledData) !== JSON.stringify(result.data));
 
       if (dataChanged) {
         lastReconciledData = result.data;
@@ -635,10 +650,15 @@ export function createOptimisticStoreManager<
       const optimisticDefaults =
         transformer?.optimisticDefaults || config.optimisticDefaults;
 
-        if (optimisticDefaults?.createOptimisticUiData) {
-          // ✅ Direct UI data creation - the right way to do optimistic updates
-          const context = config.optimisticContext ? config.optimisticContext() : undefined;
-          optimisticItem = optimisticDefaults.createOptimisticUiData(data, context);
+      if (optimisticDefaults?.createOptimisticUiData) {
+        // ✅ Direct UI data creation - the right way to do optimistic updates
+        const context = config.optimisticContext
+          ? config.optimisticContext()
+          : undefined;
+        optimisticItem = optimisticDefaults.createOptimisticUiData(
+          data,
+          context,
+        );
       } else if (transformer) {
         // Fallback: minimal mock API data when no optimistic defaults provided
         const mockApiData = {
@@ -699,18 +719,20 @@ export function createOptimisticStoreManager<
       // Optimistic update with proper UI data calculation
       notifyManager.batch(() => {
         runInAction(() => {
-              if (optimisticDefaults?.createOptimisticUiData) {
-                // Get existing item to merge with updates
-                const existingItem = store.get(id);
-                if (existingItem) {
-                  // Create updated form data by merging existing + updates
-                  const updatedFormData = { ...existingItem, ...data };
-                  // Generate fresh optimistic UI data with recalculated fields
-                  const context = config.optimisticContext ? config.optimisticContext() : undefined;
-                  const optimisticItem = optimisticDefaults.createOptimisticUiData(
-                    updatedFormData,
-                    context,
-                  );
+          if (optimisticDefaults?.createOptimisticUiData) {
+            // Get existing item to merge with updates
+            const existingItem = store.get(id);
+            if (existingItem) {
+              // Create updated form data by merging existing + updates
+              const updatedFormData = { ...existingItem, ...data };
+              // Generate fresh optimistic UI data with recalculated fields
+              const context = config.optimisticContext
+                ? config.optimisticContext()
+                : undefined;
+              const optimisticItem = optimisticDefaults.createOptimisticUiData(
+                updatedFormData,
+                context,
+              );
               // Preserve the original ID (don't generate new temp ID)
               optimisticItem.id = id;
               store.upsert(optimisticItem);
@@ -764,14 +786,20 @@ export function createOptimisticStoreManager<
       // Item already removed optimistically
       // DON'T clear from optimistic deletions yet - wait for server reconciliation
       // The reconciliation will handle clearing it when the server confirms the deletion
-      console.log("delete mutation succeeded, keeping in optimistic deletions until server confirms:", variables);
+      console.log(
+        "delete mutation succeeded, keeping in optimistic deletions until server confirms:",
+        variables,
+      );
       console.log("delete mutation result:", result);
     },
     onError: (error: any, variables: string) => {
       notifyManager.batch(() => {
         runInAction(() => {
           store.rollback();
-          console.log("delete mutation failed, rolled back and cleared from optimistic deletions:", variables);
+          console.log(
+            "delete mutation failed, rolled back and cleared from optimistic deletions:",
+            variables,
+          );
         });
       });
     },
@@ -821,7 +849,7 @@ export function createOptimisticStoreManager<
         staleTime: config.staleTime ?? 5 * 60 * 1000,
         enabled: config.enabled ? config.enabled() : true,
       });
-      
+
       // Re-trigger query if now enabled (like React hooks do)
       triggerQuery();
     },
@@ -849,10 +877,10 @@ export function createOptimisticStoreManager<
         clearTimeout(triggerTimeout);
         triggerTimeout = null;
       }
-      
+
       // Remove from cache
       storeManagerCache.delete(cacheKey);
-      
+
       unsubscribeQuery();
       unsubscribeCreateMutation();
       unsubscribeUpdateMutation();

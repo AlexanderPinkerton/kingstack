@@ -22,7 +22,10 @@ export interface RealtimeConfig<T extends { id: string }> {
   shouldProcessEvent?: (event: RealtimeEvent) => boolean;
   /** Optional: Custom handler for specific event types */
   customHandlers?: {
-    [eventType: string]: (store: OptimisticStore<T>, event: RealtimeEvent) => void;
+    [eventType: string]: (
+      store: OptimisticStore<T>,
+      event: RealtimeEvent,
+    ) => void;
   };
 }
 
@@ -53,7 +56,9 @@ export class RealtimeExtension<T extends { id: string }> {
     // Listen for the configured event type
     this.socket.on(this.config.eventType, this.handleRealtimeEvent.bind(this));
 
-    console.log(`🔌 RealtimeExtension: Connected to ${this.config.eventType} events`);
+    console.log(
+      `🔌 RealtimeExtension: Connected to ${this.config.eventType} events`,
+    );
   }
 
   /**
@@ -61,22 +66,35 @@ export class RealtimeExtension<T extends { id: string }> {
    */
   disconnect(): void {
     if (this.socket) {
-      this.socket.off(this.config.eventType, this.handleRealtimeEvent.bind(this));
+      this.socket.off(
+        this.config.eventType,
+        this.handleRealtimeEvent.bind(this),
+      );
       this.socket = null;
     }
     this.isConnected = false;
-    console.log(`🔌 RealtimeExtension: Disconnected from ${this.config.eventType} events`);
+    console.log(
+      `🔌 RealtimeExtension: Disconnected from ${this.config.eventType} events`,
+    );
   }
 
   /**
    * Handle incoming realtime events
    */
   private handleRealtimeEvent(event: RealtimeEvent): void {
-    console.log(`📡 RealtimeExtension: Received ${this.config.eventType} event:`, event);
+    console.log(
+      `📡 RealtimeExtension: Received ${this.config.eventType} event:`,
+      event,
+    );
 
     // Check if we should process this event
-    if (this.config.shouldProcessEvent && !this.config.shouldProcessEvent(event)) {
-      console.log(`📡 RealtimeExtension: Skipping event due to shouldProcessEvent filter`);
+    if (
+      this.config.shouldProcessEvent &&
+      !this.config.shouldProcessEvent(event)
+    ) {
+      console.log(
+        `📡 RealtimeExtension: Skipping event due to shouldProcessEvent filter`,
+      );
       return;
     }
 
@@ -94,49 +112,66 @@ export class RealtimeExtension<T extends { id: string }> {
    * Default event handling for INSERT, UPDATE, DELETE operations
    */
   private handleDefaultEvent(event: RealtimeEvent): void {
-    const { event: eventType, data } = event;
+    // Handle the actual event structure: { type, event, checkbox }
+    const eventType = event.event;
+    const data = event.checkbox || event.data;
 
     try {
       runInAction(() => {
         switch (eventType) {
           case "INSERT":
           case "UPDATE":
-            // Handle different data structures - check if data is nested
-            const actualData = data?.checkbox || data;
-            if (!actualData) {
-              console.warn(`📡 RealtimeExtension: No data found in ${eventType} event:`, event);
+            if (!data) {
+              console.warn(
+                `📡 RealtimeExtension: No data found in ${eventType} event:`,
+                event,
+              );
               return;
             }
-            
-            const uiData = this.config.transformRealtimeData(actualData);
+
+            const uiData = this.config.transformRealtimeData(data);
             this.store.upsert(uiData);
-            console.log(`📡 RealtimeExtension: ${eventType} processed for item ${uiData.id}`);
+            console.log(
+              `📡 RealtimeExtension: ${eventType} processed for item ${uiData.id}`,
+            );
             break;
 
           case "DELETE":
-            // Handle different data structures for delete
-            const deleteData = data?.checkbox || data;
-            if (!deleteData) {
-              console.warn(`📡 RealtimeExtension: No data found in DELETE event:`, event);
+            if (!data) {
+              console.warn(
+                `📡 RealtimeExtension: No data found in DELETE event:`,
+                event,
+              );
               return;
             }
-            
+
             // For deletions, we need to find the item by ID and remove it
-            const itemToDelete = this.store.list.find(item => item.id === deleteData.id);
+            const itemToDelete = this.store.list.find(
+              (item) => item.id === data.id,
+            );
             if (itemToDelete) {
               this.store.removeFromServer(itemToDelete.id);
-              console.log(`📡 RealtimeExtension: DELETE processed for item ${deleteData.id}`);
+              console.log(
+                `📡 RealtimeExtension: DELETE processed for item ${data.id}`,
+              );
             } else {
-              console.log(`📡 RealtimeExtension: DELETE - item ${deleteData.id} not found in store`);
+              console.log(
+                `📡 RealtimeExtension: DELETE - item ${data.id} not found in store`,
+              );
             }
             break;
 
           default:
-            console.warn(`📡 RealtimeExtension: Unknown event type: ${eventType}`);
+            console.warn(
+              `📡 RealtimeExtension: Unknown event type: ${eventType}`,
+            );
         }
       });
     } catch (error) {
-      console.error(`📡 RealtimeExtension: Error processing ${eventType} event:`, error);
+      console.error(
+        `📡 RealtimeExtension: Error processing ${eventType} event:`,
+        error,
+      );
     }
   }
 
@@ -160,18 +195,19 @@ export class RealtimeExtension<T extends { id: string }> {
 /**
  * Create a realtime extension with common checkbox configuration
  */
-export function createCheckboxRealtimeExtension<T extends { id: string; index: number; checked: boolean }>(
-  store: OptimisticStore<T>
-): RealtimeExtension<T> {
+export function createCheckboxRealtimeExtension<
+  T extends { id: string; index: number; checked: boolean },
+>(store: OptimisticStore<T>): RealtimeExtension<T> {
   return new RealtimeExtension(store, {
     eventType: "checkbox_update",
-    transformRealtimeData: (data: any) => ({
-      id: data.id,
-      index: data.index,
-      checked: data.checked,
-      created_at: new Date(data.created_at),
-      updated_at: new Date(data.updated_at),
-    } as unknown as T),
+    transformRealtimeData: (data: any) =>
+      ({
+        id: data.id,
+        index: data.index,
+        checked: data.checked,
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at),
+      }) as unknown as T,
     shouldProcessEvent: (event) => {
       // Only process checkbox events
       return event.type === "checkbox_update";
@@ -182,18 +218,19 @@ export function createCheckboxRealtimeExtension<T extends { id: string; index: n
 /**
  * Create a realtime extension with common post configuration
  */
-export function createPostRealtimeExtension<T extends { id: string; title: string; published: boolean }>(
-  store: OptimisticStore<T>
-): RealtimeExtension<T> {
+export function createPostRealtimeExtension<
+  T extends { id: string; title: string; published: boolean },
+>(store: OptimisticStore<T>): RealtimeExtension<T> {
   return new RealtimeExtension(store, {
     eventType: "post_update",
-    transformRealtimeData: (data: any) => ({
-      id: data.id,
-      title: data.title,
-      published: data.published,
-      created_at: new Date(data.created_at),
-      updated_at: new Date(data.updated_at),
-    } as unknown as T),
+    transformRealtimeData: (data: any) =>
+      ({
+        id: data.id,
+        title: data.title,
+        published: data.published,
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at),
+      }) as unknown as T,
     shouldProcessEvent: (event) => {
       // Only process post events
       return event.type === "post_update";
@@ -206,7 +243,7 @@ export function createPostRealtimeExtension<T extends { id: string; title: strin
  */
 export function createRealtimeExtension<T extends { id: string }>(
   store: OptimisticStore<T>,
-  config: RealtimeConfig<T>
+  config: RealtimeConfig<T>,
 ): RealtimeExtension<T> {
   return new RealtimeExtension(store, config);
 }

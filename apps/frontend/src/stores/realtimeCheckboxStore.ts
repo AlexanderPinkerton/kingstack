@@ -1,8 +1,17 @@
 // Realtime Checkbox Store - Self-contained with realtime capabilities
 // Extends the optimistic store pattern with realtime integration
 
-import { makeObservable, observable, computed, action, runInAction } from "mobx";
-import { createOptimisticStoreManager, Entity } from "@/lib/optimistic-store-pattern";
+import {
+  makeObservable,
+  observable,
+  computed,
+  action,
+  runInAction,
+} from "mobx";
+import {
+  createOptimisticStoreManager,
+  Entity,
+} from "@/lib/optimistic-store-pattern";
 import { createCheckboxRealtimeExtension } from "@/lib/realtime-extension";
 
 // ---------- Types ----------
@@ -23,7 +32,8 @@ export interface CheckboxUiData extends Entity {
 
 // ---------- API Functions ----------
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
 
 async function fetchCheckboxes(): Promise<CheckboxApiData[]> {
   const response = await fetch(`${API_BASE_URL}/checkboxes`);
@@ -33,7 +43,10 @@ async function fetchCheckboxes(): Promise<CheckboxApiData[]> {
   return response.json();
 }
 
-async function createCheckbox(data: { index: number; checked: boolean }): Promise<CheckboxApiData> {
+async function createCheckbox(data: {
+  index: number;
+  checked: boolean;
+}): Promise<CheckboxApiData> {
   const response = await fetch(`${API_BASE_URL}/checkboxes`, {
     method: "POST",
     headers: {
@@ -47,7 +60,13 @@ async function createCheckbox(data: { index: number; checked: boolean }): Promis
   return response.json();
 }
 
-async function updateCheckbox({ id, data }: { id: string; data: { index?: number; checked?: boolean } }): Promise<CheckboxApiData> {
+async function updateCheckbox({
+  id,
+  data,
+}: {
+  id: string;
+  data: { index?: number; checked?: boolean };
+}): Promise<CheckboxApiData> {
   const response = await fetch(`${API_BASE_URL}/checkboxes/${id}`, {
     method: "PUT",
     headers: {
@@ -95,7 +114,10 @@ const checkboxTransformer = {
   },
 
   optimisticDefaults: {
-    createOptimisticUiData: (formData: { index: number; checked: boolean }, context?: any): CheckboxUiData => {
+    createOptimisticUiData: (
+      formData: { index: number; checked: boolean },
+      context?: any,
+    ): CheckboxUiData => {
       return {
         id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         index: formData.index,
@@ -112,7 +134,10 @@ const checkboxTransformer = {
 
 export class RealtimeCheckboxStore {
   // Store manager
-  public storeManager = createOptimisticStoreManager<CheckboxApiData, CheckboxUiData>({
+  public storeManager = createOptimisticStoreManager<
+    CheckboxApiData,
+    CheckboxUiData
+  >({
     name: "checkboxes",
     queryFn: fetchCheckboxes,
     mutations: {
@@ -125,7 +150,9 @@ export class RealtimeCheckboxStore {
   });
 
   // Realtime extension
-  private realtimeExtension: ReturnType<typeof createCheckboxRealtimeExtension<CheckboxUiData>> | null = null;
+  private realtimeExtension: ReturnType<
+    typeof createCheckboxRealtimeExtension<CheckboxUiData>
+  > | null = null;
 
   // Connection status
   public isConnected = false;
@@ -140,7 +167,10 @@ export class RealtimeCheckboxStore {
 
   connectRealtime(socket: any): void {
     // If already connected to the same socket, don't reconnect
-    if (this.realtimeExtension && this.realtimeExtension.socketInstance === socket) {
+    if (
+      this.realtimeExtension &&
+      this.realtimeExtension.socketInstance === socket
+    ) {
       console.log("🔌 RealtimeCheckboxStore: Already connected to this socket");
       return;
     }
@@ -149,9 +179,11 @@ export class RealtimeCheckboxStore {
       this.realtimeExtension.disconnect();
     }
 
-    this.realtimeExtension = createCheckboxRealtimeExtension<CheckboxUiData>(this.storeManager.store);
+    this.realtimeExtension = createCheckboxRealtimeExtension<CheckboxUiData>(
+      this.storeManager.store,
+    );
     this.realtimeExtension.connect(socket);
-    
+
     runInAction(() => {
       this.isConnected = this.realtimeExtension?.connected || false;
     });
@@ -164,7 +196,7 @@ export class RealtimeCheckboxStore {
       this.realtimeExtension.disconnect();
       this.realtimeExtension = null;
     }
-    
+
     runInAction(() => {
       this.isConnected = false;
     });
@@ -213,7 +245,9 @@ export class RealtimeCheckboxStore {
   // ---------- Action Methods ----------
 
   getCheckboxByIndex(index: number): CheckboxUiData | undefined {
-    return this.storeManager.store.list.find(checkbox => checkbox.index === index);
+    return this.storeManager.store.list.find(
+      (checkbox) => checkbox.index === index,
+    );
   }
 
   isCheckboxChecked(index: number): boolean {
@@ -223,7 +257,7 @@ export class RealtimeCheckboxStore {
 
   toggleCheckbox(index: number): void {
     const existingCheckbox = this.getCheckboxByIndex(index);
-    
+
     if (existingCheckbox) {
       // Update existing checkbox
       this.storeManager.actions.update({
@@ -232,16 +266,16 @@ export class RealtimeCheckboxStore {
       });
     } else {
       // Create new checkbox
-      this.storeManager.actions.create({ 
-        index, 
-        checked: true 
+      this.storeManager.actions.create({
+        index,
+        checked: true,
       });
     }
   }
 
   setCheckboxChecked(index: number, checked: boolean): void {
     const existingCheckbox = this.getCheckboxByIndex(index);
-    
+
     if (existingCheckbox) {
       // Update existing checkbox
       this.storeManager.actions.update({
@@ -250,9 +284,9 @@ export class RealtimeCheckboxStore {
       });
     } else {
       // Create new checkbox
-      this.storeManager.actions.create({ 
-        index, 
-        checked 
+      this.storeManager.actions.create({
+        index,
+        checked,
       });
     }
   }
@@ -265,15 +299,18 @@ export class RealtimeCheckboxStore {
 
   async initializeCheckboxes(count: number = 200): Promise<void> {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+      const baseUrl =
+        process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
       const response = await fetch(`${baseUrl}/checkboxes/initialize`, {
         method: "POST",
       });
-      
+
       if (response.ok) {
         this.refetch(); // Refetch data after initialization
       } else {
-        throw new Error(`Failed to initialize checkboxes: ${response.statusText}`);
+        throw new Error(
+          `Failed to initialize checkboxes: ${response.statusText}`,
+        );
       }
     } catch (error) {
       console.error("Failed to initialize checkboxes:", error);

@@ -17,7 +17,7 @@ export const AdvancedPostsExample = observer(() => {
   const rootStore = useContext(RootStoreContext);
   const postStore = rootStore.postStore;
   const { store, actions, status } = postStore;
-  
+
   // Basic React state for UI controls
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -63,7 +63,7 @@ export const AdvancedPostsExample = observer(() => {
   // Filtering and sorting logic
   const getFilteredPosts = (): PostUiData[] => {
     if (!store?.list) return [];
-    
+
     let posts = store.list;
 
     // Filter by search query
@@ -74,7 +74,8 @@ export const AdvancedPostsExample = observer(() => {
           post.title.toLowerCase().includes(query) ||
           post.content.toLowerCase().includes(query) ||
           post.author.displayName.toLowerCase().includes(query) ||
-          (post.tags && post.tags.some((tag) => tag.toLowerCase().includes(query))),
+          (post.tags &&
+            post.tags.some((tag) => tag.toLowerCase().includes(query))),
       );
     }
 
@@ -98,12 +99,24 @@ export const AdvancedPostsExample = observer(() => {
     posts.sort((a, b) => {
       switch (sortBy) {
         case "newest":
-          const dateA = a.created_at instanceof Date ? a.created_at : new Date(a.created_at);
-          const dateB = b.created_at instanceof Date ? b.created_at : new Date(b.created_at);
+          const dateA =
+            a.created_at instanceof Date
+              ? a.created_at
+              : new Date(a.created_at);
+          const dateB =
+            b.created_at instanceof Date
+              ? b.created_at
+              : new Date(b.created_at);
           return dateB.getTime() - dateA.getTime();
         case "oldest":
-          const dateAOld = a.created_at instanceof Date ? a.created_at : new Date(a.created_at);
-          const dateBOld = b.created_at instanceof Date ? b.created_at : new Date(b.created_at);
+          const dateAOld =
+            a.created_at instanceof Date
+              ? a.created_at
+              : new Date(a.created_at);
+          const dateBOld =
+            b.created_at instanceof Date
+              ? b.created_at
+              : new Date(b.created_at);
           return dateAOld.getTime() - dateBOld.getTime();
         case "title":
           return a.title.localeCompare(b.title);
@@ -118,13 +131,13 @@ export const AdvancedPostsExample = observer(() => {
   // Computed stats
   const getStats = () => {
     if (!store?.list) return { total: 0, published: 0, draft: 0, recent: 0 };
-    
+
     const posts = store.list;
     return {
       total: posts.length,
-      published: posts.filter(post => post.published).length,
-      draft: posts.filter(post => !post.published).length,
-      recent: posts.filter(post => post.isNew).length,
+      published: posts.filter((post) => post.published).length,
+      draft: posts.filter((post) => !post.published).length,
+      recent: posts.filter((post) => post.isNew).length,
     };
   };
 
@@ -191,9 +204,7 @@ export const AdvancedPostsExample = observer(() => {
           <div className="text-sm text-slate-400">Drafts</div>
         </div>
         <div className="bg-slate-800/50 border border-slate-600/50 rounded-lg p-4">
-          <div className="text-2xl font-bold text-blue-300">
-            {stats.recent}
-          </div>
+          <div className="text-2xl font-bold text-blue-300">{stats.recent}</div>
           <div className="text-sm text-slate-400">Recent</div>
         </div>
       </div>
@@ -308,10 +319,9 @@ export const AdvancedPostsExample = observer(() => {
                   <span>{post.wordCount} words</span>
                   <span>{post.readingTime} min read</span>
                   <span>
-                    {post.created_at instanceof Date 
-                      ? post.created_at.toLocaleDateString() 
-                      : new Date(post.created_at).toLocaleDateString()
-                    }
+                    {post.created_at instanceof Date
+                      ? post.created_at.toLocaleDateString()
+                      : new Date(post.created_at).toLocaleDateString()}
                   </span>
                 </div>
                 {post.tags && post.tags.length > 0 && (

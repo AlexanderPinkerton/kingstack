@@ -25,7 +25,7 @@ export class RootStore {
     console.log("🔧 RootStore: Constructor called", Math.random());
 
     this.session = null;
-    
+
     // Always create the stores, but they won't be enabled until auth is available
     this.todoStore = new AdvancedTodoStore();
     this.postStore = new AdvancedPostStore();
@@ -46,7 +46,9 @@ export class RootStore {
     }
 
     // Set up new auth listener and store the unsubscribe function
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       console.log("🔐 RootStore: Auth state changed:", {
         event,
         hasSession: !!session,
@@ -79,7 +81,7 @@ export class RootStore {
           this.todoStore.disable();
           // this.postStore2.disable();
         }
-        
+
         // Always setup public realtime for checkboxes (works without auth)
         // Only setup if we don't already have a socket
         if (!this.socket) {
@@ -96,7 +98,7 @@ export class RootStore {
 
   setupRealtime(token: string) {
     console.log("[RootStore] setupRealtime called");
-    
+
     // Clean up existing socket first
     if (this.socket) {
       console.log("[RootStore] Cleaning up existing socket");
@@ -121,7 +123,7 @@ export class RootStore {
 
       // Setup domain-specific event handlers
       this.setupDomainEventHandlers();
-      
+
       // Connect checkbox store to realtime
       this.checkboxStore.connectRealtime(this.socket);
     });
@@ -133,7 +135,7 @@ export class RootStore {
 
   setupPublicRealtime() {
     console.log("[RootStore] setupPublicRealtime called");
-    
+
     // If we already have a socket, just connect the checkbox store
     if (this.socket) {
       console.log("[RootStore] Using existing socket for checkbox store");
@@ -169,7 +171,7 @@ export class RootStore {
   teardownRealtime() {
     // Disconnect checkbox store first
     this.checkboxStore.disconnectRealtime();
-    
+
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
@@ -199,7 +201,9 @@ export class RootStore {
     }
 
     if (this.fetchingUserData) {
-      console.log("🔄 RootStore: User data fetch already in progress, skipping");
+      console.log(
+        "🔄 RootStore: User data fetch already in progress, skipping",
+      );
       return;
     }
 
@@ -271,7 +275,7 @@ export class RootStore {
   // Cleanup method to properly dispose of the store
   dispose() {
     console.log("🧹 RootStore: Disposing");
-    
+
     // Clean up auth listener
     if (this.authUnsubscribe) {
       this.authUnsubscribe();

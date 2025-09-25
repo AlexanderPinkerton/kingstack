@@ -160,7 +160,9 @@ export const RealtimeCheckboxes = observer(() => {
           <div className="flex items-center space-x-2 text-sm text-slate-400">
             <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
             <span>Live</span>
-            {(checkboxStore.updatePending || checkboxStore.createPending || checkboxStore.deletePending) && (
+            {(checkboxStore.updatePending ||
+              checkboxStore.createPending ||
+              checkboxStore.deletePending) && (
               <span className="text-blue-400">• Syncing...</span>
             )}
           </div>
@@ -233,7 +235,9 @@ export const RealtimeCheckboxes = observer(() => {
                 {rootStore.socket?.connected ? "Connected" : "Disconnected"}
               </span>
             </div>
-            <div className="text-sm text-slate-500">• {checkboxStore.count} items loaded</div>
+            <div className="text-sm text-slate-500">
+              • {checkboxStore.count} items loaded
+            </div>
           </div>
         </div>
       </div>

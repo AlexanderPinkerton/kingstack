@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getPerformanceStats, clearStoreManagerCache } from "@/lib/optimistic-store-pattern";
+import {
+  getPerformanceStats,
+  clearStoreManagerCache,
+} from "@/lib/optimistic-store-pattern";
 
 export const PerformanceDashboard = () => {
   const [stats, setStats] = useState(getPerformanceStats());
