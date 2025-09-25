@@ -391,7 +391,9 @@ export function createOptimisticStoreManager<
       status.isSyncing = result.isFetching;
     });
 
-    if (result.data) {
+    // Only reconcile when we have fresh, non-stale data
+    // This prevents reconciling with stale cache data that can cause race conditions
+    if (result.data && !result.isStale && !result.isFetching) {
       runInAction(() => {
         store.reconcile(result.data!, transformer);
       });
