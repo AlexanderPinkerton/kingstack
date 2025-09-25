@@ -12,6 +12,7 @@ import {
   QueryClient,
   MutationObserver,
   QueryObserver,
+  notifyManager,
 } from "@tanstack/query-core";
 
 // ---------- Core Types ----------
@@ -206,27 +207,76 @@ export class OptimisticStore<T extends Entity> {
     }
   }
 
-  // Server reconciliation - simple clear and replace approach
+  // Server reconciliation - optimized diffing approach
   reconcile<TApiData extends Entity = T>(
     serverData: TApiData[],
     transformer?: DataTransformer<TApiData, T>,
   ): void {
-     
-    // Simple approach: clear current data and replace with server data
-    this.entities.clear();
-    this.snapshots = [];
-
-    // Use a faster loop to transform and add to the store with better performance
+    // Create a map of server data for efficient lookup
+    const serverDataMap = new Map<string, T>();
+    
     for (const apiItem of serverData) {
-      if (transformer) {
-        const uiItem = transformer.toUi(apiItem);
-        this.entities.set(uiItem.id, uiItem);
-      } else {
-        this.entities.set(apiItem.id, apiItem as unknown as T);
-      }
+      const uiItem = transformer ? transformer.toUi(apiItem) : (apiItem as unknown as T);
+      serverDataMap.set(uiItem.id, uiItem);
     }
 
-    console.log("reconciled: replaced with", this.list.length, "items from server");
+    // Only update if data has actually changed
+    const currentIds = new Set(this.entities.keys());
+    const serverIds = new Set(serverDataMap.keys());
+    
+    // Check if we need to do a full reconciliation
+    const needsFullReconcile = 
+      currentIds.size !== serverIds.size ||
+      [...currentIds].some(id => !serverIds.has(id)) ||
+      [...serverIds].some(id => !currentIds.has(id)) ||
+      [...serverIds].some(id => {
+        const current = this.entities.get(id);
+        const server = serverDataMap.get(id);
+        return !current || !server || !this.shallowEqual(current, server);
+      });
+
+    if (!needsFullReconcile) {
+      console.log("reconciled: no changes detected, skipping update");
+      return;
+    }
+
+    // Clear snapshots only when doing full reconciliation
+    this.snapshots = [];
+
+    // Update entities efficiently
+    runInAction(() => {
+      // Remove entities that are no longer in server data
+      for (const [id] of this.entities) {
+        if (!serverDataMap.has(id)) {
+          this.entities.delete(id);
+        }
+      }
+
+      // Add or update entities from server data
+      for (const [id, uiItem] of serverDataMap) {
+        this.entities.set(id, uiItem);
+      }
+    });
+
+    console.log("reconciled: updated with", this.list.length, "items from server");
+  }
+
+  // Helper method for shallow equality comparison
+  private shallowEqual(a: T, b: T): boolean {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    
+    if (keysA.length !== keysB.length) {
+      return false;
+    }
+    
+    for (const key of keysA) {
+      if ((a as any)[key] !== (b as any)[key]) {
+        return false;
+      }
+    }
+    
+    return true;
   }
 
   // Utility methods
@@ -377,7 +427,9 @@ export function createOptimisticStoreManager<
     enabled: config.enabled ? config.enabled() : true,
   });
 
-  // Subscribe to query changes
+  // Subscribe to query changes with optimized reconciliation
+  let lastReconciledData: TApiData[] | undefined;
+  
   const unsubscribeQuery = queryObserver.subscribe((result) => {
     runInAction(() => {
       status.isLoading = result.isLoading;
@@ -386,19 +438,38 @@ export function createOptimisticStoreManager<
       status.isSyncing = result.isFetching;
     });
 
-    // Only reconcile when we have fresh, non-stale data
-    // This prevents reconciling with stale cache data that can cause race conditions
+    // Only reconcile when we have fresh, non-stale data and it's actually different
     if (result.data && !result.isStale && !result.isFetching) {
-      runInAction(() => {
-        store.reconcile(result.data!, transformer);
-      });
+      // Check if data has actually changed to avoid unnecessary reconciliations
+      const dataChanged = !lastReconciledData || 
+        lastReconciledData.length !== result.data.length ||
+        lastReconciledData.some((item, index) => {
+          const newItem = result.data![index];
+          return !newItem || item.id !== newItem.id || 
+            JSON.stringify(item) !== JSON.stringify(newItem);
+        });
+
+      if (dataChanged) {
+        lastReconciledData = result.data;
+        runInAction(() => {
+          store.reconcile(result.data!, transformer);
+        });
+      }
     }
   });
 
-  // Auto-trigger query when enabled (like React hooks do)
+  // Auto-trigger query when enabled (like React hooks do) with debouncing
+  let triggerTimeout: NodeJS.Timeout | null = null;
   const triggerQuery = () => {
     if (config.enabled ? config.enabled() : true) {
-      queryObserver.refetch();
+      // Debounce rapid trigger calls to prevent excessive refetches
+      if (triggerTimeout) {
+        clearTimeout(triggerTimeout);
+      }
+      triggerTimeout = setTimeout(() => {
+        queryObserver.refetch();
+        triggerTimeout = null;
+      }, 10); // 10ms debounce
     }
   };
 
@@ -444,7 +515,7 @@ export function createOptimisticStoreManager<
   // The stale time is configured in the query observer options above
   // No additional setup needed for stale time behavior
 
-  // Create mutation observers
+  // Create mutation observers with optimized batching
   const createMutationObserver = new MutationObserver(qc, {
     mutationFn: config.mutations.create,
     onMutate: async (data: any) => {
@@ -477,28 +548,37 @@ export function createOptimisticStoreManager<
         optimisticItem = { id: tempId, ...data } as TUiData;
       }
 
-      runInAction(() => {
-        store.upsert(optimisticItem);
+      // Batch the optimistic update
+      notifyManager.batch(() => {
+        runInAction(() => {
+          store.upsert(optimisticItem);
+        });
       });
 
       return { tempId };
     },
     onSuccess: (result: TApiData, variables: any, context: any) => {
-      runInAction(() => {
-        // Remove temp item and add real one
-        store.remove(context.tempId);
+      // Batch the success update
+      notifyManager.batch(() => {
+        runInAction(() => {
+          // Remove temp item and add real one
+          store.remove(context.tempId);
 
-        if (transformer) {
-          const uiData = transformer.toUi(result);
-          store.upsert(uiData);
-        } else {
-          store.upsert(result as unknown as TUiData);
-        }
+          if (transformer) {
+            const uiData = transformer.toUi(result);
+            store.upsert(uiData);
+          } else {
+            store.upsert(result as unknown as TUiData);
+          }
+        });
       });
     },
     onError: () => {
-      runInAction(() => {
-        store.rollback();
+      // Batch the error rollback
+      notifyManager.batch(() => {
+        runInAction(() => {
+          store.rollback();
+        });
       });
     },
   });
@@ -514,44 +594,50 @@ export function createOptimisticStoreManager<
         transformer?.optimisticDefaults || config.optimisticDefaults;
 
       // Optimistic update with proper UI data calculation
-      runInAction(() => {
-            if (optimisticDefaults?.createOptimisticUiData) {
-              // Get existing item to merge with updates
-              const existingItem = store.get(id);
-              if (existingItem) {
-                // Create updated form data by merging existing + updates
-                const updatedFormData = { ...existingItem, ...data };
-                // Generate fresh optimistic UI data with recalculated fields
-                const context = config.optimisticContext ? config.optimisticContext() : undefined;
-                const optimisticItem = optimisticDefaults.createOptimisticUiData(
-                  updatedFormData,
-                  context,
-                );
-            // Preserve the original ID (don't generate new temp ID)
-            optimisticItem.id = id;
-            store.upsert(optimisticItem);
+      notifyManager.batch(() => {
+        runInAction(() => {
+              if (optimisticDefaults?.createOptimisticUiData) {
+                // Get existing item to merge with updates
+                const existingItem = store.get(id);
+                if (existingItem) {
+                  // Create updated form data by merging existing + updates
+                  const updatedFormData = { ...existingItem, ...data };
+                  // Generate fresh optimistic UI data with recalculated fields
+                  const context = config.optimisticContext ? config.optimisticContext() : undefined;
+                  const optimisticItem = optimisticDefaults.createOptimisticUiData(
+                    updatedFormData,
+                    context,
+                  );
+              // Preserve the original ID (don't generate new temp ID)
+              optimisticItem.id = id;
+              store.upsert(optimisticItem);
+            }
+          } else {
+            // Fallback: basic update without recalculated fields
+            store.update(id, data);
           }
-        } else {
-          // Fallback: basic update without recalculated fields
-          store.update(id, data);
-        }
+        });
       });
 
       return { id, data };
     },
     onSuccess: (result: TApiData) => {
-      runInAction(() => {
-        if (transformer) {
-          const uiData = transformer.toUi(result);
-          store.upsert(uiData);
-        } else {
-          store.upsert(result as unknown as TUiData);
-        }
+      notifyManager.batch(() => {
+        runInAction(() => {
+          if (transformer) {
+            const uiData = transformer.toUi(result);
+            store.upsert(uiData);
+          } else {
+            store.upsert(result as unknown as TUiData);
+          }
+        });
       });
     },
     onError: () => {
-      runInAction(() => {
-        store.rollback();
+      notifyManager.batch(() => {
+        runInAction(() => {
+          store.rollback();
+        });
       });
     },
   });
@@ -563,8 +649,10 @@ export function createOptimisticStoreManager<
       store.pushSnapshot();
 
       // Optimistic update
-      runInAction(() => {
-        store.remove(id);
+      notifyManager.batch(() => {
+        runInAction(() => {
+          store.remove(id);
+        });
       });
 
       return { id };
@@ -577,36 +665,38 @@ export function createOptimisticStoreManager<
       console.log("delete mutation result:", result);
     },
     onError: (error: any, variables: string) => {
-      runInAction(() => {
-        store.rollback();
-        console.log("delete mutation failed, rolled back and cleared from optimistic deletions:", variables);
+      notifyManager.batch(() => {
+        runInAction(() => {
+          store.rollback();
+          console.log("delete mutation failed, rolled back and cleared from optimistic deletions:", variables);
+        });
       });
     },
   });
 
-  // Subscribe to mutation status changes
+  // Subscribe to mutation status changes with batching
   const unsubscribeCreateMutation = createMutationObserver.subscribe(
-    (result) => {
+    notifyManager.batchCalls((result) => {
       runInAction(() => {
         status.createPending = result.isPending;
       });
-    },
+    }),
   );
 
   const unsubscribeUpdateMutation = updateMutationObserver.subscribe(
-    (result) => {
+    notifyManager.batchCalls((result) => {
       runInAction(() => {
         status.updatePending = result.isPending;
       });
-    },
+    }),
   );
 
   const unsubscribeRemoveMutation = removeMutationObserver.subscribe(
-    (result) => {
+    notifyManager.batchCalls((result) => {
       runInAction(() => {
         status.deletePending = result.isPending;
       });
-    },
+    }),
   );
 
   return {
@@ -651,6 +741,12 @@ export function createOptimisticStoreManager<
       });
     },
     destroy: () => {
+      // Clear any pending trigger timeout
+      if (triggerTimeout) {
+        clearTimeout(triggerTimeout);
+        triggerTimeout = null;
+      }
+      
       unsubscribeQuery();
       unsubscribeCreateMutation();
       unsubscribeUpdateMutation();
