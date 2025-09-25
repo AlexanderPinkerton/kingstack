@@ -390,27 +390,6 @@ export function clearStoreManagerCache(): void {
   storeManagerCache.clear();
 }
 
-export function getCacheStats(): { count: number; keys: string[] } {
-  return {
-    count: storeManagerCache.size,
-    keys: Array.from(storeManagerCache.keys()),
-  };
-}
-
-// Performance monitoring utilities
-export function getPerformanceStats(): {
-  queryClient: { isGlobal: boolean; cacheSize: number };
-  storeManagers: { count: number; keys: string[] };
-} {
-  return {
-    queryClient: {
-      isGlobal: globalQueryClient !== null,
-      cacheSize: globalQueryClient?.getQueryCache().getAll().length || 0,
-    },
-    storeManagers: getCacheStats(),
-  };
-}
-
 // Cleanup on page unload to prevent memory leaks
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
