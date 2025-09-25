@@ -48,9 +48,17 @@ export class AdvancedTodoStore {
                         const token = this.authToken || "";
                         const baseUrl =
                             process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-                        return fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
+                        const response = await fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
                             method: "DELETE",
-                        }).then(() => ({ id }));
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`Delete failed: ${response.status} ${response.statusText}`);
+                        }
+                        
+                        const result = await response.json();
+                        console.log("Delete mutation backend response:", result);
+                        return result;
                     },
                 },
                 staleTime: 5 * 60 * 1000, // 5 minutes

@@ -16,6 +16,8 @@ export class RootStore {
   // WebSocket connection management
   socket: Socket | null = null;
   browserId: string = Math.random().toString(36).substring(7);
+  // Auth listener cleanup
+  private authUnsubscribe: (() => void) | null = null;
 
   constructor() {
     console.log("🔧 RootStore: Constructor called", Math.random());
@@ -34,7 +36,13 @@ export class RootStore {
       postStore2: true, // Make postStore2 observable
     });
 
-    supabase.auth.onAuthStateChange((event: any, session: any) => {
+    // Clean up any existing auth listener first
+    if (this.authUnsubscribe) {
+      this.authUnsubscribe();
+    }
+
+    // Set up new auth listener and store the unsubscribe function
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       console.log("🔐 RootStore: Auth state changed:", {
         event,
         hasSession: !!session,
@@ -70,12 +78,18 @@ export class RootStore {
       });
     });
 
+    // Store the unsubscribe function
+    this.authUnsubscribe = () => subscription.unsubscribe();
+
     console.log("🔧 RootStore: Initialized");
   }
 
   setupRealtime(token: string) {
     console.log("[RootStore] setupRealtime called");
+    
+    // Clean up existing socket first
     if (this.socket) {
+      console.log("[RootStore] Cleaning up existing socket");
       this.socket.disconnect();
       this.socket = null;
     }
@@ -125,12 +139,20 @@ export class RootStore {
     });
   }
 
+  private fetchingUserData = false;
+
   async fetchUserData() {
     if (!this.session?.access_token) {
       console.log("🔄 RootStore: No session available for user data fetch");
       return;
     }
 
+    if (this.fetchingUserData) {
+      console.log("🔄 RootStore: User data fetch already in progress, skipping");
+      return;
+    }
+
+    this.fetchingUserData = true;
     console.log("🔄 RootStore: Fetching user data");
     try {
       const userResponse = await fetchInternal(
@@ -156,6 +178,8 @@ export class RootStore {
       }
     } catch (error) {
       console.error("❌ RootStore: Error fetching user data:", error);
+    } finally {
+      this.fetchingUserData = false;
     }
   }
 
@@ -191,5 +215,25 @@ export class RootStore {
     } catch (error) {
       console.error("🔄 RootStore: Session refresh failed:", error);
     }
+  }
+
+  // Cleanup method to properly dispose of the store
+  dispose() {
+    console.log("🧹 RootStore: Disposing");
+    
+    // Clean up auth listener
+    if (this.authUnsubscribe) {
+      this.authUnsubscribe();
+      this.authUnsubscribe = null;
+    }
+
+    // Clean up realtime connection
+    this.teardownRealtime();
+
+    // Disable stores
+    this.todoStore.disable();
+    this.postStore2.disable();
+
+    console.log("🧹 RootStore: Disposed");
   }
 }

@@ -224,6 +224,8 @@ export class OptimisticStore<T extends Entity> {
       }
     });
 
+    console.log("reconciliation: server returned", serverUiData.length, "items:", serverUiData.map(item => item.id));
+
     // Create a map of server data for quick lookup
     const serverDataMap = new Map(serverUiData.map(item => [item.id, item]));
 
@@ -622,6 +624,7 @@ export function createOptimisticStoreManager<
       // DON'T clear from optimistic deletions yet - wait for server reconciliation
       // The reconciliation will handle clearing it when the server confirms the deletion
       console.log("delete mutation succeeded, keeping in optimistic deletions until server confirms:", variables);
+      console.log("delete mutation result:", result);
     },
     onError: (error: any, variables: string) => {
       runInAction(() => {
