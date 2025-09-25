@@ -12,7 +12,7 @@ export class RootStore {
   session: any = null;
   userData: any = null;
   todoStore: AdvancedTodoStore;
-  postStore2: AdvancedPostStore;
+  // postStore2: AdvancedPostStore;
   // WebSocket connection management
   socket: Socket | null = null;
   browserId: string = Math.random().toString(36).substring(7);
@@ -26,14 +26,14 @@ export class RootStore {
     
     // Always create the stores, but they won't be enabled until auth is available
     this.todoStore = new AdvancedTodoStore();
-    this.postStore2 = new AdvancedPostStore();
+    // this.postStore2 = new AdvancedPostStore();
 
     // Make session and userData observable before setting up auth listener
     makeAutoObservable(this, {
       session: true, // Ensure session is observable
       userData: true, // Ensure userData is observable
       todoStore: true, // Make todoStore observable
-      postStore2: true, // Make postStore2 observable
+      // postStore2: true, // Make postStore2 observable
     });
 
     // Clean up any existing auth listener first
@@ -59,7 +59,7 @@ export class RootStore {
           console.log("✅ RootStore: Session established, setting up realtime");
           // Enable stores with new token
           this.todoStore.enable(session.access_token);
-          this.postStore2.enable(session.access_token);
+          // this.postStore2.enable(session.access_token);
           // Setup realtime connection
           this.setupRealtime(session.access_token);
           // Fetch user data when session is established
@@ -73,7 +73,7 @@ export class RootStore {
           this.userData = null;
           // Disable stores when session is lost
           this.todoStore.disable();
-          this.postStore2.disable();
+          // this.postStore2.disable();
         }
       });
     });
@@ -232,7 +232,7 @@ export class RootStore {
 
     // Disable stores
     this.todoStore.disable();
-    this.postStore2.disable();
+    // this.postStore2.disable();
 
     console.log("🧹 RootStore: Disposed");
   }

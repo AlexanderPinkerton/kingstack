@@ -211,25 +211,20 @@ export class OptimisticStore<T extends Entity> {
     serverData: TApiData[],
     transformer?: DataTransformer<TApiData, T>,
   ): void {
-    // Convert server data to UI format
-    const serverUiData = serverData.map((apiItem) => {
-      if (transformer) {
-        return transformer.toUi(apiItem);
-      } else {
-        return apiItem as unknown as T;
-      }
-    });
-
-    console.log("reconciliation: server returned", serverUiData.length, "items:", serverUiData.map(item => item.id));
-
+     
     // Simple approach: clear current data and replace with server data
     this.entities.clear();
     this.snapshots = [];
 
-    // Add all server data
-    serverUiData.forEach(item => {
-      this.entities.set(item.id, item);
-    });
+    // Use a faster loop to transform and add to the store with better performance
+    for (const apiItem of serverData) {
+      if (transformer) {
+        const uiItem = transformer.toUi(apiItem);
+        this.entities.set(uiItem.id, uiItem);
+      } else {
+        this.entities.set(apiItem.id, apiItem as unknown as T);
+      }
+    }
 
     console.log("reconciled: replaced with", this.list.length, "items from server");
   }
