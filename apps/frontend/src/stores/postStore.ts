@@ -41,6 +41,8 @@ export interface PostUiData {
 
 // Transformer to convert API data to UI data with computed fields
 class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
+  // Memoization cache for expensive calculations
+  private calculationCache = new Map<string, any>();
   optimisticDefaults: OptimisticDefaults<PostUiData> = {
     createOptimisticUiData: (userInput: any, context?: any) => {
       const currentUser = context?.currentUser;
@@ -150,36 +152,67 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
   }
 
   private calculateWordCount(content: string): number {
-    return content
+    const cacheKey = `wordCount-${content}`;
+    if (this.calculationCache.has(cacheKey)) {
+      return this.calculationCache.get(cacheKey);
+    }
+    
+    const result = content
       .trim()
       .split(/\s+/)
       .filter((word) => word.length > 0).length;
+    
+    this.calculationCache.set(cacheKey, result);
+    return result;
   }
 
   private calculateReadingTime(wordCount: number): number {
+    const cacheKey = `readingTime-${wordCount}`;
+    if (this.calculationCache.has(cacheKey)) {
+      return this.calculationCache.get(cacheKey);
+    }
+    
     // Average reading speed: 200 words per minute
-    return Math.max(1, Math.ceil(wordCount / 200));
+    const result = Math.max(1, Math.ceil(wordCount / 200));
+    this.calculationCache.set(cacheKey, result);
+    return result;
   }
 
   private generateExcerpt(content: string, maxLength: number = 150): string {
-    if (content.length <= maxLength) return content;
+    const cacheKey = `excerpt-${content}-${maxLength}`;
+    if (this.calculationCache.has(cacheKey)) {
+      return this.calculationCache.get(cacheKey);
+    }
+    
+    if (content.length <= maxLength) {
+      this.calculationCache.set(cacheKey, content);
+      return content;
+    }
 
     const truncated = content.substring(0, maxLength);
     const lastSpace = truncated.lastIndexOf(" ");
 
-    return lastSpace > 0
+    const result = lastSpace > 0
       ? truncated.substring(0, lastSpace) + "..."
       : truncated + "...";
+    
+    this.calculationCache.set(cacheKey, result);
+    return result;
   }
 
   private extractTags(content: string): string[] {
+    const cacheKey = `tags-${content}`;
+    if (this.calculationCache.has(cacheKey)) {
+      return this.calculationCache.get(cacheKey);
+    }
+    
     // Simple tag extraction - look for #hashtags
     const tagRegex = /#(\w+)/g;
     const matches = content.match(tagRegex);
 
-    if (!matches) return [];
-
-    return [...new Set(matches.map((tag) => tag.substring(1).toLowerCase()))];
+    const result = !matches ? [] : [...new Set(matches.map((tag) => tag.substring(1).toLowerCase()))];
+    this.calculationCache.set(cacheKey, result);
+    return result;
   }
 
   private isPostNew(createdAt: string): boolean {
@@ -188,6 +221,11 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
     return postDate > oneDayAgo;
+  }
+
+  // Cleanup method to prevent memory leaks
+  clearCache(): void {
+    this.calculationCache.clear();
   }
 }
 

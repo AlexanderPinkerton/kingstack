@@ -261,19 +261,60 @@ export class OptimisticStore<T extends Entity> {
     console.log("reconciled: updated with", this.list.length, "items from server");
   }
 
-  // Helper method for shallow equality comparison
+  // Optimized shallow equality comparison with early exit and type checking
   private shallowEqual(a: T, b: T): boolean {
+    // Quick reference equality check first
+    if (a === b) return true;
+    
+    // Handle null/undefined cases
+    if (a == null || b == null) return a === b;
+    
     const keysA = Object.keys(a);
     const keysB = Object.keys(b);
     
-    if (keysA.length !== keysB.length) {
-      return false;
-    }
+    // Quick length check
+    if (keysA.length !== keysB.length) return false;
     
-    for (const key of keysA) {
-      if ((a as any)[key] !== (b as any)[key]) {
-        return false;
+    // Early exit for empty objects
+    if (keysA.length === 0) return true;
+    
+    // Optimized comparison with type checking
+    for (let i = 0; i < keysA.length; i++) {
+      const key = keysA[i];
+      const valA = (a as any)[key];
+      const valB = (b as any)[key];
+      
+      // Quick reference equality
+      if (valA === valB) continue;
+      
+      // Handle Date objects
+      if (valA instanceof Date && valB instanceof Date) {
+        if (valA.getTime() !== valB.getTime()) return false;
+        continue;
       }
+      
+      // Handle arrays
+      if (Array.isArray(valA) && Array.isArray(valB)) {
+        if (valA.length !== valB.length) return false;
+        for (let j = 0; j < valA.length; j++) {
+          if (valA[j] !== valB[j]) return false;
+        }
+        continue;
+      }
+      
+      // Handle objects (shallow)
+      if (typeof valA === 'object' && typeof valB === 'object' && valA !== null && valB !== null) {
+        const valAKeys = Object.keys(valA);
+        const valBKeys = Object.keys(valB);
+        if (valAKeys.length !== valBKeys.length) return false;
+        for (const valKey of valAKeys) {
+          if ((valA as any)[valKey] !== (valB as any)[valKey]) return false;
+        }
+        continue;
+      }
+      
+      // Default strict equality
+      if (valA !== valB) return false;
     }
     
     return true;
@@ -307,6 +348,74 @@ export function createTransformer<TApiData extends Entity, TUiData extends Entit
     // No transformer specified - use default transformer
     return createDefaultTransformer<TApiData, TUiData>();
   }
+}
+
+// ---------- Query Client Singleton ----------
+
+// Global query client singleton to avoid creating multiple instances
+let globalQueryClient: QueryClient | null = null;
+
+export function getGlobalQueryClient(): QueryClient {
+  if (!globalQueryClient) {
+    globalQueryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          // Optimize default settings for better performance
+          staleTime: 5 * 60 * 1000, // 5 minutes
+          gcTime: 10 * 60 * 1000, // 10 minutes (was cacheTime)
+          retry: 1, // Reduce retries for better UX
+          refetchOnWindowFocus: false, // Disable to reduce unnecessary requests
+          refetchOnReconnect: true,
+        },
+        mutations: {
+          retry: 1,
+        },
+      },
+    });
+  }
+  return globalQueryClient;
+}
+
+// ---------- Store Manager Cache ----------
+
+// Cache for store managers to avoid recreating them
+const storeManagerCache = new Map<string, OptimisticStoreManager<any, any>>();
+
+// Utility functions for cache management
+export function clearStoreManagerCache(): void {
+  console.log(`🧹 Clearing ${storeManagerCache.size} cached store managers`);
+  storeManagerCache.forEach((manager) => {
+    manager.destroy();
+  });
+  storeManagerCache.clear();
+}
+
+export function getCacheStats(): { count: number; keys: string[] } {
+  return {
+    count: storeManagerCache.size,
+    keys: Array.from(storeManagerCache.keys()),
+  };
+}
+
+// Performance monitoring utilities
+export function getPerformanceStats(): {
+  queryClient: { isGlobal: boolean; cacheSize: number };
+  storeManagers: { count: number; keys: string[] };
+} {
+  return {
+    queryClient: {
+      isGlobal: globalQueryClient !== null,
+      cacheSize: globalQueryClient?.getQueryCache().getAll().length || 0,
+    },
+    storeManagers: getCacheStats(),
+  };
+}
+
+// Cleanup on page unload to prevent memory leaks
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    clearStoreManagerCache();
+  });
 }
 
 // ---------- Main API ----------
@@ -398,8 +507,16 @@ export function createOptimisticStoreManager<
   config: OptimisticStoreConfig<TApiData, TUiData>,
   queryClient?: QueryClient,
 ): OptimisticStoreManager<TApiData, TUiData, TStore> {
-  // Use provided query client or create a new one
-  const qc = queryClient || new QueryClient();
+  // Check cache first
+  const cacheKey = `${config.name}-${JSON.stringify(config.queryFn.toString())}`;
+  const cached = storeManagerCache.get(cacheKey);
+  if (cached && !queryClient) {
+    console.log(`🚀 Using cached store manager for ${config.name}`);
+    return cached as OptimisticStoreManager<TApiData, TUiData, TStore>;
+  }
+
+  // Use provided query client or get the global singleton
+  const qc = queryClient || getGlobalQueryClient();
 
   // Create store instance
   const StoreClass = (config.storeClass as any) || OptimisticStore<TUiData>;
@@ -440,14 +557,21 @@ export function createOptimisticStoreManager<
 
     // Only reconcile when we have fresh, non-stale data and it's actually different
     if (result.data && !result.isStale && !result.isFetching) {
-      // Check if data has actually changed to avoid unnecessary reconciliations
+      // More efficient data change detection
       const dataChanged = !lastReconciledData || 
         lastReconciledData.length !== result.data.length ||
+        // Quick ID check first (most common case)
         lastReconciledData.some((item, index) => {
           const newItem = result.data![index];
-          return !newItem || item.id !== newItem.id || 
-            JSON.stringify(item) !== JSON.stringify(newItem);
-        });
+          return !newItem || item.id !== newItem.id;
+        }) ||
+        // Only do deep comparison if IDs match but data might be different
+        (lastReconciledData.length === result.data.length && 
+         lastReconciledData.every((item, index) => {
+           const newItem = result.data![index];
+           return newItem && item.id === newItem.id;
+         }) &&
+         JSON.stringify(lastReconciledData) !== JSON.stringify(result.data));
 
       if (dataChanged) {
         lastReconciledData = result.data;
@@ -699,7 +823,7 @@ export function createOptimisticStoreManager<
     }),
   );
 
-  return {
+  const storeManager = {
     store: store,
     actions: {
       create: (data: any) => createMutationObserver.mutate(data),
@@ -747,6 +871,9 @@ export function createOptimisticStoreManager<
         triggerTimeout = null;
       }
       
+      // Remove from cache
+      storeManagerCache.delete(cacheKey);
+      
       unsubscribeQuery();
       unsubscribeCreateMutation();
       unsubscribeUpdateMutation();
@@ -754,4 +881,12 @@ export function createOptimisticStoreManager<
       // cleanupNaturalRefetch();
     },
   } as const;
+
+  // Cache the store manager if not using a custom query client
+  if (!queryClient) {
+    storeManagerCache.set(cacheKey, storeManager);
+    console.log(`💾 Cached store manager for ${config.name}`);
+  }
+
+  return storeManager;
 }

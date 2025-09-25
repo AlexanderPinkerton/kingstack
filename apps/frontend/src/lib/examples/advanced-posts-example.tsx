@@ -15,7 +15,7 @@ import { PostApiData, PostUiData } from "@/stores/postStore";
 
 export const AdvancedPostsExample = observer(() => {
   const rootStore = useContext(RootStoreContext);
-  const postStore = rootStore.postStore2;
+  const postStore = rootStore.postStore;
   const { store, actions, status } = postStore;
   
   // Basic React state for UI controls
