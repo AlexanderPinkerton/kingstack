@@ -12,7 +12,7 @@ import {
   createOptimisticStoreManager,
   Entity,
 } from "@/lib/optimistic-store-pattern";
-import { createSmartRealtimeExtension } from "@/lib/realtime-extension";
+import { createRealtimeExtension } from "@/lib/realtime-extension";
 
 // ---------- Types ----------
 
@@ -149,9 +149,9 @@ export class RealtimeCheckboxStore {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  // Realtime extension
+  // Realtime extension property type definition
   private realtimeExtension: ReturnType<
-    typeof createSmartRealtimeExtension<CheckboxUiData>
+    typeof createRealtimeExtension<CheckboxUiData>
   > | null = null;
 
   // Connection status
@@ -179,12 +179,12 @@ export class RealtimeCheckboxStore {
       this.realtimeExtension.disconnect();
     }
 
-    // Use the smart realtime extension with automatic data transformation
-    this.realtimeExtension = createSmartRealtimeExtension<CheckboxUiData>(
+    // Use the simplified realtime extension with the store's transformer
+    this.realtimeExtension = createRealtimeExtension<CheckboxUiData>(
       this.storeManager.store,
       "checkbox_update",
+      checkboxTransformer,
       {
-        dateFields: ["created_at", "updated_at"],
         shouldProcessEvent: (event) => event.type === "checkbox_update",
       }
     );

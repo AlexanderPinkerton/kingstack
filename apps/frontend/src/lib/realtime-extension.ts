@@ -1,34 +1,16 @@
 // Realtime Extension for Optimistic Store Pattern
-// Provides a clean, generic interface for integrating WebSocket realtime updates with optimistic stores
+// Provides a simple interface for integrating WebSocket realtime updates with optimistic stores
 //
-// USAGE EXAMPLES:
+// USAGE:
+// 1. Create extension: const extension = createRealtimeExtension(store, "checkbox_update");
+// 2. Connect: extension.connect(socket);
+// 3. Disconnect: extension.disconnect();
 //
-// 1. Simple realtime extension (minimal config):
-//    const extension = createSimpleRealtimeExtension(store, "user_update");
-//
-// 2. Smart realtime extension (automatic data transformation):
-//    const extension = createSmartRealtimeExtension(store, "post_update", {
-//      dateFields: ["created_at", "updated_at"],
-//      booleanFields: ["published", "featured"],
-//      numberFields: ["views", "likes"],
-//    });
-//
-// 3. Custom realtime extension (full control):
-//    const extension = createRealtimeExtension(store, {
-//      eventType: "custom_event",
-//      transformRealtimeData: (data) => ({ ...data, processed: true }),
-//      shouldProcessEvent: (event) => event.type === "custom_event",
-//    });
-//
-// 4. Connect to socket:
-//    extension.connect(socket);
-//
-// 5. Disconnect:
-//    extension.disconnect();
+// The extension uses the store's existing DataTransformer for all data transformation.
 
 import { Socket } from "socket.io-client";
 import { runInAction } from "mobx";
-import { OptimisticStore } from "./optimistic-store-pattern";
+import { OptimisticStore, DataTransformer } from "./optimistic-store-pattern";
 
 // ---------- Core Types ----------
 
@@ -42,8 +24,6 @@ export interface RealtimeEvent<T = any> {
 export interface RealtimeConfig<T extends { id: string }> {
   /** Event type to listen for (e.g., "checkbox_update", "post_update") */
   eventType: string;
-  /** Function to transform realtime data to UI data */
-  transformRealtimeData: (realtimeData: any) => T;
   /** Optional: Function to determine if event should be processed */
   shouldProcessEvent?: (event: RealtimeEvent) => boolean;
   /** Optional: Custom handler for specific event types */
@@ -62,10 +42,16 @@ export class RealtimeExtension<T extends { id: string }> {
   private socket: Socket | null = null;
   private config: RealtimeConfig<T>;
   private isConnected = false;
+  private transformer?: DataTransformer<any, T>;
 
-  constructor(store: OptimisticStore<T>, config: RealtimeConfig<T>) {
+  constructor(
+    store: OptimisticStore<T>, 
+    config: RealtimeConfig<T>,
+    transformer?: DataTransformer<any, T>
+  ) {
     this.store = store;
     this.config = config;
+    this.transformer = transformer;
   }
 
   /**
@@ -155,7 +141,11 @@ export class RealtimeExtension<T extends { id: string }> {
               return;
             }
 
-            const uiData = this.config.transformRealtimeData(data);
+            // Use the same transformation pipeline as the store
+            const uiData = this.transformer 
+              ? this.transformer.toUi(data)
+              : (data as T);
+            
             this.store.upsert(uiData);
             console.log(
               `📡 RealtimeExtension: ${eventType} processed for item ${uiData.id}`,
@@ -219,95 +209,26 @@ export class RealtimeExtension<T extends { id: string }> {
 // ---------- Helper Functions ----------
 
 /**
- * Create a realtime extension with automatic data transformation
+ * Create a realtime extension that uses the store's existing DataTransformer
  * This is the main function you'll use to enable realtime for any store
  */
 export function createRealtimeExtension<T extends { id: string }>(
   store: OptimisticStore<T>,
-  config: RealtimeConfig<T>,
-): RealtimeExtension<T> {
-  return new RealtimeExtension(store, config);
-}
-
-/**
- * Create a realtime extension with smart data transformation
- * Automatically handles common data patterns like dates, booleans, etc.
- */
-export function createSmartRealtimeExtension<T extends { id: string }>(
-  store: OptimisticStore<T>,
   eventType: string,
+  transformer?: DataTransformer<any, T>,
   options?: {
-    /** Custom data transformation function */
-    transformData?: (data: any) => T;
-    /** Field names that should be converted to Date objects */
-    dateFields?: (keyof T)[];
-    /** Field names that should be converted to boolean */
-    booleanFields?: (keyof T)[];
-    /** Field names that should be converted to numbers */
-    numberFields?: (keyof T)[];
-    /** Custom event filter function */
     shouldProcessEvent?: (event: RealtimeEvent) => boolean;
+    customHandlers?: {
+      [eventType: string]: (
+        store: OptimisticStore<T>,
+        event: RealtimeEvent,
+      ) => void;
+    };
   },
 ): RealtimeExtension<T> {
-  const {
-    transformData,
-    dateFields = [],
-    booleanFields = [],
-    numberFields = [],
-    shouldProcessEvent,
-  } = options || {};
-
   return new RealtimeExtension(store, {
     eventType,
-    transformRealtimeData: transformData || ((data: any) => {
-      // Smart transformation with common patterns
-      const transformed = { ...data };
-      
-      // Convert date fields
-      dateFields.forEach(field => {
-        if (data[field] && typeof data[field] === 'string') {
-          const date = new Date(data[field]);
-          if (!isNaN(date.getTime())) {
-            transformed[field] = date as any;
-          }
-        }
-      });
-      
-      // Convert boolean fields
-      booleanFields.forEach(field => {
-        if (data[field] !== undefined) {
-          if (typeof data[field] === 'string') {
-            transformed[field] = (data[field] === 'true' || data[field] === '1') as any;
-          } else {
-            transformed[field] = Boolean(data[field]) as any;
-          }
-        }
-      });
-      
-      // Convert number fields
-      numberFields.forEach(field => {
-        if (data[field] !== undefined && !isNaN(Number(data[field]))) {
-          transformed[field] = Number(data[field]) as any;
-        }
-      });
-      
-      return transformed as T;
-    }),
-    shouldProcessEvent: shouldProcessEvent || ((event) => event.type === eventType),
-  });
-}
-
-/**
- * Create a realtime extension with minimal configuration
- * Just provide the event type and store - everything else is automatic
- */
-export function createSimpleRealtimeExtension<T extends { id: string }>(
-  store: OptimisticStore<T>,
-  eventType: string,
-): RealtimeExtension<T> {
-  return new RealtimeExtension(store, {
-    eventType,
-    transformRealtimeData: (data: any) => data as T,
-    shouldProcessEvent: (event) => event.type === eventType,
-  });
+    shouldProcessEvent: options?.shouldProcessEvent || ((event) => event.type === eventType),
+    customHandlers: options?.customHandlers,
+  }, transformer);
 }
