@@ -6,11 +6,11 @@
 // 2. Connect: extension.connect(socket);
 // 3. Disconnect: extension.disconnect();
 //
-// The extension uses the store's existing DataTransformer for all data transformation.
+// The extension delegates all data transformation to the store.
 
 import { Socket } from "socket.io-client";
 import { runInAction } from "mobx";
-import { OptimisticStore, DataTransformer } from "./optimistic-store-pattern";
+import { OptimisticStore } from "./optimistic-store-pattern";
 
 // ---------- Core Types ----------
 
@@ -42,16 +42,10 @@ export class RealtimeExtension<T extends { id: string }> {
   private socket: Socket | null = null;
   private config: RealtimeConfig<T>;
   private isConnected = false;
-  private transformer?: DataTransformer<any, T>;
 
-  constructor(
-    store: OptimisticStore<T>, 
-    config: RealtimeConfig<T>,
-    transformer?: DataTransformer<any, T>
-  ) {
+  constructor(store: OptimisticStore<T>, config: RealtimeConfig<T>) {
     this.store = store;
     this.config = config;
-    this.transformer = transformer;
   }
 
   /**
@@ -141,14 +135,10 @@ export class RealtimeExtension<T extends { id: string }> {
               return;
             }
 
-            // Use the same transformation pipeline as the store
-            const uiData = this.transformer 
-              ? this.transformer.toUi(data)
-              : (data as T);
-            
-            this.store.upsert(uiData);
+            // Let the store handle the data transformation
+            this.store.handleRealtimeData(data);
             console.log(
-              `📡 RealtimeExtension: ${eventType} processed for item ${uiData.id}`,
+              `📡 RealtimeExtension: ${eventType} processed for item ${data.id}`,
             );
             break;
 
@@ -161,20 +151,11 @@ export class RealtimeExtension<T extends { id: string }> {
               return;
             }
 
-            // For deletions, we need to find the item by ID and remove it
-            const itemToDelete = this.store.list.find(
-              (item) => item.id === data.id,
+            // Realtime events are authoritative - use regular remove
+            this.store.remove(data.id);
+            console.log(
+              `📡 RealtimeExtension: DELETE processed for item ${data.id}`,
             );
-            if (itemToDelete) {
-              this.store.removeFromServer(itemToDelete.id);
-              console.log(
-                `📡 RealtimeExtension: DELETE processed for item ${data.id}`,
-              );
-            } else {
-              console.log(
-                `📡 RealtimeExtension: DELETE - item ${data.id} not found in store`,
-              );
-            }
             break;
 
           default:
@@ -215,7 +196,6 @@ export class RealtimeExtension<T extends { id: string }> {
 export function createRealtimeExtension<T extends { id: string }>(
   store: OptimisticStore<T>,
   eventType: string,
-  transformer?: DataTransformer<any, T>,
   options?: {
     shouldProcessEvent?: (event: RealtimeEvent) => boolean;
     customHandlers?: {
@@ -230,5 +210,5 @@ export function createRealtimeExtension<T extends { id: string }>(
     eventType,
     shouldProcessEvent: options?.shouldProcessEvent || ((event) => event.type === eventType),
     customHandlers: options?.customHandlers,
-  }, transformer);
+  });
 }

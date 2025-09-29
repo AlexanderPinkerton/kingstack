@@ -14,6 +14,7 @@ import {
   QueryObserver,
   notifyManager,
 } from "@tanstack/query-core";
+import { createRealtimeExtension, RealtimeExtension } from "./realtime-extension";
 
 // ---------- Core Types ----------
 
@@ -139,8 +140,10 @@ export class OptimisticStore<T extends Entity> {
    */
   public entities = new Map<string, T>();
   private snapshots: Map<string, T>[] = [];
+  private transformer?: DataTransformer<any, T>;
 
-  constructor() {
+  constructor(transformer?: DataTransformer<any, T>) {
+    this.transformer = transformer;
     makeObservable(this, {
       entities: observable,
       list: computed,
@@ -188,6 +191,12 @@ export class OptimisticStore<T extends Entity> {
   removeFromServer(id: string): void {
     this.entities.delete(id);
     console.log("server-side removal:", id);
+  }
+
+  // Handle realtime data with transformation
+  handleRealtimeData<TApiData extends Entity>(apiData: TApiData): void {
+    const uiData = this.transformer ? this.transformer.toUi(apiData) : (apiData as unknown as T);
+    this.upsert(uiData);
   }
 
   clear(): void {
@@ -439,6 +448,20 @@ export interface OptimisticStoreConfig<
   staleTime?: number;
   /** Optional: Function to determine if query should be enabled (default: () => true) */
   enabled?: () => boolean;
+  /** Optional: Realtime configuration - enables realtime updates when provided */
+  realtime?: {
+    /** Event type to listen for (e.g., "checkbox_update", "post_update") */
+    eventType: string;
+    /** Optional: Function to determine if event should be processed */
+    shouldProcessEvent?: (event: any) => boolean;
+    /** Optional: Custom handler for specific event types */
+    customHandlers?: {
+      [eventType: string]: (
+        store: OptimisticStore<TUiData>,
+        event: any,
+      ) => void;
+    };
+  };
 }
 
 // ---------- Framework-Agnostic Store Manager ----------
@@ -470,6 +493,12 @@ export interface OptimisticStoreManager<
   enable: () => void;
   disable: () => void;
   destroy: () => void;
+  // Realtime methods (only available when realtime config is provided)
+  realtime?: {
+    connect: (socket: any) => void;
+    disconnect: () => void;
+    isConnected: boolean;
+  };
 }
 
 /**
@@ -511,12 +540,25 @@ export function createOptimisticStoreManager<
   // Use provided query client or get the global singleton
   const qc = queryClient || getGlobalQueryClient();
 
-  // Create store instance
-  const StoreClass = (config.storeClass as any) || OptimisticStore<TUiData>;
-  const store = new StoreClass() as TStore;
-
   // Create transformer
   const transformer = createTransformer(config.transformer);
+
+  // Create store instance
+  const StoreClass = (config.storeClass as any) || OptimisticStore<TUiData>;
+  const store = new StoreClass(transformer) as TStore;
+
+  // Create realtime extension if config provided
+  let realtimeExtension: RealtimeExtension<TUiData> | null = null;
+  if (config.realtime) {
+    realtimeExtension = createRealtimeExtension<TUiData>(
+      store,
+      config.realtime.eventType,
+      {
+        shouldProcessEvent: config.realtime.shouldProcessEvent,
+        customHandlers: config.realtime.customHandlers,
+      }
+    );
+  }
 
   // Status tracking - make it observable so React components re-render
   const status = observable({
@@ -878,6 +920,11 @@ export function createOptimisticStoreManager<
         triggerTimeout = null;
       }
 
+      // Disconnect realtime if connected
+      if (realtimeExtension) {
+        realtimeExtension.disconnect();
+      }
+
       // Remove from cache
       storeManagerCache.delete(cacheKey);
 
@@ -887,6 +934,20 @@ export function createOptimisticStoreManager<
       unsubscribeRemoveMutation();
       // cleanupNaturalRefetch();
     },
+    // Realtime methods (only available when realtime config is provided)
+    ...(realtimeExtension && {
+      realtime: {
+        connect: (socket: any) => {
+          realtimeExtension!.connect(socket);
+        },
+        disconnect: () => {
+          realtimeExtension!.disconnect();
+        },
+        get isConnected() {
+          return realtimeExtension!.connected;
+        },
+      },
+    }),
   } as const;
 
   // Cache the store manager if not using a custom query client

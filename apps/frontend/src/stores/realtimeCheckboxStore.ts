@@ -1,18 +1,11 @@
-// Realtime Checkbox Store - Self-contained with realtime capabilities
-// Extends the optimistic store pattern with realtime integration
+// Realtime Checkbox Store - Self-contained with integrated realtime capabilities
+// Uses the optimistic store pattern with built-in realtime integration
 
-import {
-  makeObservable,
-  observable,
-  computed,
-  action,
-  runInAction,
-} from "mobx";
 import {
   createOptimisticStoreManager,
   Entity,
 } from "@/lib/optimistic-store-pattern";
-import { createRealtimeExtension } from "@/lib/realtime-extension";
+// No longer need to import realtime extension - it's integrated into the store manager
 
 // ---------- Types ----------
 
@@ -133,7 +126,7 @@ const checkboxTransformer = {
 // ---------- Realtime Checkbox Store Class ----------
 
 export class RealtimeCheckboxStore {
-  // Store manager
+  // Store manager with integrated realtime
   public storeManager = createOptimisticStoreManager<
     CheckboxApiData,
     CheckboxUiData
@@ -147,67 +140,32 @@ export class RealtimeCheckboxStore {
     },
     transformer: checkboxTransformer,
     staleTime: 2 * 60 * 1000, // 2 minutes
+    realtime: {
+      eventType: "checkbox_update",
+      shouldProcessEvent: (event) => event.type === "checkbox_update",
+    },
   });
 
-  // Realtime extension property type definition
-  private realtimeExtension: ReturnType<
-    typeof createRealtimeExtension<CheckboxUiData>
-  > | null = null;
-
-  // Connection status
-  public isConnected = false;
-
   constructor() {
-    makeObservable(this, {
-      isConnected: observable,
-    });
+    // No longer need to make isConnected observable since it's handled by the store manager
   }
 
   // ---------- Realtime Methods ----------
 
   connectRealtime(socket: any): void {
-    // If already connected to the same socket, don't reconnect
-    if (
-      this.realtimeExtension &&
-      this.realtimeExtension.socketInstance === socket
-    ) {
-      console.log("🔌 RealtimeCheckboxStore: Already connected to this socket");
-      return;
+    if (this.storeManager.realtime) {
+      this.storeManager.realtime.connect(socket);
+      console.log("🔌 RealtimeCheckboxStore: Connected to realtime");
+    } else {
+      console.warn("🔌 RealtimeCheckboxStore: Realtime not configured");
     }
-
-    if (this.realtimeExtension) {
-      this.realtimeExtension.disconnect();
-    }
-
-    // Use the simplified realtime extension with the store's transformer
-    this.realtimeExtension = createRealtimeExtension<CheckboxUiData>(
-      this.storeManager.store,
-      "checkbox_update",
-      checkboxTransformer,
-      {
-        shouldProcessEvent: (event) => event.type === "checkbox_update",
-      }
-    );
-    this.realtimeExtension.connect(socket);
-
-    runInAction(() => {
-      this.isConnected = this.realtimeExtension?.connected || false;
-    });
-
-    console.log("🔌 RealtimeCheckboxStore: Connected to realtime");
   }
 
   disconnectRealtime(): void {
-    if (this.realtimeExtension) {
-      this.realtimeExtension.disconnect();
-      this.realtimeExtension = null;
+    if (this.storeManager.realtime) {
+      this.storeManager.realtime.disconnect();
+      console.log("🔌 RealtimeCheckboxStore: Disconnected from realtime");
     }
-
-    runInAction(() => {
-      this.isConnected = false;
-    });
-
-    console.log("🔌 RealtimeCheckboxStore: Disconnected from realtime");
   }
 
   // ---------- Store Access Methods ----------
@@ -246,6 +204,10 @@ export class RealtimeCheckboxStore {
 
   get deletePending(): boolean {
     return this.storeManager.status.deletePending;
+  }
+
+  get isConnected(): boolean {
+    return this.storeManager.realtime?.isConnected || false;
   }
 
   // ---------- Action Methods ----------
