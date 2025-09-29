@@ -167,7 +167,7 @@ export class OptimisticStore<T extends Entity> {
     return this.entities.size;
   }
 
-  // Basic operations
+  // Basic operations (used internally and by manager actions)
   get(id: string): T | undefined {
     return this.entities.get(id);
   }
@@ -187,20 +187,24 @@ export class OptimisticStore<T extends Entity> {
     this.entities.delete(id);
   }
 
-  // Remove item without tracking as optimistic deletion (for server-side removals)
-  removeFromServer(id: string): void {
-    this.entities.delete(id);
-    console.log("server-side removal:", id);
-  }
-
-  // Handle realtime data with transformation
-  handleRealtimeData<TApiData extends Entity>(apiData: TApiData): void {
-    const uiData = this.transformer ? this.transformer.toUi(apiData) : (apiData as unknown as T);
-    this.upsert(uiData);
-  }
 
   clear(): void {
     this.entities.clear();
+  }
+
+  // MobX-aware methods for realtime updates (UI-only, server already updated)
+  // These methods handle runInAction internally so the realtime extension doesn't need MobX
+  upsertFromRealtime<TApiData extends Entity>(apiData: TApiData): void {
+    runInAction(() => {
+      const uiData = this.transformer ? this.transformer.toUi(apiData) : (apiData as unknown as T);
+      this.upsert(uiData);
+    });
+  }
+
+  removeFromRealtime(id: string): void {
+    runInAction(() => {
+      this.remove(id);
+    });
   }
 
   // Optimistic update support
@@ -473,6 +477,7 @@ export interface OptimisticStoreManager<
 > {
   store: TStore;
   actions: {
+    // These actions perform both UI updates AND server updates (optimistic)
     create: (data: any) => Promise<TApiData>;
     update: (params: { id: string; data: any }) => Promise<TApiData>;
     remove: (id: string) => Promise<void | { id: string }>;

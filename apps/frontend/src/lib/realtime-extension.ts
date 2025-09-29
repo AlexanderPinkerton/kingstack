@@ -6,10 +6,7 @@
 // 2. Connect: extension.connect(socket);
 // 3. Disconnect: extension.disconnect();
 //
-// The extension delegates all data transformation to the store.
-
 import { Socket } from "socket.io-client";
-import { runInAction } from "mobx";
 import { OptimisticStore } from "./optimistic-store-pattern";
 
 // ---------- Core Types ----------
@@ -123,47 +120,45 @@ export class RealtimeExtension<T extends { id: string }> {
     const data = event.checkbox || event.data;
 
     try {
-      runInAction(() => {
-        switch (eventType) {
-          case "INSERT":
-          case "UPDATE":
-            if (!data) {
-              console.warn(
-                `📡 RealtimeExtension: No data found in ${eventType} event:`,
-                event,
-              );
-              return;
-            }
-
-            // Let the store handle the data transformation
-            this.store.handleRealtimeData(data);
-            console.log(
-              `📡 RealtimeExtension: ${eventType} processed for item ${data.id}`,
-            );
-            break;
-
-          case "DELETE":
-            if (!data) {
-              console.warn(
-                `📡 RealtimeExtension: No data found in DELETE event:`,
-                event,
-              );
-              return;
-            }
-
-            // Realtime events are authoritative - use regular remove
-            this.store.remove(data.id);
-            console.log(
-              `📡 RealtimeExtension: DELETE processed for item ${data.id}`,
-            );
-            break;
-
-          default:
+      switch (eventType) {
+        case "INSERT": // Drop to the UPDATE case
+        case "UPDATE":
+          if (!data) {
             console.warn(
-              `📡 RealtimeExtension: Unknown event type: ${eventType}`,
+              `📡 RealtimeExtension: No data found in ${eventType} event:`,
+              event,
             );
-        }
-      });
+            return;
+          }
+
+          // UI-only update (server already updated via realtime)
+          this.store.upsertFromRealtime(data);
+          console.log(
+            `📡 RealtimeExtension: ${eventType} processed for item ${data.id}`,
+          );
+          break;
+
+        case "DELETE":
+          if (!data) {
+            console.warn(
+              `📡 RealtimeExtension: No data found in DELETE event:`,
+              event,
+            );
+            return;
+          }
+
+          // UI-only removal (server already updated via realtime)
+          this.store.removeFromRealtime(data.id);
+          console.log(
+            `📡 RealtimeExtension: DELETE processed for item ${data.id}`,
+          );
+          break;
+
+        default:
+          console.warn(
+            `📡 RealtimeExtension: Unknown event type: ${eventType}`,
+          );
+      }
     } catch (error) {
       console.error(
         `📡 RealtimeExtension: Error processing ${eventType} event:`,
