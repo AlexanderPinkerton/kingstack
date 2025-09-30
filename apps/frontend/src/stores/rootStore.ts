@@ -5,6 +5,7 @@ import { fetchWithAuth } from "@/lib/utils";
 import { AdvancedTodoStore } from "./todoStore";
 import { AdvancedPostStore } from "./postStore";
 import { RealtimeCheckboxStore } from "./realtimeCheckboxStore";
+import { AdvancedUserStore } from "./userStore";
 
 const supabase = createClient();
 
@@ -21,12 +22,12 @@ export class RootStore {
   private static instanceCount = 0;
   
   session: any = null;
-  userData: any = null;
   
   // Optimistic stores
   todoStore: AdvancedTodoStore;
   postStore: AdvancedPostStore;
   checkboxStore: RealtimeCheckboxStore;
+  userStore: AdvancedUserStore;
   
   // WebSocket connection management
   socket: Socket | null = null;
@@ -43,6 +44,7 @@ export class RootStore {
       this.todoStore,
       this.postStore,
       this.checkboxStore,
+      this.userStore,
     ];
   }
 
@@ -97,14 +99,15 @@ export class RootStore {
     this.todoStore = new AdvancedTodoStore();
     this.postStore = new AdvancedPostStore();
     this.checkboxStore = new RealtimeCheckboxStore(this.browserId);
+    this.userStore = new AdvancedUserStore();
 
-    // Make session and userData observable before setting up auth listener
+    // Make session and stores observable before setting up auth listener
     makeAutoObservable(this, {
       session: true,
-      userData: true,
       todoStore: true,
       postStore: true,
       checkboxStore: true,
+      userStore: true,
     });
 
     // Clean up any existing auth listener first
@@ -133,20 +136,18 @@ export class RootStore {
           // Enable stores with new token
           this.todoStore.enable(session.access_token);
           this.postStore.enable(session.access_token);
+          this.userStore.enable(session.access_token);
           // Setup realtime connection
           this.setupRealtime(session.access_token);
-          // Fetch user data when session is established
-          this.fetchUserData();
         } else if (!session?.access_token) {
           // Handle auth-required teardown here
           console.log("❌ RootStore: Session lost, tearing down realtime");
           // Teardown realtime connection
           this.teardownRealtime();
-          // Clear user data when session is lost
-          this.userData = null;
           // Disable stores when session is lost
           this.todoStore.disable();
-          // this.postStore2.disable();
+          this.postStore.disable();
+          this.userStore.disable();
         }
 
         // Note: Realtime is only available with authentication
@@ -212,51 +213,6 @@ export class RootStore {
   }
 
 
-  private fetchingUserData = false;
-
-  async fetchUserData() {
-    if (!this.session?.access_token) {
-      console.log("🔄 RootStore: No session available for user data fetch");
-      return;
-    }
-
-    if (this.fetchingUserData) {
-      console.log(
-        "🔄 RootStore: User data fetch already in progress, skipping",
-      );
-      return;
-    }
-
-    this.fetchingUserData = true;
-    console.log("🔄 RootStore: Fetching user data");
-    try {
-
-      const userResponse = await fetchWithAuth(
-        this.session.access_token,
-        "/api/user"
-      );
-
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        runInAction(() => {
-          this.userData = userData;
-          console.log(
-            "✅ RootStore: User data fetched successfully:",
-            userData,
-          );
-        });
-      } else {
-        console.error(
-          "❌ RootStore: Failed to fetch user data:",
-          userResponse.status,
-        );
-      }
-    } catch (error) {
-      console.error("❌ RootStore: Error fetching user data:", error);
-    } finally {
-      this.fetchingUserData = false;
-    }
-  }
 
   async refreshSession() {
     console.log("🔄 RootStore: Refreshing session");
@@ -276,14 +232,15 @@ export class RootStore {
             userEmail: this.session?.user?.email,
           });
         });
-        // Fetch user data for new session
-        this.fetchUserData();
+        // Enable user store for new session
+        this.userStore.enable(result.data.session.access_token);
       } else if (this.session && !result.data.session) {
         runInAction(() => {
           this.session = null;
-          this.userData = null;
           console.log("🔄 RootStore: Session cleared from refresh");
         });
+        // Disable user store when session is lost
+        this.userStore.disable();
       } else {
         console.log("🔄 RootStore: Session refresh - no change needed");
       }
@@ -333,6 +290,7 @@ export class RootStore {
     // Disable stores
     this.todoStore.disable();
     this.postStore.disable();
+    this.userStore.disable();
 
     // Clear singleton reference if this is the current instance
     if (RootStore.instance === this) {
@@ -350,5 +308,10 @@ export class RootStore {
   // Static method to check if there's an active instance
   static hasActiveInstance(): boolean {
     return RootStore.instance !== null && !RootStore.instance.isDisposed;
+  }
+
+  // Convenience getter for user data
+  get userData() {
+    return this.userStore.currentUser;
   }
 }
