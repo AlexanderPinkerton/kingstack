@@ -42,7 +42,6 @@ export class PostsController {
         created_at: "desc",
       },
     });
-    console.log("Fetched posts:", posts);
     // Return the posts
     return posts;
   }

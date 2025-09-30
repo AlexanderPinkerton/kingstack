@@ -28,7 +28,8 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" --fix",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "peerDependencies": {
     "@tanstack/query-core": "^5.0.0",
@@ -47,6 +48,7 @@
     "eslint": "^9",
     "mobx": "^6.13.5",
     "socket.io-client": "^4.8.1",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
   }
 }

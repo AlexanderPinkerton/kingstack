@@ -24,7 +24,6 @@ export class TodosService {
         created_at: "desc",
       },
     });
-    console.log("Fetched todos:", todos);
     return todos;
   }
 

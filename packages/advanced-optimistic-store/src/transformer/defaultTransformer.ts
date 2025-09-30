@@ -21,11 +21,14 @@ export function createDefaultTransformer<
           if (typeof value === "string") {
             // Convert ISO date strings to Date objects
             if (
-              key.includes("date") ||
-              key.includes("time") ||
-              key.includes("at") ||
-              ((key.includes("created") || key.includes("updated")) &&
-                key.includes("_"))
+              (key.includes("date") ||
+                key.includes("time") ||
+                key.includes("at") ||
+                ((key.includes("created") || key.includes("updated")) &&
+                  key.includes("_"))) &&
+              !key.includes("negative") &&
+              !key.includes("count") &&
+              !key.includes("priority")
             ) {
               const date = new Date(value);
               if (!isNaN(date.getTime())) {
@@ -40,9 +43,29 @@ export function createDefaultTransformer<
               return acc;
             }
 
-            // Convert number strings to numbers
-            if (!isNaN(Number(value)) && value !== "") {
+            // Convert number strings to numbers (but preserve ID fields as strings)
+            if (
+              !isNaN(Number(value)) &&
+              value !== "" &&
+              key !== "id" &&
+              key !== "_id" &&
+              key !== "ID"
+            ) {
               acc[key] = Number(value);
+              return acc;
+            }
+
+            // Handle special number values
+            if (value === "Infinity") {
+              acc[key] = Infinity;
+              return acc;
+            }
+            if (value === "-Infinity") {
+              acc[key] = -Infinity;
+              return acc;
+            }
+            if (value === "NaN") {
+              acc[key] = NaN;
               return acc;
             }
 
