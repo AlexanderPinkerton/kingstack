@@ -77,11 +77,14 @@ export class RootStore {
 
     // Warn if multiple instances detected (possible memory leak)
     if (RootStore.instance && !RootStore.instance.isDisposed) {
-      console.warn(
-        "⚠️ RootStore: Multiple instances detected! Previous instance was not disposed.",
-        "This can cause memory leaks. Consider using a singleton pattern."
+      // In development, HMR causes module re-execution - this is expected
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      const logLevel = isDevelopment ? 'log' : 'warn';
+      
+      console[logLevel](
+        `${isDevelopment ? '🔄' : '⚠️'} RootStore: Multiple instances detected (${isDevelopment ? 'HMR' : 'memory leak'})`,
+        "Auto-disposing previous instance..."
       );
-      console.warn("⚠️ RootStore: Auto-disposing previous instance...");
       RootStore.instance.dispose();
     }
 

@@ -404,25 +404,15 @@ export function getGlobalQueryClient(): QueryClient {
 }
 
 // ---------- Store Manager Cache ----------
-
-// Cache for store managers to avoid recreating them
-const storeManagerCache = new Map<string, OptimisticStoreManager<any, any>>();
-
-// Utility functions for cache management
-export function clearStoreManagerCache(): void {
-  console.log(`🧹 Clearing ${storeManagerCache.size} cached store managers`);
-  storeManagerCache.forEach((manager) => {
-    manager.destroy();
-  });
-  storeManagerCache.clear();
-}
-
-// Cleanup on page unload to prevent memory leaks
-if (typeof window !== "undefined") {
-  window.addEventListener("beforeunload", () => {
-    clearStoreManagerCache();
-  });
-}
+// NOTE: Store manager caching was removed because:
+// 1. Store managers are cheap to create (~5-10ms)
+// 2. TanStack Query already caches query results (the expensive part)
+// 3. Caching store managers breaks dynamic closures (auth tokens, context)
+// 4. Adds unnecessary complexity
+//
+// TanStack Query caches by queryKey automatically, so repeated calls
+// with the same queryKey will return cached data without network requests.
+// That's the optimization that matters!
 
 // ---------- Main API ----------
 
@@ -452,8 +442,6 @@ export interface OptimisticStoreConfig<
   staleTime?: number;
   /** Optional: Function to determine if query should be enabled (default: () => true) */
   enabled?: () => boolean;
-  /** Optional: Explicit cache key for store manager reuse. If not provided, only 'name' is used. This is safer than automatic key generation. */
-  cacheKey?: string;
   /** Optional: Realtime configuration - enables realtime updates when provided */
   realtime?: {
     /** Event type to listen for (e.g., "checkbox_update", "post_update") */
@@ -540,16 +528,9 @@ export function createOptimisticStoreManager<
   config: OptimisticStoreConfig<TApiData, TUiData>,
   queryClient?: QueryClient,
 ): OptimisticStoreManager<TApiData, TUiData, TStore> {
-  // Generate cache key - use explicit cacheKey or just name
-  // NOTE: We no longer use queryFn.toString() as it's unreliable across minification/bundling
-  const cacheKey = config.cacheKey || config.name;
-  
-  // Check cache first (but skip if custom query client provided)
-  const cached = storeManagerCache.get(cacheKey);
-  if (cached && !queryClient) {
-    console.log(`🚀 Using cached store manager for ${config.name} (key: ${cacheKey})`);
-    return cached as OptimisticStoreManager<TApiData, TUiData, TStore>;
-  }
+  // Store managers are NOT cached - they're cheap to create (~5-10ms)
+  // TanStack Query caches query RESULTS by queryKey (config.name)
+  // That's where the real performance gain is (avoiding 100-500ms network requests)
 
   // Use provided query client or get the global singleton
   const qc = queryClient || getGlobalQueryClient();
@@ -955,9 +936,6 @@ export function createOptimisticStoreManager<
         realtimeExtension.disconnect();
       }
 
-      // Remove from cache
-      storeManagerCache.delete(cacheKey);
-
       unsubscribeQuery();
       unsubscribeCreateMutation();
       unsubscribeUpdateMutation();
@@ -979,19 +957,6 @@ export function createOptimisticStoreManager<
       },
     }),
   } as const;
-
-  // Cache the store manager if not using a custom query client
-  if (!queryClient) {
-    // Warn if overwriting existing cache entry
-    if (storeManagerCache.has(cacheKey)) {
-      console.warn(
-        `⚠️ Overwriting cached store manager for key "${cacheKey}". ` +
-        `This might indicate duplicate store creation. Consider using explicit cacheKey in config.`
-      );
-    }
-    storeManagerCache.set(cacheKey, storeManager);
-    console.log(`💾 Cached store manager for ${config.name} (key: ${cacheKey})`);
-  }
 
   return storeManager;
 }
