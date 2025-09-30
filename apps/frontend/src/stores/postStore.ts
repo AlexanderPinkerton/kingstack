@@ -3,7 +3,7 @@ import {
   OptimisticStoreManager,
   DataTransformer,
   OptimisticDefaults,
-} from "@/lib/optimistic-store-pattern";
+} from "@kingstack/advanced-optimistic-store";
 import { fetchWithAuth } from "@/lib/utils";
 
 // API data structure (what comes from the server)

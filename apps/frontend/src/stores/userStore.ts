@@ -2,7 +2,7 @@ import {
   createOptimisticStoreManager,
   OptimisticStoreManager,
   DataTransformer,
-} from "@/lib/optimistic-store-pattern";
+} from "@kingstack/advanced-optimistic-store";
 import { fetchWithAuth } from "@/lib/utils";
 
 // API data structure (what comes from the server)
@@ -34,13 +34,15 @@ export interface UserUiData {
 class UserTransformer implements DataTransformer<UserApiData, UserUiData> {
   toUi(apiData: UserApiData): UserUiData {
     const created_at = new Date(apiData.created_at);
-    const username_changed_at = apiData.username_changed_at 
-      ? new Date(apiData.username_changed_at) 
+    const username_changed_at = apiData.username_changed_at
+      ? new Date(apiData.username_changed_at)
       : null;
-    
+
     const now = new Date();
-    const accountAge = Math.floor((now.getTime() - created_at.getTime()) / (1000 * 60 * 60 * 24));
-    
+    const accountAge = Math.floor(
+      (now.getTime() - created_at.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
     return {
       id: apiData.id,
       email: apiData.email,
@@ -49,8 +51,10 @@ class UserTransformer implements DataTransformer<UserApiData, UserUiData> {
       previous_usernames: apiData.previous_usernames,
       created_at,
       displayName: apiData.username || apiData.email,
-      canChangeUsername: !username_changed_at || 
-        (now.getTime() - username_changed_at.getTime()) > (30 * 24 * 60 * 60 * 1000), // 30 days
+      canChangeUsername:
+        !username_changed_at ||
+        now.getTime() - username_changed_at.getTime() >
+          30 * 24 * 60 * 60 * 1000, // 30 days
       accountAge,
       isNewUser: accountAge <= 7,
     };
@@ -87,8 +91,8 @@ export class AdvancedUserStore {
         const token = this.authToken || "";
         const baseUrl =
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:3069";
-        const user = await fetchWithAuth(token, `${baseUrl}/api/user`).then((res) =>
-          res.json(),
+        const user = await fetchWithAuth(token, `${baseUrl}/api/user`).then(
+          (res) => res.json(),
         );
         // Wrap single user object in array since optimistic store expects array of entities
         return [user];
@@ -120,7 +124,9 @@ export class AdvancedUserStore {
             method: "DELETE",
           });
           if (!response.ok) {
-            throw new Error(`Delete failed: ${response.status} ${response.statusText}`);
+            throw new Error(
+              `Delete failed: ${response.status} ${response.statusText}`,
+            );
           }
           return response.json();
         },

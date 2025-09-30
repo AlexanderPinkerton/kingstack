@@ -1,7 +1,7 @@
 import {
   createOptimisticStoreManager,
   OptimisticStoreManager,
-} from "@/lib/optimistic-store-pattern";
+} from "@kingstack/advanced-optimistic-store";
 import { TodoApiData } from "@/app/home/page";
 import { TodoUiData } from "@/app/home/page";
 import { fetchWithAuth } from "@/lib/utils";

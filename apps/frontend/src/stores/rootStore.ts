@@ -20,32 +20,27 @@ export class RootStore {
   // Singleton instance tracking
   private static instance: RootStore | null = null;
   private static instanceCount = 0;
-  
+
   session: any = null;
-  
+
   // Optimistic stores
   todoStore: AdvancedTodoStore;
   postStore: AdvancedPostStore;
   checkboxStore: RealtimeCheckboxStore;
   userStore: AdvancedUserStore;
-  
+
   // WebSocket connection management
   socket: Socket | null = null;
   // Stable browser ID for filtering out self-originated realtime events
   browserId: string = this.getBrowserId();
-  
+
   // Auth listener cleanup
   private authUnsubscribe: (() => void) | null = null;
   private isDisposed = false;
 
   // Get all optimistic stores
   private getOptimisticStores(): AnyStore[] {
-    return [
-      this.todoStore,
-      this.postStore,
-      this.checkboxStore,
-      this.userStore,
-    ];
+    return [this.todoStore, this.postStore, this.checkboxStore, this.userStore];
   }
 
   // Connect all stores that support realtime
@@ -80,12 +75,12 @@ export class RootStore {
     // Warn if multiple instances detected (possible memory leak)
     if (RootStore.instance && !RootStore.instance.isDisposed) {
       // In development, HMR causes module re-execution - this is expected
-      const isDevelopment = process.env.NODE_ENV === 'development';
-      const logLevel = isDevelopment ? 'log' : 'warn';
-      
+      const isDevelopment = process.env.NODE_ENV === "development";
+      const logLevel = isDevelopment ? "log" : "warn";
+
       console[logLevel](
-        `${isDevelopment ? '🔄' : '⚠️'} RootStore: Multiple instances detected (${isDevelopment ? 'HMR' : 'memory leak'})`,
-        "Auto-disposing previous instance..."
+        `${isDevelopment ? "🔄" : "⚠️"} RootStore: Multiple instances detected (${isDevelopment ? "HMR" : "memory leak"})`,
+        "Auto-disposing previous instance...",
       );
       RootStore.instance.dispose();
     }
@@ -165,7 +160,7 @@ export class RootStore {
   setupRealtime(token: string) {
     console.log("🔌 RootStore: Setting up realtime");
     const socket = this.createSocket();
-    
+
     socket.on("connect", () => {
       console.log("🔌 RootStore: Realtime socket connected");
       socket.emit("register", {
@@ -205,14 +200,12 @@ export class RootStore {
   teardownRealtime() {
     console.log("🔌 RootStore: Tearing down realtime");
     this.disconnectAllRealtime();
-    
+
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
     }
   }
-
-
 
   async refreshSession() {
     console.log("🔄 RootStore: Refreshing session");
@@ -254,15 +247,15 @@ export class RootStore {
     if (typeof window === "undefined") {
       return "server";
     }
-    
+
     const STORAGE_KEY = "kingstack_browser_id";
     let browserId = sessionStorage.getItem(STORAGE_KEY);
-    
+
     if (!browserId) {
       browserId = `browser-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       sessionStorage.setItem(STORAGE_KEY, browserId);
     }
-    
+
     return browserId;
   }
 

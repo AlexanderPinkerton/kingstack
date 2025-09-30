@@ -4,7 +4,7 @@
 import {
   createOptimisticStoreManager,
   Entity,
-} from "@/lib/optimistic-store-pattern";
+} from "@kingstack/advanced-optimistic-store";
 // No longer need to import realtime extension - it's integrated into the store manager
 
 // ---------- Types ----------
@@ -295,4 +295,3 @@ export class RealtimeCheckboxStore {
     }
   }
 }
-

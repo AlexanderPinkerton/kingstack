@@ -1,13 +1,32 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  getPerformanceStats,
-  clearStoreManagerCache,
-} from "@/lib/optimistic-store-pattern";
+import { getGlobalQueryClient } from "@kingstack/advanced-optimistic-store";
+
+interface PerformanceStats {
+  queryClient: {
+    isGlobal: boolean;
+    cacheSize: number;
+    queries: string[];
+  };
+}
+
+function getPerformanceStats(): PerformanceStats {
+  const queryClient = getGlobalQueryClient();
+  const queryCache = queryClient.getQueryCache();
+  const queries = queryCache.getAll();
+
+  return {
+    queryClient: {
+      isGlobal: true,
+      cacheSize: queries.length,
+      queries: queries.map((q) => q.queryKey.join(", ")),
+    },
+  };
+}
 
 export const PerformanceDashboard = () => {
-  const [stats, setStats] = useState(getPerformanceStats());
+  const [stats, setStats] = useState<PerformanceStats>(getPerformanceStats());
   const [isVisible, setIsVisible] = useState(false);
 
   // Update stats every 2 seconds
@@ -20,7 +39,8 @@ export const PerformanceDashboard = () => {
   }, []);
 
   const handleClearCache = () => {
-    clearStoreManagerCache();
+    const queryClient = getGlobalQueryClient();
+    queryClient.clear();
     setStats(getPerformanceStats());
   };
 
@@ -50,26 +70,33 @@ export const PerformanceDashboard = () => {
       <div className="space-y-3 text-sm">
         {/* Query Client Stats */}
         <div className="bg-gray-50 p-2 rounded">
-          <h4 className="font-medium text-gray-700">Query Client</h4>
+          <h4 className="font-medium text-gray-700">TanStack Query Cache</h4>
           <div className="text-xs text-gray-600">
-            <div>Global: {stats.queryClient.isGlobal ? "✅" : "❌"}</div>
-            <div>Cache Size: {stats.queryClient.cacheSize} queries</div>
+            <div>Global Client: {stats.queryClient.isGlobal ? "✅" : "❌"}</div>
+            <div>Cached Queries: {stats.queryClient.cacheSize}</div>
           </div>
         </div>
 
-        {/* Store Managers Stats */}
-        <div className="bg-gray-50 p-2 rounded">
-          <h4 className="font-medium text-gray-700">Store Managers</h4>
-          <div className="text-xs text-gray-600">
-            <div>Count: {stats.storeManagers.count}</div>
-            <div className="mt-1">
-              <div className="font-medium">Active Stores:</div>
-              {stats.storeManagers.keys.map((key) => (
-                <div key={key} className="ml-2 text-green-600">
+        {/* Active Queries */}
+        {stats.queryClient.queries.length > 0 && (
+          <div className="bg-gray-50 p-2 rounded">
+            <h4 className="font-medium text-gray-700">Active Queries</h4>
+            <div className="text-xs text-gray-600 max-h-32 overflow-y-auto">
+              {stats.queryClient.queries.map((key, idx) => (
+                <div key={idx} className="ml-2 text-green-600">
                   • {key}
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Info */}
+        <div className="bg-blue-50 p-2 rounded border border-blue-200">
+          <div className="text-xs text-blue-700">
+            <div className="font-medium mb-1">💡 About Caching</div>
+            <div>Store managers are recreated (~5ms)</div>
+            <div>TanStack Query caches data (expensive)</div>
           </div>
         </div>
 
