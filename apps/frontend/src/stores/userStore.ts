@@ -1,6 +1,6 @@
 import {
-  createOptimisticStoreManager,
-  OptimisticStoreManager,
+  createOptimisticStore,
+  OptimisticStore,
   DataTransformer,
 } from "@kingstack/advanced-optimistic-store";
 import { fetchWithAuth } from "@/lib/utils";
@@ -73,7 +73,7 @@ class UserTransformer implements DataTransformer<UserApiData, UserUiData> {
 }
 
 export class AdvancedUserStore {
-  private storeManager: OptimisticStoreManager<UserApiData, UserUiData> | null =
+  private optimisticStore: OptimisticStore<UserApiData, UserUiData> | null =
     null;
   private authToken: string | null = null;
   private isEnabled: boolean = false;
@@ -85,7 +85,7 @@ export class AdvancedUserStore {
   }
 
   private initialize() {
-    this.storeManager = createOptimisticStoreManager<UserApiData, UserUiData>({
+    this.optimisticStore = createOptimisticStore<UserApiData, UserUiData>({
       name: "user",
       queryFn: async () => {
         const token = this.authToken || "";
@@ -142,7 +142,7 @@ export class AdvancedUserStore {
     this.authToken = authToken;
     this.isEnabled = true;
     // Update the store manager options to enable the query
-    this.storeManager?.updateOptions();
+    this.optimisticStore?.updateOptions();
   }
 
   // Disable the store
@@ -150,37 +150,47 @@ export class AdvancedUserStore {
     this.isEnabled = false;
     this.authToken = null;
     // Update the store manager options to disable the query
-    this.storeManager?.updateOptions();
+    this.optimisticStore?.updateOptions();
   }
 
-  // Expose store manager properties directly for easy access
+  // Expose UI data (observable MobX state)
+  get ui() {
+    return this.optimisticStore?.ui || null;
+  }
+
+  // Expose API methods (mutations + query control)
+  get api() {
+    return this.optimisticStore?.api || null;
+  }
+
+  // Legacy getters for backward compatibility (deprecated)
   get store() {
-    return this.storeManager?.store || null;
+    return this.ui;
   }
 
   get actions() {
-    return this.storeManager?.actions || null;
+    return this.api;
   }
 
   get status() {
-    return this.storeManager?.status || null;
+    return this.api?.status || null;
   }
 
   // Check if store is ready and enabled
   get isReady() {
-    return this.storeManager !== null && this.isEnabled;
+    return this.optimisticStore !== null && this.isEnabled;
   }
 
   // Manually trigger query (useful for debugging or manual refresh)
   triggerQuery() {
-    this.storeManager?.actions?.triggerQuery();
+    this.optimisticStore?.api.triggerQuery();
   }
 
   // Convenience method to get current user data
   get currentUser() {
-    if (!this.store?.entities) return null;
+    if (!this.ui?.entities) return null;
     // For user data, we expect a single entity, so get the first one
-    const entities = Array.from(this.store.entities.values());
+    const entities = Array.from(this.ui.entities.values());
     return entities[0] || null;
   }
 }

@@ -2,10 +2,10 @@
 // Uses the optimistic store pattern with built-in realtime integration
 
 import {
-  createOptimisticStoreManager,
+  createOptimisticStore,
   Entity,
 } from "@kingstack/advanced-optimistic-store";
-// No longer need to import realtime extension - it's integrated into the store manager
+// No longer need to import realtime extension - it's integrated into the store
 
 // ---------- Types ----------
 
@@ -126,15 +126,15 @@ const checkboxTransformer = {
 // ---------- Realtime Checkbox Store Class ----------
 
 export class RealtimeCheckboxStore {
-  // Store manager with integrated realtime
-  public storeManager: ReturnType<
-    typeof createOptimisticStoreManager<CheckboxApiData, CheckboxUiData>
+  // Optimistic store with integrated realtime
+  public optimisticStore: ReturnType<
+    typeof createOptimisticStore<CheckboxApiData, CheckboxUiData>
   >;
 
   constructor(browserId?: string) {
     // Store is created with realtime config but not connected yet
     // rootStore will connect it when socket is ready
-    this.storeManager = createOptimisticStoreManager<
+    this.optimisticStore = createOptimisticStore<
       CheckboxApiData,
       CheckboxUiData
     >({
@@ -162,50 +162,50 @@ export class RealtimeCheckboxStore {
   // ---------- Store Access Methods ----------
 
   get checkboxes(): CheckboxUiData[] {
-    return this.storeManager.store.list;
+    return this.optimisticStore.ui.list;
   }
 
   get count(): number {
-    return this.storeManager.store.count;
+    return this.optimisticStore.ui.count;
   }
 
   get isLoading(): boolean {
-    return this.storeManager.status.isLoading;
+    return this.optimisticStore.api.status.isLoading;
   }
 
   get isError(): boolean {
-    return this.storeManager.status.isError;
+    return this.optimisticStore.api.status.isError;
   }
 
   get error(): Error | null {
-    return this.storeManager.status.error;
+    return this.optimisticStore.api.status.error;
   }
 
   get isSyncing(): boolean {
-    return this.storeManager.status.isSyncing;
+    return this.optimisticStore.api.status.isSyncing;
   }
 
   get updatePending(): boolean {
-    return this.storeManager.status.updatePending;
+    return this.optimisticStore.api.status.updatePending;
   }
 
   get createPending(): boolean {
-    return this.storeManager.status.createPending;
+    return this.optimisticStore.api.status.createPending;
   }
 
   get deletePending(): boolean {
-    return this.storeManager.status.deletePending;
+    return this.optimisticStore.api.status.deletePending;
   }
 
   get isConnected(): boolean {
-    return this.storeManager.realtime?.isConnected || false;
+    return this.optimisticStore.realtime?.isConnected || false;
   }
 
   // ---------- Realtime Methods (for rootStore control) ----------
 
   connectRealtime(socket: any): void {
-    if (this.storeManager.realtime) {
-      this.storeManager.realtime.connect(socket);
+    if (this.optimisticStore.realtime) {
+      this.optimisticStore.realtime.connect(socket);
       console.log("🔌 RealtimeCheckboxStore: Connected to realtime");
     } else {
       console.warn("🔌 RealtimeCheckboxStore: Realtime not configured");
@@ -213,8 +213,8 @@ export class RealtimeCheckboxStore {
   }
 
   disconnectRealtime(): void {
-    if (this.storeManager.realtime) {
-      this.storeManager.realtime.disconnect();
+    if (this.optimisticStore.realtime) {
+      this.optimisticStore.realtime.disconnect();
       console.log("🔌 RealtimeCheckboxStore: Disconnected from realtime");
     }
   }
@@ -222,8 +222,8 @@ export class RealtimeCheckboxStore {
   // ---------- Action Methods ----------
 
   getCheckboxByIndex(index: number): CheckboxUiData | undefined {
-    return this.storeManager.store.list.find(
-      (checkbox) => checkbox.index === index,
+    return this.optimisticStore.ui.list.find(
+      (checkbox: CheckboxUiData) => checkbox.index === index,
     );
   }
 
@@ -237,13 +237,12 @@ export class RealtimeCheckboxStore {
 
     if (existingCheckbox) {
       // Update existing checkbox
-      this.storeManager.actions.update({
-        id: existingCheckbox.id,
-        data: { checked: !existingCheckbox.checked },
+      this.optimisticStore.api.update(existingCheckbox.id, {
+        checked: !existingCheckbox.checked,
       });
     } else {
       // Create new checkbox
-      this.storeManager.actions.create({
+      this.optimisticStore.api.create({
         index,
         checked: true,
       });
@@ -255,13 +254,10 @@ export class RealtimeCheckboxStore {
 
     if (existingCheckbox) {
       // Update existing checkbox
-      this.storeManager.actions.update({
-        id: existingCheckbox.id,
-        data: { checked },
-      });
+      this.optimisticStore.api.update(existingCheckbox.id, { checked });
     } else {
       // Create new checkbox
-      this.storeManager.actions.create({
+      this.optimisticStore.api.create({
         index,
         checked,
       });
@@ -269,7 +265,7 @@ export class RealtimeCheckboxStore {
   }
 
   refetch(): void {
-    this.storeManager.actions.refetch();
+    this.optimisticStore.api.refetch();
   }
 
   // ---------- Initialization ----------

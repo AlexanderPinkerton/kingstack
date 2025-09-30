@@ -1,4 +1,5 @@
-// Factory function to create optimistic store managers with TanStack Query integration
+// Factory function to create optimistic stores with TanStack Query integration
+// Provides a clean API with ui (MobX) and api (TanStack Query) namespaces
 
 import {
   QueryClient,
@@ -7,7 +8,7 @@ import {
   notifyManager,
 } from "@tanstack/query-core";
 import { observable, runInAction } from "mobx";
-import { OptimisticStore } from "./OptimisticStore";
+import { ObservableUIData } from "./ObservableUIData";
 import { createRealtimeExtension } from "../realtime";
 import type { RealtimeExtension } from "../realtime/RealtimeExtension";
 import { createTransformer } from "../transformer/helpers";
@@ -15,7 +16,7 @@ import { getGlobalQueryClient } from "../query/queryClient";
 import type {
   Entity,
   OptimisticStoreConfig,
-  OptimisticStoreManager,
+  OptimisticStore,
 } from "./types";
 
 /**
@@ -38,14 +39,14 @@ import type {
  * 5. Transformer converts server response to UI data
  * 6. Optimistic data replaced with authoritative server data
  */
-export function createOptimisticStoreManager<
+export function createOptimisticStore<
   TApiData extends Entity,
   TUiData extends Entity = TApiData,
-  TStore extends OptimisticStore<TUiData> = OptimisticStore<TUiData>,
+  TStore extends ObservableUIData<TUiData> = ObservableUIData<TUiData>,
 >(
   config: OptimisticStoreConfig<TApiData, TUiData>,
   queryClient?: QueryClient,
-): OptimisticStoreManager<TApiData, TUiData, TStore> {
+): OptimisticStore<TApiData, TUiData, TStore> {
   // Store managers are NOT cached - they're cheap to create (~5-10ms)
   // TanStack Query caches query RESULTS by queryKey (config.name)
   // That's where the real performance gain is (avoiding 100-500ms network requests)
@@ -56,15 +57,15 @@ export function createOptimisticStoreManager<
   // Create transformer
   const transformer = createTransformer(config.transformer);
 
-  // Create store instance
-  const StoreClass = (config.storeClass as any) || OptimisticStore<TUiData>;
-  const store = new StoreClass(transformer) as TStore;
+  // Create UI data store instance
+  const StoreClass = (config.storeClass as any) || ObservableUIData<TUiData>;
+  const uiStore = new StoreClass(transformer) as TStore;
 
   // Create realtime extension if config provided (but don't connect yet)
   let realtimeExtension: RealtimeExtension<TUiData> | null = null;
   if (config.realtime) {
     realtimeExtension = createRealtimeExtension<TUiData>(
-      store,
+      uiStore,
       config.realtime.eventType,
       {
         dataExtractor: config.realtime.dataExtractor,
@@ -139,7 +140,7 @@ export function createOptimisticStoreManager<
       if (dataChanged) {
         lastReconciledData = result.data;
         runInAction(() => {
-          store.reconcile(result.data!, transformer);
+          uiStore.reconcile(result.data!, transformer);
         });
       }
     }
@@ -173,7 +174,7 @@ export function createOptimisticStoreManager<
     mutationFn: config.mutations.create,
     onMutate: async (data: any) => {
       await qc.cancelQueries({ queryKey: [config.name] });
-      store.pushSnapshot();
+      uiStore.pushSnapshot();
 
       // Optimistic update - add to store immediately
       const tempId = `temp-${Date.now()}`;
@@ -209,7 +210,7 @@ export function createOptimisticStoreManager<
       // Batch the optimistic update
       notifyManager.batch(() => {
         runInAction(() => {
-          store.upsert(optimisticItem);
+          uiStore.upsert(optimisticItem);
         });
       });
 
@@ -220,13 +221,13 @@ export function createOptimisticStoreManager<
       notifyManager.batch(() => {
         runInAction(() => {
           // Remove temp item and add real one
-          store.remove(context.tempId);
+          uiStore.remove(context.tempId);
 
           if (transformer) {
             const uiData = transformer.toUi(result);
-            store.upsert(uiData);
+            uiStore.upsert(uiData);
           } else {
-            store.upsert(result as unknown as TUiData);
+            uiStore.upsert(result as unknown as TUiData);
           }
         });
       });
@@ -235,7 +236,7 @@ export function createOptimisticStoreManager<
       // Batch the error rollback
       notifyManager.batch(() => {
         runInAction(() => {
-          store.rollback();
+          uiStore.rollback();
         });
       });
     },
@@ -245,7 +246,7 @@ export function createOptimisticStoreManager<
     mutationFn: config.mutations.update,
     onMutate: async ({ id, data }: { id: string; data: any }) => {
       await qc.cancelQueries({ queryKey: [config.name] });
-      store.pushSnapshot();
+      uiStore.pushSnapshot();
 
       // Get optimistic defaults for updates
       const optimisticDefaults =
@@ -256,7 +257,7 @@ export function createOptimisticStoreManager<
         runInAction(() => {
           if (optimisticDefaults?.createOptimisticUiData) {
             // Get existing item to merge with updates
-            const existingItem = store.get(id);
+            const existingItem = uiStore.get(id);
             if (existingItem) {
               // Create updated form data by merging existing + updates
               const updatedFormData = { ...existingItem, ...data };
@@ -270,11 +271,11 @@ export function createOptimisticStoreManager<
               );
               // Preserve the original ID (don't generate new temp ID)
               optimisticItem.id = id;
-              store.upsert(optimisticItem);
+              uiStore.upsert(optimisticItem);
             }
           } else {
             // Fallback: basic update without recalculated fields
-            store.update(id, data);
+            uiStore.update(id, data);
           }
         });
       });
@@ -286,9 +287,9 @@ export function createOptimisticStoreManager<
         runInAction(() => {
           if (transformer) {
             const uiData = transformer.toUi(result);
-            store.upsert(uiData);
+            uiStore.upsert(uiData);
           } else {
-            store.upsert(result as unknown as TUiData);
+            uiStore.upsert(result as unknown as TUiData);
           }
         });
       });
@@ -296,7 +297,7 @@ export function createOptimisticStoreManager<
     onError: () => {
       notifyManager.batch(() => {
         runInAction(() => {
-          store.rollback();
+          uiStore.rollback();
         });
       });
     },
@@ -306,12 +307,12 @@ export function createOptimisticStoreManager<
     mutationFn: config.mutations.remove,
     onMutate: async (id: string) => {
       await qc.cancelQueries({ queryKey: [config.name] });
-      store.pushSnapshot();
+      uiStore.pushSnapshot();
 
       // Optimistic update
       notifyManager.batch(() => {
         runInAction(() => {
-          store.remove(id);
+          uiStore.remove(id);
         });
       });
 
@@ -330,7 +331,7 @@ export function createOptimisticStoreManager<
     onError: (error: any, variables: string) => {
       notifyManager.batch(() => {
         runInAction(() => {
-          store.rollback();
+          uiStore.rollback();
           console.log(
             "delete mutation failed, rolled back and cleared from optimistic deletions:",
             variables,
@@ -365,17 +366,28 @@ export function createOptimisticStoreManager<
     }),
   );
 
-  const storeManager = {
-    store: store,
-    actions: {
+  const optimisticStore = {
+    // UI domain - observable MobX state
+    ui: uiStore,
+
+    // API domain - TanStack Query + mutations
+    api: {
+      // Optimistic mutations
       create: (data: any) => createMutationObserver.mutate(data),
-      update: (params: { id: string; data: any }) =>
-        updateMutationObserver.mutate(params),
+      update: (id: string, data: any) =>
+        updateMutationObserver.mutate({ id, data }),
       remove: (id: string) => removeMutationObserver.mutate(id),
+
+      // Query control
       refetch: () => queryObserver.refetch(),
+      invalidate: () => qc.invalidateQueries({ queryKey: [config.name] }),
       triggerQuery: () => triggerQuery(),
+
+      // Query state
+      status,
     },
-    status,
+
+    // Lifecycle methods
     updateOptions: () => {
       // Update query options with current enabled state
       queryObserver.setOptions({
@@ -439,5 +451,5 @@ export function createOptimisticStoreManager<
     }),
   } as const;
 
-  return storeManager;
+  return optimisticStore;
 }

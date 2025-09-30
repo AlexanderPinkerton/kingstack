@@ -42,15 +42,15 @@ export default observer(function HomePage() {
 
   // Use the optimistic store - dead simple! 🚀
   const todoStore = rootStore.todoStore;
-  const { store, actions, status } = todoStore;
+  const { ui, api } = todoStore;
 
   const [newTodoTitle, setNewTodoTitle] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTodoTitle.trim() || !actions) return;
+    if (!newTodoTitle.trim() || !api) return;
 
-    actions.create({
+    api.create({
       title: newTodoTitle.trim(),
     });
 
@@ -124,7 +124,7 @@ export default observer(function HomePage() {
                     )}
 
                     {/* Show loading state when store is ready but data is loading */}
-                    {todoStore.isReady && status?.isLoading && (
+                    {todoStore.isReady && api?.status.isLoading && (
                       <div className="text-center py-8">
                         <div className="animate-pulse text-slate-300">
                           Loading your todos...
@@ -133,13 +133,13 @@ export default observer(function HomePage() {
                     )}
 
                     {/* Show error state when store is ready */}
-                    {todoStore.isReady && status?.isError && (
+                    {todoStore.isReady && api?.status.isError && (
                       <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 mb-6">
                         <div className="text-red-300 mb-2">
-                          ❌ Error: {status.error?.message}
+                          ❌ Error: {api.status.error?.message}
                         </div>
                         <ThemedButton
-                          onClick={() => actions?.refetch()}
+                          onClick={() => api?.refetch()}
                           className="text-sm px-3 py-1"
                         >
                           Retry
@@ -148,7 +148,7 @@ export default observer(function HomePage() {
                     )}
 
                     {/* Show main content when store is ready and not loading */}
-                    {todoStore.isReady && !status?.isLoading && (
+                    {todoStore.isReady && !api?.status.isLoading && (
                       <>
                         <div className="text-center mb-6">
                           <h2 className="text-2xl font-bold text-white mb-2">
@@ -176,7 +176,7 @@ export default observer(function HomePage() {
                               className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             />
                             {/* Non-invasive loading indicator */}
-                            {status?.isSyncing && (
+                            {api?.status.isSyncing && (
                               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                                 <div className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
                               </div>
@@ -185,26 +185,26 @@ export default observer(function HomePage() {
                           <ThemedButton
                             type="submit"
                             disabled={
-                              status?.createPending || !newTodoTitle.trim()
+                              api?.status.createPending || !newTodoTitle.trim()
                             }
                             className="px-6 py-3 whitespace-nowrap flex-shrink-0"
                           >
-                            {status?.createPending ? "Adding..." : "Add"}
+                            {api?.status.createPending ? "Adding..." : "Add"}
                           </ThemedButton>
                         </form>
 
                         {/* Stats */}
                         <div className="text-center mb-6 text-slate-400 relative">
                           <span className="text-2xl font-bold text-white">
-                            {store?.count}
+                            {ui?.count}
                           </span>{" "}
                           total,{" "}
                           <span className="text-xl font-semibold text-purple-300">
-                            {store?.filter((t: TodoUiData) => !t.done).length}
+                            {ui?.filter((t: TodoUiData) => !t.done).length}
                           </span>{" "}
                           remaining
                           {/* Subtle sync indicator */}
-                          {status?.isSyncing && (
+                          {api?.status.isSyncing && (
                             <div className="absolute -right-6 top-1/2 transform -translate-y-1/2">
                               <div className="w-3 h-3 border border-purple-500/40 border-t-purple-500 rounded-full animate-spin"></div>
                             </div>
@@ -213,7 +213,7 @@ export default observer(function HomePage() {
 
                         {/* Todo list */}
                         <div className="space-y-3">
-                          {store?.list.map((todo: TodoUiData) => (
+                          {ui?.list.map((todo: TodoUiData) => (
                             <div
                               key={todo.id}
                               className={`flex items-center gap-4 p-4 rounded-lg border transition-all relative ${
@@ -226,9 +226,8 @@ export default observer(function HomePage() {
                                 type="checkbox"
                                 checked={todo.done}
                                 onChange={() =>
-                                  actions?.update({
-                                    id: todo.id,
-                                    data: { done: !todo.done },
+                                  api?.update(todo.id, {
+                                    done: !todo.done,
                                   })
                                 }
                                 className="w-5 h-5 rounded border-slate-500 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 disabled:opacity-50"
@@ -245,7 +244,7 @@ export default observer(function HomePage() {
                               </span>
 
                               <button
-                                onClick={() => actions?.remove(todo.id)}
+                                onClick={() => api?.remove(todo.id)}
                                 className="px-3 py-1 text-xs bg-red-600/20 text-red-300 border border-red-500/50 rounded hover:bg-red-600/30 transition-colors disabled:opacity-50"
                               >
                                 Delete
@@ -254,7 +253,7 @@ export default observer(function HomePage() {
                           ))}
                         </div>
 
-                        {store?.count === 0 && !status?.isLoading && (
+                        {ui?.count === 0 && !api?.status.isLoading && (
                           <div className="text-center py-12">
                             <div className="text-6xl mb-4">📝</div>
                             <div className="text-slate-400 text-lg">

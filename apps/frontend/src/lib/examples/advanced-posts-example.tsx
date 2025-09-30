@@ -45,7 +45,7 @@ export const AdvancedPostsExample = observer(() => {
 
   const handleUpdatePost = (post: PostUiData, updates: Partial<PostUiData>) => {
     if (!actions) return;
-    actions.update({ id: post.id, data: updates });
+    actions.update(post.id, updates);
     setEditingPost(null);
   };
 
@@ -54,10 +54,7 @@ export const AdvancedPostsExample = observer(() => {
   };
 
   const togglePublish = (post: PostUiData) => {
-    actions?.update({
-      id: post.id,
-      data: { published: !post.published },
-    });
+    actions?.update(post.id, { published: !post.published });
   };
 
   // Filtering and sorting logic

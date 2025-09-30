@@ -1,11 +1,16 @@
 // Core module exports
 
-export { OptimisticStore } from "./OptimisticStore";
-export { createOptimisticStoreManager } from "./createStoreManager";
+// UI data store class (MobX observable)
+export { ObservableUIData } from "./ObservableUIData";
+
+// Factory function (main API)
+export { createOptimisticStore } from "./createStoreManager";
+
+// Types
 export type {
   Entity,
   OptimisticDefaults,
   DataTransformer,
   OptimisticStoreConfig,
-  OptimisticStoreManager,
+  OptimisticStore,
 } from "./types";

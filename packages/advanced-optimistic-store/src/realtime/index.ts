@@ -1,7 +1,7 @@
 // Realtime module exports
 
 import { RealtimeExtension } from "./RealtimeExtension";
-import type { OptimisticStore } from "../core/OptimisticStore";
+import type { ObservableUIData } from "../core/ObservableUIData";
 import type { RealtimeEvent } from "./types";
 
 export { RealtimeExtension } from "./RealtimeExtension";
@@ -12,7 +12,7 @@ export type { RealtimeEvent, RealtimeConfig } from "./types";
  * This is the main function you'll use to enable realtime for any store
  */
 export function createRealtimeExtension<T extends { id: string }>(
-  store: OptimisticStore<T>,
+  store: ObservableUIData<T>,
   eventType: string,
   options?: {
     dataExtractor?: (event: RealtimeEvent) => T | undefined;
@@ -20,7 +20,7 @@ export function createRealtimeExtension<T extends { id: string }>(
     browserId?: string;
     customHandlers?: {
       [eventType: string]: (
-        store: OptimisticStore<T>,
+        store: ObservableUIData<T>,
         event: RealtimeEvent,
       ) => void;
     };

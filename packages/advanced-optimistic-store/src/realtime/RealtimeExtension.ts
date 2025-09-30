@@ -2,16 +2,16 @@
 // Provides a simple interface for integrating WebSocket realtime updates with optimistic stores
 
 import { Socket } from "socket.io-client";
-import type { OptimisticStore } from "../core/OptimisticStore";
+import type { ObservableUIData } from "../core/ObservableUIData";
 import type { RealtimeEvent, RealtimeConfig } from "./types";
 
 export class RealtimeExtension<T extends { id: string }> {
-  private store: OptimisticStore<T>;
+  private store: ObservableUIData<T>;
   private socket: Socket | null = null;
   private config: RealtimeConfig<T>;
   private isConnected = false;
 
-  constructor(store: OptimisticStore<T>, config: RealtimeConfig<T>) {
+  constructor(store: ObservableUIData<T>, config: RealtimeConfig<T>) {
     this.store = store;
     this.config = config;
   }

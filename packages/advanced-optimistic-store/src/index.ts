@@ -2,13 +2,13 @@
 // Framework-Agnostic MobX + TanStack Query Core Optimistic Store Pattern
 
 // Core
-export { OptimisticStore, createOptimisticStoreManager } from "./core";
+export { ObservableUIData, createOptimisticStore } from "./core";
 export type {
   Entity,
   OptimisticDefaults,
   DataTransformer,
   OptimisticStoreConfig,
-  OptimisticStoreManager,
+  OptimisticStore,
 } from "./core";
 
 // Transforms

@@ -1,13 +1,13 @@
 import {
-  createOptimisticStoreManager,
-  type OptimisticStoreManager,
+  createOptimisticStore,
+  type OptimisticStore,
 } from "@kingstack/advanced-optimistic-store";
 import { TodoApiData } from "@/app/home/page";
 import { TodoUiData } from "@/app/home/page";
 import { fetchWithAuth } from "@/lib/utils";
 
 export class AdvancedTodoStore {
-  private storeManager: OptimisticStoreManager<TodoApiData, TodoUiData> | null =
+  private optimisticStore: OptimisticStore<TodoApiData, TodoUiData> | null =
     null;
   private authToken: string | null = null;
   private isEnabled: boolean = false;
@@ -18,7 +18,7 @@ export class AdvancedTodoStore {
   }
 
   private initialize() {
-    this.storeManager = createOptimisticStoreManager<TodoApiData, TodoUiData>({
+    this.optimisticStore = createOptimisticStore<TodoApiData, TodoUiData>({
       name: "todos",
       queryFn: async () => {
         const token = this.authToken || "";
@@ -81,38 +81,48 @@ export class AdvancedTodoStore {
   enable(authToken: string) {
     this.authToken = authToken;
     this.isEnabled = true;
-    // Update the store manager options to enable the query
-    this.storeManager?.updateOptions();
+    // Update the store options to enable the query
+    this.optimisticStore?.updateOptions();
   }
 
   // Disable the store
   disable() {
     this.isEnabled = false;
     this.authToken = null;
-    // Update the store manager options to disable the query
-    this.storeManager?.updateOptions();
+    // Update the store options to disable the query
+    this.optimisticStore?.updateOptions();
   }
 
-  // Expose store manager properties directly for easy access
+  // Expose UI data (observable MobX state)
+  get ui() {
+    return this.optimisticStore?.ui || null;
+  }
+
+  // Expose API methods (mutations + query control)
+  get api() {
+    return this.optimisticStore?.api || null;
+  }
+
+  // Legacy getters for backward compatibility (deprecated)
   get store() {
-    return this.storeManager?.store || null;
+    return this.ui;
   }
 
   get actions() {
-    return this.storeManager?.actions || null;
+    return this.api;
   }
 
   get status() {
-    return this.storeManager?.status || null;
+    return this.api?.status || null;
   }
 
   // Check if store is ready and enabled
   get isReady() {
-    return this.storeManager !== null && this.isEnabled;
+    return this.optimisticStore !== null && this.isEnabled;
   }
 
   // Manually trigger query (useful for debugging or manual refresh)
   triggerQuery() {
-    this.storeManager?.actions?.triggerQuery();
+    this.optimisticStore?.api.triggerQuery();
   }
 }

@@ -1,6 +1,6 @@
 // Core type definitions for the optimistic store pattern
 
-import type { OptimisticStore } from "./OptimisticStore";
+import type { ObservableUIData } from "./ObservableUIData";
 
 export interface Entity {
   id: string;
@@ -45,8 +45,8 @@ export interface OptimisticStoreConfig<
   optimisticDefaults?: OptimisticDefaults<TUiData>;
   /** Optional: Function to get current context data for optimistic updates (e.g., current user, app state) */
   optimisticContext?: () => any;
-  /** Optional: Custom store class (creates basic OptimisticStore if not provided) */
-  storeClass?: new () => OptimisticStore<TUiData>;
+  /** Optional: Custom store class (creates basic ObservableUIData if not provided) */
+  storeClass?: new () => ObservableUIData<TUiData>;
   /** Optional: Cache time in milliseconds (default: 5 minutes) */
   staleTime?: number;
   /** Optional: Function to determine if query should be enabled (default: () => true) */
@@ -64,41 +64,53 @@ export interface OptimisticStoreConfig<
     /** Optional: Custom handler for specific event types */
     customHandlers?: {
       [eventType: string]: (
-        store: OptimisticStore<TUiData>,
+        store: ObservableUIData<TUiData>,
         event: any,
       ) => void;
     };
   };
 }
 
-export interface OptimisticStoreManager<
+export interface OptimisticStore<
   TApiData extends Entity,
   TUiData extends Entity,
-  TStore extends OptimisticStore<TUiData> = OptimisticStore<TUiData>,
+  TStore extends ObservableUIData<TUiData> = ObservableUIData<TUiData>,
 > {
-  store: TStore;
-  actions: {
-    // These actions perform both UI updates AND server updates (optimistic)
+  // UI domain - observable MobX state
+  ui: TStore;
+
+  // API domain - TanStack Query + mutations
+  api: {
+    // Optimistic mutations
     create: (data: any) => Promise<TApiData>;
-    update: (params: { id: string; data: any }) => Promise<TApiData>;
+    update: (id: string, data: any) => Promise<TApiData>;
     remove: (id: string) => Promise<void | { id: string }>;
+
+    // Query control
     refetch: () => Promise<any>;
+    invalidate: () => Promise<void>;
     triggerQuery: () => void;
+
+    // Query state
+    status: {
+      isLoading: boolean;
+      isError: boolean;
+      error: Error | null;
+      isSyncing: boolean;
+      createPending: boolean;
+      updatePending: boolean;
+      deletePending: boolean;
+      hasPendingMutations: boolean;
+    };
   };
-  status: {
-    isLoading: boolean;
-    isError: boolean;
-    error: Error | null;
-    isSyncing: boolean;
-    createPending: boolean;
-    updatePending: boolean;
-    deletePending: boolean;
-  };
+
+  // Lifecycle methods
   updateOptions: () => void;
   isEnabled: () => boolean;
   enable: () => void;
   disable: () => void;
   destroy: () => void;
+
   // Realtime status (only available when realtime config is provided)
   realtime?: {
     isConnected: boolean;

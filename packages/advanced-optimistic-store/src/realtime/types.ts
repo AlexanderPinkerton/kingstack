@@ -1,6 +1,6 @@
 // Realtime type definitions
 
-import type { OptimisticStore } from "../core/OptimisticStore";
+import type { ObservableUIData } from "../core/ObservableUIData";
 
 export interface RealtimeEvent<T = any> {
   type: string;
@@ -21,7 +21,7 @@ export interface RealtimeConfig<T extends { id: string }> {
   /** Optional: Custom handler for specific event types */
   customHandlers?: {
     [eventType: string]: (
-      store: OptimisticStore<T>,
+      store: ObservableUIData<T>,
       event: RealtimeEvent,
     ) => void;
   };
