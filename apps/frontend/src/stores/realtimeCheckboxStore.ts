@@ -147,25 +147,8 @@ export class RealtimeCheckboxStore {
   });
 
   constructor() {
-    // No longer need to make isConnected observable since it's handled by the store manager
-  }
-
-  // ---------- Realtime Methods ----------
-
-  connectRealtime(socket: any): void {
-    if (this.storeManager.realtime) {
-      this.storeManager.realtime.connect(socket);
-      console.log("🔌 RealtimeCheckboxStore: Connected to realtime");
-    } else {
-      console.warn("🔌 RealtimeCheckboxStore: Realtime not configured");
-    }
-  }
-
-  disconnectRealtime(): void {
-    if (this.storeManager.realtime) {
-      this.storeManager.realtime.disconnect();
-      console.log("🔌 RealtimeCheckboxStore: Disconnected from realtime");
-    }
+    // Store is created with realtime config but not connected yet
+    // rootStore will connect it when socket is ready
   }
 
   // ---------- Store Access Methods ----------
@@ -208,6 +191,24 @@ export class RealtimeCheckboxStore {
 
   get isConnected(): boolean {
     return this.storeManager.realtime?.isConnected || false;
+  }
+
+  // ---------- Realtime Methods (for rootStore control) ----------
+
+  connectRealtime(socket: any): void {
+    if (this.storeManager.realtime) {
+      this.storeManager.realtime.connect(socket);
+      console.log("🔌 RealtimeCheckboxStore: Connected to realtime");
+    } else {
+      console.warn("🔌 RealtimeCheckboxStore: Realtime not configured");
+    }
+  }
+
+  disconnectRealtime(): void {
+    if (this.storeManager.realtime) {
+      this.storeManager.realtime.disconnect();
+      console.log("🔌 RealtimeCheckboxStore: Disconnected from realtime");
+    }
   }
 
   // ---------- Action Methods ----------

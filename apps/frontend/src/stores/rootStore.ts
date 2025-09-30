@@ -1,43 +1,84 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import { io, Socket } from "socket.io-client";
 import { createClient } from "@/lib/supabase/browserClient";
-import { fetchInternal, fetchWithAuth } from "@/lib/utils";
-import { RealtimeStore } from "./interfaces/RealtimeStore";
+import { fetchWithAuth } from "@/lib/utils";
 import { AdvancedTodoStore } from "./todoStore";
 import { AdvancedPostStore } from "./postStore";
 import { RealtimeCheckboxStore } from "./realtimeCheckboxStore";
 
 const supabase = createClient();
 
+// Type for any store that might support realtime
+type AnyStore = {
+  connectRealtime?: (socket: any) => void;
+  disconnectRealtime?: () => void;
+  [key: string]: any;
+};
+
 export class RootStore {
   session: any = null;
   userData: any = null;
+  
+  // Optimistic stores
   todoStore: AdvancedTodoStore;
   postStore: AdvancedPostStore;
   checkboxStore: RealtimeCheckboxStore;
+  
   // WebSocket connection management
   socket: Socket | null = null;
   browserId: string = Math.random().toString(36).substring(7);
+  
   // Auth listener cleanup
   private authUnsubscribe: (() => void) | null = null;
+
+  // Get all optimistic stores
+  private getOptimisticStores(): AnyStore[] {
+    return [
+      this.todoStore,
+      this.postStore,
+      this.checkboxStore,
+    ];
+  }
+
+  // Connect all stores that support realtime
+  private connectAllRealtime(socket: Socket): void {
+    console.log("🔌 RootStore: Connecting stores that support realtime");
+    this.getOptimisticStores().forEach((store, index) => {
+      if (store.connectRealtime) {
+        store.connectRealtime(socket);
+        console.log(`🔌 RootStore: Connected store ${index} to realtime`);
+      }
+    });
+  }
+
+  // Disconnect all stores from realtime
+  private disconnectAllRealtime(): void {
+    console.log("🔌 RootStore: Disconnecting stores from realtime");
+    this.getOptimisticStores().forEach((store, index) => {
+      if (store.disconnectRealtime) {
+        store.disconnectRealtime();
+        console.log(`🔌 RootStore: Disconnected store ${index} from realtime`);
+      }
+    });
+  }
 
   constructor() {
     console.log("🔧 RootStore: Constructor called", Math.random());
 
     this.session = null;
 
-    // Always create the stores, but they won't be enabled until auth is available
+    // Create all optimistic stores
     this.todoStore = new AdvancedTodoStore();
     this.postStore = new AdvancedPostStore();
     this.checkboxStore = new RealtimeCheckboxStore();
 
     // Make session and userData observable before setting up auth listener
     makeAutoObservable(this, {
-      session: true, // Ensure session is observable
-      userData: true, // Ensure userData is observable
-      todoStore: true, // Make todoStore observable
-      postStore: true, // Make postStore2 observable
-      checkboxStore: true, // Make checkboxStore observable
+      session: true,
+      userData: true,
+      todoStore: true,
+      postStore: true,
+      checkboxStore: true,
     });
 
     // Clean up any existing auth listener first
@@ -82,11 +123,8 @@ export class RootStore {
           // this.postStore2.disable();
         }
 
-        // Always setup public realtime for checkboxes (works without auth)
-        // Only setup if we don't already have a socket
-        if (!this.socket) {
-          this.setupPublicRealtime();
-        }
+        // Note: Realtime is only available with authentication
+        // Checkboxes will work without realtime when not authenticated
       });
     });
 
@@ -96,101 +134,57 @@ export class RootStore {
     console.log("🔧 RootStore: Initialized");
   }
 
+  // Setup realtime (requires authentication)
   setupRealtime(token: string) {
-    console.log("[RootStore] setupRealtime called");
-
-    // Clean up existing socket first
-    if (this.socket) {
-      console.log("[RootStore] Cleaning up existing socket");
-      this.socket.disconnect();
-      this.socket = null;
-    }
-
-    const REALTIME_SERVER_URL =
-      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-
-    this.socket = io(REALTIME_SERVER_URL, {
-      transports: ["websocket"],
-      autoConnect: true,
-    });
-
-    this.socket.on("connect", () => {
-      console.log("[RootStore] Realtime socket connected");
-      this.socket?.emit("register", {
+    console.log("🔌 RootStore: Setting up realtime");
+    const socket = this.createSocket();
+    
+    socket.on("connect", () => {
+      console.log("🔌 RootStore: Realtime socket connected");
+      socket.emit("register", {
         token,
         browserId: this.browserId,
       });
-
-      // Setup domain-specific event handlers
-      this.setupDomainEventHandlers();
-
-      // Connect checkbox store to realtime
-      this.checkboxStore.connectRealtime(this.socket);
-    });
-
-    this.socket.on("disconnect", () => {
-      console.log("[RootStore] Realtime socket disconnected");
+      this.connectAllRealtime(socket);
     });
   }
 
-  setupPublicRealtime() {
-    console.log("[RootStore] setupPublicRealtime called");
-
-    // If we already have a socket, just connect the checkbox store
+  // Create socket connection
+  private createSocket(): Socket {
+    // Clean up existing socket first
     if (this.socket) {
-      console.log("[RootStore] Using existing socket for checkbox store");
-      this.checkboxStore.connectRealtime(this.socket);
-      return;
+      console.log("🔌 RootStore: Cleaning up existing socket");
+      this.socket.disconnect();
+      this.socket = null;
     }
 
-    // Create a new socket for public access
     const REALTIME_SERVER_URL =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
 
-    console.log("[RootStore] Creating new public realtime socket");
-    this.socket = io(REALTIME_SERVER_URL, {
+    const socket = io(REALTIME_SERVER_URL, {
       transports: ["websocket"],
       autoConnect: true,
     });
 
-    this.socket.on("connect", () => {
-      console.log("[RootStore] Public realtime socket connected");
-      this.socket?.emit("register_public", {
-        browserId: this.browserId,
-      });
-
-      // Connect checkbox store to realtime
-      this.checkboxStore.connectRealtime(this.socket);
+    socket.on("disconnect", () => {
+      console.log("🔌 RootStore: Realtime socket disconnected");
     });
 
-    this.socket.on("disconnect", () => {
-      console.log("[RootStore] Public realtime socket disconnected");
-    });
+    this.socket = socket;
+    return socket;
   }
 
+  // Teardown realtime connections
   teardownRealtime() {
-    // Disconnect checkbox store first
-    this.checkboxStore.disconnectRealtime();
-
+    console.log("🔌 RootStore: Tearing down realtime");
+    this.disconnectAllRealtime();
+    
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
     }
   }
 
-  private setupDomainEventHandlers() {
-    if (!this.socket) return;
-
-    // Get all domain stores that implement RealtimeStore
-    const realtimeStores: RealtimeStore[] = [
-      // Add other domain stores here as they are created
-    ];
-
-    // Setup event handlers for each domain store
-    realtimeStores.forEach((store) => {
-      store.setupRealtimeHandlers(this.socket!);
-    });
-  }
 
   private fetchingUserData = false;
 
@@ -210,10 +204,10 @@ export class RootStore {
     this.fetchingUserData = true;
     console.log("🔄 RootStore: Fetching user data");
     try {
-      const userResponse = await fetchInternal(
+
+      const userResponse = await fetchWithAuth(
         this.session.access_token,
-        "/api/user",
-        "GET",
+        "/api/user"
       );
 
       if (userResponse.ok) {

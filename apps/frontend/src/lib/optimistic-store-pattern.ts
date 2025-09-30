@@ -498,11 +498,11 @@ export interface OptimisticStoreManager<
   enable: () => void;
   disable: () => void;
   destroy: () => void;
-  // Realtime methods (only available when realtime config is provided)
+  // Realtime status (only available when realtime config is provided)
   realtime?: {
+    isConnected: boolean;
     connect: (socket: any) => void;
     disconnect: () => void;
-    isConnected: boolean;
   };
 }
 
@@ -552,7 +552,7 @@ export function createOptimisticStoreManager<
   const StoreClass = (config.storeClass as any) || OptimisticStore<TUiData>;
   const store = new StoreClass(transformer) as TStore;
 
-  // Create realtime extension if config provided
+  // Create realtime extension if config provided (but don't connect yet)
   let realtimeExtension: RealtimeExtension<TUiData> | null = null;
   if (config.realtime) {
     realtimeExtension = createRealtimeExtension<TUiData>(
@@ -563,6 +563,7 @@ export function createOptimisticStoreManager<
         customHandlers: config.realtime.customHandlers,
       }
     );
+    // Note: Connection will be handled by rootStore when socket is ready
   }
 
   // Status tracking - make it observable so React components re-render
@@ -939,17 +940,17 @@ export function createOptimisticStoreManager<
       unsubscribeRemoveMutation();
       // cleanupNaturalRefetch();
     },
-    // Realtime methods (only available when realtime config is provided)
+    // Realtime status (only available when realtime config is provided)
     ...(realtimeExtension && {
       realtime: {
+        get isConnected() {
+          return realtimeExtension!.connected;
+        },
         connect: (socket: any) => {
           realtimeExtension!.connect(socket);
         },
         disconnect: () => {
           realtimeExtension!.disconnect();
-        },
-        get isConnected() {
-          return realtimeExtension!.connected;
         },
       },
     }),

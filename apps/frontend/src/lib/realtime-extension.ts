@@ -7,7 +7,7 @@
 // 3. Disconnect: extension.disconnect();
 //
 import { Socket } from "socket.io-client";
-import { OptimisticStore } from "./optimistic-store-pattern";
+import { type OptimisticStore } from "./optimistic-store-pattern";
 
 // ---------- Core Types ----------
 
