@@ -13,11 +13,7 @@ import { createRealtimeExtension } from "../realtime";
 import type { RealtimeExtension } from "../realtime/RealtimeExtension";
 import { createTransformer } from "../transformer/helpers";
 import { getGlobalQueryClient } from "../query/queryClient";
-import type {
-  Entity,
-  OptimisticStoreConfig,
-  OptimisticStore,
-} from "./types";
+import type { Entity, OptimisticStoreConfig, OptimisticStore } from "./types";
 
 /**
  * Creates a fully configured framework-agnostic optimistic store with minimal setup.

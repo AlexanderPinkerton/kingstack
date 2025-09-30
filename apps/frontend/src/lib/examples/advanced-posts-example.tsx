@@ -16,7 +16,7 @@ import { PostApiData, PostUiData } from "@/stores/postStore";
 export const AdvancedPostsExample = observer(() => {
   const rootStore = useContext(RootStoreContext);
   const postStore = rootStore.postStore;
-  const { store, actions, status } = postStore;
+  const { ui, api } = postStore;
 
   // Basic React state for UI controls
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,7 +31,7 @@ export const AdvancedPostsExample = observer(() => {
 
   const handleCreatePost = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPost.title.trim() || !actions) return;
+    if (!newPost.title.trim() || !api) return;
 
     // Add author_id from current user for optimistic updates
     const postData = {
@@ -39,29 +39,29 @@ export const AdvancedPostsExample = observer(() => {
       author_id: rootStore.session?.user?.id || "unknown",
     };
 
-    actions.create(postData);
+    api.create(postData);
     setNewPost({ title: "", content: "", published: false });
   };
 
   const handleUpdatePost = (post: PostUiData, updates: Partial<PostUiData>) => {
-    if (!actions) return;
-    actions.update(post.id, updates);
+    if (!api) return;
+    api.update(post.id, updates);
     setEditingPost(null);
   };
 
   const handleDeletePost = (post: PostUiData) => {
-    actions?.remove(post.id);
+    api?.remove(post.id);
   };
 
   const togglePublish = (post: PostUiData) => {
-    actions?.update(post.id, { published: !post.published });
+    api?.update(post.id, { published: !post.published });
   };
 
   // Filtering and sorting logic
   const getFilteredPosts = (): PostUiData[] => {
-    if (!store?.list) return [];
+    if (!ui?.list) return [];
 
-    let posts = store.list;
+    let posts = ui.list;
 
     // Filter by search query
     if (searchQuery) {
@@ -127,9 +127,9 @@ export const AdvancedPostsExample = observer(() => {
 
   // Computed stats
   const getStats = () => {
-    if (!store?.list) return { total: 0, published: 0, draft: 0, recent: 0 };
+    if (!ui?.list) return { total: 0, published: 0, draft: 0, recent: 0 };
 
-    const posts = store.list;
+    const posts = ui.list;
     return {
       total: posts.length,
       published: posts.filter((post) => post.published).length,
@@ -149,7 +149,7 @@ export const AdvancedPostsExample = observer(() => {
     );
   }
 
-  if (status?.isLoading) {
+  if (api?.status.isLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-pulse text-slate-300">
@@ -159,14 +159,14 @@ export const AdvancedPostsExample = observer(() => {
     );
   }
 
-  if (status?.isError) {
+  if (api?.status.isError) {
     return (
       <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4">
         <div className="text-red-300 mb-2">
-          ❌ Error: {status.error?.message}
+          ❌ Error: {api.status.error?.message}
         </div>
         <button
-          onClick={() => actions?.refetch()}
+          onClick={() => api?.refetch()}
           className="px-3 py-1 bg-red-600/20 text-red-300 border border-red-500/50 rounded hover:bg-red-600/30 transition-colors"
         >
           Retry
@@ -274,10 +274,10 @@ export const AdvancedPostsExample = observer(() => {
           </label>
           <button
             type="submit"
-            disabled={status?.createPending || !newPost.title.trim()}
+            disabled={api?.status.createPending || !newPost.title.trim()}
             className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {status?.createPending ? "Creating..." : "Create Post"}
+            {api?.status.createPending ? "Creating..." : "Create Post"}
           </button>
         </div>
       </form>
