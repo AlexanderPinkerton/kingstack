@@ -16,6 +16,10 @@ type AnyStore = {
 };
 
 export class RootStore {
+  // Singleton instance tracking
+  private static instance: RootStore | null = null;
+  private static instanceCount = 0;
+  
   session: any = null;
   userData: any = null;
   
@@ -31,6 +35,7 @@ export class RootStore {
   
   // Auth listener cleanup
   private authUnsubscribe: (() => void) | null = null;
+  private isDisposed = false;
 
   // Get all optimistic stores
   private getOptimisticStores(): AnyStore[] {
@@ -64,8 +69,24 @@ export class RootStore {
   }
 
   constructor() {
-    console.log("🔧 RootStore: Constructor called", Math.random());
+    // Track instance creation
+    RootStore.instanceCount++;
+    const instanceId = RootStore.instanceCount;
+    console.log(`🔧 RootStore: Constructor called (instance #${instanceId})`);
     console.log("🔧 RootStore: Browser ID:", this.browserId);
+
+    // Warn if multiple instances detected (possible memory leak)
+    if (RootStore.instance && !RootStore.instance.isDisposed) {
+      console.warn(
+        "⚠️ RootStore: Multiple instances detected! Previous instance was not disposed.",
+        "This can cause memory leaks. Consider using a singleton pattern."
+      );
+      console.warn("⚠️ RootStore: Auto-disposing previous instance...");
+      RootStore.instance.dispose();
+    }
+
+    // Store reference to this instance
+    RootStore.instance = this;
 
     this.session = null;
 
@@ -287,7 +308,15 @@ export class RootStore {
 
   // Cleanup method to properly dispose of the store
   dispose() {
+    if (this.isDisposed) {
+      console.warn("⚠️ RootStore: Already disposed, skipping");
+      return;
+    }
+
     console.log("🧹 RootStore: Disposing");
+
+    // Mark as disposed
+    this.isDisposed = true;
 
     // Clean up auth listener
     if (this.authUnsubscribe) {
@@ -302,6 +331,21 @@ export class RootStore {
     this.todoStore.disable();
     this.postStore.disable();
 
+    // Clear singleton reference if this is the current instance
+    if (RootStore.instance === this) {
+      RootStore.instance = null;
+    }
+
     console.log("🧹 RootStore: Disposed");
+  }
+
+  // Static method to get the current instance (useful for debugging)
+  static getInstance(): RootStore | null {
+    return RootStore.instance;
+  }
+
+  // Static method to check if there's an active instance
+  static hasActiveInstance(): boolean {
+    return RootStore.instance !== null && !RootStore.instance.isDisposed;
   }
 }

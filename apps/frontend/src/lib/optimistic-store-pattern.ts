@@ -452,6 +452,8 @@ export interface OptimisticStoreConfig<
   staleTime?: number;
   /** Optional: Function to determine if query should be enabled (default: () => true) */
   enabled?: () => boolean;
+  /** Optional: Explicit cache key for store manager reuse. If not provided, only 'name' is used. This is safer than automatic key generation. */
+  cacheKey?: string;
   /** Optional: Realtime configuration - enables realtime updates when provided */
   realtime?: {
     /** Event type to listen for (e.g., "checkbox_update", "post_update") */
@@ -538,11 +540,14 @@ export function createOptimisticStoreManager<
   config: OptimisticStoreConfig<TApiData, TUiData>,
   queryClient?: QueryClient,
 ): OptimisticStoreManager<TApiData, TUiData, TStore> {
-  // Check cache first
-  const cacheKey = `${config.name}-${JSON.stringify(config.queryFn.toString())}`;
+  // Generate cache key - use explicit cacheKey or just name
+  // NOTE: We no longer use queryFn.toString() as it's unreliable across minification/bundling
+  const cacheKey = config.cacheKey || config.name;
+  
+  // Check cache first (but skip if custom query client provided)
   const cached = storeManagerCache.get(cacheKey);
   if (cached && !queryClient) {
-    console.log(`🚀 Using cached store manager for ${config.name}`);
+    console.log(`🚀 Using cached store manager for ${config.name} (key: ${cacheKey})`);
     return cached as OptimisticStoreManager<TApiData, TUiData, TStore>;
   }
 
@@ -977,8 +982,15 @@ export function createOptimisticStoreManager<
 
   // Cache the store manager if not using a custom query client
   if (!queryClient) {
+    // Warn if overwriting existing cache entry
+    if (storeManagerCache.has(cacheKey)) {
+      console.warn(
+        `⚠️ Overwriting cached store manager for key "${cacheKey}". ` +
+        `This might indicate duplicate store creation. Consider using explicit cacheKey in config.`
+      );
+    }
     storeManagerCache.set(cacheKey, storeManager);
-    console.log(`💾 Cached store manager for ${config.name}`);
+    console.log(`💾 Cached store manager for ${config.name} (key: ${cacheKey})`);
   }
 
   return storeManager;
