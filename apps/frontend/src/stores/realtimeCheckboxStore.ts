@@ -127,28 +127,36 @@ const checkboxTransformer = {
 
 export class RealtimeCheckboxStore {
   // Store manager with integrated realtime
-  public storeManager = createOptimisticStoreManager<
-    CheckboxApiData,
-    CheckboxUiData
-  >({
-    name: "checkboxes",
-    queryFn: fetchCheckboxes,
-    mutations: {
-      create: createCheckbox,
-      update: updateCheckbox,
-      remove: deleteCheckbox,
-    },
-    transformer: checkboxTransformer,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    realtime: {
-      eventType: "checkbox_update",
-      shouldProcessEvent: (event) => event.type === "checkbox_update",
-    },
-  });
+  public storeManager: ReturnType<
+    typeof createOptimisticStoreManager<CheckboxApiData, CheckboxUiData>
+  >;
 
-  constructor() {
+  constructor(browserId?: string) {
     // Store is created with realtime config but not connected yet
     // rootStore will connect it when socket is ready
+    this.storeManager = createOptimisticStoreManager<
+      CheckboxApiData,
+      CheckboxUiData
+    >({
+      name: "checkboxes",
+      queryFn: fetchCheckboxes,
+      mutations: {
+        create: createCheckbox,
+        update: updateCheckbox,
+        remove: deleteCheckbox,
+      },
+      transformer: checkboxTransformer,
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      realtime: {
+        eventType: "checkbox_update",
+        // 🔧 Custom data extractor for checkbox events
+        // The backend sends events in format: { type, event, checkbox: {...} }
+        dataExtractor: (event) => event.checkbox || event.data,
+        shouldProcessEvent: (event) => event.type === "checkbox_update",
+        // 🛡️ Filter out self-originated events to prevent echo
+        browserId: browserId,
+      },
+    });
   }
 
   // ---------- Store Access Methods ----------

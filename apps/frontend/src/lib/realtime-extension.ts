@@ -21,8 +21,12 @@ export interface RealtimeEvent<T = any> {
 export interface RealtimeConfig<T extends { id: string }> {
   /** Event type to listen for (e.g., "checkbox_update", "post_update") */
   eventType: string;
-  /** Optional: Function to determine if event should be processed */
+  /** Optional: Function to extract data from event. Defaults to (event) => event.data */
+  dataExtractor?: (event: RealtimeEvent) => T | undefined;
+  /** Optional: Function to determine if event should be processed (runs before dataExtractor) */
   shouldProcessEvent?: (event: RealtimeEvent) => boolean;
+  /** Optional: Browser ID to filter out self-originated events (prevents echo) */
+  browserId?: string;
   /** Optional: Custom handler for specific event types */
   customHandlers?: {
     [eventType: string]: (
@@ -90,7 +94,15 @@ export class RealtimeExtension<T extends { id: string }> {
       event,
     );
 
-    // Check if we should process this event
+    // 🛡️ PROTECTION 1: Filter out self-originated events (prevent echo)
+    if (this.config.browserId && event.browserId === this.config.browserId) {
+      console.log(
+        `📡 RealtimeExtension: Skipping self-originated event from browser ${event.browserId}`,
+      );
+      return;
+    }
+
+    // 🛡️ PROTECTION 2: Check if we should process this event
     if (
       this.config.shouldProcessEvent &&
       !this.config.shouldProcessEvent(event)
@@ -115,9 +127,12 @@ export class RealtimeExtension<T extends { id: string }> {
    * Default event handling for INSERT, UPDATE, DELETE operations
    */
   private handleDefaultEvent(event: RealtimeEvent): void {
-    // Handle the actual event structure: { type, event, checkbox }
+    // Handle the actual event structure: { type, event, data }
     const eventType = event.event;
-    const data = event.checkbox || event.data;
+    
+    // 🔧 Use configurable data extractor or default to event.data
+    const dataExtractor = this.config.dataExtractor || ((e: RealtimeEvent) => e.data);
+    const data = dataExtractor(event);
 
     try {
       switch (eventType) {
@@ -192,7 +207,9 @@ export function createRealtimeExtension<T extends { id: string }>(
   store: OptimisticStore<T>,
   eventType: string,
   options?: {
+    dataExtractor?: (event: RealtimeEvent) => T | undefined;
     shouldProcessEvent?: (event: RealtimeEvent) => boolean;
+    browserId?: string;
     customHandlers?: {
       [eventType: string]: (
         store: OptimisticStore<T>,
@@ -203,7 +220,9 @@ export function createRealtimeExtension<T extends { id: string }>(
 ): RealtimeExtension<T> {
   return new RealtimeExtension(store, {
     eventType,
+    dataExtractor: options?.dataExtractor,
     shouldProcessEvent: options?.shouldProcessEvent || ((event) => event.type === eventType),
+    browserId: options?.browserId,
     customHandlers: options?.customHandlers,
   });
 }

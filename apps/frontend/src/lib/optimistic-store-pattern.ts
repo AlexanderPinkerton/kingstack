@@ -456,8 +456,12 @@ export interface OptimisticStoreConfig<
   realtime?: {
     /** Event type to listen for (e.g., "checkbox_update", "post_update") */
     eventType: string;
+    /** Optional: Function to extract data from event. Defaults to (event) => event.data */
+    dataExtractor?: (event: any) => TUiData | undefined;
     /** Optional: Function to determine if event should be processed */
     shouldProcessEvent?: (event: any) => boolean;
+    /** Optional: Browser ID to filter out self-originated events (prevents echo) */
+    browserId?: string;
     /** Optional: Custom handler for specific event types */
     customHandlers?: {
       [eventType: string]: (
@@ -559,7 +563,9 @@ export function createOptimisticStoreManager<
       store,
       config.realtime.eventType,
       {
+        dataExtractor: config.realtime.dataExtractor,
         shouldProcessEvent: config.realtime.shouldProcessEvent,
+        browserId: config.realtime.browserId,
         customHandlers: config.realtime.customHandlers,
       }
     );
@@ -575,6 +581,10 @@ export function createOptimisticStoreManager<
     createPending: false,
     updatePending: false,
     deletePending: false,
+    // Track if any mutation is in flight (for realtime coordination)
+    get hasPendingMutations(): boolean {
+      return this.createPending || this.updatePending || this.deletePending;
+    },
   });
 
   // Create query observer for data fetching
@@ -595,6 +605,15 @@ export function createOptimisticStoreManager<
       status.error = result.error as Error | null;
       status.isSyncing = result.isFetching;
     });
+
+    // 🛡️ PROTECTION 3: Skip reconciliation if mutations are in flight
+    // This prevents race conditions where reconciliation wipes out optimistic updates
+    if (status.hasPendingMutations) {
+      console.log(
+        `⏸️ Skipping reconciliation while mutations are pending`,
+      );
+      return;
+    }
 
     // Only reconcile when we have fresh, non-stale data and it's actually different
     if (result.data && !result.isStale && !result.isFetching) {

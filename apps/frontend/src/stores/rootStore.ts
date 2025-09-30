@@ -26,7 +26,8 @@ export class RootStore {
   
   // WebSocket connection management
   socket: Socket | null = null;
-  browserId: string = Math.random().toString(36).substring(7);
+  // Stable browser ID for filtering out self-originated realtime events
+  browserId: string = this.getBrowserId();
   
   // Auth listener cleanup
   private authUnsubscribe: (() => void) | null = null;
@@ -64,13 +65,14 @@ export class RootStore {
 
   constructor() {
     console.log("🔧 RootStore: Constructor called", Math.random());
+    console.log("🔧 RootStore: Browser ID:", this.browserId);
 
     this.session = null;
 
     // Create all optimistic stores
     this.todoStore = new AdvancedTodoStore();
     this.postStore = new AdvancedPostStore();
-    this.checkboxStore = new RealtimeCheckboxStore();
+    this.checkboxStore = new RealtimeCheckboxStore(this.browserId);
 
     // Make session and userData observable before setting up auth listener
     makeAutoObservable(this, {
@@ -264,6 +266,23 @@ export class RootStore {
     } catch (error) {
       console.error("🔄 RootStore: Session refresh failed:", error);
     }
+  }
+
+  // Get or create stable browser ID (persists across page reloads)
+  private getBrowserId(): string {
+    if (typeof window === "undefined") {
+      return "server";
+    }
+    
+    const STORAGE_KEY = "kingstack_browser_id";
+    let browserId = sessionStorage.getItem(STORAGE_KEY);
+    
+    if (!browserId) {
+      browserId = `browser-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      sessionStorage.setItem(STORAGE_KEY, browserId);
+    }
+    
+    return browserId;
   }
 
   // Cleanup method to properly dispose of the store
