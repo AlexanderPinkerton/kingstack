@@ -4,7 +4,7 @@
 export { ObservableUIData } from "./ObservableUIData";
 
 // Factory function (main API)
-export { createOptimisticStore } from "./createStoreManager";
+export { createOptimisticStore } from "./OptimisticStore";
 
 // Types
 export type {
