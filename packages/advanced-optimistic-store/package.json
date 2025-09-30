@@ -1,0 +1,45 @@
+{
+  "name": "@kingstack/advanced-optimistic-store",
+  "version": "0.1.0",
+  "description": "Framework-agnostic optimistic updates with MobX + TanStack Query Core + optional realtime",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./realtime": {
+      "types": "./dist/realtime/index.d.ts",
+      "import": "./dist/realtime/index.mjs",
+      "require": "./dist/realtime/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "echo 'Build not configured yet'",
+    "dev": "echo 'Dev not configured yet'",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@tanstack/query-core": "^5.0.0",
+    "mobx": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "socket.io-client": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@tanstack/query-core": "^5.59.20",
+    "mobx": "^6.13.5",
+    "socket.io-client": "^4.8.1",
+    "typescript": "^5.6.3"
+  }
+}
