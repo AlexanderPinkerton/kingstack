@@ -12,7 +12,7 @@ export type {
 } from "./core";
 
 // Transforms
-export { createDefaultTransformer, createTransformer } from "./transforms";
+export { createDefaultTransformer, createTransformer } from "./transformer";
 
 // Query
 export { getGlobalQueryClient } from "./query";

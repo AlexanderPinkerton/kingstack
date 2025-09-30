@@ -2,19 +2,19 @@
   "name": "@kingstack/advanced-optimistic-store",
   "version": "0.1.0",
   "description": "Framework-agnostic optimistic updates with MobX + TanStack Query Core + optional realtime",
+  "type": "module",
   "private": true,
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
     "./realtime": {
       "types": "./dist/realtime/index.d.ts",
-      "import": "./dist/realtime/index.mjs",
+      "import": "./dist/realtime/index.js",
       "require": "./dist/realtime/index.js"
     }
   },
@@ -23,9 +23,12 @@
     "README.md"
   ],
   "scripts": {
-    "build": "echo 'Build not configured yet'",
-    "dev": "echo 'Dev not configured yet'",
-    "typecheck": "tsc --noEmit"
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "peerDependencies": {
     "@tanstack/query-core": "^5.0.0",
@@ -37,9 +40,13 @@
     }
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@kingstack/eslint-config": "workspace:*",
+    "@kingstack/ts-config": "workspace:*",
     "@tanstack/query-core": "^5.59.20",
+    "eslint": "^9",
     "mobx": "^6.13.5",
     "socket.io-client": "^4.8.1",
-    "typescript": "^5.6.3"
+    "typescript": "^5.0.0"
   }
 }

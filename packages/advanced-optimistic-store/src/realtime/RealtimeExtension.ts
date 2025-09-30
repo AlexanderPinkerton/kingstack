@@ -96,9 +96,10 @@ export class RealtimeExtension<T extends { id: string }> {
   private handleDefaultEvent(event: RealtimeEvent): void {
     // Handle the actual event structure: { type, event, data }
     const eventType = event.event;
-    
+
     // 🔧 Use configurable data extractor or default to event.data
-    const dataExtractor = this.config.dataExtractor || ((e: RealtimeEvent) => e.data);
+    const dataExtractor =
+      this.config.dataExtractor || ((e: RealtimeEvent) => e.data);
     const data = dataExtractor(event);
 
     try {

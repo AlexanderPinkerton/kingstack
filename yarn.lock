@@ -1379,10 +1379,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@kingstack/advanced-optimistic-store@workspace:packages/advanced-optimistic-store"
   dependencies:
+    "@eslint/eslintrc": "npm:^3"
+    "@kingstack/eslint-config": "workspace:*"
+    "@kingstack/ts-config": "workspace:*"
     "@tanstack/query-core": "npm:^5.59.20"
+    eslint: "npm:^9"
     mobx: "npm:^6.13.5"
     socket.io-client: "npm:^4.8.1"
-    typescript: "npm:^5.6.3"
+    typescript: "npm:^5.0.0"
   peerDependencies:
     "@tanstack/query-core": ^5.0.0
     mobx: ^6.0.0
@@ -13508,7 +13512,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5.0.0, typescript@npm:^5.6.3":
+"typescript@npm:^5.0.0":
   version: 5.9.2
   resolution: "typescript@npm:5.9.2"
   bin:
@@ -13548,7 +13552,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^5.0.0#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.6.3#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A^5.0.0#optional!builtin<compat/typescript>":
   version: 5.9.2
   resolution: "typescript@patch:typescript@npm%3A5.9.2#optional!builtin<compat/typescript>::version=5.9.2&hash=5786d5"
   bin:

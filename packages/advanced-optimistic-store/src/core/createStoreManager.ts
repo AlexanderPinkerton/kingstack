@@ -10,7 +10,7 @@ import { observable, runInAction } from "mobx";
 import { OptimisticStore } from "./OptimisticStore";
 import { createRealtimeExtension } from "../realtime";
 import type { RealtimeExtension } from "../realtime/RealtimeExtension";
-import { createTransformer } from "../transforms/helpers";
+import { createTransformer } from "../transformer/helpers";
 import { getGlobalQueryClient } from "../query/queryClient";
 import type {
   Entity,
@@ -71,7 +71,7 @@ export function createOptimisticStoreManager<
         shouldProcessEvent: config.realtime.shouldProcessEvent,
         browserId: config.realtime.browserId,
         customHandlers: config.realtime.customHandlers,
-      }
+      },
     );
     // Note: Connection will be handled by rootStore when socket is ready
   }
@@ -113,9 +113,7 @@ export function createOptimisticStoreManager<
     // 🛡️ PROTECTION 3: Skip reconciliation if mutations are in flight
     // This prevents race conditions where reconciliation wipes out optimistic updates
     if (status.hasPendingMutations) {
-      console.log(
-        `⏸️ Skipping reconciliation while mutations are pending`,
-      );
+      console.log(`⏸️ Skipping reconciliation while mutations are pending`);
       return;
     }
 

@@ -1,0 +1,21 @@
+# Source files
+src/
+tests/
+
+# Config files
+tsconfig.json
+turbo.jsonc
+eslint.config.mjs
+.eslintrc*
+
+# Docs
+*.md
+!README.md
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore

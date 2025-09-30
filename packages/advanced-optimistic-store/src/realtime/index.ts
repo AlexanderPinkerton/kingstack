@@ -2,7 +2,7 @@
 
 import { RealtimeExtension } from "./RealtimeExtension";
 import type { OptimisticStore } from "../core/OptimisticStore";
-import type { RealtimeEvent, RealtimeConfig } from "./types";
+import type { RealtimeEvent } from "./types";
 
 export { RealtimeExtension } from "./RealtimeExtension";
 export type { RealtimeEvent, RealtimeConfig } from "./types";
@@ -29,7 +29,8 @@ export function createRealtimeExtension<T extends { id: string }>(
   return new RealtimeExtension(store, {
     eventType,
     dataExtractor: options?.dataExtractor,
-    shouldProcessEvent: options?.shouldProcessEvent || ((event) => event.type === eventType),
+    shouldProcessEvent:
+      options?.shouldProcessEvent || ((event) => event.type === eventType),
     browserId: options?.browserId,
     customHandlers: options?.customHandlers,
   });

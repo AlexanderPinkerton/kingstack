@@ -65,7 +65,6 @@ export class OptimisticStore<T extends Entity> {
     this.entities.delete(id);
   }
 
-
   clear(): void {
     this.entities.clear();
   }
@@ -74,7 +73,9 @@ export class OptimisticStore<T extends Entity> {
   // These methods handle runInAction internally so the realtime extension doesn't need MobX
   upsertFromRealtime<TApiData extends Entity>(apiData: TApiData): void {
     runInAction(() => {
-      const uiData = this.transformer ? this.transformer.toUi(apiData) : (apiData as unknown as T);
+      const uiData = this.transformer
+        ? this.transformer.toUi(apiData)
+        : (apiData as unknown as T);
       this.upsert(uiData);
     });
   }
