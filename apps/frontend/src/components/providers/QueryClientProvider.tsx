@@ -19,8 +19,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// Create root store instance
-const rootStore = new RootStore();
+
 
 interface Props {
   children: React.ReactNode;
@@ -29,9 +28,7 @@ interface Props {
 export function AppProviders({ children }: Props) {
   return (
     <QueryClientProvider client={queryClient}>
-      <RootStoreContext.Provider value={rootStore}>
         {children}
-      </RootStoreContext.Provider>
     </QueryClientProvider>
   );
 }

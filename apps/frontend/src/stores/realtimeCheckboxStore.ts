@@ -296,6 +296,3 @@ export class RealtimeCheckboxStore {
   }
 }
 
-// ---------- Singleton Instance ----------
-
-export const realtimeCheckboxStore = new RealtimeCheckboxStore();
