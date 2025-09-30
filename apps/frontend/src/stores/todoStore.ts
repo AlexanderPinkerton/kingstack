@@ -1,6 +1,6 @@
 import {
   createOptimisticStoreManager,
-  OptimisticStoreManager,
+  type OptimisticStoreManager,
 } from "@kingstack/advanced-optimistic-store";
 import { TodoApiData } from "@/app/home/page";
 import { TodoUiData } from "@/app/home/page";

@@ -1,10 +1,9 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import { io, Socket } from "socket.io-client";
 import { createClient } from "@/lib/supabase/browserClient";
-import { fetchWithAuth } from "@/lib/utils";
 import { AdvancedTodoStore } from "./todoStore";
 import { AdvancedPostStore } from "./postStore";
-import { RealtimeCheckboxStore } from "./realtimeCheckboxStore";
+import { RealtimeCheckboxStore } from "./checkboxStore";
 import { AdvancedUserStore } from "./userStore";
 
 const supabase = createClient();
