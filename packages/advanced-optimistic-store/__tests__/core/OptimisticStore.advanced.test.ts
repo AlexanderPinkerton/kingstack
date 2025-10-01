@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { QueryClient } from "@tanstack/query-core";
 import { autorun } from "mobx";
-import { createOptimisticStore } from "./OptimisticStore";
-import type { Entity, OptimisticStoreConfig } from "./types";
+import { createOptimisticStore } from "../../src/core/OptimisticStore";
+import type { Entity, OptimisticStoreConfig } from "../../src/core/types";
 
 // Test data types
 interface TestApiData extends Entity {
@@ -54,12 +54,12 @@ const mockRealtimeExtension = {
 };
 
 // Mock the realtime module
-vi.mock("../realtime", () => ({
+vi.mock("../../src/realtime", () => ({
   createRealtimeExtension: vi.fn(() => mockRealtimeExtension),
 }));
 
 // Mock the query client module
-vi.mock("../query/queryClient", () => ({
+vi.mock("../../src/query/queryClient", () => ({
   getGlobalQueryClient: vi.fn(() => new QueryClient()),
 }));
 

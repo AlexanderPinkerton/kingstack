@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createDefaultTransformer } from "./defaultTransformer";
+import { createDefaultTransformer } from "../../src/transformer/defaultTransformer";
 import type { Entity } from "../core/types";
 
 // Test data types

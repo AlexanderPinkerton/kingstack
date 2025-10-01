@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { QueryClient } from "@tanstack/query-core";
-import { createOptimisticStore, ObservableUIData } from "./index";
-import type { Entity, OptimisticStoreConfig } from "./types";
+import { createOptimisticStore, ObservableUIData } from "../../src/core/index";
+import type { Entity, OptimisticStoreConfig } from "../../src/core/types";
 
 // Test data types
 interface TodoApiData extends Entity {

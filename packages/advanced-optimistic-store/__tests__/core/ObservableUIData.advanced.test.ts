@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { autorun, reaction } from "mobx";
-import { ObservableUIData } from "./ObservableUIData";
-import type { Entity, DataTransformer } from "./types";
+import { ObservableUIData } from "../../src/core/ObservableUIData";
+import type { Entity, DataTransformer } from "../../src/core/types";
 
 // Test data types
 interface TestEntity extends Entity {
