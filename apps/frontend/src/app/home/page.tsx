@@ -2,7 +2,7 @@
 
 import useAuthGuard from "@/hooks/useAuthGuard";
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
 import { NeonCard } from "@/components/ui/neon-card";
@@ -39,6 +39,13 @@ export default observer(function HomePage() {
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"todos" | "posts">("todos");
+  
+  // Client-side only state to prevent hydration mismatches
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Use the optimistic store - dead simple! 🚀
   const todoStore = rootStore.todoStore;
@@ -115,7 +122,16 @@ export default observer(function HomePage() {
                 {activeTab === "todos" && (
                   <>
                     {/* Show loading state while store is not ready */}
-                    {!todoStore.isReady && (
+                    {!isClient && (
+                      <div className="text-center py-8">
+                        <div className="animate-pulse text-slate-300">
+                          Initializing your todos...
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Show loading state while store is not ready */}
+                    {isClient && !todoStore.isReady && (
                       <div className="text-center py-8">
                         <div className="animate-pulse text-slate-300">
                           Initializing your todos...
@@ -124,7 +140,7 @@ export default observer(function HomePage() {
                     )}
 
                     {/* Show loading state when store is ready but data is loading */}
-                    {todoStore.isReady && api?.status.isLoading && (
+                    {isClient && todoStore.isReady && api?.status.isLoading && (
                       <div className="text-center py-8">
                         <div className="animate-pulse text-slate-300">
                           Loading your todos...
@@ -133,7 +149,7 @@ export default observer(function HomePage() {
                     )}
 
                     {/* Show error state when store is ready */}
-                    {todoStore.isReady && api?.status.isError && (
+                    {isClient && todoStore.isReady && api?.status.isError && (
                       <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 mb-6">
                         <div className="text-red-300 mb-2">
                           ❌ Error: {api.status.error?.message}
@@ -148,7 +164,7 @@ export default observer(function HomePage() {
                     )}
 
                     {/* Show main content when store is ready and not loading */}
-                    {todoStore.isReady && !api?.status.isLoading && (
+                    {isClient && todoStore.isReady && !api?.status.isLoading && (
                       <>
                         <div className="text-center mb-6">
                           <h2 className="text-2xl font-bold text-white mb-2">

@@ -29,6 +29,11 @@ export const AvatarMenu = observer(function AvatarMenu({
   const session = rootStore.session;
   const user = session?.user;
 
+  // Don't render in playground mode
+  if (!supabase) {
+    return null;
+  }
+
   const handleLogout = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {

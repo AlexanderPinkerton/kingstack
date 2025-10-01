@@ -21,6 +21,16 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
+  
+  // Don't render in playground mode
+  if (!supabase) {
+    return (
+      <div className="text-center text-gray-400">
+        <p>Authentication is disabled in playground mode.</p>
+        <p>Switch to development mode to use authentication.</p>
+      </div>
+    );
+  }
   const [mode, setMode] = useState<"login" | "register">("login");
   // Registration state
   const [email, setEmail] = useState("");
