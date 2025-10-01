@@ -294,15 +294,21 @@ export class RealtimeCheckboxStore {
   }
 
   private getCreateMutation() {
-    return isPlaygroundMode() ? this.playgroundCreateMutation : this.apiCreateMutation;
+    return isPlaygroundMode()
+      ? this.playgroundCreateMutation
+      : this.apiCreateMutation;
   }
 
   private getUpdateMutation() {
-    return isPlaygroundMode() ? this.playgroundUpdateMutation : this.apiUpdateMutation;
+    return isPlaygroundMode()
+      ? this.playgroundUpdateMutation
+      : this.apiUpdateMutation;
   }
 
   private getDeleteMutation() {
-    return isPlaygroundMode() ? this.playgroundDeleteMutation : this.apiDeleteMutation;
+    return isPlaygroundMode()
+      ? this.playgroundDeleteMutation
+      : this.apiDeleteMutation;
   }
 
   private getTransformer() {
@@ -314,7 +320,7 @@ export class RealtimeCheckboxStore {
     if (isPlaygroundMode()) {
       return undefined;
     }
-    
+
     return {
       eventType: "checkbox_update",
       // 🔧 Custom data extractor for checkbox events
@@ -331,11 +337,20 @@ export class RealtimeCheckboxStore {
     return fetchCheckboxes();
   };
 
-  private apiCreateMutation = async (data: { index: number; checked: boolean }): Promise<CheckboxApiData> => {
+  private apiCreateMutation = async (data: {
+    index: number;
+    checked: boolean;
+  }): Promise<CheckboxApiData> => {
     return createCheckbox(data);
   };
 
-  private apiUpdateMutation = async ({ id, data }: { id: string; data: { index?: number; checked?: boolean } }): Promise<CheckboxApiData> => {
+  private apiUpdateMutation = async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: { index?: number; checked?: boolean };
+  }): Promise<CheckboxApiData> => {
     return updateCheckbox({ id, data });
   };
 
@@ -345,12 +360,15 @@ export class RealtimeCheckboxStore {
 
   // Playground Implementations
   private playgroundQueryFn = async (): Promise<CheckboxApiData[]> => {
-    await new Promise(resolve => setTimeout(resolve, 300)); // Simulate delay
-    return getMockData('checkboxes') as CheckboxApiData[];
+    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
+    return getMockData("checkboxes") as CheckboxApiData[];
   };
 
-  private playgroundCreateMutation = async (data: { index: number; checked: boolean }): Promise<CheckboxApiData> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
+  private playgroundCreateMutation = async (data: {
+    index: number;
+    checked: boolean;
+  }): Promise<CheckboxApiData> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
     return {
       id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       index: data.index,
@@ -360,13 +378,19 @@ export class RealtimeCheckboxStore {
     };
   };
 
-  private playgroundUpdateMutation = async ({ id, data }: { id: string; data: { index?: number; checked?: boolean } }): Promise<CheckboxApiData> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
+  private playgroundUpdateMutation = async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: { index?: number; checked?: boolean };
+  }): Promise<CheckboxApiData> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     // Get existing checkbox from mock data to preserve unchanged fields
-    const existingCheckboxes = getMockData('checkboxes') as CheckboxApiData[];
-    const existingCheckbox = existingCheckboxes.find(c => c.id === id);
-    
+    const existingCheckboxes = getMockData("checkboxes") as CheckboxApiData[];
+    const existingCheckbox = existingCheckboxes.find((c) => c.id === id);
+
     // If we have an existing checkbox, merge it with the updates
     if (existingCheckbox) {
       return {
@@ -375,7 +399,7 @@ export class RealtimeCheckboxStore {
         updated_at: new Date().toISOString(), // Always update the timestamp
       };
     }
-    
+
     // Fallback if no existing checkbox found
     return {
       id,
@@ -386,8 +410,10 @@ export class RealtimeCheckboxStore {
     };
   };
 
-  private playgroundDeleteMutation = async (id: string): Promise<{ id: string }> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
+  private playgroundDeleteMutation = async (
+    id: string,
+  ): Promise<{ id: string }> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
     return { id };
   };
 }

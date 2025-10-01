@@ -12,8 +12,7 @@ export interface PlaygroundConfig {
 }
 
 export const PLAYGROUND_CONFIG: PlaygroundConfig = {
-  enabled: typeof window !== 'undefined' && 
-    (process.env.NEXT_PUBLIC_PLAYGROUND_MODE === 'true' || 
+  enabled: (process.env.NEXT_PUBLIC_PLAYGROUND_MODE === 'true' || 
      !process.env.NEXT_PUBLIC_SUPABASE_URL),
   
   mockData: {
@@ -29,7 +28,7 @@ export const PLAYGROUND_CONFIG: PlaygroundConfig = {
       {
         id: '2',
         title: 'Explore the UI components',
-        done: true,
+        done: false,
         created_at: new Date(Date.now() - 86400000).toISOString(),
         updated_at: new Date().toISOString(),
         user_id: 'playground-user'
@@ -37,6 +36,14 @@ export const PLAYGROUND_CONFIG: PlaygroundConfig = {
       {
         id: '3',
         title: 'Test optimistic updates',
+        done: false,
+        created_at: new Date(Date.now() - 172800000).toISOString(),
+        updated_at: new Date().toISOString(),
+        user_id: 'playground-user'
+      },
+      {
+        id: '4',
+        title: 'Connect to a supabase backend',
         done: false,
         created_at: new Date(Date.now() - 172800000).toISOString(),
         updated_at: new Date().toISOString(),

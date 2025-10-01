@@ -30,7 +30,7 @@ export class RootStore {
   postStore: AdvancedPostStore;
   checkboxStore: RealtimeCheckboxStore;
   userStore: AdvancedUserStore;
-  
+
   // Playground store
   playgroundStore: PlaygroundStore;
 
@@ -119,12 +119,14 @@ export class RootStore {
 
     // Handle playground mode vs normal mode
     if (isPlaygroundMode() || !supabase) {
-      console.log("🎮 RootStore: Playground mode detected - enabling stores with mock data");
+      console.log(
+        "🎮 RootStore: Playground mode detected - enabling stores with mock data",
+      );
       runInAction(() => {
         // In playground mode, enable stores without authentication
-        this.todoStore.enable('playground-token');
-        this.postStore.enable('playground-token');
-        this.userStore.enable('playground-token');
+        this.todoStore.enable("playground-token");
+        this.postStore.enable("playground-token");
+        this.userStore.enable("playground-token");
         // Checkboxes work without auth in playground mode
       });
     } else if (supabase) {
@@ -145,7 +147,9 @@ export class RootStore {
 
           if (session?.access_token && event === "SIGNED_IN") {
             // Handle auth-required setup here
-            console.log("✅ RootStore: Session established, setting up realtime");
+            console.log(
+              "✅ RootStore: Session established, setting up realtime",
+            );
             // Enable stores with new token
             this.todoStore.enable(session.access_token);
             this.postStore.enable(session.access_token);
@@ -228,12 +232,14 @@ export class RootStore {
 
   async refreshSession() {
     console.log("🔄 RootStore: Refreshing session");
-    
+
     if (!supabase) {
-      console.log("🔄 RootStore: No Supabase client available (playground mode)");
+      console.log(
+        "🔄 RootStore: No Supabase client available (playground mode)",
+      );
       return;
     }
-    
+
     try {
       const result = await supabase.auth.getSession();
       console.log("🔄 RootStore: Session refresh result:", {

@@ -21,7 +21,7 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
-  
+
   // Don't render in playground mode
   if (!supabase) {
     return (

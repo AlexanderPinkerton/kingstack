@@ -38,7 +38,7 @@ export default observer(function HomePage() {
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"todos" | "posts">("todos");
-  
+
   // Client-side only state to prevent hydration mismatches
   const [isClient, setIsClient] = useState(false);
 
@@ -92,7 +92,9 @@ export default observer(function HomePage() {
                       <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
                       <span className="text-yellow-300">Playground Mode</span>
                       <span className="text-yellow-400/70">•</span>
-                      <span className="text-yellow-200/80 text-xs">Enable backend for full power</span>
+                      <span className="text-yellow-200/80 text-xs">
+                        Enable backend for full power
+                      </span>
                     </div>
                   </div>
                 )}
@@ -175,135 +177,140 @@ export default observer(function HomePage() {
                     )}
 
                     {/* Show main content when store is ready and not loading */}
-                    {isClient && todoStore.isReady && !api?.status.isLoading && (
-                      <>
-                        <div className="text-center mb-6">
-                          <h2 className="text-2xl font-bold text-white mb-2">
-                            Simple Todo Example
-                          </h2>
-                          <p className="text-slate-400 text-sm">
-                            Basic CRUD with default transformer - just one line
-                            of config! 🚀
-                          </p>
-                        </div>
+                    {isClient &&
+                      todoStore.isReady &&
+                      !api?.status.isLoading && (
+                        <>
+                          <div className="text-center mb-6">
+                            <h2 className="text-2xl font-bold text-white mb-2">
+                              Simple Todo Example
+                            </h2>
+                            <p className="text-slate-400 text-sm">
+                              Basic CRUD with default transformer - just one
+                              line of config! 🚀
+                            </p>
+                          </div>
 
-                        {/* Create form */}
-                        <form
-                          onSubmit={handleSubmit}
-                          className="flex flex-col gap-3 mb-8 max-w-full"
-                        >
-                          <div className="flex-1 min-w-0 relative">
-                            <input
-                              id="newTodoTitle"
-                              name="newTodoTitle"
-                              type="text"
-                              placeholder="What needs to be done?"
-                              value={newTodoTitle}
-                              onChange={(e) => setNewTodoTitle(e.target.value)}
-                              className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            />
-                            {/* Non-invasive loading indicator */}
+                          {/* Create form */}
+                          <form
+                            onSubmit={handleSubmit}
+                            className="flex flex-col gap-3 mb-8 max-w-full"
+                          >
+                            <div className="flex-1 min-w-0 relative">
+                              <input
+                                id="newTodoTitle"
+                                name="newTodoTitle"
+                                type="text"
+                                placeholder="What needs to be done?"
+                                value={newTodoTitle}
+                                onChange={(e) =>
+                                  setNewTodoTitle(e.target.value)
+                                }
+                                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              />
+                              {/* Non-invasive loading indicator */}
+                              {api?.status.isSyncing && (
+                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                  <div className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
+                                </div>
+                              )}
+                            </div>
+                            <ThemedButton
+                              type="submit"
+                              disabled={
+                                api?.status.createPending ||
+                                !newTodoTitle.trim()
+                              }
+                              className="px-6 py-3 whitespace-nowrap flex-shrink-0"
+                            >
+                              {api?.status.createPending ? "Adding..." : "Add"}
+                            </ThemedButton>
+                          </form>
+
+                          {/* Stats */}
+                          <div className="text-center mb-6 text-slate-400 relative">
+                            <span className="text-2xl font-bold text-white">
+                              {ui?.count}
+                            </span>{" "}
+                            total,{" "}
+                            <span className="text-xl font-semibold text-purple-300">
+                              {ui?.filter((t: TodoUiData) => !t.done).length}
+                            </span>{" "}
+                            remaining
+                            {/* Subtle sync indicator */}
                             {api?.status.isSyncing && (
-                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                <div className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
+                              <div className="absolute -right-6 top-1/2 transform -translate-y-1/2">
+                                <div className="w-3 h-3 border border-purple-500/40 border-t-purple-500 rounded-full animate-spin"></div>
                               </div>
                             )}
                           </div>
-                          <ThemedButton
-                            type="submit"
-                            disabled={
-                              api?.status.createPending || !newTodoTitle.trim()
-                            }
-                            className="px-6 py-3 whitespace-nowrap flex-shrink-0"
-                          >
-                            {api?.status.createPending ? "Adding..." : "Add"}
-                          </ThemedButton>
-                        </form>
 
-                        {/* Stats */}
-                        <div className="text-center mb-6 text-slate-400 relative">
-                          <span className="text-2xl font-bold text-white">
-                            {ui?.count}
-                          </span>{" "}
-                          total,{" "}
-                          <span className="text-xl font-semibold text-purple-300">
-                            {ui?.filter((t: TodoUiData) => !t.done).length}
-                          </span>{" "}
-                          remaining
-                          {/* Subtle sync indicator */}
-                          {api?.status.isSyncing && (
-                            <div className="absolute -right-6 top-1/2 transform -translate-y-1/2">
-                              <div className="w-3 h-3 border border-purple-500/40 border-t-purple-500 rounded-full animate-spin"></div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Todo list */}
-                        <div className="space-y-3">
-                          {ui?.list.map((todo: TodoUiData) => (
-                            <div
-                              key={todo.id}
-                              className={`flex items-center gap-4 p-4 rounded-lg border transition-all relative ${
-                                todo.done
-                                  ? "bg-slate-800/30 border-slate-700/50"
-                                  : "bg-slate-800/50 border-slate-600/50 hover:border-purple-500/50"
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={todo.done}
-                                onChange={() =>
-                                  api?.update(todo.id, {
-                                    done: !todo.done,
-                                  })
-                                }
-                                className="w-5 h-5 rounded border-slate-500 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 disabled:opacity-50"
-                              />
-
-                              <span
-                                className={`flex-1 transition-all ${
+                          {/* Todo list */}
+                          <div className="space-y-3">
+                            {ui?.list.map((todo: TodoUiData) => (
+                              <div
+                                key={todo.id}
+                                className={`flex items-center gap-4 p-4 rounded-lg border transition-all relative ${
                                   todo.done
-                                    ? "text-slate-500 line-through"
-                                    : "text-white"
+                                    ? "bg-slate-800/30 border-slate-700/50"
+                                    : "bg-slate-800/50 border-slate-600/50 hover:border-purple-500/50"
                                 }`}
                               >
-                                {todo.title}
-                              </span>
+                                <input
+                                  type="checkbox"
+                                  checked={todo.done}
+                                  onChange={() =>
+                                    api?.update(todo.id, {
+                                      done: !todo.done,
+                                    })
+                                  }
+                                  className="w-5 h-5 rounded border-slate-500 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 disabled:opacity-50"
+                                />
 
-                              <button
-                                onClick={() => api?.remove(todo.id)}
-                                className="px-3 py-1 text-xs bg-red-600/20 text-red-300 border border-red-500/50 rounded hover:bg-red-600/30 transition-colors disabled:opacity-50"
-                              >
-                                Delete
-                              </button>
+                                <span
+                                  className={`flex-1 transition-all ${
+                                    todo.done
+                                      ? "text-slate-500 line-through"
+                                      : "text-white"
+                                  }`}
+                                >
+                                  {todo.title}
+                                </span>
+
+                                <button
+                                  onClick={() => api?.remove(todo.id)}
+                                  className="px-3 py-1 text-xs bg-red-600/20 text-red-300 border border-red-500/50 rounded hover:bg-red-600/30 transition-colors disabled:opacity-50"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+
+                          {ui?.count === 0 && !api?.status.isLoading && (
+                            <div className="text-center py-12">
+                              <div className="text-6xl mb-4">📝</div>
+                              <div className="text-slate-400 text-lg">
+                                No todos yet. Add one above! 👆
+                              </div>
                             </div>
-                          ))}
-                        </div>
+                          )}
 
-                        {ui?.count === 0 && !api?.status.isLoading && (
-                          <div className="text-center py-12">
-                            <div className="text-6xl mb-4">📝</div>
-                            <div className="text-slate-400 text-lg">
-                              No todos yet. Add one above! 👆
+                          {/* Pattern info */}
+                          <div className="mt-8 pt-6 border-t border-slate-700/50">
+                            <div className="text-xs text-slate-500 text-center space-y-1">
+                              <div>
+                                ✅ Optimistic updates • ✅ Auto rollback on
+                                errors • ✅ Background sync
+                              </div>
+                              <div>
+                                ✅ Loading states • ✅ Full type safety • ✅
+                                MobX reactivity
+                              </div>
                             </div>
                           </div>
-                        )}
-
-                        {/* Pattern info */}
-                        <div className="mt-8 pt-6 border-t border-slate-700/50">
-                          <div className="text-xs text-slate-500 text-center space-y-1">
-                            <div>
-                              ✅ Optimistic updates • ✅ Auto rollback on errors
-                              • ✅ Background sync
-                            </div>
-                            <div>
-                              ✅ Loading states • ✅ Full type safety • ✅ MobX
-                              reactivity
-                            </div>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                        </>
+                      )}
                   </>
                 )}
 

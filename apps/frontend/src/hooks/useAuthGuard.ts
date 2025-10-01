@@ -12,7 +12,7 @@ export default function useAuthGuard() {
     if (isPlaygroundMode()) {
       return;
     }
-    
+
     if (!rootStore.session) {
       router.replace("/login");
     }

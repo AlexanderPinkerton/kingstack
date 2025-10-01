@@ -9,8 +9,11 @@ import { fetchWithAuth } from "@/lib/utils";
 import { getMockData, isPlaygroundMode } from "@kingstack/shapes";
 
 export class AdvancedTodoStore {
-  private optimisticStore: OptimisticStore<TodoApiData, TodoUiData, ObservableUIData<TodoUiData>> | null =
-    null;
+  private optimisticStore: OptimisticStore<
+    TodoApiData,
+    TodoUiData,
+    ObservableUIData<TodoUiData>
+  > | null = null;
   private authToken: string | null = null;
   private isEnabled: boolean = false;
 
@@ -30,7 +33,9 @@ export class AdvancedTodoStore {
       },
       transformer: this.getTransformer(),
       staleTime: 5 * 60 * 1000, // 5 minutes
-      enabled: () => this.isEnabled && (!!this.authToken || this.authToken === 'playground-token'),
+      enabled: () =>
+        this.isEnabled &&
+        (!!this.authToken || this.authToken === "playground-token"),
     });
   }
 
@@ -93,15 +98,21 @@ export class AdvancedTodoStore {
   }
 
   private getCreateMutation() {
-    return isPlaygroundMode() ? this.playgroundCreateMutation : this.apiCreateMutation;
+    return isPlaygroundMode()
+      ? this.playgroundCreateMutation
+      : this.apiCreateMutation;
   }
 
   private getUpdateMutation() {
-    return isPlaygroundMode() ? this.playgroundUpdateMutation : this.apiUpdateMutation;
+    return isPlaygroundMode()
+      ? this.playgroundUpdateMutation
+      : this.apiUpdateMutation;
   }
 
   private getDeleteMutation() {
-    return isPlaygroundMode() ? this.playgroundDeleteMutation : this.apiDeleteMutation;
+    return isPlaygroundMode()
+      ? this.playgroundDeleteMutation
+      : this.apiDeleteMutation;
   }
 
   private getTransformer() {
@@ -130,22 +141,31 @@ export class AdvancedTodoStore {
   // API Implementations
   private apiQueryFn = async (): Promise<TodoApiData[]> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/todos`).then((res) => res.json());
   };
 
   private apiCreateMutation = async (data: any): Promise<TodoApiData> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/todos`, {
       method: "POST",
       body: JSON.stringify(data),
     }).then((res) => res.json());
   };
 
-  private apiUpdateMutation = async ({ id, data }: { id: string; data: any }): Promise<TodoApiData> => {
+  private apiUpdateMutation = async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: any;
+  }): Promise<TodoApiData> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -154,13 +174,16 @@ export class AdvancedTodoStore {
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     const response = await fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
       method: "DELETE",
     });
 
     if (!response.ok) {
-      throw new Error(`Delete failed: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Delete failed: ${response.status} ${response.statusText}`,
+      );
     }
 
     const result = await response.json();
@@ -170,28 +193,36 @@ export class AdvancedTodoStore {
 
   // Playground Implementations
   private playgroundQueryFn = async (): Promise<TodoApiData[]> => {
-    await new Promise(resolve => setTimeout(resolve, 300)); // Simulate delay
-    return getMockData('todos') as TodoApiData[];
+    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
+    return getMockData("todos") as TodoApiData[];
   };
 
-  private playgroundCreateMutation = async (data: any): Promise<TodoApiData> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
+  private playgroundCreateMutation = async (
+    data: any,
+  ): Promise<TodoApiData> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
     return {
       id: `temp-${Date.now()}`,
       ...data,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: 'playground-user'
+      user_id: "playground-user",
     };
   };
 
-  private playgroundUpdateMutation = async ({ id, data }: { id: string; data: any }): Promise<TodoApiData> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
+  private playgroundUpdateMutation = async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: any;
+  }): Promise<TodoApiData> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     // Get existing todo from mock data to preserve unchanged fields
-    const existingTodos = getMockData('todos') as TodoApiData[];
-    const existingTodo = existingTodos.find(t => t.id === id);
-    
+    const existingTodos = getMockData("todos") as TodoApiData[];
+    const existingTodo = existingTodos.find((t) => t.id === id);
+
     // If we have an existing todo, merge it with the updates
     if (existingTodo) {
       return {
@@ -200,21 +231,23 @@ export class AdvancedTodoStore {
         updated_at: new Date().toISOString(), // Always update the timestamp
       };
     }
-    
+
     // Fallback if no existing todo found
     return {
       id,
-      title: data.title || 'Updated Todo',
+      title: data.title || "Updated Todo",
       done: data.done || false,
-      user_id: 'playground-user',
+      user_id: "playground-user",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      ...data
+      ...data,
     };
   };
 
-  private playgroundDeleteMutation = async (id: string): Promise<{ id: string }> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
+  private playgroundDeleteMutation = async (
+    id: string,
+  ): Promise<{ id: string }> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
     return { id };
   };
 }

@@ -1,5 +1,5 @@
-import { makeAutoObservable } from 'mobx';
-import { isPlaygroundMode, getMockData } from '@kingstack/shapes';
+import { makeAutoObservable } from "mobx";
+import { isPlaygroundMode, getMockData } from "@kingstack/shapes";
 
 export class PlaygroundStore {
   isPlaygroundMode = false;
@@ -12,22 +12,22 @@ export class PlaygroundStore {
 
   private initialize() {
     this.isPlaygroundMode = isPlaygroundMode();
-    
+
     if (this.isPlaygroundMode) {
       this.mockData = {
-        todos: getMockData('todos'),
-        posts: getMockData('posts'),
-        checkboxes: getMockData('checkboxes'),
-        users: getMockData('users')
+        todos: getMockData("todos"),
+        posts: getMockData("posts"),
+        checkboxes: getMockData("checkboxes"),
+        users: getMockData("users"),
       };
-      
-      console.log('🎮 Playground mode enabled - using mock data');
+
+      console.log("🎮 Playground mode enabled - using mock data");
     }
   }
 
   // Simulate API delays for realistic UX
   private async simulateDelay(ms: number = 300) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // Mock API methods that return promises with delays
@@ -59,7 +59,7 @@ export class PlaygroundStore {
       ...data,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: 'playground-user'
+      user_id: "playground-user",
     };
     this.mockData.todos.push(newTodo);
     return newTodo;
@@ -72,7 +72,7 @@ export class PlaygroundStore {
       Object.assign(todo, data, { updated_at: new Date().toISOString() });
       return todo;
     }
-    throw new Error('Todo not found');
+    throw new Error("Todo not found");
   }
 
   async deleteTodo(id: string) {
@@ -82,7 +82,7 @@ export class PlaygroundStore {
       this.mockData.todos.splice(index, 1);
       return { id };
     }
-    throw new Error('Todo not found');
+    throw new Error("Todo not found");
   }
 
   async createPost(data: any) {
@@ -92,8 +92,8 @@ export class PlaygroundStore {
       ...data,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: 'playground-user',
-      published: true
+      user_id: "playground-user",
+      published: true,
     };
     this.mockData.posts.push(newPost);
     return newPost;
@@ -106,7 +106,7 @@ export class PlaygroundStore {
       Object.assign(post, data, { updated_at: new Date().toISOString() });
       return post;
     }
-    throw new Error('Post not found');
+    throw new Error("Post not found");
   }
 
   async deletePost(id: string) {
@@ -116,7 +116,7 @@ export class PlaygroundStore {
       this.mockData.posts.splice(index, 1);
       return { id };
     }
-    throw new Error('Post not found');
+    throw new Error("Post not found");
   }
 
   async updateCheckbox(id: string, data: any) {
@@ -126,6 +126,6 @@ export class PlaygroundStore {
       Object.assign(checkbox, data, { updated_at: new Date().toISOString() });
       return checkbox;
     }
-    throw new Error('Checkbox not found');
+    throw new Error("Checkbox not found");
   }
 }

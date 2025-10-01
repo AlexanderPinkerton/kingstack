@@ -321,36 +321,51 @@ export class AdvancedPostStore {
   }
 
   private getCreateMutation() {
-    return isPlaygroundMode() ? this.playgroundCreateMutation : this.apiCreateMutation;
+    return isPlaygroundMode()
+      ? this.playgroundCreateMutation
+      : this.apiCreateMutation;
   }
 
   private getUpdateMutation() {
-    return isPlaygroundMode() ? this.playgroundUpdateMutation : this.apiUpdateMutation;
+    return isPlaygroundMode()
+      ? this.playgroundUpdateMutation
+      : this.apiUpdateMutation;
   }
 
   private getDeleteMutation() {
-    return isPlaygroundMode() ? this.playgroundDeleteMutation : this.apiDeleteMutation;
+    return isPlaygroundMode()
+      ? this.playgroundDeleteMutation
+      : this.apiDeleteMutation;
   }
 
   // API Implementations
   private apiQueryFn = async (): Promise<PostApiData[]> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts`).then((res) => res.json());
   };
 
   private apiCreateMutation = async (data: any): Promise<PostApiData> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts`, {
       method: "POST",
       body: JSON.stringify(data),
     }).then((res) => res.json());
   };
 
-  private apiUpdateMutation = async ({ id, data }: { id: string; data: any }): Promise<PostApiData> => {
+  private apiUpdateMutation = async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: any;
+  }): Promise<PostApiData> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -359,7 +374,8 @@ export class AdvancedPostStore {
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
       method: "DELETE",
     }).then(() => ({ id }));
@@ -367,34 +383,42 @@ export class AdvancedPostStore {
 
   // Playground Implementations
   private playgroundQueryFn = async (): Promise<PostApiData[]> => {
-    await new Promise(resolve => setTimeout(resolve, 300)); // Simulate delay
-    return getMockData('posts') as PostApiData[];
+    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
+    return getMockData("posts") as PostApiData[];
   };
 
-  private playgroundCreateMutation = async (data: any): Promise<PostApiData> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
+  private playgroundCreateMutation = async (
+    data: any,
+  ): Promise<PostApiData> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
     return {
       id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: data.title || 'New Post',
-      content: data.content || '',
+      title: data.title || "New Post",
+      content: data.content || "",
       published: data.published || false,
-      author_id: 'playground-user',
+      author_id: "playground-user",
       created_at: new Date().toISOString(),
       author: {
-        id: 'playground-user',
-        username: 'playground-user',
-        email: 'playground@example.com',
+        id: "playground-user",
+        username: "playground-user",
+        email: "playground@example.com",
       },
     };
   };
 
-  private playgroundUpdateMutation = async ({ id, data }: { id: string; data: any }): Promise<PostApiData> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
+  private playgroundUpdateMutation = async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: any;
+  }): Promise<PostApiData> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     // Get existing post from mock data to preserve unchanged fields
-    const existingPosts = getMockData('posts') as PostApiData[];
-    const existingPost = existingPosts.find(p => p.id === id);
-    
+    const existingPosts = getMockData("posts") as PostApiData[];
+    const existingPost = existingPosts.find((p) => p.id === id);
+
     // If we have an existing post, merge it with the updates
     if (existingPost) {
       return {
@@ -403,26 +427,28 @@ export class AdvancedPostStore {
         updated_at: new Date().toISOString(), // Always update the timestamp
       };
     }
-    
+
     // Fallback if no existing post found
     return {
       id,
-      title: data.title || 'Updated Post',
-      content: data.content || '',
+      title: data.title || "Updated Post",
+      content: data.content || "",
       published: data.published || false,
-      author_id: 'playground-user',
+      author_id: "playground-user",
       created_at: new Date().toISOString(),
       author: {
-        id: 'playground-user',
-        username: 'playground-user',
-        email: 'playground@example.com',
+        id: "playground-user",
+        username: "playground-user",
+        email: "playground@example.com",
       },
-      ...data
+      ...data,
     };
   };
 
-  private playgroundDeleteMutation = async (id: string): Promise<{ id: string }> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
+  private playgroundDeleteMutation = async (
+    id: string,
+  ): Promise<{ id: string }> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
     return { id };
   };
 }
