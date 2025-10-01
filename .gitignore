@@ -44,3 +44,6 @@ secrets/.env.*
 
 # Backend Dist
 dist/
+
+# TypeScript build info
+*.tsbuildinfo
