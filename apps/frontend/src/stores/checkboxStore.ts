@@ -362,6 +362,21 @@ export class RealtimeCheckboxStore {
 
   private playgroundUpdateMutation = async ({ id, data }: { id: string; data: { index?: number; checked?: boolean } }): Promise<CheckboxApiData> => {
     await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Get existing checkbox from mock data to preserve unchanged fields
+    const existingCheckboxes = getMockData('checkboxes') as CheckboxApiData[];
+    const existingCheckbox = existingCheckboxes.find(c => c.id === id);
+    
+    // If we have an existing checkbox, merge it with the updates
+    if (existingCheckbox) {
+      return {
+        ...existingCheckbox,
+        ...data, // This will override only the fields that were updated
+        updated_at: new Date().toISOString(), // Always update the timestamp
+      };
+    }
+    
+    // Fallback if no existing checkbox found
     return {
       id,
       index: data.index || 0,

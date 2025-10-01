@@ -187,6 +187,21 @@ export class AdvancedTodoStore {
 
   private playgroundUpdateMutation = async ({ id, data }: { id: string; data: any }): Promise<TodoApiData> => {
     await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Get existing todo from mock data to preserve unchanged fields
+    const existingTodos = getMockData('todos') as TodoApiData[];
+    const existingTodo = existingTodos.find(t => t.id === id);
+    
+    // If we have an existing todo, merge it with the updates
+    if (existingTodo) {
+      return {
+        ...existingTodo,
+        ...data, // This will override only the fields that were updated
+        updated_at: new Date().toISOString(), // Always update the timestamp
+      };
+    }
+    
+    // Fallback if no existing todo found
     return {
       id,
       title: data.title || 'Updated Todo',

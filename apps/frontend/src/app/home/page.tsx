@@ -2,17 +2,16 @@
 
 import useAuthGuard from "@/hooks/useAuthGuard";
 import { observer } from "mobx-react-lite";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 
 import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
 import { NeonCard } from "@/components/ui/neon-card";
 import { GradientText } from "@/components/ui/gradient-text";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { AppNavbar } from "@/components/navbar/presets/app";
-
-import { useContext } from "react";
 import { RootStoreContext } from "@/context/rootStoreContext";
 import { AdvancedPostsExample } from "@/lib/examples/advanced-posts-example";
+import { isPlaygroundMode } from "@kingstack/shapes";
 
 export interface TodoApiData {
   id: string;
@@ -85,6 +84,18 @@ export default observer(function HomePage() {
                     See the power of our optimistic store pattern in action! 🚀
                   </p>
                 </div>
+
+                {/* Playground Mode Indicator */}
+                {isClient && isPlaygroundMode() && (
+                  <div className="mb-6 flex justify-center">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-900/30 border border-yellow-500/40 rounded-full text-sm">
+                      <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
+                      <span className="text-yellow-300">Playground Mode</span>
+                      <span className="text-yellow-400/70">•</span>
+                      <span className="text-yellow-200/80 text-xs">Enable backend for full power</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Tab Navigation */}
                 <div className="flex justify-center mb-8">

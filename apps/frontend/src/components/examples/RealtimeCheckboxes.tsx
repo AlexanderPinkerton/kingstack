@@ -3,6 +3,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { RootStoreContext } from "@/context/rootStoreContext";
+import { isPlaygroundMode } from "@kingstack/shapes";
 
 // ---------- Realtime Checkboxes Component ----------
 
@@ -35,6 +36,7 @@ export const RealtimeCheckboxes = observer(() => {
     );
   }
 
+
   // If no checkboxes exist, show a message to initialize them
   if (checkboxStore.count === 0) {
     return (
@@ -65,13 +67,24 @@ export const RealtimeCheckboxes = observer(() => {
     <div className="p-8 bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-sm rounded-2xl border border-slate-600 shadow-2xl">
       {/* Header Section */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center px-4 py-2 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-medium mb-4">
-          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse mr-2" />
-          Live Demo
+        <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-4 ${
+          isClient && isPlaygroundMode() 
+            ? 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-400' 
+            : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
+        }`}>
+          <div className={`w-2 h-2 rounded-full animate-pulse mr-2 ${
+            isClient && isPlaygroundMode() ? 'bg-yellow-400' : 'bg-emerald-400'
+          }`} />
+          {isClient && isPlaygroundMode() ? 'Mock Demo' : 'Live Demo'}
         </div>
         <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
           Realtime Optimistic Updates
         </h2>
+        {isClient && isPlaygroundMode() && (
+          <p className="text-yellow-200 text-sm mb-4">
+            Playground mode is active. Enable backend for a full experience.
+          </p>
+        )}
         <p className="text-slate-300 text-lg max-w-2xl mx-auto leading-relaxed">
           Experience instant UI updates with automatic rollback on errors.
           Changes sync across all users in real-time with zero configuration.
@@ -158,8 +171,10 @@ export const RealtimeCheckboxes = observer(() => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-semibold text-white">Interactive Demo</h3>
           <div className="flex items-center space-x-2 text-sm text-slate-400">
-            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-            <span>Live</span>
+            <div className={`w-2 h-2 rounded-full animate-pulse ${
+              isClient && isPlaygroundMode() ? 'bg-yellow-400' : 'bg-emerald-400'
+            }`} />
+            <span>{isClient && isPlaygroundMode() ? 'Mock' : 'Live'}</span>
             {(checkboxStore.updatePending ||
               checkboxStore.createPending ||
               checkboxStore.deletePending) && (

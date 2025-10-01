@@ -63,24 +63,14 @@ export const PLAYGROUND_CONFIG: PlaygroundConfig = {
         published: true
       }
     ],
-    checkboxes: [
-      {
-        id: '1',
-        label: 'Enable realtime updates',
-        checked: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: 'playground-user'
-      },
-      {
-        id: '2',
-        label: 'Show playground mode indicator',
-        checked: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: 'playground-user'
-      }
-    ],
+    checkboxes: new Array(100).fill(0).map((_, index) => ({
+      id: `checkbox-${index}`,
+      label: `Checkbox ${index}`,
+      checked: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      user_id: 'playground-user'
+    })),
     users: [
       {
         id: 'playground-user',
