@@ -749,4 +749,296 @@ describe("OptimisticStore Advanced Scenarios", () => {
       expect(store.ui.get("1")).toBeDefined();
     });
   });
+
+  describe("Optimistic Update Computed Fields", () => {
+    // Enhanced test data types with computed fields
+    interface PostApiData extends Entity {
+      id: string;
+      title: string;
+      content: string;
+      published: boolean;
+      author_id: string;
+      created_at: string;
+    }
+
+    interface PostUiData extends Entity {
+      id: string;
+      title: string;
+      content: string;
+      published: boolean;
+      author_id: string;
+      created_at: Date;
+      // Computed fields that should update immediately on optimistic updates
+      publishStatus: string;
+      excerpt: string;
+      wordCount: number;
+      readingTime: number;
+      tags: string[];
+    }
+
+    // Mock transformer with computed fields
+    const postTransformer = {
+      toUi: (apiData: PostApiData): PostUiData => {
+        const content = apiData.content || "";
+        const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+        const readingTime = Math.ceil(wordCount / 200); // 200 words per minute
+        const excerpt = content.length > 100 ? content.substring(0, 100) + "..." : content;
+        const tags = content.match(/#\w+/g)?.map(tag => tag.substring(1)) || [];
+
+        return {
+          id: apiData.id,
+          title: apiData.title,
+          content,
+          published: apiData.published,
+          author_id: apiData.author_id,
+          created_at: new Date(apiData.created_at),
+          publishStatus: apiData.published ? "published" : "draft",
+          excerpt,
+          wordCount,
+          readingTime,
+          tags,
+        };
+      },
+      toApi: (uiData: PostUiData): PostApiData => ({
+        id: uiData.id,
+        title: uiData.title,
+        content: uiData.content,
+        published: uiData.published,
+        author_id: uiData.author_id,
+        created_at: uiData.created_at.toISOString(),
+      }),
+      optimisticDefaults: {
+        createOptimisticUiData: (userInput: any, context?: any): PostUiData => {
+          const content = userInput.content || "";
+          const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+          const readingTime = Math.ceil(wordCount / 200);
+          const excerpt = content.length > 100 ? content.substring(0, 100) + "..." : content;
+          const tags = content.match(/#\w+/g)?.map(tag => tag.substring(1)) || [];
+
+          return {
+            id: userInput.id || `temp-${Date.now()}`,
+            title: userInput.title || "",
+            content,
+            published: userInput.published ?? false,
+            author_id: userInput.author_id || "unknown",
+            created_at: userInput.created_at instanceof Date 
+              ? userInput.created_at 
+              : new Date(userInput.created_at || Date.now()),
+            publishStatus: (userInput.published ?? false) ? "published" : "draft",
+            excerpt,
+            wordCount,
+            readingTime,
+            tags,
+          };
+        },
+        pendingFields: [],
+      },
+    };
+
+    const postConfig: OptimisticStoreConfig<PostApiData, PostUiData> = {
+      name: "posts",
+      queryFn: mockQueryFn,
+      mutations: {
+        create: mockCreateMutation,
+        update: mockUpdateMutation,
+        remove: mockRemoveMutation,
+      },
+      transformer: postTransformer,
+      optimisticContext: () => ({ currentUser: null }),
+    };
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      
+      // Mock initial data
+      mockQueryFn.mockResolvedValue([
+        {
+          id: "1",
+          title: "Test Post",
+          content: "This is a test post with #testing and #optimistic tags",
+          published: false,
+          author_id: "user1",
+          created_at: "2023-01-01T00:00:00.000Z",
+        },
+      ]);
+
+      // Mock successful mutations with delay to allow optimistic updates to be checked
+      mockUpdateMutation.mockImplementation(({ data }) => 
+        new Promise(resolve => 
+          setTimeout(() => resolve({
+            id: "1",
+            title: data.title || "Updated Post",
+            content: data.content || "Updated content with #new and #updated tags",
+            published: data.published !== undefined ? data.published : true,
+            author_id: "user1",
+            created_at: "2023-01-01T00:00:00.000Z",
+          }), 50)
+        )
+      );
+    });
+
+    it("should immediately update computed fields on optimistic publish toggle", async () => {
+      const store = createOptimisticStore(postConfig, queryClient);
+
+      // Wait for initial load
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const initialPost = store.ui.get("1");
+      expect(initialPost).toBeDefined();
+      expect(initialPost!.publishStatus).toBe("draft");
+      expect(initialPost!.published).toBe(false);
+
+      // Start optimistic update to toggle published status
+      const updatePromise = store.api.update("1", { published: true });
+
+      // Wait for optimistic update to be applied
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Check that computed fields are immediately updated
+      const optimisticPost = store.ui.get("1");
+      expect(optimisticPost).toBeDefined();
+      expect(optimisticPost!.published).toBe(true);
+      expect(optimisticPost!.publishStatus).toBe("published"); // This should be immediate!
+
+      // Complete the mutation
+      await updatePromise;
+
+      // Verify final state
+      const finalPost = store.ui.get("1");
+      expect(finalPost!.published).toBe(true);
+      expect(finalPost!.publishStatus).toBe("published");
+    });
+
+    it("should immediately recalculate content-related computed fields on content update", async () => {
+      const store = createOptimisticStore(postConfig, queryClient);
+
+      // Wait for initial load
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const initialPost = store.ui.get("1");
+      expect(initialPost).toBeDefined();
+      expect(initialPost!.wordCount).toBe(10); // "This is a test post with #testing and #optimistic tags" (10 words)
+      expect(initialPost!.readingTime).toBe(1); // 10 words / 200 = 1 minute
+      expect(initialPost!.excerpt).toBe("This is a test post with #testing and #optimistic tags");
+      expect(initialPost!.tags).toEqual(["testing", "optimistic"]);
+
+      // Start optimistic update with new content
+      const newContent = "This is a much longer post with many more words to test the word count calculation and reading time estimation. It should have #new #tags and #more #content for testing purposes.";
+      const updatePromise = store.api.update("1", { content: newContent });
+
+      // Wait for optimistic update to be applied
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Check that computed fields are immediately recalculated
+      const optimisticPost = store.ui.get("1");
+      expect(optimisticPost).toBeDefined();
+      expect(optimisticPost!.content).toBe(newContent);
+      expect(optimisticPost!.wordCount).toBe(31); // Should be recalculated immediately
+      expect(optimisticPost!.readingTime).toBe(1); // 35 words / 200 = 1 minute
+      expect(optimisticPost!.excerpt).toBe("This is a much longer post with many more words to test the word count calculation and reading time ..."); // Should be recalculated (truncated at 100 chars)
+      expect(optimisticPost!.tags).toEqual(["new", "tags", "more", "content"]); // Should be recalculated immediately
+
+      // Complete the mutation
+      await updatePromise;
+
+      // Verify final state
+      const finalPost = store.ui.get("1");
+      expect(finalPost!.content).toBe(newContent);
+      expect(finalPost!.wordCount).toBe(31);
+      expect(finalPost!.readingTime).toBe(1);
+      expect(finalPost!.tags).toEqual(["new", "tags", "more", "content"]);
+    });
+
+    it("should handle multiple field updates with computed field recalculation", async () => {
+      const store = createOptimisticStore(postConfig, queryClient);
+
+      // Wait for initial load
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Start optimistic update with multiple fields
+      const updatePromise = store.api.update("1", {
+        title: "Updated Title",
+        content: "Short content with #single #tag",
+        published: true,
+      });
+
+      // Wait for optimistic update to be applied
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Check that all fields and computed fields are immediately updated
+      const optimisticPost = store.ui.get("1");
+      expect(optimisticPost).toBeDefined();
+      expect(optimisticPost!.title).toBe("Updated Title");
+      expect(optimisticPost!.content).toBe("Short content with #single #tag");
+      expect(optimisticPost!.published).toBe(true);
+      expect(optimisticPost!.publishStatus).toBe("published"); // Computed field
+      expect(optimisticPost!.wordCount).toBe(5); // "Short content with #single #tag"
+      expect(optimisticPost!.readingTime).toBe(1); // 5 words / 200 = 1 minute
+      expect(optimisticPost!.tags).toEqual(["single", "tag"]); // Computed field
+
+      // Complete the mutation
+      await updatePromise;
+
+      // Verify final state
+      const finalPost = store.ui.get("1");
+      expect(finalPost!.title).toBe("Updated Title");
+      expect(finalPost!.content).toBe("Short content with #single #tag");
+      expect(finalPost!.published).toBe(true);
+      expect(finalPost!.publishStatus).toBe("published");
+      expect(finalPost!.wordCount).toBe(5);
+      expect(finalPost!.readingTime).toBe(1);
+      expect(finalPost!.tags).toEqual(["single", "tag"]);
+    });
+
+    it("should rollback computed fields on mutation error", async () => {
+      const store = createOptimisticStore(postConfig, queryClient);
+
+      // Wait for initial load
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const initialPost = store.ui.get("1");
+      const initialWordCount = initialPost!.wordCount;
+      const initialPublishStatus = initialPost!.publishStatus;
+
+      // Mock mutation to fail after delay
+      mockUpdateMutation.mockImplementationOnce(() => 
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Update failed")), 50)
+        )
+      );
+
+      // Start optimistic update
+      const updatePromise = store.api.update("1", {
+        content: "This will fail and should rollback",
+        published: true,
+      });
+
+      // Wait for optimistic update to be applied
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Check optimistic state
+      const optimisticPost = store.ui.get("1");
+      expect(optimisticPost!.content).toBe("This will fail and should rollback");
+      expect(optimisticPost!.published).toBe(true);
+      expect(optimisticPost!.publishStatus).toBe("published");
+
+      // Wait for mutation to fail and rollback
+      try {
+        await updatePromise;
+      } catch (error) {
+        // Expected to fail
+        expect(error.message).toBe("Update failed");
+      }
+
+      // Wait a bit for rollback to complete
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Check that computed fields are rolled back
+      const rolledBackPost = store.ui.get("1");
+      expect(rolledBackPost!.content).toBe("This is a test post with #testing and #optimistic tags");
+      expect(rolledBackPost!.published).toBe(false);
+      expect(rolledBackPost!.publishStatus).toBe("draft");
+      expect(rolledBackPost!.wordCount).toBe(initialWordCount);
+    });
+  });
 });

@@ -260,18 +260,8 @@ export function createOptimisticStore<
             const mergedData = { ...existingItem, ...data };
 
             // Use transformer to recalculate computed fields if available
-            if (transformer?.optimisticDefaults?.createOptimisticUiData) {
-              const context = config.optimisticContext
-                ? config.optimisticContext()
-                : undefined;
-              const optimisticItem =
-                transformer.optimisticDefaults.createOptimisticUiData(
-                  mergedData,
-                  context,
-                );
-              uiStore.upsert(optimisticItem);
-            } else if (transformer) {
-              // Fallback: convert to API data and back to UI data to recalculate computed fields
+            if (transformer) {
+              // For updates, convert to API data and back to UI data to recalculate computed fields
               const apiData = transformer.toApi(mergedData);
               const uiData = transformer.toUi(apiData);
               uiStore.upsert(uiData);
