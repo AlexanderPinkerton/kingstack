@@ -1,13 +1,12 @@
 "use client";
 
 import { observer } from "mobx-react-lite";
-import { useRootStore } from "@/hooks/useRootStore";
 import { Badge } from "@/components/ui/badge";
 import { Play } from "lucide-react";
 import { useState, useEffect } from "react";
+import { isPlaygroundMode } from "@kingstack/shapes";
 
 export const PlaygroundIndicator = observer(() => {
-  const { playgroundStore } = useRootStore();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -15,7 +14,7 @@ export const PlaygroundIndicator = observer(() => {
   }, []);
 
   // Don't render during SSR to prevent hydration mismatch
-  if (!isClient || !playgroundStore.isPlaygroundMode) {
+  if (!isClient || !isPlaygroundMode()) {
     return null;
   }
 

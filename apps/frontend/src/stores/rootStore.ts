@@ -5,7 +5,6 @@ import { AdvancedTodoStore } from "./todoStore";
 import { AdvancedPostStore } from "./postStore";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { AdvancedUserStore } from "./userStore";
-import { PlaygroundStore } from "./playgroundStore";
 import { isPlaygroundMode } from "@kingstack/shapes";
 
 // Create Supabase client (will be null if env vars are missing)
@@ -30,9 +29,6 @@ export class RootStore {
   postStore: AdvancedPostStore;
   checkboxStore: RealtimeCheckboxStore;
   userStore: AdvancedUserStore;
-
-  // Playground store
-  playgroundStore: PlaygroundStore;
 
   // WebSocket connection management
   socket: Socket | null = null;
@@ -100,7 +96,6 @@ export class RootStore {
     this.postStore = new AdvancedPostStore();
     this.checkboxStore = new RealtimeCheckboxStore(this.browserId);
     this.userStore = new AdvancedUserStore();
-    this.playgroundStore = new PlaygroundStore();
 
     // Make session and stores observable before setting up auth listener
     makeAutoObservable(this, {
@@ -109,7 +104,6 @@ export class RootStore {
       postStore: true,
       checkboxStore: true,
       userStore: true,
-      playgroundStore: true,
     });
 
     // Clean up any existing auth listener first
