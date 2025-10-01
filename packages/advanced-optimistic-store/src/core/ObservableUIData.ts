@@ -72,7 +72,7 @@ export class ObservableUIData<T extends Entity> {
 
   // MobX-aware methods for realtime updates (UI-only, server already updated)
   // These methods handle runInAction internally so the realtime extension doesn't need MobX
-  upsertFromRealtime<TApiData extends Entity>(apiData: TApiData): void {
+  upsertViaRealtime<TApiData extends Entity>(apiData: TApiData): void {
     runInAction(() => {
       const uiData = this.transformer
         ? this.transformer.toUi(apiData)
@@ -81,7 +81,7 @@ export class ObservableUIData<T extends Entity> {
     });
   }
 
-  removeFromRealtime(id: string): void {
+  removeViaRealtime(id: string): void {
     runInAction(() => {
       this.remove(id);
     });

@@ -115,7 +115,7 @@ export class RealtimeExtension<T extends { id: string }> {
           }
 
           // UI-only update (server already updated via realtime)
-          this.store.upsertFromRealtime(data);
+          this.store.upsertViaRealtime(data);
           console.log(
             `📡 RealtimeExtension: ${eventType} processed for item ${data.id}`,
           );
@@ -131,7 +131,7 @@ export class RealtimeExtension<T extends { id: string }> {
           }
 
           // UI-only removal (server already updated via realtime)
-          this.store.removeFromRealtime(data.id);
+          this.store.removeViaRealtime(data.id);
           console.log(
             `📡 RealtimeExtension: DELETE processed for item ${data.id}`,
           );

@@ -267,7 +267,7 @@ describe("Core Module Integration", () => {
       };
 
       // Manually trigger realtime update (simulating WebSocket event)
-      store.ui.upsertFromRealtime(realtimeData);
+      store.ui.upsertViaRealtime(realtimeData);
 
       expect(store.ui.count).toBe(3);
       const realtimeTask = store.ui.get("3");

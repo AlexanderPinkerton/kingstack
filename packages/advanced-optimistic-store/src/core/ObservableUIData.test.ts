@@ -200,12 +200,12 @@ describe("ObservableUIData", () => {
       created_at: "2023-01-01T00:00:00.000Z",
     };
 
-    it("should upsert from realtime with transformer", () => {
+    it("should upsert via realtime with transformer", () => {
       const storeWithTransformer = new ObservableUIData<TestEntity>(
         mockTransformer,
       );
 
-      storeWithTransformer.upsertFromRealtime(apiData);
+      storeWithTransformer.upsertViaRealtime(apiData);
 
       const result = storeWithTransformer.get("1");
       expect(result).toBeDefined();
@@ -216,14 +216,14 @@ describe("ObservableUIData", () => {
       expect(result?.createdAt).toBeInstanceOf(Date);
     });
 
-    it("should upsert from realtime without transformer", () => {
-      store.upsertFromRealtime(apiData as any);
+    it("should upsert via realtime without transformer", () => {
+      store.upsertViaRealtime(apiData as any);
 
       const result = store.get("1");
       expect(result).toEqual(apiData);
     });
 
-    it("should remove from realtime", () => {
+    it("should remove via realtime", () => {
       const testEntity: TestEntity = {
         id: "1",
         title: "Test Task",
@@ -236,7 +236,7 @@ describe("ObservableUIData", () => {
       store.upsert(testEntity);
       expect(store.count).toBe(1);
 
-      store.removeFromRealtime("1");
+      store.removeViaRealtime("1");
       expect(store.count).toBe(0);
     });
   });
