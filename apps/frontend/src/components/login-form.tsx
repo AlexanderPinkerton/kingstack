@@ -15,22 +15,16 @@ import { createClient } from "@/lib/supabase/browserClient";
 import { UsernameGenerator } from "@kingstack/shapes";
 import { APPNAME } from "@kingstack/shapes";
 
+import { isPlaygroundMode } from "@kingstack/shapes";
+
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
   const supabase = createClient();
-  const [loading, setLoading] = useState(false);
 
-  // Don't render in playground mode
-  if (!supabase) {
-    return (
-      <div className="text-center text-gray-400">
-        <p>Authentication is disabled in playground mode.</p>
-        <p>Switch to development mode to use authentication.</p>
-      </div>
-    );
-  }
+  // All hooks must be called before any conditional returns
+  const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "register">("login");
   // Registration state
   const [email, setEmail] = useState("");
@@ -39,6 +33,26 @@ export function LoginForm({
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Debounced username validation
+  useEffect(() => {
+    if (mode === "register" && username) {
+      const timeoutId = setTimeout(() => {
+        validateUsername(username);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [username, mode]);
+
+  // Show playground mode message
+  if (isPlaygroundMode()) {
+    return (
+      <div className="text-center text-gray-400">
+        <p>Authentication is disabled in playground mode.</p>
+        <p>Switch to development mode to use authentication.</p>
+      </div>
+    );
+  }
 
   // Username validation and suggestions
   const validateUsername = async (username: string) => {
@@ -71,16 +85,6 @@ export function LoginForm({
       setUsernameError("Error checking username availability");
     }
   };
-
-  // Debounced username validation
-  useEffect(() => {
-    if (mode === "register" && username) {
-      const timeoutId = setTimeout(() => {
-        validateUsername(username);
-      }, 500);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [username, mode]);
 
   async function onLogin(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();

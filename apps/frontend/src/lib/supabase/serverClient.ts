@@ -1,16 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { isPlaygroundMode } from "@kingstack/shapes";
+import { createMockClient } from "./mockClient";
 
 export async function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Check if we have the required environment variables
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn(
-      "⚠️ Supabase server client: Missing environment variables - returning null",
-    );
-    return null;
+  // Check if we're in playground mode or missing environment variables
+  if (isPlaygroundMode() || !supabaseUrl || !supabaseAnonKey) {
+    console.log("🎮 Supabase client: Using mock client for playground mode");
+    return createMockClient();
   }
 
   const cookieStore = await cookies();
