@@ -5,6 +5,7 @@ import {
   createOptimisticStore,
   Entity,
 } from "@kingstack/advanced-optimistic-store";
+import { getMockData, isPlaygroundMode } from "@kingstack/shapes";
 // No longer need to import realtime extension - it's integrated into the store
 
 // ---------- Types ----------
@@ -139,23 +140,15 @@ export class RealtimeCheckboxStore {
       CheckboxUiData
     >({
       name: "checkboxes",
-      queryFn: fetchCheckboxes,
+      queryFn: this.getQueryFn(),
       mutations: {
-        create: createCheckbox,
-        update: updateCheckbox,
-        remove: deleteCheckbox,
+        create: this.getCreateMutation(),
+        update: this.getUpdateMutation(),
+        remove: this.getDeleteMutation(),
       },
-      transformer: checkboxTransformer,
+      transformer: this.getTransformer(),
       staleTime: 2 * 60 * 1000, // 2 minutes
-      realtime: {
-        eventType: "checkbox_update",
-        // 🔧 Custom data extractor for checkbox events
-        // The backend sends events in format: { type, event, checkbox: {...} }
-        dataExtractor: (event) => event.checkbox || event.data,
-        shouldProcessEvent: (event) => event.type === "checkbox_update",
-        // 🛡️ Filter out self-originated events to prevent echo
-        browserId: browserId,
-      },
+      realtime: this.getRealtimeConfig(browserId),
     });
   }
 
@@ -290,4 +283,96 @@ export class RealtimeCheckboxStore {
       throw error;
     }
   }
+
+  // ============================================================================
+  // PLAYGROUND CONFIGURATION
+  // ============================================================================
+  // All playground logic is centralized here for easy maintenance
+
+  private getQueryFn() {
+    return isPlaygroundMode() ? this.playgroundQueryFn : this.apiQueryFn;
+  }
+
+  private getCreateMutation() {
+    return isPlaygroundMode() ? this.playgroundCreateMutation : this.apiCreateMutation;
+  }
+
+  private getUpdateMutation() {
+    return isPlaygroundMode() ? this.playgroundUpdateMutation : this.apiUpdateMutation;
+  }
+
+  private getDeleteMutation() {
+    return isPlaygroundMode() ? this.playgroundDeleteMutation : this.apiDeleteMutation;
+  }
+
+  private getTransformer() {
+    return checkboxTransformer;
+  }
+
+  private getRealtimeConfig(browserId?: string) {
+    // Only enable realtime in non-playground mode
+    if (isPlaygroundMode()) {
+      return undefined;
+    }
+    
+    return {
+      eventType: "checkbox_update",
+      // 🔧 Custom data extractor for checkbox events
+      // The backend sends events in format: { type, event, checkbox: {...} }
+      dataExtractor: (event: any) => event.checkbox || event.data,
+      shouldProcessEvent: (event: any) => event.type === "checkbox_update",
+      // 🛡️ Filter out self-originated events to prevent echo
+      browserId: browserId,
+    };
+  }
+
+  // API Implementations
+  private apiQueryFn = async (): Promise<CheckboxApiData[]> => {
+    return fetchCheckboxes();
+  };
+
+  private apiCreateMutation = async (data: { index: number; checked: boolean }): Promise<CheckboxApiData> => {
+    return createCheckbox(data);
+  };
+
+  private apiUpdateMutation = async ({ id, data }: { id: string; data: { index?: number; checked?: boolean } }): Promise<CheckboxApiData> => {
+    return updateCheckbox({ id, data });
+  };
+
+  private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
+    return deleteCheckbox(id);
+  };
+
+  // Playground Implementations
+  private playgroundQueryFn = async (): Promise<CheckboxApiData[]> => {
+    await new Promise(resolve => setTimeout(resolve, 300)); // Simulate delay
+    return getMockData('checkboxes') as CheckboxApiData[];
+  };
+
+  private playgroundCreateMutation = async (data: { index: number; checked: boolean }): Promise<CheckboxApiData> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return {
+      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      index: data.index,
+      checked: data.checked,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  };
+
+  private playgroundUpdateMutation = async ({ id, data }: { id: string; data: { index?: number; checked?: boolean } }): Promise<CheckboxApiData> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return {
+      id,
+      index: data.index || 0,
+      checked: data.checked || false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  };
+
+  private playgroundDeleteMutation = async (id: string): Promise<{ id: string }> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { id };
+  };
 }
