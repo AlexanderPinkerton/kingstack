@@ -1,6 +1,6 @@
 // Mock Supabase client for playground mode
 // This provides a no-op implementation that doesn't require real Supabase credentials
-export function createMockClient() {
+export function createPlaygroundClient() {
   console.log("🎮 Creating mock Supabase client for playground mode");
 
   return {

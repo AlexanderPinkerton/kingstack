@@ -1,5 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
-import { createMockClient } from "./mockClient";
+import { createPlaygroundClient } from "./playgroundClient";
 import { isPlaygroundMode } from "@kingstack/shapes";
 
 export function createClient() {
@@ -9,7 +9,7 @@ export function createClient() {
   // Check if we're in playground mode or missing environment variables
   if (isPlaygroundMode() || !supabaseUrl || !supabaseAnonKey) {
     console.log("🎮 Supabase client: Using mock client for playground mode");
-    return createMockClient();
+    return createPlaygroundClient();
   }
 
   return createBrowserClient(supabaseUrl, supabaseAnonKey);
