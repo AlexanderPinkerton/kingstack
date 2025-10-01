@@ -250,20 +250,35 @@ export function createOptimisticStore<
       await qc.cancelQueries({ queryKey: [config.name] });
       uiStore.pushSnapshot();
 
-      // Get optimistic defaults for updates TODO: Does it make sense to use this here?
-      // const optimisticDefaults =
-      //   transformer?.optimisticDefaults || config.optimisticDefaults;
-
       // Optimistic update with proper UI data calculation
       notifyManager.batch(() => {
         runInAction(() => {
           // Get existing item to merge with updates
           const existingItem = uiStore.get(id);
           if (existingItem) {
-            // For updates, just merge the existing item with the updates
-            // This is simpler and more appropriate for update operations
-            const optimisticItem = { ...existingItem, ...data };
-            uiStore.upsert(optimisticItem);
+            // Merge the existing item with the updates
+            const mergedData = { ...existingItem, ...data };
+
+            // Use transformer to recalculate computed fields if available
+            if (transformer?.optimisticDefaults?.createOptimisticUiData) {
+              const context = config.optimisticContext
+                ? config.optimisticContext()
+                : undefined;
+              const optimisticItem =
+                transformer.optimisticDefaults.createOptimisticUiData(
+                  mergedData,
+                  context,
+                );
+              uiStore.upsert(optimisticItem);
+            } else if (transformer) {
+              // Fallback: convert to API data and back to UI data to recalculate computed fields
+              const apiData = transformer.toApi(mergedData);
+              const uiData = transformer.toUi(apiData);
+              uiStore.upsert(uiData);
+            } else {
+              // No transformer - just merge as before
+              uiStore.upsert(mergedData);
+            }
           }
         });
       });
