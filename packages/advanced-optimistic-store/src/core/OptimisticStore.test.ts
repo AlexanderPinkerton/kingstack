@@ -159,8 +159,11 @@ describe("createOptimisticStore", () => {
       expect(store.ui.list).toEqual([]);
     });
 
-    it("should have correct initial status", () => {
+    it("should have correct initial status", async () => {
       const store = createOptimisticStore(config, queryClient);
+
+      // Wait for the initial query to complete (auto-triggered on creation)
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(store.api.status.isLoading).toBe(false);
       expect(store.api.status.isError).toBe(false);
@@ -195,10 +198,14 @@ describe("createOptimisticStore", () => {
     });
 
     it("should handle query errors", async () => {
+      const store = createOptimisticStore(config, queryClient);
+
+      // Wait for initial query to complete first
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Now set up the error mock for the next query
       const error = new Error("Query failed");
       mockQueryFn.mockRejectedValueOnce(error);
-
-      const store = createOptimisticStore(config, queryClient);
 
       await store.api.triggerQuery();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -328,16 +335,21 @@ describe("createOptimisticStore", () => {
 
       // Make the server response take longer
       const originalCreateMutation = mockCreateMutation.getMockImplementation();
-      mockCreateMutation.mockImplementation(() => 
-        new Promise(resolve => 
-          setTimeout(() => resolve({
-            id: "3",
-            title: "New Task",
-            completed: "false",
-            priority: "3",
-            created_at: "2023-01-03T00:00:00.000Z",
-          }), 200)
-        )
+      mockCreateMutation.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  id: "3",
+                  title: "New Task",
+                  completed: "false",
+                  priority: "3",
+                  created_at: "2023-01-03T00:00:00.000Z",
+                }),
+              200,
+            ),
+          ),
       );
 
       // Set up MobX spy to track changes
@@ -356,7 +368,7 @@ describe("createOptimisticStore", () => {
       const mutationPromise = store.api.create(newData);
 
       // Wait a bit for the onMutate callback to run
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Check that optimistic data is added after onMutate has run
       expect(store.ui.count).toBe(1);
@@ -404,16 +416,21 @@ describe("createOptimisticStore", () => {
 
       // Make the server response take longer
       const originalUpdateMutation = mockUpdateMutation.getMockImplementation();
-      mockUpdateMutation.mockImplementation(() => 
-        new Promise(resolve => 
-          setTimeout(() => resolve({
-            id: "1",
-            title: "Server Confirmed Updated Task",
-            completed: "true",
-            priority: "5",
-            created_at: "2023-01-01T00:00:00.000Z",
-          }), 200)
-        )
+      mockUpdateMutation.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  id: "1",
+                  title: "Server Confirmed Updated Task",
+                  completed: "true",
+                  priority: "5",
+                  created_at: "2023-01-01T00:00:00.000Z",
+                }),
+              200,
+            ),
+          ),
       );
 
       // Set up MobX spy to track changes
@@ -430,7 +447,7 @@ describe("createOptimisticStore", () => {
       const mutationPromise = store.api.update("1", updateData);
 
       // Wait a bit for the onMutate callback to run
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Check optimistic update after onMutate has run
       const optimisticTask = store.ui.get("1");
@@ -545,7 +562,6 @@ describe("createOptimisticStore", () => {
     it("should work without transformer", () => {
       const configWithoutTransformer = {
         ...config,
-        transformer: false,
       };
 
       const store = createOptimisticStore(

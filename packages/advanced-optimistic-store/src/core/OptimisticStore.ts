@@ -250,9 +250,9 @@ export function createOptimisticStore<
       await qc.cancelQueries({ queryKey: [config.name] });
       uiStore.pushSnapshot();
 
-      // Get optimistic defaults for updates
-      const optimisticDefaults =
-        transformer?.optimisticDefaults || config.optimisticDefaults;
+      // Get optimistic defaults for updates TODO: Does it make sense to use this here?
+      // const optimisticDefaults =
+      //   transformer?.optimisticDefaults || config.optimisticDefaults;
 
       // Optimistic update with proper UI data calculation
       notifyManager.batch(() => {
