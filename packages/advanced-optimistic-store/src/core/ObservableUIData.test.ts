@@ -411,7 +411,7 @@ describe("ObservableUIData", () => {
       // Mock console.log to verify it's called
       const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-      // Reconcile with same data (but as API data)
+      // Reconcile with same data (but as API data) using transformer
       const sameServerData: TestApiData = {
         id: "1",
         title: "Server Task 1",
@@ -421,7 +421,7 @@ describe("ObservableUIData", () => {
         created_at: "2023-01-01T00:00:00.000Z",
       };
 
-      store.reconcile([sameServerData]);
+      store.reconcile([sameServerData], mockTransformer);
 
       expect(consoleSpy).toHaveBeenCalledWith(
         "reconciled: no changes detected, skipping update",

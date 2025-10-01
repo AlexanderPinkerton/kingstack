@@ -50,6 +50,9 @@ export function createOptimisticStore<
   // Use provided query client or get the global singleton
   const qc = queryClient || getGlobalQueryClient();
 
+  // Track enabled state first
+  let enabledState = config.enabled ? config.enabled() : true;
+
   // Create transformer
   const transformer = createTransformer(config.transformer);
 
@@ -93,7 +96,7 @@ export function createOptimisticStore<
     queryKey: [config.name],
     queryFn: config.queryFn,
     staleTime: config.staleTime ?? 5 * 60 * 1000,
-    enabled: config.enabled ? config.enabled() : true,
+    enabled: enabledState,
   });
 
   // Subscribe to query changes with optimized reconciliation
@@ -159,11 +162,14 @@ export function createOptimisticStore<
 
   // Check if query is currently enabled
   const isEnabled = () => {
-    return config.enabled ? config.enabled() : true;
+    // Always check the current config function if it exists
+    return config.enabled ? config.enabled() : enabledState;
   };
 
-  // Initial trigger
-  triggerQuery();
+  // Initial trigger only if enabled
+  if (enabledState) {
+    triggerQuery();
+  }
 
   // Create mutation observers with optimized batching
   const createMutationObserver = new MutationObserver(qc, {
@@ -251,27 +257,13 @@ export function createOptimisticStore<
       // Optimistic update with proper UI data calculation
       notifyManager.batch(() => {
         runInAction(() => {
-          if (optimisticDefaults?.createOptimisticUiData) {
-            // Get existing item to merge with updates
-            const existingItem = uiStore.get(id);
-            if (existingItem) {
-              // Create updated form data by merging existing + updates
-              const updatedFormData = { ...existingItem, ...data };
-              // Generate fresh optimistic UI data with recalculated fields
-              const context = config.optimisticContext
-                ? config.optimisticContext()
-                : undefined;
-              const optimisticItem = optimisticDefaults.createOptimisticUiData(
-                updatedFormData,
-                context,
-              );
-              // Preserve the original ID (don't generate new temp ID)
-              optimisticItem.id = id;
-              uiStore.upsert(optimisticItem);
-            }
-          } else {
-            // Fallback: basic update without recalculated fields
-            uiStore.update(id, data);
+          // Get existing item to merge with updates
+          const existingItem = uiStore.get(id);
+          if (existingItem) {
+            // For updates, just merge the existing item with the updates
+            // This is simpler and more appropriate for update operations
+            const optimisticItem = { ...existingItem, ...data };
+            uiStore.upsert(optimisticItem);
           }
         });
       });
@@ -398,6 +390,7 @@ export function createOptimisticStore<
     },
     isEnabled: () => isEnabled(),
     enable: () => {
+      enabledState = true;
       queryObserver.setOptions({
         queryKey: [config.name],
         queryFn: config.queryFn,
@@ -407,6 +400,7 @@ export function createOptimisticStore<
       triggerQuery();
     },
     disable: () => {
+      enabledState = false;
       queryObserver.setOptions({
         queryKey: [config.name],
         queryFn: config.queryFn,

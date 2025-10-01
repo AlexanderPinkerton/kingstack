@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { QueryClient } from "@tanstack/query-core";
+import { autorun } from "mobx";
 import { createOptimisticStore } from "./OptimisticStore";
 import type { Entity, OptimisticStoreConfig } from "./types";
 
@@ -311,6 +312,7 @@ describe("createOptimisticStore", () => {
     it("should handle optimistic create with transformer", async () => {
       const configWithOptimistic = {
         ...config,
+        enabled: () => false, // Disable query to prevent interference
         optimisticDefaults: {
           createOptimisticUiData: (userInput: any) => ({
             id: `temp-${Date.now()}`,
@@ -324,6 +326,26 @@ describe("createOptimisticStore", () => {
 
       const store = createOptimisticStore(configWithOptimistic, queryClient);
 
+      // Make the server response take longer
+      const originalCreateMutation = mockCreateMutation.getMockImplementation();
+      mockCreateMutation.mockImplementation(() => 
+        new Promise(resolve => 
+          setTimeout(() => resolve({
+            id: "3",
+            title: "New Task",
+            completed: "false",
+            priority: "3",
+            created_at: "2023-01-03T00:00:00.000Z",
+          }), 200)
+        )
+      );
+
+      // Set up MobX spy to track changes
+      const spy = vi.fn();
+      const dispose = autorun(() => {
+        spy(store.ui.count);
+      });
+
       const newData = {
         title: "Optimistic Task",
         completed: false,
@@ -333,7 +355,10 @@ describe("createOptimisticStore", () => {
       // Start the mutation
       const mutationPromise = store.api.create(newData);
 
-      // Check that optimistic data is added immediately
+      // Wait a bit for the onMutate callback to run
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Check that optimistic data is added after onMutate has run
       expect(store.ui.count).toBe(1);
       const optimisticTask = store.ui.list[0];
       expect(optimisticTask.title).toBe("Optimistic Task");
@@ -347,29 +372,84 @@ describe("createOptimisticStore", () => {
       const finalTask = store.ui.list[0];
       expect(finalTask.title).toBe("New Task"); // From mock response
       expect(finalTask.id).toBe("3"); // From mock response
+
+      // Verify the spy captured the optimistic update
+      expect(spy).toHaveBeenCalledWith(1);
+
+      // Cleanup
+      dispose();
+      mockCreateMutation.mockImplementation(originalCreateMutation!);
     });
 
     it("should handle optimistic update", async () => {
+      const configWithOptimistic = {
+        ...config,
+        optimisticDefaults: {
+          createOptimisticUiData: (userInput: any) => ({
+            id: userInput.id,
+            title: userInput.title,
+            completed: userInput.completed || false,
+            priority: userInput.priority || 1,
+            created_at: userInput.created_at || new Date(),
+          }),
+        },
+      };
+
       // First populate the store
-      const store = createOptimisticStore(config, queryClient);
+      const store = createOptimisticStore(configWithOptimistic, queryClient);
       await store.api.triggerQuery();
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(store.ui.count).toBe(2);
 
+      // Make the server response take longer
+      const originalUpdateMutation = mockUpdateMutation.getMockImplementation();
+      mockUpdateMutation.mockImplementation(() => 
+        new Promise(resolve => 
+          setTimeout(() => resolve({
+            id: "1",
+            title: "Server Confirmed Updated Task",
+            completed: "true",
+            priority: "5",
+            created_at: "2023-01-01T00:00:00.000Z",
+          }), 200)
+        )
+      );
+
+      // Set up MobX spy to track changes
+      const spy = vi.fn();
+      const dispose = autorun(() => {
+        const task = store.ui.get("1");
+        if (task) {
+          spy(task.title);
+        }
+      });
+
       // Update with optimistic data
       const updateData = { title: "Optimistically Updated" };
       const mutationPromise = store.api.update("1", updateData);
 
-      // Check optimistic update
+      // Wait a bit for the onMutate callback to run
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Check optimistic update after onMutate has run
       const optimisticTask = store.ui.get("1");
       expect(optimisticTask?.title).toBe("Optimistically Updated");
 
+      // Wait for mutation to complete
       await mutationPromise;
 
       // Check final state
       const finalTask = store.ui.get("1");
-      expect(finalTask?.title).toBe("Updated Task"); // From mock response
+      expect(finalTask?.title).toBe("Server Confirmed Updated Task"); // From mock response
+
+      // Verify the spy captured the optimistic update
+      expect(spy).toHaveBeenCalledWith("Optimistically Updated");
+      expect(spy).toHaveBeenCalledWith("Server Confirmed Updated Task");
+
+      // Cleanup
+      dispose();
+      mockUpdateMutation.mockImplementation(originalUpdateMutation!);
     });
   });
 
