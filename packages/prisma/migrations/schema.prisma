@@ -1,0 +1,63 @@
+generator client {
+    provider = "prisma-client-js"
+    output   = "../../node_modules/.prisma/client"
+}
+
+datasource db {
+    provider          = "postgresql"
+    url               = env("SUPABASE_DB_POOL_URL")
+    directUrl         = env("SUPABASE_DB_DIRECT_URL")
+    shadowDatabaseUrl = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+}
+
+// 🔥 Golden Rules:
+// ❗ Never add a non-nullable field without a default to a table that is inserted into by triggers.
+// ❗ Never use capital letters ANYWHERE if you are using supabase or postgres...torment will follow
+
+// ❗❗❗ IMPORTANT ❗❗❗
+// Always update the db triggers in scripts/install-custom-user-trigger.ts if you change the user model 
+// ❗❗❗ Not doing this will BREAK ALL AUTH FOR THE APP ❗❗❗ 
+model user {
+    id                  String    @id @default(cuid())
+    email               String    @unique
+    username            String    @unique @db.VarChar(40)
+    username_changed_at DateTime?
+    previous_usernames  String[]
+    posts               post[]
+    todos               todo[]
+    created_at          DateTime  @default(now())
+}
+
+model post {
+    id         String   @id @default(cuid())
+    title      String
+    content    String?
+    published  Boolean  @default(false)
+    author_id  String
+    author     user     @relation(fields: [author_id], references: [id])
+    created_at DateTime @default(now())
+}
+
+model todo {
+    id         String   @id @default(cuid())
+    title      String
+    done       Boolean  @default(false)
+    user_id    String
+    user       user     @relation(fields: [user_id], references: [id])
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+}
+
+model test {
+    id         String   @id @default(cuid())
+    name       String
+    created_at DateTime @default(now())
+}
+
+model checkbox {
+    id         String   @id @default(cuid())
+    index      Int      @unique // 0-199 for 200 checkboxes
+    checked    Boolean  @default(false)
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+}
