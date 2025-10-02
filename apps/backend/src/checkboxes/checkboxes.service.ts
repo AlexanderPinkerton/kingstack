@@ -42,7 +42,9 @@ export class CheckboxesService {
         data: createCheckboxDto,
       });
 
-      this.logger.log(`Created checkbox: ${checkbox.id} at index ${checkbox.index}`);
+      this.logger.log(
+        `Created checkbox: ${checkbox.id} at index ${checkbox.index}`,
+      );
       return checkbox;
     } catch (error) {
       this.logger.error("Error in create:", error);
