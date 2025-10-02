@@ -1,38 +1,32 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { PrismaClient } from "@prisma/client";
 
 export interface Checkbox {
   id: string;
   index: number;
   checked: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at: Date;
+  updated_at: Date;
 }
 
 @Injectable()
 export class CheckboxesService {
   private readonly logger = new Logger(CheckboxesService.name);
-  private supabase: SupabaseClient;
+  private prisma: PrismaClient;
 
   constructor() {
-    const supabaseUrl = process.env.SUPABASE_URL!;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    this.supabase = createClient(supabaseUrl, supabaseKey);
+    this.prisma = new PrismaClient();
   }
 
   async findAll(): Promise<Checkbox[]> {
     try {
-      const { data, error } = await this.supabase
-        .from("checkbox")
-        .select("*")
-        .order("index", { ascending: true });
+      const checkboxes = await this.prisma.checkbox.findMany({
+        orderBy: {
+          index: "asc",
+        },
+      });
 
-      if (error) {
-        this.logger.error("Error fetching checkboxes:", error);
-        throw new Error(`Failed to fetch checkboxes: ${error.message}`);
-      }
-
-      return data || [];
+      return checkboxes;
     } catch (error) {
       this.logger.error("Error in findAll:", error);
       throw error;
@@ -44,19 +38,12 @@ export class CheckboxesService {
     checked: boolean;
   }): Promise<Checkbox> {
     try {
-      const { data, error } = await this.supabase
-        .from("checkbox")
-        .insert([createCheckboxDto])
-        .select()
-        .single();
+      const checkbox = await this.prisma.checkbox.create({
+        data: createCheckboxDto,
+      });
 
-      if (error) {
-        this.logger.error("Error creating checkbox:", error);
-        throw new Error(`Failed to create checkbox: ${error.message}`);
-      }
-
-      this.logger.log(`Created checkbox: ${data.id} at index ${data.index}`);
-      return data;
+      this.logger.log(`Created checkbox: ${checkbox.id} at index ${checkbox.index}`);
+      return checkbox;
     } catch (error) {
       this.logger.error("Error in create:", error);
       throw error;
@@ -68,20 +55,13 @@ export class CheckboxesService {
     updateCheckboxDto: { index?: number; checked?: boolean },
   ): Promise<Checkbox> {
     try {
-      const { data, error } = await this.supabase
-        .from("checkbox")
-        .update(updateCheckboxDto)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) {
-        this.logger.error("Error updating checkbox:", error);
-        throw new Error(`Failed to update checkbox: ${error.message}`);
-      }
+      const checkbox = await this.prisma.checkbox.update({
+        where: { id },
+        data: updateCheckboxDto,
+      });
 
       this.logger.log(`Updated checkbox: ${id}`);
-      return data;
+      return checkbox;
     } catch (error) {
       this.logger.error("Error in update:", error);
       throw error;
@@ -90,15 +70,9 @@ export class CheckboxesService {
 
   async remove(id: string): Promise<void> {
     try {
-      const { error } = await this.supabase
-        .from("checkbox")
-        .delete()
-        .eq("id", id);
-
-      if (error) {
-        this.logger.error("Error deleting checkbox:", error);
-        throw new Error(`Failed to delete checkbox: ${error.message}`);
-      }
+      await this.prisma.checkbox.delete({
+        where: { id },
+      });
 
       this.logger.log(`Deleted checkbox: ${id}`);
     } catch (error) {
@@ -112,17 +86,7 @@ export class CheckboxesService {
   ): Promise<{ message: string; count: number }> {
     try {
       // First, clear existing checkboxes
-      const { error: deleteError } = await this.supabase
-        .from("checkbox")
-        .delete()
-        .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all
-
-      if (deleteError) {
-        this.logger.error("Error clearing existing checkboxes:", deleteError);
-        throw new Error(
-          `Failed to clear existing checkboxes: ${deleteError.message}`,
-        );
-      }
+      await this.prisma.checkbox.deleteMany({});
 
       // Create new checkboxes
       const checkboxes = Array.from({ length: count }, (_, i) => ({
@@ -130,20 +94,14 @@ export class CheckboxesService {
         checked: false,
       }));
 
-      const { data, error } = await this.supabase
-        .from("checkbox")
-        .insert(checkboxes)
-        .select();
+      const createdCheckboxes = await this.prisma.checkbox.createMany({
+        data: checkboxes,
+      });
 
-      if (error) {
-        this.logger.error("Error initializing checkboxes:", error);
-        throw new Error(`Failed to initialize checkboxes: ${error.message}`);
-      }
-
-      this.logger.log(`Initialized ${data.length} checkboxes`);
+      this.logger.log(`Initialized ${createdCheckboxes.count} checkboxes`);
       return {
-        message: `Successfully initialized ${data.length} checkboxes`,
-        count: data.length,
+        message: `Successfully initialized ${createdCheckboxes.count} checkboxes`,
+        count: createdCheckboxes.count,
       };
     } catch (error) {
       this.logger.error("Error in initializeCheckboxes:", error);
