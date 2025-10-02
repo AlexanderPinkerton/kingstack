@@ -18,6 +18,13 @@ export const AdvancedPostsExample = observer(() => {
   const postStore = rootStore.postStore;
   const { ui, api } = postStore;
 
+  // Client-side only state to prevent hydration mismatches
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Basic React state for UI controls
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -137,6 +144,17 @@ export const AdvancedPostsExample = observer(() => {
       recent: posts.filter((post) => post.isNew).length,
     };
   };
+
+  // Show loading state during hydration
+  if (!isClient) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-pulse text-slate-300">
+          Initializing advanced posts...
+        </div>
+      </div>
+    );
+  }
 
   // Show loading state while store is not ready
   if (!postStore.isReady) {

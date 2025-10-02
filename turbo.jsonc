@@ -4,7 +4,8 @@
     "dev": {
       "cache": false,
       "dependsOn": [
-        "^dev"
+        "@kingstack/shapes#build",
+        "@kingstack/prisma#generate"
       ]
     },
     "build": {

@@ -53,3 +53,11 @@ model test {
     name       String
     created_at DateTime @default(now())
 }
+
+model checkbox {
+    id         String   @id @default(cuid())
+    index      Int      @unique // 0-199 for 200 checkboxes
+    checked    Boolean  @default(false)
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+}

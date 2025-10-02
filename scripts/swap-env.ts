@@ -7,7 +7,7 @@
 import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync } from "fs";
 import { dirname, join } from "path";
 
-const ENVIRONMENTS = ["development", "production"];
+const ENVIRONMENTS = ["development", "production", "playground"];
 const FILE_MAP = [
   {
     src: ".env.frontend",
@@ -61,7 +61,7 @@ async function main() {
 }
 
 function printUsageAndExit() {
-  console.error("Usage:\n  bun swap-env.ts [development|production]\n  bun swap-env.ts --current");
+  console.error("Usage:\n  bun swap-env.ts [development|production|playground]\n  bun swap-env.ts --current");
   process.exit(1);
 }
 

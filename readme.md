@@ -94,6 +94,14 @@ yarn dev
 ```
 This runs both `frontend` and `backend` in parallel.
 
+### 🎮 Playground Mode (No Setup Required)
+For UI development and demos without Supabase setup:
+```bash
+yarn env:playground
+yarn dev
+```
+This runs KingStack with mock data - perfect for UI development and demos!
+
 ### Run Individual App
 ```bash
 yarn workspace @kingstack/frontend dev
