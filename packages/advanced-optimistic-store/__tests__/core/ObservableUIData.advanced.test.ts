@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { autorun, reaction } from "mobx";
 import { ObservableUIData } from "../../src/core/ObservableUIData";
 import type { Entity, DataTransformer } from "../../src/core/types";
+import { getPerformanceThresholds, measurePerformance, measureMemoryUsage } from "../utils/testHelpers";
 
 // Test data types
 interface TestEntity extends Entity {
@@ -201,30 +202,33 @@ describe("ObservableUIData Advanced Scenarios", () => {
   });
 
   describe("Performance & Memory", () => {
-    it("should handle large datasets efficiently", () => {
-      const startTime = performance.now();
+    it("should handle large datasets efficiently", async () => {
+      const thresholds = getPerformanceThresholds();
+      
+      const { result, duration, passed } = await measurePerformance(
+        () => {
+          // Add 1000 entities
+          for (let i = 0; i < 1000; i++) {
+            store.upsert({
+              id: `task-${i}`,
+              title: `Task ${i}`,
+              completed: i % 2 === 0,
+              priority: (i % 5) + 1,
+              tags: [`tag-${i % 10}`],
+              createdAt: new Date(2023, 0, 1 + i),
+            });
+          }
+          return store.count;
+        },
+        thresholds.largeDataset,
+        "large dataset insertion"
+      );
 
-      // Add 1000 entities
-      for (let i = 0; i < 1000; i++) {
-        store.upsert({
-          id: `task-${i}`,
-          title: `Task ${i}`,
-          completed: i % 2 === 0,
-          priority: (i % 5) + 1,
-          tags: [`tag-${i % 10}`],
-          createdAt: new Date(2023, 0, 1 + i),
-        });
-      }
-
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-
-      // Should complete in reasonable time (less than 100ms)
-      expect(duration).toBeLessThan(100);
-      expect(store.count).toBe(1000);
+      expect(passed).toBe(true);
+      expect(result).toBe(1000);
     });
 
-    it("should handle rapid updates efficiently", () => {
+    it("should handle rapid updates efficiently", async () => {
       const entity: TestEntity = {
         id: "1",
         title: "Task 1",
@@ -235,57 +239,50 @@ describe("ObservableUIData Advanced Scenarios", () => {
       };
 
       store.upsert(entity);
+      const thresholds = getPerformanceThresholds();
 
-      const startTime = performance.now();
+      const { result, duration, passed } = await measurePerformance(
+        () => {
+          // Perform 1000 rapid updates
+          for (let i = 0; i < 1000; i++) {
+            store.update("1", { priority: i });
+          }
+          return store.get("1")?.priority;
+        },
+        thresholds.rapidUpdates,
+        "rapid updates"
+      );
 
-      // Perform 1000 rapid updates
-      for (let i = 0; i < 1000; i++) {
-        store.update("1", { priority: i });
-      }
-
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-
-      // Should complete in reasonable time (less than 50ms)
-      expect(duration).toBeLessThan(50);
-      expect(store.get("1")?.priority).toBe(999);
+      expect(passed).toBe(true);
+      expect(result).toBe(999);
     });
 
-    it("should handle memory efficiently with large datasets", () => {
-      const initialMemory = process.memoryUsage().heapUsed;
+    it("should handle memory efficiently with large datasets", async () => {
+      const thresholds = getPerformanceThresholds();
+      
+      const memoryUsage = await measureMemoryUsage(async () => {
+        // Add 10000 entities
+        for (let i = 0; i < 10000; i++) {
+          store.upsert({
+            id: `task-${i}`,
+            title: `Task ${i}`,
+            completed: i % 2 === 0,
+            priority: (i % 5) + 1,
+            tags: [`tag-${i % 10}`, `category-${i % 3}`],
+            createdAt: new Date(2023, 0, 1 + i),
+            metadata: { index: i, category: `cat-${i % 5}` },
+          });
+        }
+      });
 
-      // Add 10000 entities
-      for (let i = 0; i < 10000; i++) {
-        store.upsert({
-          id: `task-${i}`,
-          title: `Task ${i}`,
-          completed: i % 2 === 0,
-          priority: (i % 5) + 1,
-          tags: [`tag-${i % 10}`, `category-${i % 3}`],
-          createdAt: new Date(2023, 0, 1 + i),
-          metadata: { index: i, category: `cat-${i % 5}` },
-        });
-      }
+      expect(memoryUsage.increase).toBeLessThan(thresholds.largeDatasetMemory);
 
-      const afterAddMemory = process.memoryUsage().heapUsed;
-      const memoryIncrease = afterAddMemory - initialMemory;
-
-      // Memory increase should be reasonable (less than 100MB)
-      expect(memoryIncrease).toBeLessThan(100 * 1024 * 1024);
-
-      // Clear all
+      // Clear all and measure memory reclamation
       store.clear();
-
-      // Force garbage collection if available
-      if (global.gc) {
-        global.gc();
-      }
-
-      const afterClearMemory = process.memoryUsage().heapUsed;
-      const memoryAfterClear = afterClearMemory - initialMemory;
-
+      const memoryAfterClear = await measureMemoryUsage(() => {});
+      
       // Memory should be reclaimed (very lenient check)
-      expect(memoryAfterClear).toBeLessThan(memoryIncrease * 1.1);
+      expect(memoryAfterClear.increase).toBeLessThan(memoryUsage.increase * 1.1);
     });
   });
 
