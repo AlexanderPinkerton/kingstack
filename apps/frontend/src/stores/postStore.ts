@@ -5,6 +5,7 @@ import {
   OptimisticDefaults,
 } from "@kingstack/advanced-optimistic-store";
 import { fetchWithAuth } from "@/lib/utils";
+import { getMockData, isPlaygroundMode } from "@kingstack/shapes";
 
 // API data structure (what comes from the server)
 export interface PostApiData {
@@ -253,43 +254,11 @@ export class AdvancedPostStore {
 
     this.optimisticStore = createOptimisticStore<PostApiData, PostUiData>({
       name: "advanced-posts",
-      queryFn: async () => {
-        const token = this.authToken || "";
-        const baseUrl =
-          process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-        return fetchWithAuth(token, `${baseUrl}/posts`).then((res) =>
-          res.json(),
-        );
-      },
+      queryFn: this.getQueryFn(),
       mutations: {
-        create: async (data) => {
-          const token = this.authToken || "";
-          const baseUrl =
-            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-          return fetchWithAuth(token, `${baseUrl}/posts`, {
-            method: "POST",
-            body: JSON.stringify(data),
-          }).then((res) => res.json());
-        },
-
-        update: async ({ id, data }) => {
-          const token = this.authToken || "";
-          const baseUrl =
-            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-          return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
-            method: "PUT",
-            body: JSON.stringify(data),
-          }).then((res) => res.json());
-        },
-
-        remove: async (id) => {
-          const token = this.authToken || "";
-          const baseUrl =
-            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-          return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
-            method: "DELETE",
-          }).then(() => ({ id }));
-        },
+        create: this.getCreateMutation(),
+        update: this.getUpdateMutation(),
+        remove: this.getDeleteMutation(),
       },
       transformer: transformer,
       optimisticContext: () => ({ currentUser: null }), // Will be set by the component
@@ -341,4 +310,145 @@ export class AdvancedPostStore {
   get isReady() {
     return this.optimisticStore !== null && this.isEnabled;
   }
+
+  // ============================================================================
+  // PLAYGROUND CONFIGURATION
+  // ============================================================================
+  // All playground logic is centralized here for easy maintenance
+
+  private getQueryFn() {
+    return isPlaygroundMode() ? this.playgroundQueryFn : this.apiQueryFn;
+  }
+
+  private getCreateMutation() {
+    return isPlaygroundMode()
+      ? this.playgroundCreateMutation
+      : this.apiCreateMutation;
+  }
+
+  private getUpdateMutation() {
+    return isPlaygroundMode()
+      ? this.playgroundUpdateMutation
+      : this.apiUpdateMutation;
+  }
+
+  private getDeleteMutation() {
+    return isPlaygroundMode()
+      ? this.playgroundDeleteMutation
+      : this.apiDeleteMutation;
+  }
+
+  // API Implementations
+  private apiQueryFn = async (): Promise<PostApiData[]> => {
+    const token = this.authToken || "";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    return fetchWithAuth(token, `${baseUrl}/posts`).then((res) => res.json());
+  };
+
+  private apiCreateMutation = async (data: any): Promise<PostApiData> => {
+    const token = this.authToken || "";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    return fetchWithAuth(token, `${baseUrl}/posts`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }).then((res) => res.json());
+  };
+
+  private apiUpdateMutation = async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: any;
+  }): Promise<PostApiData> => {
+    const token = this.authToken || "";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }).then((res) => res.json());
+  };
+
+  private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
+    const token = this.authToken || "";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
+      method: "DELETE",
+    }).then(() => ({ id }));
+  };
+
+  // Playground Implementations
+  private playgroundQueryFn = async (): Promise<PostApiData[]> => {
+    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
+    return getMockData("posts") as PostApiData[];
+  };
+
+  private playgroundCreateMutation = async (
+    data: any,
+  ): Promise<PostApiData> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return {
+      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: data.title || "New Post",
+      content: data.content || "",
+      published: data.published || false,
+      author_id: "playground-user",
+      created_at: new Date().toISOString(),
+      author: {
+        id: "playground-user",
+        username: "playground-user",
+        email: "playground@example.com",
+      },
+    };
+  };
+
+  private playgroundUpdateMutation = async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: any;
+  }): Promise<PostApiData> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Get existing post from mock data to preserve unchanged fields
+    const existingPosts = getMockData("posts") as PostApiData[];
+    const existingPost = existingPosts.find((p) => p.id === id);
+
+    // If we have an existing post, merge it with the updates
+    if (existingPost) {
+      return {
+        ...existingPost,
+        ...data, // This will override only the fields that were updated
+        updated_at: new Date().toISOString(), // Always update the timestamp
+      };
+    }
+
+    // Fallback if no existing post found
+    return {
+      id,
+      title: data.title || "Updated Post",
+      content: data.content || "",
+      published: data.published || false,
+      author_id: "playground-user",
+      created_at: new Date().toISOString(),
+      author: {
+        id: "playground-user",
+        username: "playground-user",
+        email: "playground@example.com",
+      },
+      ...data,
+    };
+  };
+
+  private playgroundDeleteMutation = async (
+    id: string,
+  ): Promise<{ id: string }> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return { id };
+  };
 }

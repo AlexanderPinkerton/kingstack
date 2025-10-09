@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { RootStoreContext } from "@/context/rootStoreContext";
 import { observer } from "mobx-react-lite";
 import { createClient } from "@/lib/supabase/browserClient";
+import { isPlaygroundMode } from "@kingstack/shapes";
 
 interface AvatarMenuProps {
   className?: string;
@@ -35,6 +36,11 @@ export const AvatarMenu = observer(function AvatarMenu({
       console.error("Error signing out:", error);
     }
   }, [supabase.auth]);
+
+  // Don't render in playground mode
+  if (isPlaygroundMode()) {
+    return null;
+  }
 
   // Don't render if no user
   if (!user) {

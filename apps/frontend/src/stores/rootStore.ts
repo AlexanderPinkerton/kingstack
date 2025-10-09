@@ -5,7 +5,9 @@ import { AdvancedTodoStore } from "./todoStore";
 import { AdvancedPostStore } from "./postStore";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { AdvancedUserStore } from "./userStore";
+import { isPlaygroundMode } from "@kingstack/shapes";
 
+// Create Supabase client (will be null if env vars are missing)
 const supabase = createClient();
 
 // Type for any store that might support realtime
@@ -109,48 +111,64 @@ export class RootStore {
       this.authUnsubscribe();
     }
 
-    // Set up new auth listener and store the unsubscribe function
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: any, session: any) => {
-      console.log("🔐 RootStore: Auth state changed:", {
-        event,
-        hasSession: !!session,
-        userEmail: session?.user?.email,
-        timestamp: new Date().toISOString(),
-      });
-
+    // Handle playground mode vs normal mode
+    if (isPlaygroundMode() || !supabase) {
+      console.log(
+        "🎮 RootStore: Playground mode detected - enabling stores with mock data",
+      );
       runInAction(() => {
-        // Update session state
-        this.session = session;
-
-        if (session?.access_token && event === "SIGNED_IN") {
-          // Handle auth-required setup here
-          console.log("✅ RootStore: Session established, setting up realtime");
-          // Enable stores with new token
-          this.todoStore.enable(session.access_token);
-          this.postStore.enable(session.access_token);
-          this.userStore.enable(session.access_token);
-          // Setup realtime connection
-          this.setupRealtime(session.access_token);
-        } else if (!session?.access_token) {
-          // Handle auth-required teardown here
-          console.log("❌ RootStore: Session lost, tearing down realtime");
-          // Teardown realtime connection
-          this.teardownRealtime();
-          // Disable stores when session is lost
-          this.todoStore.disable();
-          this.postStore.disable();
-          this.userStore.disable();
-        }
-
-        // Note: Realtime is only available with authentication
-        // Checkboxes will work without realtime when not authenticated
+        // In playground mode, enable stores without authentication
+        this.todoStore.enable("playground-token");
+        this.postStore.enable("playground-token");
+        this.userStore.enable("playground-token");
+        // Checkboxes work without auth in playground mode
       });
-    });
+    } else if (supabase) {
+      // Set up new auth listener and store the unsubscribe function
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+        console.log("🔐 RootStore: Auth state changed:", {
+          event,
+          hasSession: !!session,
+          userEmail: session?.user?.email,
+          timestamp: new Date().toISOString(),
+        });
 
-    // Store the unsubscribe function
-    this.authUnsubscribe = () => subscription.unsubscribe();
+        runInAction(() => {
+          // Update session state
+          this.session = session;
+
+          if (session?.access_token && event === "SIGNED_IN") {
+            // Handle auth-required setup here
+            console.log(
+              "✅ RootStore: Session established, setting up realtime",
+            );
+            // Enable stores with new token
+            this.todoStore.enable(session.access_token);
+            this.postStore.enable(session.access_token);
+            this.userStore.enable(session.access_token);
+            // Setup realtime connection
+            this.setupRealtime(session.access_token);
+          } else if (!session?.access_token) {
+            // Handle auth-required teardown here
+            console.log("❌ RootStore: Session lost, tearing down realtime");
+            // Teardown realtime connection
+            this.teardownRealtime();
+            // Disable stores when session is lost
+            this.todoStore.disable();
+            this.postStore.disable();
+            this.userStore.disable();
+          }
+
+          // Note: Realtime is only available with authentication
+          // Checkboxes will work without realtime when not authenticated
+        });
+      });
+
+      // Store the unsubscribe function
+      this.authUnsubscribe = () => subscription.unsubscribe();
+    }
 
     console.log("🔧 RootStore: Initialized");
   }
@@ -208,6 +226,14 @@ export class RootStore {
 
   async refreshSession() {
     console.log("🔄 RootStore: Refreshing session");
+
+    if (!supabase) {
+      console.log(
+        "🔄 RootStore: No Supabase client available (playground mode)",
+      );
+      return;
+    }
+
     try {
       const result = await supabase.auth.getSession();
       console.log("🔄 RootStore: Session refresh result:", {

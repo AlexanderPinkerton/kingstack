@@ -14,7 +14,6 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc",
     "clean": "rm -rf dist",
     "lint": "eslint \"{post,test}/**/*.ts\" --fix",
     "test": "echo \"No tests specified\" && exit 0"
