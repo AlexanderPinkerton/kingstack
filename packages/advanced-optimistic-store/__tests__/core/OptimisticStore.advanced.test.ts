@@ -3,6 +3,7 @@ import { QueryClient } from "@tanstack/query-core";
 import { autorun } from "mobx";
 import { createOptimisticStore } from "../../src/core/OptimisticStore";
 import type { Entity, OptimisticStoreConfig } from "../../src/core/types";
+import { getPerformanceThresholds, measureMemoryUsage } from "../utils/testHelpers";
 
 // Test data types
 interface TestApiData extends Entity {
@@ -229,25 +230,18 @@ describe("OptimisticStore Advanced Scenarios", () => {
   });
 
   describe("Memory Management & Cleanup", () => {
-    it("should not leak memory with repeated create/destroy cycles", () => {
-      const initialMemory = process.memoryUsage().heapUsed;
+    it("should not leak memory with repeated create/destroy cycles", async () => {
+      const thresholds = getPerformanceThresholds();
+      
+      const memoryUsage = await measureMemoryUsage(async () => {
+        // Create and destroy stores multiple times
+        for (let i = 0; i < 100; i++) {
+          const store = createOptimisticStore(config, queryClient);
+          store.destroy();
+        }
+      });
 
-      // Create and destroy stores multiple times
-      for (let i = 0; i < 100; i++) {
-        const store = createOptimisticStore(config, queryClient);
-        store.destroy();
-      }
-
-      // Force garbage collection if available
-      if (global.gc) {
-        global.gc();
-      }
-
-      const finalMemory = process.memoryUsage().heapUsed;
-      const memoryIncrease = finalMemory - initialMemory;
-
-      // Memory increase should be reasonable (less than 1MB)
-      expect(memoryIncrease).toBeLessThan(2 * 1024 * 1024);
+      expect(memoryUsage.increase).toBeLessThan(thresholds.memoryLeak);
     });
 
     it("should clean up MobX reactions on destroy", () => {

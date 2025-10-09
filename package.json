@@ -19,6 +19,7 @@
     "prisma:migrate": "yarn workspace @kingstack/prisma prisma migrate dev",
     "env:development": "bun scripts/swap-env.ts development",
     "env:production": "bun scripts/swap-env.ts production",
+    "env:playground": "bun scripts/setup-playground.ts",
     "env:current": "bun scripts/swap-env.ts --current",
     "shadow:start": "supabase start -x realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
     "shadow:stop": "supabase stop"

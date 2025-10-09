@@ -4,6 +4,7 @@ import {
   DataTransformer,
 } from "@kingstack/advanced-optimistic-store";
 import { fetchWithAuth } from "@/lib/utils";
+import { getMockData, isPlaygroundMode } from "@kingstack/shapes";
 
 // API data structure (what comes from the server)
 export interface UserApiData {
@@ -87,59 +88,161 @@ export class AdvancedUserStore {
   private initialize() {
     this.optimisticStore = createOptimisticStore<UserApiData, UserUiData>({
       name: "user",
-      queryFn: async () => {
-        const token = this.authToken || "";
-        const baseUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3069";
-        const user = await fetchWithAuth(token, `${baseUrl}/api/user`).then(
-          (res) => res.json(),
-        );
-        // Wrap single user object in array since optimistic store expects array of entities
-        return [user];
-      },
+      queryFn: this.getQueryFn(),
       mutations: {
-        create: async (data) => {
-          const token = this.authToken || "";
-          const baseUrl =
-            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-          return fetchWithAuth(token, `${baseUrl}/api/user`, {
-            method: "POST",
-            body: JSON.stringify(data),
-          }).then((res) => res.json());
-        },
-        update: async ({ id, data }) => {
-          const token = this.authToken || "";
-          const baseUrl =
-            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-          return fetchWithAuth(token, `${baseUrl}/api/user`, {
-            method: "PUT",
-            body: JSON.stringify(data),
-          }).then((res) => res.json());
-        },
-        remove: async (id) => {
-          const token = this.authToken || "";
-          const baseUrl =
-            process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-          const response = await fetchWithAuth(token, `${baseUrl}/api/user`, {
-            method: "DELETE",
-          });
-          if (!response.ok) {
-            throw new Error(
-              `Delete failed: ${response.status} ${response.statusText}`,
-            );
-          }
-          return response.json();
-        },
+        create: this.getCreateMutation(),
+        update: this.getUpdateMutation(),
+        remove: this.getDeleteMutation(),
       },
       transformer: this.transformer,
       staleTime: 10 * 60 * 1000, // 10 minutes (user data changes less frequently)
-      enabled: () => this.isEnabled && !!this.authToken, // Only run when enabled and we have a token
+      enabled: () => this.isEnabled && (!!this.authToken || isPlaygroundMode()), // Run when enabled and we have a token OR in playground mode
     });
+  }
+
+  // API Implementations
+  private apiQueryFn = async (): Promise<UserApiData[]> => {
+    const token = this.authToken || "";
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3069";
+    const user = await fetchWithAuth(token, `${baseUrl}/api/user`).then((res) =>
+      res.json(),
+    );
+    // Wrap single user object in array since optimistic store expects array of entities
+    return [user];
+  };
+
+  private apiCreateMutation = async (data: any): Promise<UserApiData> => {
+    const token = this.authToken || "";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    return fetchWithAuth(token, `${baseUrl}/api/user`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }).then((res) => res.json());
+  };
+
+  private apiUpdateMutation = async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: any;
+  }): Promise<UserApiData> => {
+    const token = this.authToken || "";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    return fetchWithAuth(token, `${baseUrl}/api/user`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }).then((res) => res.json());
+  };
+
+  private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
+    const token = this.authToken || "";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const response = await fetchWithAuth(token, `${baseUrl}/api/user`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      throw new Error(
+        `Delete failed: ${response.status} ${response.statusText}`,
+      );
+    }
+    return response.json();
+  };
+
+  // Playground Implementations
+  private playgroundQueryFn = async (): Promise<UserApiData[]> => {
+    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
+    const mockUsers = getMockData("users") as any[];
+    // Transform mock data to match UserApiData interface
+    const userData: UserApiData = {
+      id: mockUsers[0]?.id || "playground-user",
+      email: mockUsers[0]?.email || "playground@kingstack.dev",
+      username: "playground-user",
+      username_changed_at: null,
+      previous_usernames: [],
+      created_at: mockUsers[0]?.created_at || new Date().toISOString(),
+    };
+    return [userData];
+  };
+
+  private playgroundCreateMutation = async (
+    data: any,
+  ): Promise<UserApiData> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return {
+      id: `temp-${Date.now()}`,
+      email: data.email || "playground@kingstack.dev",
+      username: data.username || "playground-user",
+      username_changed_at: null,
+      previous_usernames: [],
+      created_at: new Date().toISOString(),
+      ...data,
+    };
+  };
+
+  private playgroundUpdateMutation = async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: any;
+  }): Promise<UserApiData> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return {
+      id,
+      email: "playground@kingstack.dev",
+      username: "playground-user",
+      username_changed_at: null,
+      previous_usernames: [],
+      created_at: new Date().toISOString(),
+      ...data,
+    };
+  };
+
+  private playgroundDeleteMutation = async (
+    id: string,
+  ): Promise<{ id: string }> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return { id };
+  };
+
+  // All playground logic is centralized here for easy maintenance
+  private getQueryFn() {
+    return isPlaygroundMode() ? this.playgroundQueryFn : this.apiQueryFn;
+  }
+
+  private getCreateMutation() {
+    return isPlaygroundMode()
+      ? this.playgroundCreateMutation
+      : this.apiCreateMutation;
+  }
+
+  private getUpdateMutation() {
+    return isPlaygroundMode()
+      ? this.playgroundUpdateMutation
+      : this.apiUpdateMutation;
+  }
+
+  private getDeleteMutation() {
+    return isPlaygroundMode()
+      ? this.playgroundDeleteMutation
+      : this.apiDeleteMutation;
   }
 
   // Enable the store with auth token
   enable(authToken: string) {
     this.authToken = authToken;
+    this.isEnabled = true;
+    // Update the store manager options to enable the query
+    this.optimisticStore?.updateOptions();
+  }
+
+  // Enable for playground mode (no auth token needed)
+  enablePlayground() {
+    this.authToken = "playground-token";
     this.isEnabled = true;
     // Update the store manager options to enable the query
     this.optimisticStore?.updateOptions();
