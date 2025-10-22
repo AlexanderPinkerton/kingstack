@@ -44,8 +44,10 @@
     "@kingstack/eslint-config": "workspace:*",
     "@kingstack/ts-config": "workspace:*",
     "@tanstack/query-core": "^5.59.20",
-    "eslint": "^9",
+    "@typescript-eslint/parser": "^8.46.2",
+    "eslint": "^9.25.0",
     "mobx": "^6.13.5",
+    "prettier": "^3.4.2",
     "socket.io-client": "^4.8.1",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"
