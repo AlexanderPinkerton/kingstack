@@ -23,7 +23,9 @@
     "@kingstack/eslint-config": "workspace:*",
     "@kingstack/prisma": "workspace:*",
     "@kingstack/ts-config": "workspace:*",
-    "eslint": "^9",
+    "@typescript-eslint/parser": "^8.46.2",
+    "eslint": "^9.25.0",
+    "prettier": "^3.4.2",
     "typescript": "^5.0.0"
   },
   "private": true
