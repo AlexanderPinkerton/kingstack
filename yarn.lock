@@ -10205,7 +10205,7 @@ __metadata:
     "@types/pg": "npm:^8.15.4"
     pg: "npm:^8.16.3"
     supabase: "npm:2.40.7"
-    turbo: "npm:^2.5.2"
+    turbo: "npm:^2.5.8"
     vercel: "npm:^44.4.0"
   languageName: unknown
   linkType: soft
@@ -13878,58 +13878,58 @@ __metadata:
   languageName: node
   linkType: hard
 
-"turbo-darwin-64@npm:2.5.2":
-  version: 2.5.2
-  resolution: "turbo-darwin-64@npm:2.5.2"
+"turbo-darwin-64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "turbo-darwin-64@npm:2.5.8"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"turbo-darwin-arm64@npm:2.5.2":
-  version: 2.5.2
-  resolution: "turbo-darwin-arm64@npm:2.5.2"
+"turbo-darwin-arm64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "turbo-darwin-arm64@npm:2.5.8"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"turbo-linux-64@npm:2.5.2":
-  version: 2.5.2
-  resolution: "turbo-linux-64@npm:2.5.2"
+"turbo-linux-64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "turbo-linux-64@npm:2.5.8"
   conditions: os=linux & cpu=x64
   languageName: node
   linkType: hard
 
-"turbo-linux-arm64@npm:2.5.2":
-  version: 2.5.2
-  resolution: "turbo-linux-arm64@npm:2.5.2"
+"turbo-linux-arm64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "turbo-linux-arm64@npm:2.5.8"
   conditions: os=linux & cpu=arm64
   languageName: node
   linkType: hard
 
-"turbo-windows-64@npm:2.5.2":
-  version: 2.5.2
-  resolution: "turbo-windows-64@npm:2.5.2"
+"turbo-windows-64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "turbo-windows-64@npm:2.5.8"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"turbo-windows-arm64@npm:2.5.2":
-  version: 2.5.2
-  resolution: "turbo-windows-arm64@npm:2.5.2"
+"turbo-windows-arm64@npm:2.5.8":
+  version: 2.5.8
+  resolution: "turbo-windows-arm64@npm:2.5.8"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"turbo@npm:^2.5.2":
-  version: 2.5.2
-  resolution: "turbo@npm:2.5.2"
+"turbo@npm:^2.5.8":
+  version: 2.5.8
+  resolution: "turbo@npm:2.5.8"
   dependencies:
-    turbo-darwin-64: "npm:2.5.2"
-    turbo-darwin-arm64: "npm:2.5.2"
-    turbo-linux-64: "npm:2.5.2"
-    turbo-linux-arm64: "npm:2.5.2"
-    turbo-windows-64: "npm:2.5.2"
-    turbo-windows-arm64: "npm:2.5.2"
+    turbo-darwin-64: "npm:2.5.8"
+    turbo-darwin-arm64: "npm:2.5.8"
+    turbo-linux-64: "npm:2.5.8"
+    turbo-linux-arm64: "npm:2.5.8"
+    turbo-windows-64: "npm:2.5.8"
+    turbo-windows-arm64: "npm:2.5.8"
   dependenciesMeta:
     turbo-darwin-64:
       optional: true
@@ -13945,7 +13945,7 @@ __metadata:
       optional: true
   bin:
     turbo: bin/turbo
-  checksum: 10c0/3eed6eba8bace18ed767785c83cd572985214e79d267f3eb631b2c147e941203746b241869fe629776704d3e69c37da90c5356c3b9506e08c468c9cab52f120c
+  checksum: 10c0/34e8dc87fc2c5d63c3cd5aede9068c1123509d88f9bb99283ffec1687de6ad6df7ebfb83a5d348580afb3fdac53af479456e36938a1b6ed80fc1c3416c6dc3f3
   languageName: node
   linkType: hard
 
