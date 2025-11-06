@@ -22,7 +22,8 @@ king-stack/
 │   ├── next/        # Next.js app (public website + auth UI)
 │   └── nest/         # NestJS app (API, logic, jobs)
 ├── packages/
-│   └── prisma/          # Shared Prisma schema + generated client
+│   └── prisma/          # Schema + generated client
+│   └── shared/          # Shared TS code used by both NextJS and NestJS apps
 ├── .yarn/               # Yarn plugins, version, patches, etc.
 ├── .turbo/              # Turborepo local task cache (gitignored)
 ├── .gitignore
@@ -81,9 +82,6 @@ king-stack/
   SUPABASE_DB_PASSWORD=...
   SUPABASE_PROJECT_HOST=...
   ```
-- Backend connects using `postgres` library
-- Auth flows via Supabase client + JWT headers (to backend)
-
 ---
 
 ## 🛊 Local Development
@@ -94,8 +92,8 @@ yarn dev
 ```
 This runs both `frontend` and `backend` in parallel.
 
-### 🎮 Playground Mode (No Setup Required)
-For UI development and demos without Supabase setup:
+### 🎮 Playground Mode
+For UI development and demos without Supabase:
 ```bash
 yarn env:playground
 yarn dev
@@ -113,33 +111,26 @@ yarn workspace @kingstack/nest dev
 yarn workspace @kingstack/prisma prisma migrate dev
 ```
 
-### Run Scripts with Bun
-```bash
-bun run apps/nest/scripts/backfill-user-data.ts
-```
-
 ---
 
 ## 🧠 Points of Interest
 
 ### 🔄 Supabase Auth Sync
 
-- A Supabase **trigger** automatically syncs users from the `auth.users` table into the `public.user` table (managed by Prisma).
+- A Supabase **trigger** automatically syncs users from the `auth.users` (managed by Supabase) table into the `public.user` table (managed by Prisma).
 - This ensures internal application logic can use a fully controlled `user` model while still leveraging Supabase Auth.
-- Run this script to install the trigger: `apps/nest/scripts/install-custom-user-trigger.ts`
-
-### ⚠️ User Schema Changes Require Trigger Updates
-
-- The `user` table is updated by Supabase using a **custom SQL trigger**.
-- Any changes to the Prisma `user` model **must be reflected** in the trigger script.
-- 🔥 Failing to update the trigger when modifying `user` will break authentication and signup flows.
+- This trigger will be automatically installed when running the migrations via `20250921183730_essentials`
+- Any new required fields added to the `user` model will require a new migration which updates the trigger to handle the new fields.
+- 🔥 Failing to update the trigger when modifying `user` **will** break authentication and signup flows.
 
 ### 🛠️ Bun Scripts Use Internal DB
 
-- Bun scripts (like `backfill-user-data.ts`) operate on the `public.user` table, not `auth.users`.
+- Existing Supabase users which "missed the boat" can be copied over with the `backfill-user-data.ts` script.
 - Ensure the trigger is installed and working before running any backfills or jobs that interact with `user`.
+```bash
+bun run apps/nest/scripts/backfill-user-data.ts
+```
 
 ---
 
 🌟 Let the kingdom reign. Long live the stack!
-
