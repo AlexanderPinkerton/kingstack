@@ -30,23 +30,23 @@
 ## Backfill User Data ( only needed if you have existing users)
 - run `yarn workspace @<project-name>/nest run backfill-user-data` in the root directory
 
-## Test the stack
+## Test the stack in Playground Mode
 - run `yarn dev` in the root directory
+- run `yarn build` in the root directory
+- run `yarn env:playground` in the root directory
 - open http://localhost:3069 in your browser
 - you should see the landing page
-- register using username and password
-- check email for confirmation
-- login and you should be redirected to the dashboard
-- click "create post" to inject a post into db
-- click "fetch posts" to fetch posts from db via NestJS api route
-- click "fetch posts2" to fetch posts from db via NextJS api route
+- you can now vibecode with great power
 
+## Setting Up Supabase
+- fill out the necessary env files in the `/secrets/development/` directory
+- run `yarn env:development` to have the secrets installed into the correct .env files
+- run `yarn dev` to spin up the stack in dev mode
 
-## Setting Up Realtime
-- Go to supabase project and navigate to the posts table
-- TODO: Fill me out
-
-## Deployments
+## Deploying the Apps
+- run `yarn lint` to clean the code. Fix all errors.
+- run `yarn build` to build the apps. Fix all errors.
+- ...
 
 ### Deploying NestJS to Railway
 - Use railway git integration to deploy the nestjs app with ease
@@ -58,3 +58,10 @@
 ### Deploying NextJS to Vercel
 - Use vercel git integration to deploy the frontend with ease
 - Be sure to set the environment variables in the vercel dashboard before deploying
+
+## Moving into Production
+- fill out the necessary env files in the `/secrets/production/` directory
+- run `yarn env:production` to have the secrets installed into the correct .env files
+- run `yarn lint` to clean the code. Fix all errors.
+- run `yarn build` to build the apps. Fix all errors.
+- ....
