@@ -9,7 +9,8 @@
             ],
             "dependsOn": [
                 "@kingstack/prisma#generate",
-                "@kingstack/shared#build"
+                "@kingstack/shared#build",
+                "@kingstack/advanced-optimistic-store#build"
             ]
         }
     }
