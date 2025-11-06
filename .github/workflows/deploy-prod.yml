@@ -3,6 +3,7 @@ name: Deploy Production
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   run-migrations:
@@ -65,6 +66,6 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
       - name: Link Vercel Project
-        run: npx vercel link --yes --cwd apps/next --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID
+        run: npx vercel link --yes --cwd apps/next --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID --project $VERCEL_PROJECT_NAME
       - name: Deploy to Vercel
         run: npx vercel deploy --prod --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID --yes
