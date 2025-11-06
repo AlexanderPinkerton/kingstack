@@ -135,47 +135,74 @@ kingstack/
 
 ---
 
-## 🔄 Prisma Integration
+## 🗄️ Database & ORM
 
-- Schema lives in `packages/prisma/schema.prisma`
-- Client is shared via the standard `@prisma/client` package
-- Usage:
-  ```ts
-  import { PrismaClient } from "@prisma/client" // works everywhere
-  ```
-- Commands:
-  ```bash
-  yarn prisma:generate    # Generate Prisma client
-  yarn prisma:migrate     # Run migrations
-  # Or using workspace directly:
-  yarn workspace @kingstack/prisma prisma generate
-  yarn workspace @kingstack/prisma prisma migrate dev
-  ```
+KingStack is **designed to use Supabase** as the database backend and authentication provider. Prisma is used as the ORM layer to make schema modeling, migrations, and querying easy and type-safe.
 
----
+### Supabase + Prisma Architecture
 
-## 📃 Supabase Setup
+**Supabase** provides:
+- ☁️ **PostgreSQL database** - Managed Postgres with connection pooling
+- 🔐 **Authentication** - Built-in auth with JWT tokens
+- 🔄 **Realtime** - Database change subscriptions (optional)
 
-- Used for Auth and Postgres database
-- Requires a `.env` with:
-  ```env
-  SUPABASE_DB_HOST=...
-  SUPABASE_DB_PASSWORD=...
-  SUPABASE_PROJECT_HOST=...
-  ```
----
+**Prisma** provides:
+- 📐 **Schema modeling** - Type-safe schema definitions
+- 🔄 **Migrations** - Version-controlled database changes
+- 🔍 **Type-safe queries** - Generated TypeScript client
+- 🛠️ **Developer experience** - Great tooling and IntelliSense
 
-## 🔐 JWT Authentication
+### Configuration
 
-KingStack uses **explicit JWT token passing** instead of relying on cookies or localStorage. The same Supabase JWT token is used across Next.js, NestJS, and realtime connections.
+Supabase is configured by populating the relevant environment variables in your secrets configuration:
 
-**Key points:**
-- Token stored in memory (`RootStore.session`), not cookies/localStorage
-- All internal API calls use `fetchWithAuth(token, url, options)` - **never use plain `fetch`**
-- Token explicitly passed to stores via `store.enable(token)`
-- Same token validated by NestJS (Passport JWT) and realtime gateway (Socket.io)
+```env
+# Database connections
+SUPABASE_DB_POOL_URL=postgresql://...
+SUPABASE_DB_DIRECT_URL=postgresql://...
 
-📖 **[Full Authentication Documentation →](./docs/auth/README.md)**
+# Supabase API
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# JWT secret for token validation
+SUPA_JWT_SECRET=your-jwt-secret
+```
+
+📖 **[Secrets Management Guide →](./docs/secrets/README.md)**
+
+### Prisma Usage
+
+**Schema location:** `packages/prisma/schema.prisma`
+
+**Import Prisma Client:**
+```ts
+import { PrismaClient } from "@prisma/client" // works everywhere
+```
+
+**Commands:**
+```bash
+yarn prisma:generate    # Generate Prisma client
+yarn prisma:migrate     # Run migrations
+# Or using workspace directly:
+yarn workspace @kingstack/prisma prisma generate
+yarn workspace @kingstack/prisma prisma migrate dev
+```
+
+### Playground Mode
+
+The stack can be used **without a Supabase backend** via Playground mode for:
+- 🎨 **Vibe coding** - Quick prototyping without setup
+- 🖼️ **Frontend development** - UI work with mock data
+- 💻 **Local apps** - Apps that don't need a database
+
+```bash
+yarn env:playground
+yarn dev
+```
+
+Playground mode uses mock data and doesn't require Supabase configuration.
 
 ---
 
