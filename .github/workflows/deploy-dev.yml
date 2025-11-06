@@ -65,9 +65,7 @@ jobs:
             ${{ runner.os }}-yarn-
       - name: Install dependencies
         run: yarn install --immutable
-      - name: Link Vercel Project
-        working-directory: apps/next
-        run: npx vercel link --yes --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID
+      - name: Pull Vercel Environment Information
+        run: npx vercel pull --yes --environment=preview --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID
       - name: Deploy to Vercel
-        working-directory: apps/next
-        run: npx vercel deploy --prod --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID --yes
+        run: npx vercel deploy --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID --yes
