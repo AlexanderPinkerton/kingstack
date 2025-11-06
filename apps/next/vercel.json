@@ -1,5 +1,5 @@
 {
-    "buildCommand": "turbo build --filter=@kingstack/frontend",
+    "buildCommand": "turbo build --filter=@kingstack/next",
     "git": {
         "deploymentEnabled": {
             "main": false,

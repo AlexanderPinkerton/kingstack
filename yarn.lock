@@ -1580,9 +1580,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@kingstack/backend@workspace:apps/backend":
+"@kingstack/nest@workspace:apps/nest":
   version: 0.0.0-use.local
-  resolution: "@kingstack/backend@workspace:apps/backend"
+  resolution: "@kingstack/nest@workspace:apps/nest"
   dependencies:
     "@eslint/eslintrc": "npm:^3.2.0"
     "@eslint/js": "npm:^9.18.0"
@@ -1653,9 +1653,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@kingstack/frontend@workspace:apps/frontend":
+"@kingstack/next@workspace:apps/next":
   version: 0.0.0-use.local
-  resolution: "@kingstack/frontend@workspace:apps/frontend"
+  resolution: "@kingstack/next@workspace:apps/next"
   dependencies:
     "@dnd-kit/core": "npm:^6.3.1"
     "@dnd-kit/modifiers": "npm:^9.0.0"

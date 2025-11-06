@@ -21,8 +21,7 @@ node_modules/
 .env.test.local
 .env.production.local
 .env.docker
-.env.docker.backend
-.env.backend
+.env.nest
 
 **/.env.*
 
@@ -42,7 +41,7 @@ secrets/.env.*
 # NextJS
 .next/
 
-# Backend Dist
+# NestJS Dist
 dist/
 
 # TypeScript build info

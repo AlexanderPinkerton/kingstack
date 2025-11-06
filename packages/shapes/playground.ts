@@ -43,7 +43,7 @@ export const PLAYGROUND_CONFIG: PlaygroundConfig = {
       },
       {
         id: '4',
-        title: 'Connect to a supabase backend',
+        title: 'Connect to a supabase database',
         done: false,
         created_at: new Date(Date.now() - 172800000).toISOString(),
         updated_at: new Date().toISOString(),

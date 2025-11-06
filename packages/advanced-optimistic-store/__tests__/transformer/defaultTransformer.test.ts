@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createDefaultTransformer } from "../../src/transformer/defaultTransformer";
-import type { Entity } from "../core/types";
+import type { Entity } from "../../src/core/types";
 
 // Test data types
 interface TestApiData extends Entity {

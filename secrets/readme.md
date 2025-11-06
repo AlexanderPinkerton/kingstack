@@ -8,16 +8,16 @@ This directory contains environment-specific configuration files for the KingSta
 secrets/
 ├── README.md                    # This file
 ├── _example/                    # Template files for new developers
-│   ├── .env.frontend           # Frontend environment variables
-│   ├── .env.backend            # Backend environment variables
+│   ├── .env.next           # Next app environment variables
+│   ├── .env.nest            # Nest app environment variables
 │   └── .env.prisma             # Database connection variables
 ├── development/                 # Development environment secrets
-│   ├── .env.frontend
-│   ├── .env.backend
+│   ├── .env.next
+│   ├── .env.nest
 │   └── .env.prisma
 └── production/                  # Production environment secrets
-    ├── .env.frontend
-    ├── .env.backend
+    ├── .env.next
+    ├── .env.nest
     └── .env.prisma
 ```
 
@@ -35,8 +35,8 @@ The script maps files to these destinations:
 
 | Source File | Target Location |
 |-------------|----------------|
-| `.env.frontend` | `apps/frontend/.env` |
-| `.env.backend` | `apps/backend/.env` |
+| `.env.next` | `apps/next/.env` |
+| `.env.nest` | `apps/nest/.env` |
 | `.env.prisma` | `packages/prisma/.env` |
 
 ## Usage
@@ -60,10 +60,10 @@ bun scripts/swap-env.ts production
 
 ## Environment Variables
 
-### Frontend (.env.frontend)
+### NextJS App (.env.next)
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
-- `NEXT_PUBLIC_NEST_BACKEND_URL` - Backend API URL for frontend
+- `NEXT_PUBLIC_NEST_URL` - Nest API URL for frontend to use
 - `NEXT_PUBLIC_API_URL` - Public API URL
 - `GOOGLE_CLIENT_SECRET` - Google OAuth client secret (optional)
 - `GOOGLE_CLIENT_ID` - Google OAuth client ID (optional)
@@ -71,8 +71,8 @@ bun scripts/swap-env.ts production
 - `SUPABASE_DB_DIRECT_URL` - Direct database connection URL
 - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
 
-### Backend (.env.backend)
-- `FRONTEND_URL` - Frontend URL for CORS
+### NestJS App (.env.nest)
+- `NEXT_URL` - Frontend URL for CORS
 - `SUPABASE_POOLER_HOST` - Supabase pooler hostname
 - `SUPABASE_POOLER_USER` - Database pooler username
 - `SUPABASE_URL` - Supabase project URL
@@ -143,13 +143,13 @@ If the current environment shows as "unknown":
 ### Missing Files
 If you get "does not exist" errors:
 - Ensure you've copied the example files to your target environment directory
-- Check that all three files (`.env.frontend`, `.env.backend`, `.env.prisma`) exist
+- Check that all three files (`.env.next`, `.env.nest`, `.env.prisma`) exist
 - Verify the file names match exactly (case-sensitive)
 
 ### Backup Files
 Previous `.env` files are automatically backed up as `.env.previous` when swapping environments. You can restore them manually if needed:
 ```bash
-mv apps/frontend/.env.previous apps/frontend/.env
-mv apps/backend/.env.previous apps/backend/.env
+mv apps/next/.env.previous apps/next/.env
+mv apps/nest/.env.previous apps/nest/.env
 mv packages/prisma/.env.previous packages/prisma/.env
 ```
