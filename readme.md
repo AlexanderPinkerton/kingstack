@@ -6,7 +6,7 @@ A modern full-stack TypeScript monorepo powered by:
 - ⚡️ Turborepo (monorepo)
 - ✅ ESLint 9 (shared config)
 - 🧠 NestJS (API backend)
-- 🌐 Next.js (frontend)
+- 🌐 Next.js (frontend & serveless api)
 - 🎨 ShadCN with Tailwind CSS
 - 🧬 Prisma (ORM)
 - ☁️ Supabase (auth + db)
@@ -19,8 +19,8 @@ A modern full-stack TypeScript monorepo powered by:
 ```
 king-stack/
 ├── apps/
-│   ├── frontend/        # Next.js app (public website + auth UI)
-│   └── backend/         # NestJS app (API, logic, jobs)
+│   ├── next/        # Next.js app (public website + auth UI)
+│   └── nest/         # NestJS app (API, logic, jobs)
 ├── packages/
 │   └── prisma/          # Shared Prisma schema + generated client
 ├── .yarn/               # Yarn plugins, version, patches, etc.
@@ -40,7 +40,7 @@ king-stack/
 - Hoisted deps, deduped installs
 - Example:
   ```bash
-  yarn workspace @kingstack/frontend dev
+  yarn workspace @kingstack/next dev
   yarn workspace @kingstack/prisma prisma generate
   ```
 
@@ -49,7 +49,7 @@ king-stack/
 - Handles `dev`, `build`, `lint`, `test` across all workspaces
 - Example:
   ```bash
-  yarn dev       # Starts frontend + backend
+  yarn dev       # Starts next + nest
   yarn build     # Builds all packages
   yarn lint      # Lints everything
   ```
@@ -104,8 +104,8 @@ This runs KingStack with mock data - perfect for UI development and demos!
 
 ### Run Individual App
 ```bash
-yarn workspace @kingstack/frontend dev
-yarn workspace @kingstack/backend dev
+yarn workspace @kingstack/next dev
+yarn workspace @kingstack/nest dev
 ```
 
 ### Run Prisma Migration
@@ -115,7 +115,7 @@ yarn workspace @kingstack/prisma prisma migrate dev
 
 ### Run Scripts with Bun
 ```bash
-bun run apps/backend/scripts/backfill-user-data.ts
+bun run apps/nest/scripts/backfill-user-data.ts
 ```
 
 ---
@@ -126,7 +126,7 @@ bun run apps/backend/scripts/backfill-user-data.ts
 
 - A Supabase **trigger** automatically syncs users from the `auth.users` table into the `public.user` table (managed by Prisma).
 - This ensures internal application logic can use a fully controlled `user` model while still leveraging Supabase Auth.
-- Run this script to install the trigger: `apps/backend/scripts/install-custom-user-trigger.ts`
+- Run this script to install the trigger: `apps/nest/scripts/install-custom-user-trigger.ts`
 
 ### ⚠️ User Schema Changes Require Trigger Updates
 

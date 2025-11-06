@@ -10,8 +10,8 @@ KingStack is a modern, full-stack TypeScript monorepo designed for rapid develop
 - **Yarn v4 Workspaces**: Manages dependencies and packages across the monorepo.
 - **Turborepo**: Orchestrates builds, development, linting, and testing pipelines for all workspaces.
 - **ESLint 9**: Provides a unified linting configuration for code quality.
-- **NestJS**: Backend framework for building scalable APIs (in `apps/backend`).
-- **Next.js**: Frontend React framework for SSR and SSG (in `apps/frontend`).
+- **NestJS**: Backend framework for building scalable APIs (in `apps/nest`).
+- **Next.js**: Frontend React framework for Serverless functions, SSR and SSG (in `apps/next`).
 - **ShadCN + Tailwind CSS**: Modern UI component library and utility-first styling for the frontend.
 - **Prisma**: Type-safe ORM for database access, with shared schema in `packages/prisma`.
 - **Supabase**: Provides authentication and database services (integrated in frontend and backend).
@@ -24,8 +24,8 @@ KingStack is a modern, full-stack TypeScript monorepo designed for rapid develop
 ```
 kingstack/
 ├── apps/
-│   ├── frontend/        # Next.js app (public website + auth UI)
-│   └── backend/         # NestJS app (API, logic, jobs)
+│   ├── next/            # Next.js app (public website + serverless api)
+│   └── nest/            # NestJS app (API, logic, jobs, realtime)
 ├── packages/
 │   ├── eslint-config/   # Shared ESLint config
 │   ├── prisma/          # Shared Prisma schema + generated client
@@ -39,8 +39,8 @@ kingstack/
 ```
 
 ### Notable Subfolders
-- `apps/frontend/src/` — React components, pages, stores, context, and UI logic.
-- `apps/backend/src/` — NestJS modules, controllers, services, and scripts.
+- `apps/next/src/` — React components, pages, stores, context, and UI logic.
+- `apps/nest/src/` — NestJS modules, controllers, services, and scripts.
 - `packages/prisma/` — `schema.prisma` and migration files for DB.
 - `packages/shapes/` — TypeScript types for data transfer and state shapes.
 - `packages/eslint-config/` — Centralized ESLint settings for all workspaces.
@@ -53,15 +53,15 @@ kingstack/
 - **Yarn Workspaces** are defined in the root `package.json`, enabling shared dependencies and workspace commands.
 - **Turborepo** (`turbo.json`) manages scripts for dev, build, lint, and test, ensuring tasks run in the correct order across workspaces.
 
-### Backend (NestJS)
-- Located in `apps/backend`.
+### Backend Server and API (NestJS)
+- Located in `apps/nest`.
 - Uses NestJS modules for API structure (`app.module.ts`, `posts.module.ts`, etc.).
 - Database access via Prisma Client, generated from the shared schema.
 - Auth handled via JWT and Supabase integration.
 - Dockerfile provided for containerized builds.
 
-### Frontend (Next.js)
-- Located in `apps/frontend`.
+### Frontend & Serverless APIs (Next.js)
+- Located in `apps/next`.
 - Uses Next.js for SSR/SSG, with UI built from ShadCN components and styled with Tailwind CSS.
 - State management with MobX (stores in `src/stores/`).
 - Supabase client for auth and session management.
@@ -71,14 +71,6 @@ kingstack/
 - **Shapes**: `packages/shapes` holds TypeScript types for DSS (Domain State Shape), VDS (View Data Shape), and DTS (Data Transfer Shape), promoting type safety and DRY code.
 - **ESLint Config**: Centralized config in `packages/eslint-config` ensures consistent linting rules.
 
----
-
-## 🧩 Integration Example
-- Frontend fetches data from backend API (`/posts`) using MobX stores and Supabase session tokens for auth.
-- Backend uses NestJS controllers to handle requests, authenticates with JWT, and interacts with the database via Prisma.
-- Shared types (from `shapes`) and Prisma client are imported by both frontend and backend, ensuring end-to-end type safety.
-
----
 
 ## 🚀 Getting Started
 
@@ -108,7 +100,7 @@ kingstack/
 
 ## 📝 Notes
 - Environment variables are managed via `.env` files at both root and app levels.
-- See individual `README.md` files in `apps/frontend` and `apps/backend` for more details on each app.
+- See individual `README.md` files in `apps/next` and `apps/nest` for more details on each app.
 - For advanced orchestration, use `docker-compose.yml` to spin up all services.
 
 ---

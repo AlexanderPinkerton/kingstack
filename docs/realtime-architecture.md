@@ -12,7 +12,7 @@ The realtime system follows a centralized pattern where:
 ## 📁 File Structure
 
 ```
-apps/frontend/src/stores/
+apps/next/src/stores/
 ├── interfaces/
 │   └── RealtimeStore.ts          # Interface for realtime stores
 ├── rootStore.ts                  # Owns WebSocket connection

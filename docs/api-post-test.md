@@ -6,7 +6,7 @@ The 405 (Method Not Allowed) error was occurring because the Next.js API route a
 
 ## Solution
 
-Added a `POST` handler to `/apps/frontend/src/app/api/post/route.ts` that:
+Added a `POST` handler to `/apps/next/src/app/api/post/route.ts` that:
 
 1. **Authenticates the user** using the JWT token from the Authorization header
 2. **Validates the request** to ensure title is provided

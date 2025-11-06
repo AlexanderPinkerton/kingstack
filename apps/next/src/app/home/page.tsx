@@ -93,7 +93,7 @@ export default observer(function HomePage() {
                       <span className="text-yellow-300">Playground Mode</span>
                       <span className="text-yellow-400/70">•</span>
                       <span className="text-yellow-200/80 text-xs">
-                        Enable backend for full power
+                        Connect to Supabase for full power
                       </span>
                     </div>
                   </div>

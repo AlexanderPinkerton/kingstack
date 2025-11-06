@@ -10,12 +10,12 @@ import { dirname, join } from "path";
 const ENVIRONMENTS = ["development", "production", "playground"];
 const FILE_MAP = [
   {
-    src: ".env.frontend",
-    dest: "apps/frontend/.env"
+    src: ".env.next",
+    dest: "apps/next/.env"
   },
   {
-    src: ".env.backend",
-    dest: "apps/backend/.env"
+    src: ".env.nest",
+    dest: "apps/nest/.env"
   },
   {
     src: ".env.prisma",

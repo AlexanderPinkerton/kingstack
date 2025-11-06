@@ -27,7 +27,7 @@ export interface CheckboxUiData extends Entity {
 // ---------- API Functions ----------
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
 
 async function fetchCheckboxes(): Promise<CheckboxApiData[]> {
   const response = await fetch(`${API_BASE_URL}/checkboxes`);
@@ -266,7 +266,7 @@ export class RealtimeCheckboxStore {
   async initializeCheckboxes(count: number = 200): Promise<void> {
     try {
       const baseUrl =
-        process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+        process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
       const response = await fetch(`${baseUrl}/checkboxes/initialize`, {
         method: "POST",
       });
@@ -324,7 +324,7 @@ export class RealtimeCheckboxStore {
     return {
       eventType: "checkbox_update",
       // 🔧 Custom data extractor for checkbox events
-      // The backend sends events in format: { type, event, checkbox: {...} }
+      // The api sends events in format: { type, event, checkbox: {...} }
       dataExtractor: (event: any) => event.checkbox || event.data,
       shouldProcessEvent: (event: any) => event.type === "checkbox_update",
       // 🛡️ Filter out self-originated events to prevent echo

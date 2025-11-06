@@ -1,5 +1,5 @@
 // Shared base config for all apps — includes TypeScript and Prettier support.
-// Does NOT include any React/Next.js-specific rules (those are added in the frontend config).
+// Does NOT include any React/Next.js-specific rules (those are added in the nextjs config).
 
 import tseslint from "typescript-eslint";                  // Official flat config helper for TypeScript
 import prettierPlugin from "eslint-plugin-prettier";       // Plugin to run Prettier as an ESLint rule
@@ -15,7 +15,7 @@ const tsEslintConfig = tseslint.config({
             ecmaVersion: "latest",
             sourceType: "module",
             ecmaFeatures: {
-                jsx: true, // Enable parsing of JSX for shared use in frontend
+                jsx: true, // Enable parsing of JSX for shared use in nextjs
             },
         },
     },

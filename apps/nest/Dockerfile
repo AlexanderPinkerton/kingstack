@@ -1,4 +1,4 @@
-# apps/backend/Dockerfile
+# apps/nest/Dockerfile
 
 # Stage 1: Build
 FROM node:20 AS build
@@ -15,8 +15,8 @@ COPY .yarn/releases/     ./.yarn/releases/
 
 # 3) **Copy every workspace’s package.json** so Yarn can see them, otherwise it will fail with lockfile complaints.
 # This is crucial for the `--immutable` flag to work correctly.
-COPY apps/backend/package.json apps/backend/package.json
-COPY apps/frontend/package.json apps/frontend/package.json
+COPY apps/nest/package.json apps/nest/package.json
+COPY apps/next/package.json apps/next/package.json
 COPY packages/prisma/package.json packages/prisma/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
 COPY packages/ts-config/package.json packages/ts-config/package.json
@@ -39,8 +39,8 @@ RUN yarn workspace @kingstack/shapes build
 # 👇 Generate the Prisma client using the shared schema
 RUN yarn workspace @kingstack/prisma prisma generate
 
-# 👇 Build the backend app
-WORKDIR /app/apps/backend
+# 👇 Build the nestjs app
+WORKDIR /app/apps/nest
 RUN yarn build
 
 # Stage 2: Runtime
@@ -51,9 +51,9 @@ RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY --from=build /app/apps/backend/dist ./dist
+COPY --from=build /app/apps/nest/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/apps/backend/package.json ./
+COPY --from=build /app/apps/nest/package.json ./
 COPY --from=build /app/packages/shapes ./packages/shapes
 
 CMD ["node", "dist/main"]

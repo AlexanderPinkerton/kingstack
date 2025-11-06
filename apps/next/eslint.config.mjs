@@ -1,4 +1,4 @@
-// Frontend config: extends shared base + adds Next.js rules with backward compatibility
+// NextJS config: extends shared base + adds Next.js rules with backward compatibility
 
 import baseConfig from "@kingstack/eslint-config";
 import path from "path";
@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Log the current directory for debugging purposes
-console.log("Eslint Frontend Dir:", __dirname);
+console.log("Eslint NextJS Dir:", __dirname);
 
 // FlatCompat allows us to reuse existing eslint configs like 'next/core-web-vitals'
 const compat = new FlatCompat({

@@ -1,8 +1,8 @@
 
-Im back again! Can you explain in detail why the relative paths in @shared.ts break the backend builds. Why does that cause the dist to end up somewhere else?
+Im back again! Can you explain in detail why the relative paths in @shared.ts break the nest builds. Why does that cause the dist to end up somewhere else?
 
 
-Great question! Let me explain in detail why relative paths in shared.ts break the backend builds and cause the dist structure to be nested.
+Great question! Let me explain in detail why relative paths in shared.ts break the nest builds and cause the dist structure to be nested.
 The Root Cause: TypeScript's Path Preservation
 When TypeScript compiles your code, it preserves the relative path structure from your source files in the output directory. Here's what happens:
 1. Your Source Structure
@@ -13,13 +13,13 @@ Apply to shared.ts
 ;
 2. TypeScript's Compilation Logic
 TypeScript sees this relative path and thinks:
-"The source file is at apps/backend/src/lib/shared.ts"
+"The source file is at apps/nest/src/lib/shared.ts"
 "It imports from ../../../../packages/shapes/karma/KarmaManager"
 "So the compiled file should maintain this same relative relationship"
 3. The Problem: Path Resolution
 TypeScript resolves ../../../../packages/shapes/karma/KarmaManager from the source file's location:
-From: apps/backend/src/lib/shared.ts
-Going up 4 levels: apps/backend/src/ → apps/backend/ → apps/ → root/
+From: apps/nest/src/lib/shared.ts
+Going up 4 levels: apps/nest/src/ → apps/nest/ → apps/ → root/
 Then into: packages/shapes/karma/KarmaManager
 4. Output Structure Preservation
 TypeScript preserves this full monorepo path structure in the output:
@@ -81,8 +81,8 @@ One file (shared.ts) imports from above the root dir:
 Apply to shared.ts
 ;
 TypeScript preserves ALL relative paths in the entire compilation, so every single file gets moved down to maintain those relationships
-The entire dist structure gets nested under dist/apps/backend/src/ instead of just dist/
-NestJS CLI expects dist/main.js but finds dist/apps/backend/src/main.js
+The entire dist structure gets nested under dist/apps/nest/src/ instead of just dist/
+NestJS CLI expects dist/main.js but finds dist/apps/nest/src/main.js
 Why It Affects Everything
 It's not just that one file - TypeScript treats the entire compilation as a unit. When it sees that some files need to preserve paths that go outside the source directory, it restructures the whole output to maintain consistency.
 So even files that don't import from packages/shapes (like main.ts, app.controller.ts, etc.) all get moved down into the nested structure because TypeScript is preserving the relative path relationships across the entire codebase.

@@ -49,13 +49,13 @@ import { createOptimisticStoreManager } from "@kingstack/advanced-optimistic-sto
 ### 3. Files Updated
 
 #### Stores (All updated to use new package)
-- ✅ `apps/frontend/src/stores/todoStore.ts`
-- ✅ `apps/frontend/src/stores/postStore.ts`
-- ✅ `apps/frontend/src/stores/userStore.ts`
-- ✅ `apps/frontend/src/stores/realtimeCheckboxStore.ts`
+- ✅ `apps/next/src/stores/todoStore.ts`
+- ✅ `apps/next/src/stores/postStore.ts`
+- ✅ `apps/next/src/stores/userStore.ts`
+- ✅ `apps/next/src/stores/realtimeCheckboxStore.ts`
 
 #### Components
-- ✅ `apps/frontend/src/components/PerformanceDashboard.tsx`
+- ✅ `apps/next/src/components/PerformanceDashboard.tsx`
   - Updated to use `getGlobalQueryClient()` from new package
   - Removed references to deleted store manager cache
   - Now shows TanStack Query cache stats
@@ -63,9 +63,9 @@ import { createOptimisticStoreManager } from "@kingstack/advanced-optimistic-sto
 ### 4. Files Deleted
 
 Cleaned up old implementation files:
-- ❌ `apps/frontend/src/lib/optimistic-store-pattern.ts` (963 lines → moved to package)
-- ❌ `apps/frontend/src/lib/realtime-extension.ts` (moved to package)
-- ❌ `apps/frontend/src/lib/references/` (old unused code)
+- ❌ `apps/next/src/lib/optimistic-store-pattern.ts` (963 lines → moved to package)
+- ❌ `apps/next/src/lib/realtime-extension.ts` (moved to package)
+- ❌ `apps/next/src/lib/references/` (old unused code)
 
 ---
 
@@ -141,7 +141,7 @@ yarn clean       # Remove dist/
 
 ```bash
 # Build frontend (uses the package)
-cd apps/frontend
+cd apps/next
 yarn build       # ✅ Passing
 yarn dev         # Development mode
 ```
@@ -254,8 +254,8 @@ Documented in `docs/why-no-store-manager-cache.md`:
 If needed, the old files are preserved in git history:
 ```bash
 # Restore old files
-git checkout HEAD~1 -- apps/frontend/src/lib/optimistic-store-pattern.ts
-git checkout HEAD~1 -- apps/frontend/src/lib/realtime-extension.ts
+git checkout HEAD~1 -- apps/next/src/lib/optimistic-store-pattern.ts
+git checkout HEAD~1 -- apps/next/src/lib/realtime-extension.ts
 
 # Revert imports in stores
 # Replace @kingstack/advanced-optimistic-store with @/lib/optimistic-store-pattern

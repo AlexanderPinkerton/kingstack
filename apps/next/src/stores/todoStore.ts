@@ -142,14 +142,14 @@ export class AdvancedTodoStore {
   private apiQueryFn = async (): Promise<TodoApiData[]> => {
     const token = this.authToken || "";
     const baseUrl =
-      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/todos`).then((res) => res.json());
   };
 
   private apiCreateMutation = async (data: any): Promise<TodoApiData> => {
     const token = this.authToken || "";
     const baseUrl =
-      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/todos`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -165,7 +165,7 @@ export class AdvancedTodoStore {
   }): Promise<TodoApiData> => {
     const token = this.authToken || "";
     const baseUrl =
-      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -175,7 +175,7 @@ export class AdvancedTodoStore {
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
     const token = this.authToken || "";
     const baseUrl =
-      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
     const response = await fetchWithAuth(token, `${baseUrl}/todos/${id}`, {
       method: "DELETE",
     });
@@ -187,7 +187,7 @@ export class AdvancedTodoStore {
     }
 
     const result = await response.json();
-    console.log("Delete mutation backend response:", result);
+    console.log("Delete mutation api response:", result);
     return result;
   };
 

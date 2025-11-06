@@ -12,9 +12,9 @@ async function bootstrap() {
     new FastifyAdapter(),
   );
 
-  // Enable CORS for the frontend
+  // Configure CORS for the NextJS app to use this API
   app.enableCors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3069",
+    origin: process.env.NEXT_URL || "http://localhost:3069",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],

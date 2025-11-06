@@ -20,7 +20,7 @@ CSS & Tailwind:
 
 Never nest ternary statements. All statements should be explicit and easy to read.
 
-Never use fetch when hitting the backend or API routes...always use the "fetchInternal" utility which explicityly passes the JWT though
+Never use fetch when hitting our internal API routes...always use the "fetchWithAuth" utility which explicityly passes the JWT though
 
 
 KEY COMMANDS:

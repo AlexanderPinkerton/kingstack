@@ -198,7 +198,7 @@ export class RootStore {
     }
 
     const REALTIME_SERVER_URL =
-      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
 
     const socket = io(REALTIME_SERVER_URL, {
       transports: ["websocket"],

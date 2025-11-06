@@ -87,7 +87,7 @@ export const RealtimeCheckboxes = observer(() => {
         </h2>
         {isClient && isPlaygroundMode() && (
           <p className="text-yellow-200 text-sm mb-4">
-            Playground mode is active. Enable backend for a full experience.
+            Playground mode is active. Enable Supabase for a full experience.
           </p>
         )}
         <p className="text-slate-300 text-lg max-w-2xl mx-auto leading-relaxed">

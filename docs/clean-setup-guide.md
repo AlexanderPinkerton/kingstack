@@ -1,11 +1,11 @@
 ## Setup Env Files
-- copy apps/frontend/.env.example to apps/frontend/.env
-- copy apps/backend/.env.example to apps/backend/.env
+- copy apps/next/.env.example to apps/next/.env
+- copy apps/nest/.env.example to apps/nest/.env
 - copy packages/prisma/.env.example to packages/prisma/.env
 
 ## Update Env Files
-- update apps/frontend/.env with your supabase project info
-- update apps/backend/.env with your supabase project info
+- update apps/next/.env with your supabase project info
+- update apps/nest/.env with your supabase project info
 - update packages/prisma/.env with your supabase project info
 
 ## Setup Monorepo name
@@ -18,9 +18,6 @@
 ## Initialize Database
 - run `yarn prisma:migrate` in the root directory
 
-## Install Auth Triggers
-- run `yarn workspace @<project-name>/backend run install-custom-user-trigger` in the root directory
-
 ## Setup Auth Redirects
 - go to supabase project and navigate to Authentication -> URL Configuration
 - under "Redirect URLs" add the following:
@@ -28,10 +25,10 @@
     - <your vercel domain>
 
 ## Setup Google Auth (Optional)
-- if you want to use google auth, add your google client id and secret to apps/frontend/.env ( you can get this from the google developers console)
+- if you want to use google auth, add your google client id and secret to apps/next/.env ( you can get this from the google developers console)
 
 ## Backfill User Data ( only needed if you have existing users)
-- run `yarn workspace @<project-name>/backend run backfill-user-data` in the root directory
+- run `yarn workspace @<project-name>/nest run backfill-user-data` in the root directory
 
 ## Test the stack
 - run `yarn dev` in the root directory
@@ -51,13 +48,13 @@
 
 ## Deployments
 
-### Deploying Backend to Railway
-- Use railway git integration to deploy the backend with ease
-- Under settings -> Config-as-code -> set the railway.json file path to ```/apps/backend/railway.json```
-- Under variables -> add the environment variables from the .env file in the backend directory
+### Deploying NestJS to Railway
+- Use railway git integration to deploy the nestjs app with ease
+- Under settings -> Config-as-code -> set the railway.json file path to ```/apps/nest/railway.json```
+- Under variables -> add the environment variables from the .env file in the nest directory
 - Under settings -> Networking: generate a domain name
-- Copy the generated domain name and add update the `NEXT_PUBLIC_NEST_BACKEND_URL` environment variable in the vercel dashboard
+- Copy the generated domain name and add update the `NEXT_PUBLIC_NEST_URL` environment variable in the vercel dashboard
 
-### Deploying Frontend to Vercel
+### Deploying NextJS to Vercel
 - Use vercel git integration to deploy the frontend with ease
 - Be sure to set the environment variables in the vercel dashboard before deploying
