@@ -6,7 +6,7 @@ import {
 import { TodoApiData } from "@/app/home/page";
 import { TodoUiData } from "@/app/home/page";
 import { fetchWithAuth } from "@/lib/utils";
-import { getMockData, isPlaygroundMode } from "@kingstack/shapes";
+import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 
 export class AdvancedTodoStore {
   private optimisticStore: OptimisticStore<

@@ -20,8 +20,8 @@
         "incremental": true,
         "baseUrl": ".",
         "paths": {
-            "@shapes/*": [
-                "../../packages/shapes/src/*"
+            "@shared/*": [
+                "../../packages/shared/src/*"
             ],
             "@prisma/*": [
                 "../../packages/prisma/*"

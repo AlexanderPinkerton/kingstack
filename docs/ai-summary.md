@@ -29,7 +29,7 @@ kingstack/
 ├── packages/
 │   ├── eslint-config/   # Shared ESLint config
 │   ├── prisma/          # Shared Prisma schema + generated client
-│   └── shapes/          # Shared data/model shapes (DSS, VDS, DTS)
+│   └── shared/          # Shared TS code used by Next and Nest
 ├── .env, .env.docker    # Environment configs
 ├── docker-compose.yml   # Multi-service Docker orchestration
 ├── package.json         # Root config (workspaces, scripts)
@@ -42,7 +42,7 @@ kingstack/
 - `apps/next/src/` — React components, pages, stores, context, and UI logic.
 - `apps/nest/src/` — NestJS modules, controllers, services, and scripts.
 - `packages/prisma/` — `schema.prisma` and migration files for DB.
-- `packages/shapes/` — TypeScript types for data transfer and state shapes.
+- `packages/shared/` — Shared code used by Next and Nest
 - `packages/eslint-config/` — Centralized ESLint settings for all workspaces.
 
 ---
@@ -68,7 +68,7 @@ kingstack/
 
 ### Shared Packages
 - **Prisma**: `packages/prisma` contains the schema and generates the client for both backend and (optionally) frontend.
-- **Shapes**: `packages/shapes` holds TypeScript types for DSS (Domain State Shape), VDS (View Data Shape), and DTS (Data Transfer Shape), promoting type safety and DRY code.
+- **Shared**: `packages/shared` holds TypeScript types for DSS (Domain State Shape), VDS (View Data Shape), and DTS (Data Transfer Shape), promoting type safety and DRY code.
 - **ESLint Config**: Centralized config in `packages/eslint-config` ensures consistent linting rules.
 
 

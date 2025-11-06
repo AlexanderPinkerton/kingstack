@@ -12,10 +12,10 @@ import { ThemedSuccessText } from "@/components/ui/themed-success-text";
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/browserClient";
-import { UsernameGenerator } from "@kingstack/shapes";
-import { APPNAME } from "@kingstack/shapes";
+import { UsernameGenerator } from "@kingstack/shared";
+import { APPNAME } from "@kingstack/shared";
 
-import { isPlaygroundMode } from "@kingstack/shapes";
+import { isPlaygroundMode } from "@kingstack/shared";
 
 export function LoginForm({
   className,

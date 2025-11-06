@@ -9,7 +9,7 @@
             ],
             "dependsOn": [
                 "@kingstack/prisma#generate",
-                "@kingstack/shapes#build"
+                "@kingstack/shared#build"
             ]
         }
     }

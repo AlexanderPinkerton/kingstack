@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { UsernameGenerator } from "@kingstack/shapes";
+import { UsernameGenerator } from "@kingstack/shared";
 import prisma from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/serverClient";
 

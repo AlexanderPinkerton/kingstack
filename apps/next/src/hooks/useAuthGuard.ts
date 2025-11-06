@@ -1,7 +1,7 @@
 import { useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { RootStoreContext } from "@/context/rootStoreContext";
-import { isPlaygroundMode } from "@kingstack/shapes";
+import { isPlaygroundMode } from "@kingstack/shared";
 
 export default function useAuthGuard() {
   const rootStore = useContext(RootStoreContext);
