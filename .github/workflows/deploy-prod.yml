@@ -68,4 +68,4 @@ jobs:
       - name: Link Vercel Project
         run: npx vercel link --yes --cwd apps/next --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID
       - name: Deploy to Vercel
-        run: npx vercel deploy --prod --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID --yes
+        run: npx vercel deploy --prod --cwd apps/next --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID --yes
