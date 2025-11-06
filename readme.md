@@ -261,6 +261,7 @@ yarn shadow:stop     # Stop shadow DB
   - VERCEL_PROJECT_ID - Get this from the project vercel generated on step 1
   - VERCEL_TOKEN - Create one from your Vercel account settings -> Tokens
   - VERCEL_ORG_ID - This is your "Team ID" which you can get from your team settings.
+  - Code pushed to main will be deployed to production, all other branches will go to preview
 
 ## 🧠 Points of Interest
 
