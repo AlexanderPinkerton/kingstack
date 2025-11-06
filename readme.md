@@ -252,6 +252,16 @@ yarn shadow:stop     # Stop shadow DB
 
 ---
 
+## Deployments
+
+### NextJS App
+- Ensure the vercel cli is installed and authenticated
+- Run `vercel` command and follow prompts to deploy
+- To enable auto-deployments, you need to add vercel details to github action secrets
+  - VERCEL_PROJECT_ID - Get this from the project vercel generated on step 1
+  - VERCEL_TOKEN - Create one from your Vercel account settings -> Tokens
+  - VERCEL_ORG_ID - This is your "Team ID" which you can get from your team settings.
+
 ## 🧠 Points of Interest
 
 ### 🔄 Supabase Auth Sync
