@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { RootStoreContext } from "@/context/rootStoreContext";
 import { observer } from "mobx-react-lite";
 import { createClient } from "@/lib/supabase/browserClient";
-import { isPlaygroundMode } from "@kingstack/shapes";
+import { isPlaygroundMode } from "@kingstack/shared";
 
 interface AvatarMenuProps {
   className?: string;

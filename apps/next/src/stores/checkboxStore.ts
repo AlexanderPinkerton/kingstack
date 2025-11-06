@@ -5,7 +5,7 @@ import {
   createOptimisticStore,
   Entity,
 } from "@kingstack/advanced-optimistic-store";
-import { getMockData, isPlaygroundMode } from "@kingstack/shapes";
+import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 // No longer need to import realtime extension - it's integrated into the store
 
 // ---------- Types ----------

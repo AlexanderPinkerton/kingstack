@@ -1,7 +1,7 @@
 {
-  "name": "@kingstack/shapes",
+  "name": "@kingstack/shared",
   "version": "1.0.0",
-  "description": "Shared TypeScript types and shapes for kingstack",
+  "description": "Shared TypeScript types and code for kingstack apps",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

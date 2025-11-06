@@ -3,7 +3,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { RootStoreContext } from "@/context/rootStoreContext";
-import { isPlaygroundMode } from "@kingstack/shapes";
+import { isPlaygroundMode } from "@kingstack/shared";
 
 // ---------- Realtime Checkboxes Component ----------
 

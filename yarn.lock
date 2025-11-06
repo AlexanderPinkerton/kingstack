@@ -1586,7 +1586,7 @@ __metadata:
   dependencies:
     "@eslint/eslintrc": "npm:^3.2.0"
     "@eslint/js": "npm:^9.18.0"
-    "@kingstack/shapes": "workspace:*"
+    "@kingstack/shared": "workspace:*"
     "@nestjs/cli": "npm:^11.0.0"
     "@nestjs/common": "npm:^11.0.1"
     "@nestjs/config": "npm:^4.0.2"
@@ -1663,7 +1663,7 @@ __metadata:
     "@dnd-kit/utilities": "npm:^3.2.2"
     "@eslint/eslintrc": "npm:^3"
     "@kingstack/advanced-optimistic-store": "workspace:*"
-    "@kingstack/shapes": "workspace:*"
+    "@kingstack/shared": "workspace:*"
     "@radix-ui/react-avatar": "npm:^1.1.4"
     "@radix-ui/react-checkbox": "npm:^1.1.5"
     "@radix-ui/react-dialog": "npm:^1.1.14"
@@ -1723,9 +1723,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@kingstack/shapes@workspace:*, @kingstack/shapes@workspace:packages/shapes":
+"@kingstack/shared@workspace:*, @kingstack/shared@workspace:packages/shared":
   version: 0.0.0-use.local
-  resolution: "@kingstack/shapes@workspace:packages/shapes"
+  resolution: "@kingstack/shared@workspace:packages/shared"
   dependencies:
     "@eslint/eslintrc": "npm:^3"
     "@kingstack/eslint-config": "workspace:*"

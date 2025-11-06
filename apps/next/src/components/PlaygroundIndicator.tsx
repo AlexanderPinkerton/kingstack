@@ -4,7 +4,7 @@ import { observer } from "mobx-react-lite";
 import { Badge } from "@/components/ui/badge";
 import { Play } from "lucide-react";
 import { useState, useEffect } from "react";
-import { isPlaygroundMode } from "@kingstack/shapes";
+import { isPlaygroundMode } from "@kingstack/shared";
 
 export const PlaygroundIndicator = observer(() => {
   const [isClient, setIsClient] = useState(false);

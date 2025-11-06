@@ -14,13 +14,13 @@ Apply to shared.ts
 2. TypeScript's Compilation Logic
 TypeScript sees this relative path and thinks:
 "The source file is at apps/nest/src/lib/shared.ts"
-"It imports from ../../../../packages/shapes/karma/KarmaManager"
+"It imports from ../../../../packages/shared/karma/KarmaManager"
 "So the compiled file should maintain this same relative relationship"
 3. The Problem: Path Resolution
-TypeScript resolves ../../../../packages/shapes/karma/KarmaManager from the source file's location:
+TypeScript resolves ../../../../packages/shared/karma/KarmaManager from the source file's location:
 From: apps/nest/src/lib/shared.ts
 Going up 4 levels: apps/nest/src/ → apps/nest/ → apps/ → root/
-Then into: packages/shapes/karma/KarmaManager
+Then into: packages/shared/karma/KarmaManager
 4. Output Structure Preservation
 TypeScript preserves this full monorepo path structure in the output:
 Apply to shared.ts
@@ -85,10 +85,10 @@ The entire dist structure gets nested under dist/apps/nest/src/ instead of just 
 NestJS CLI expects dist/main.js but finds dist/apps/nest/src/main.js
 Why It Affects Everything
 It's not just that one file - TypeScript treats the entire compilation as a unit. When it sees that some files need to preserve paths that go outside the source directory, it restructures the whole output to maintain consistency.
-So even files that don't import from packages/shapes (like main.ts, app.controller.ts, etc.) all get moved down into the nested structure because TypeScript is preserving the relative path relationships across the entire codebase.
+So even files that don't import from packages/shared (like main.ts, app.controller.ts, etc.) all get moved down into the nested structure because TypeScript is preserving the relative path relationships across the entire codebase.
 The Fix
 That's why the path mapping solution works so well:
 Apply to shared.ts
 ;
-The path mapping tells TypeScript "when you see @shapes/*, resolve it to ../../packages/shapes/*" but it doesn't preserve the full monorepo path structure in the output.
+The path mapping tells TypeScript "when you see @shared/*, resolve it to ../../packages/shared/*" but it doesn't preserve the full monorepo path structure in the output.
 You've nailed the root cause! 🎯

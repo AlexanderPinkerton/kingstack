@@ -11,7 +11,7 @@ import { ThemedButton } from "@/components/ui/themed-button";
 import { AppNavbar } from "@/components/navbar/presets/app";
 import { RootStoreContext } from "@/context/rootStoreContext";
 import { AdvancedPostsExample } from "@/lib/examples/advanced-posts-example";
-import { isPlaygroundMode } from "@kingstack/shapes";
+import { isPlaygroundMode } from "@kingstack/shared";
 
 export interface TodoApiData {
   id: string;

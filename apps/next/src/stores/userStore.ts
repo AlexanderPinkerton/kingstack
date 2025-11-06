@@ -4,7 +4,7 @@ import {
   DataTransformer,
 } from "@kingstack/advanced-optimistic-store";
 import { fetchWithAuth } from "@/lib/utils";
-import { getMockData, isPlaygroundMode } from "@kingstack/shapes";
+import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 
 // API data structure (what comes from the server)
 export interface UserApiData {

@@ -5,7 +5,7 @@ import { AdvancedTodoStore } from "./todoStore";
 import { AdvancedPostStore } from "./postStore";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { AdvancedUserStore } from "./userStore";
-import { isPlaygroundMode } from "@kingstack/shapes";
+import { isPlaygroundMode } from "@kingstack/shared";
 
 // Create Supabase client (will be null if env vars are missing)
 const supabase = createClient();

@@ -1,6 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { createPlaygroundClient } from "./playgroundClient";
-import { isPlaygroundMode } from "@kingstack/shapes";
+import { isPlaygroundMode } from "@kingstack/shared";
 
 export function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
