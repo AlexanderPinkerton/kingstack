@@ -98,6 +98,20 @@ kingstack/
   ```
 ---
 
+## 🔐 JWT Authentication
+
+KingStack uses **explicit JWT token passing** instead of relying on cookies or localStorage. The same Supabase JWT token is used across Next.js, NestJS, and realtime connections.
+
+**Key points:**
+- Token stored in memory (`RootStore.session`), not cookies/localStorage
+- All internal API calls use `fetchWithAuth(token, url, options)` - **never use plain `fetch`**
+- Token explicitly passed to stores via `store.enable(token)`
+- Same token validated by NestJS (Passport JWT) and realtime gateway (Socket.io)
+
+📖 **[Full Authentication Documentation →](./docs/auth/README.md)**
+
+---
+
 ## 🛊 Local Development
 
 ### Start Dev Servers
