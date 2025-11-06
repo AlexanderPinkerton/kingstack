@@ -5,7 +5,7 @@
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
-const PLAYGROUND_ENV = `# Playground Mode - No Supabase Required
+const NEXT_PLAYGROUND_ENV = `# NextJS Playground Mode - No Supabase Required
 # This configuration allows KingStack to run as a UI playground
 # without requiring authentication or database setup
 
@@ -30,7 +30,7 @@ SUPABASE_DB_DIRECT_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 `;
 
-const BACKEND_PLAYGROUND_ENV = `# Backend Playground Mode
+const NEST_PLAYGROUND_ENV = `# NestJS Playground Mode
 # This configuration allows the backend to run in playground mode
 # without requiring database connections
 
@@ -64,17 +64,17 @@ async function main() {
   console.log('🎮 Setting up KingStack Playground Mode...');
 
   // Create playground environment files
-  const frontendEnvPath = join('apps', 'frontend', '.env');
-  const backendEnvPath = join('apps', 'backend', '.env');
+  const nextEnvPath = join('apps', 'next', '.env');
+  const nestEnvPath = join('apps', 'nest', '.env');
   const prismaEnvPath = join('packages', 'prisma', '.env');
 
-  // Write frontend environment
-  writeFileSync(frontendEnvPath, PLAYGROUND_ENV);
-  console.log('✅ Created frontend playground environment');
+  // Write nextjs environment
+  writeFileSync(nextEnvPath, NEXT_PLAYGROUND_ENV);
+  console.log('✅ Created nextjs playground environment');
 
-  // Write backend environment
-  writeFileSync(backendEnvPath, BACKEND_PLAYGROUND_ENV);
-  console.log('✅ Created backend playground environment');
+  // Write nestjs environment
+  writeFileSync(nestEnvPath, NEST_PLAYGROUND_ENV);
+  console.log('✅ Created nestjs playground environment');
 
   // Write prisma environment
   writeFileSync(prismaEnvPath, PRISMA_PLAYGROUND_ENV);
