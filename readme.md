@@ -54,6 +54,8 @@ KingStack excels at making common tasks **easy**:
 - ✅ **Easy State Management** - MobX + TanStack Query with optimistic updates
 - ✅ **Easy Realtime** - Built-in realtime extensions for stores
 
+📖 **[State Management Architecture →](./docs/state-management/README.md)**
+
 ### Tackling Common Annoyances
 
 KingStack takes an **explicit approach** to avoid hidden pitfalls:
@@ -99,7 +101,8 @@ kingstack/
 │   ├── auth/                   # Authentication architecture
 │   ├── deployment/            # CI/CD and deployment guides
 │   ├── secrets/                # Secrets management guide
-│   └── scripts/                # Scripts and automation guide
+│   ├── scripts/                # Scripts and automation guide
+│   └── state-management/       # State management architecture
 ├── .yarn/                      # Yarn plugins, version, patches, etc.
 ├── .turbo/                     # Turborepo local task cache (gitignored)
 ├── .gitignore
