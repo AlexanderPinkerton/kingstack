@@ -1,28 +1,81 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import { generateText } from "ai";
-
-import { getUserAuthDetails } from "@/lib/admin-utils";
+import {
+  generateText,
+  streamText,
+  convertToModelMessages,
+  type UIMessage,
+  type LanguageModelUsage,
+} from "ai";
 
 import { getModel, getDefaultModelForProvider } from "../models";
 
+export const maxDuration = 30;
+
+// Metadata type for chat messages
+type ChatMetadata = {
+  createdAt: number;
+  model: string;
+  totalUsage?: LanguageModelUsage;
+};
+
+export type ChatUIMessage = UIMessage<ChatMetadata>;
+
 export async function POST(request: NextRequest) {
   try {
-    const jwt =
-      request.headers.get("Authorization")?.replace("Bearer ", "") || null;
+    const body = await request.json();
+    const { prompt, modelId, messages } = body;
 
-    const authDetails = await getUserAuthDetails(jwt);
+    // Handle chat streaming (messages array)
+    if (messages && Array.isArray(messages)) {
+      const modelConfig = modelId
+        ? getModel(modelId)
+        : getDefaultModelForProvider("anthropic");
 
-    if (!authDetails.isAuthenticated) {
-      return NextResponse.json(
-        { error: authDetails.error || "Unauthorized" },
-        { status: 401 },
-      );
+      if (!modelConfig) {
+        return NextResponse.json(
+          { error: `Model ${modelId} not found or disabled` },
+          { status: 400 },
+        );
+      }
+
+      if (modelConfig.provider !== "anthropic") {
+        return NextResponse.json(
+          { error: "Invalid model for Anthropic endpoint" },
+          { status: 400 },
+        );
+      }
+
+      const result = streamText({
+        model: modelConfig.model,
+        system: "You are a helpful assistant.",
+        messages: convertToModelMessages(messages),
+      });
+
+      return result.toUIMessageStreamResponse({
+        originalMessages: messages,
+        messageMetadata: ({ part }) => {
+          const metadata: ChatMetadata = {
+            createdAt: Date.now(),
+            model: modelConfig.id,
+          };
+
+          if (part.type === "finish") {
+            metadata.totalUsage = part.totalUsage;
+          }
+
+          return metadata;
+        },
+        onError: (error) => {
+          if (error == null) return "An unknown error occurred.";
+          if (typeof error === "string") return error;
+          if (error instanceof Error) return error.message;
+          return "An error occurred while processing your request.";
+        },
+      });
     }
 
-    const body = await request.json();
-    const { prompt, modelId } = body;
-
+    // Handle single text generation
     if (!prompt) {
       return NextResponse.json(
         { error: "Prompt is required" },
@@ -30,7 +83,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get model from registry (use specified model or default)
     const modelConfig = modelId
       ? getModel(modelId)
       : getDefaultModelForProvider("anthropic");
@@ -42,7 +94,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure the model is from Anthropic provider
     if (modelConfig.provider !== "anthropic") {
       return NextResponse.json(
         { error: "Invalid model for Anthropic endpoint" },

@@ -2,8 +2,8 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useState } from "react";
-import type { ChatUIMessage } from "../api/chat/route";
+import { useState, useMemo } from "react";
+import type { ChatUIMessage } from "../api/ai/openai/route";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,21 +27,33 @@ interface ImageMessage {
   timestamp: number;
 }
 
+// Helper to get provider endpoint for a model
+function getProviderEndpoint(modelId: string): string {
+  if (modelId.startsWith("gpt-")) return "/api/ai/openai";
+  if (modelId.startsWith("claude-")) return "/api/ai/anthropic";
+  if (modelId.startsWith("gemini-")) return "/api/ai/google";
+  return "/api/ai/openai"; // fallback
+}
+
 export default function ChatPage() {
   const [mode, setMode] = useState<ChatMode>("text");
   const [modelId, setModelId] = useState("gpt-5-nano");
   const [imageMessages, setImageMessages] = useState<ImageMessage[]>([]);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
-  const { messages, sendMessage, status, stop, reload, error } =
-    useChat<ChatUIMessage>({
+  // Get the correct provider endpoint based on selected model
+  const apiEndpoint = useMemo(() => getProviderEndpoint(modelId), [modelId]);
+
+  const { messages, sendMessage, status, stop, error } = useChat<ChatUIMessage>(
+    {
       transport: new DefaultChatTransport({
-        api: "/api/chat",
+        api: apiEndpoint,
         body: {
           modelId,
         },
       }),
-    });
+    },
+  );
 
   const [input, setInput] = useState("");
 
@@ -364,17 +376,10 @@ export default function ChatPage() {
             <Card className="p-4 bg-red-950/20 border-red-900/50">
               <div className="flex items-start gap-3">
                 <div className="flex-1">
-                  <p className="text-red-400 font-medium">
-                    An error occurred
+                  <p className="text-red-400 font-medium">An error occurred</p>
+                  <p className="text-red-300 text-sm mt-1">
+                    Please try sending your message again.
                   </p>
-                  <Button
-                    onClick={() => reload()}
-                    variant="ghost"
-                    size="sm"
-                    className="mt-2 text-red-400 hover:text-red-300 hover:bg-red-950/20"
-                  >
-                    Retry
-                  </Button>
                 </div>
               </div>
             </Card>
