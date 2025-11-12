@@ -1,0 +1,8 @@
+{
+  "buildCommand": "yarn turbo run build --filter=@kingstack/next",
+  "outputDirectory": "apps/next/.next",
+  "installCommand": "yarn install",
+  "framework": "nextjs",
+  "devCommand": "yarn workspace @kingstack/next dev",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./apps/next"
+}
