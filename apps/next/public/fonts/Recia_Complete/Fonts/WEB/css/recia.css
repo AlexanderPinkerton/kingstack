@@ -1,0 +1,159 @@
+/**
+* @license
+*
+* Font Family: Recia
+* Designed by: Carlos de Toro
+* URL: https://www.fontshare.com/fonts/recia
+* © 2025 Indian Type Foundry
+*
+* Recia Light 
+* Recia LightItalic 
+* Recia Regular 
+* Recia Italic 
+* Recia Medium 
+* Recia MediumItalic 
+* Recia Semibold 
+* Recia SemiboldItalic 
+* Recia Bold 
+* Recia BoldItalic 
+* Recia Variable (Variable font)
+* Recia VariableItalic (Variable font)
+
+*
+*/
+@font-face {
+	font-family: "Recia-Light";
+	src:
+		url("../fonts/Recia-Light.woff2") format("woff2"),
+		url("../fonts/Recia-Light.woff") format("woff"),
+		url("../fonts/Recia-Light.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Recia-LightItalic";
+	src:
+		url("../fonts/Recia-LightItalic.woff2") format("woff2"),
+		url("../fonts/Recia-LightItalic.woff") format("woff"),
+		url("../fonts/Recia-LightItalic.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Recia-Regular";
+	src:
+		url("../fonts/Recia-Regular.woff2") format("woff2"),
+		url("../fonts/Recia-Regular.woff") format("woff"),
+		url("../fonts/Recia-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Recia-Italic";
+	src:
+		url("../fonts/Recia-Italic.woff2") format("woff2"),
+		url("../fonts/Recia-Italic.woff") format("woff"),
+		url("../fonts/Recia-Italic.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Recia-Medium";
+	src:
+		url("../fonts/Recia-Medium.woff2") format("woff2"),
+		url("../fonts/Recia-Medium.woff") format("woff"),
+		url("../fonts/Recia-Medium.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Recia-MediumItalic";
+	src:
+		url("../fonts/Recia-MediumItalic.woff2") format("woff2"),
+		url("../fonts/Recia-MediumItalic.woff") format("woff"),
+		url("../fonts/Recia-MediumItalic.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Recia-Semibold";
+	src:
+		url("../fonts/Recia-Semibold.woff2") format("woff2"),
+		url("../fonts/Recia-Semibold.woff") format("woff"),
+		url("../fonts/Recia-Semibold.ttf") format("truetype");
+	font-weight: 600;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Recia-SemiboldItalic";
+	src:
+		url("../fonts/Recia-SemiboldItalic.woff2") format("woff2"),
+		url("../fonts/Recia-SemiboldItalic.woff") format("woff"),
+		url("../fonts/Recia-SemiboldItalic.ttf") format("truetype");
+	font-weight: 600;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Recia-Bold";
+	src:
+		url("../fonts/Recia-Bold.woff2") format("woff2"),
+		url("../fonts/Recia-Bold.woff") format("woff"),
+		url("../fonts/Recia-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Recia-BoldItalic";
+	src:
+		url("../fonts/Recia-BoldItalic.woff2") format("woff2"),
+		url("../fonts/Recia-BoldItalic.woff") format("woff"),
+		url("../fonts/Recia-BoldItalic.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: italic;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 300.0wght 700.0;
+*
+* available axes:
+'wght' (range from 300.0 to 700.0'wght' (range from 300.0 to 700.0
+*/
+@font-face {
+	font-family: "Recia-Variable";
+	src:
+		url("../fonts/Recia-Variable.woff2") format("woff2"),
+		url("../fonts/Recia-Variable.woff") format("woff"),
+		url("../fonts/Recia-Variable.ttf") format("truetype");
+	font-weight: 300 700;
+	font-display: swap;
+	font-style: normal;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 300.0wght 700.0;
+*
+* available axes:
+'wght' (range from 300.0 to 700.0'wght' (range from 300.0 to 700.0
+*/
+@font-face {
+	font-family: "Recia-VariableItalic";
+	src:
+		url("../fonts/Recia-VariableItalic.woff2") format("woff2"),
+		url("../fonts/Recia-VariableItalic.woff") format("woff"),
+		url("../fonts/Recia-VariableItalic.ttf") format("truetype");
+	font-weight: 300 700;
+	font-display: swap;
+	font-style: italic;
+}

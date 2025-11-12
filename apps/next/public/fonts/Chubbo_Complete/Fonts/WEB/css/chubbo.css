@@ -1,0 +1,159 @@
+/**
+* @license
+*
+* Font Family: Chubbo
+* Designed by: Rafał Buchner
+* URL: https://www.fontshare.com/fonts/chubbo
+* © 2025 Indian Type Foundry
+*
+* Chubbo Extralight 
+* Chubbo ExtralightItalic 
+* Chubbo Light 
+* Chubbo LightItalic 
+* Chubbo Regular 
+* Chubbo Italic 
+* Chubbo Medium 
+* Chubbo MediumItalic 
+* Chubbo Bold 
+* Chubbo BoldItalic 
+* Chubbo Variable (Variable font)
+* Chubbo VariableItalic (Variable font)
+
+*
+*/
+@font-face {
+	font-family: "Chubbo-Extralight";
+	src:
+		url("../fonts/Chubbo-Extralight.woff2") format("woff2"),
+		url("../fonts/Chubbo-Extralight.woff") format("woff"),
+		url("../fonts/Chubbo-Extralight.ttf") format("truetype");
+	font-weight: 200;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Chubbo-ExtralightItalic";
+	src:
+		url("../fonts/Chubbo-ExtralightItalic.woff2") format("woff2"),
+		url("../fonts/Chubbo-ExtralightItalic.woff") format("woff"),
+		url("../fonts/Chubbo-ExtralightItalic.ttf") format("truetype");
+	font-weight: 200;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Chubbo-Light";
+	src:
+		url("../fonts/Chubbo-Light.woff2") format("woff2"),
+		url("../fonts/Chubbo-Light.woff") format("woff"),
+		url("../fonts/Chubbo-Light.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Chubbo-LightItalic";
+	src:
+		url("../fonts/Chubbo-LightItalic.woff2") format("woff2"),
+		url("../fonts/Chubbo-LightItalic.woff") format("woff"),
+		url("../fonts/Chubbo-LightItalic.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Chubbo-Regular";
+	src:
+		url("../fonts/Chubbo-Regular.woff2") format("woff2"),
+		url("../fonts/Chubbo-Regular.woff") format("woff"),
+		url("../fonts/Chubbo-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Chubbo-Italic";
+	src:
+		url("../fonts/Chubbo-Italic.woff2") format("woff2"),
+		url("../fonts/Chubbo-Italic.woff") format("woff"),
+		url("../fonts/Chubbo-Italic.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Chubbo-Medium";
+	src:
+		url("../fonts/Chubbo-Medium.woff2") format("woff2"),
+		url("../fonts/Chubbo-Medium.woff") format("woff"),
+		url("../fonts/Chubbo-Medium.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Chubbo-MediumItalic";
+	src:
+		url("../fonts/Chubbo-MediumItalic.woff2") format("woff2"),
+		url("../fonts/Chubbo-MediumItalic.woff") format("woff"),
+		url("../fonts/Chubbo-MediumItalic.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Chubbo-Bold";
+	src:
+		url("../fonts/Chubbo-Bold.woff2") format("woff2"),
+		url("../fonts/Chubbo-Bold.woff") format("woff"),
+		url("../fonts/Chubbo-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Chubbo-BoldItalic";
+	src:
+		url("../fonts/Chubbo-BoldItalic.woff2") format("woff2"),
+		url("../fonts/Chubbo-BoldItalic.woff") format("woff"),
+		url("../fonts/Chubbo-BoldItalic.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: italic;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 400.0wght 700.0;
+*
+* available axes:
+'wght' (range from 200.0 to 700.0'wght' (range from 200.0 to 700.0
+*/
+@font-face {
+	font-family: "Chubbo-Variable";
+	src:
+		url("../fonts/Chubbo-Variable.woff2") format("woff2"),
+		url("../fonts/Chubbo-Variable.woff") format("woff"),
+		url("../fonts/Chubbo-Variable.ttf") format("truetype");
+	font-weight: 200 700;
+	font-display: swap;
+	font-style: normal;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 400.0wght 700.0;
+*
+* available axes:
+'wght' (range from 200.0 to 700.0'wght' (range from 200.0 to 700.0
+*/
+@font-face {
+	font-family: "Chubbo-VariableItalic";
+	src:
+		url("../fonts/Chubbo-VariableItalic.woff2") format("woff2"),
+		url("../fonts/Chubbo-VariableItalic.woff") format("woff"),
+		url("../fonts/Chubbo-VariableItalic.ttf") format("truetype");
+	font-weight: 200 700;
+	font-display: swap;
+	font-style: italic;
+}

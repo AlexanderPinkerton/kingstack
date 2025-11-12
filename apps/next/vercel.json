@@ -1,9 +1,9 @@
 {
-    "buildCommand": "turbo build --filter=@kingstack/next",
-    "git": {
-        "deploymentEnabled": {
-            "main": false,
-            "development": false
-        }
+  "buildCommand": "turbo build --filter=@kingstack/next",
+  "git": {
+    "deploymentEnabled": {
+      "main": false,
+      "development": false
     }
+  }
 }
