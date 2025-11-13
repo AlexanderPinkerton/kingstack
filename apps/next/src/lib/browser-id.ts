@@ -25,4 +25,3 @@ export function getBrowserId(): string {
 
   return browserId;
 }
-
