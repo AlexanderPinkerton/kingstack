@@ -1,15 +1,13 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeAutoObservable } from "mobx";
 import { io, Socket } from "socket.io-client";
-import { createClient } from "@/lib/supabase/browserClient";
 import { AdvancedTodoStore } from "./todoStore";
 import { AdvancedPostStore } from "./postStore";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { AdvancedUserStore } from "./userStore";
 import { PublicTodoStore } from "./publicTodoStore";
-import { isPlaygroundMode } from "@kingstack/shared";
-
-// Create Supabase client (will be null if env vars are missing)
-const supabase = createClient();
+import { SingletonManager } from "@/lib/singleton";
+import { SessionManager, type SupabaseSession } from "@/lib/session-manager";
+import { getBrowserId } from "@/lib/browser-id";
 
 // Type for any store that might support realtime
 type AnyStore = {
@@ -18,12 +16,12 @@ type AnyStore = {
   [key: string]: any;
 };
 
-export class RootStore {
-  // Singleton instance tracking
-  private static instance: RootStore | null = null;
-  private static instanceCount = 0;
+const SINGLETON_KEY = "RootStore";
 
-  session: any = null;
+export class RootStore {
+  // Session management
+  private sessionManager: SessionManager;
+  session: SupabaseSession = null;
 
   // Optimistic stores
   todoStore: AdvancedTodoStore;
@@ -35,10 +33,8 @@ export class RootStore {
   // WebSocket connection management
   socket: Socket | null = null;
   // Stable browser ID for filtering out self-originated realtime events
-  browserId: string = this.getBrowserId();
+  browserId: string = getBrowserId();
 
-  // Auth listener cleanup
-  private authUnsubscribe: (() => void) | null = null;
   private isDisposed = false;
 
   // Get all optimistic stores
@@ -69,29 +65,16 @@ export class RootStore {
   }
 
   constructor() {
-    // Track instance creation
-    RootStore.instanceCount++;
-    const instanceId = RootStore.instanceCount;
+    // Register with singleton manager
+    const instanceId = SingletonManager.getInstanceCount(SINGLETON_KEY) + 1;
     console.log(`🔧 RootStore: Constructor called (instance #${instanceId})`);
     console.log("🔧 RootStore: Browser ID:", this.browserId);
 
-    // Warn if multiple instances detected (possible memory leak)
-    if (RootStore.instance && !RootStore.instance.isDisposed) {
-      // In development, HMR causes module re-execution - this is expected
-      const isDevelopment = process.env.NODE_ENV === "development";
-      const logLevel = isDevelopment ? "log" : "warn";
-
-      console[logLevel](
-        `${isDevelopment ? "🔄" : "⚠️"} RootStore: Multiple instances detected (${isDevelopment ? "HMR" : "memory leak"})`,
-        "Auto-disposing previous instance...",
-      );
-      RootStore.instance.dispose();
-    }
-
-    // Store reference to this instance
-    RootStore.instance = this;
-
-    this.session = null;
+    const isDevelopment = process.env.NODE_ENV === "development";
+    SingletonManager.register(SINGLETON_KEY, this, {
+      autoDisposePrevious: true,
+      isDevelopment,
+    });
 
     // Create all optimistic stores
     this.todoStore = new AdvancedTodoStore();
@@ -100,7 +83,27 @@ export class RootStore {
     this.publicTodoStore = new PublicTodoStore();
     this.userStore = new AdvancedUserStore();
 
-    // Make session and stores observable before setting up auth listener
+    // Initialize session manager with stores that require auth
+    this.sessionManager = new SessionManager({
+      stores: [this.todoStore, this.postStore, this.userStore],
+      onSessionChange: (session, event) => {
+        // Update observable session
+        this.session = session;
+
+        // Handle realtime connection based on session state
+        if (session?.access_token && event === "SIGNED_IN") {
+          console.log(
+            "✅ RootStore: Session established, setting up realtime",
+          );
+          this.setupRealtime(session.access_token);
+        } else if (!session?.access_token) {
+          console.log("❌ RootStore: Session lost, tearing down realtime");
+          this.teardownRealtime();
+        }
+      },
+    });
+
+    // Make session and stores observable
     makeAutoObservable(this, {
       session: true,
       todoStore: true,
@@ -109,69 +112,8 @@ export class RootStore {
       userStore: true,
     });
 
-    // Clean up any existing auth listener first
-    if (this.authUnsubscribe) {
-      this.authUnsubscribe();
-    }
-
-    // Handle playground mode vs normal mode
-    if (isPlaygroundMode() || !supabase) {
-      console.log(
-        "🎮 RootStore: Playground mode detected - enabling stores with mock data",
-      );
-      runInAction(() => {
-        // In playground mode, enable stores without authentication
-        this.todoStore.enable("playground-token");
-        this.postStore.enable("playground-token");
-        this.userStore.enable("playground-token");
-        // Checkboxes work without auth in playground mode
-      });
-    } else if (supabase) {
-      // Set up new auth listener and store the unsubscribe function
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((event: any, session: any) => {
-        console.log("🔐 RootStore: Auth state changed:", {
-          event,
-          hasSession: !!session,
-          userEmail: session?.user?.email,
-          timestamp: new Date().toISOString(),
-        });
-
-        runInAction(() => {
-          // Update session state
-          this.session = session;
-
-          if (session?.access_token && event === "SIGNED_IN") {
-            // Handle auth-required setup here
-            console.log(
-              "✅ RootStore: Session established, setting up realtime",
-            );
-            // Enable stores with new token
-            this.todoStore.enable(session.access_token);
-            this.postStore.enable(session.access_token);
-            this.userStore.enable(session.access_token);
-            // Setup realtime connection
-            this.setupRealtime(session.access_token);
-          } else if (!session?.access_token) {
-            // Handle auth-required teardown here
-            console.log("❌ RootStore: Session lost, tearing down realtime");
-            // Teardown realtime connection
-            this.teardownRealtime();
-            // Disable stores when session is lost
-            this.todoStore.disable();
-            this.postStore.disable();
-            this.userStore.disable();
-          }
-
-          // Note: Realtime is only available with authentication
-          // Checkboxes will work without realtime when not authenticated
-        });
-      });
-
-      // Store the unsubscribe function
-      this.authUnsubscribe = () => subscription.unsubscribe();
-    }
+    // Initialize session management (sets up auth listener or playground mode)
+    this.sessionManager.initialize();
 
     console.log("🔧 RootStore: Initialized");
   }
@@ -228,64 +170,10 @@ export class RootStore {
   }
 
   async refreshSession() {
-    console.log("🔄 RootStore: Refreshing session");
-
-    if (!supabase) {
-      console.log(
-        "🔄 RootStore: No Supabase client available (playground mode)",
-      );
-      return;
-    }
-
-    try {
-      const result = await supabase.auth.getSession();
-      console.log("🔄 RootStore: Session refresh result:", {
-        hasSession: !!result.data.session,
-        userEmail: result.data.session?.user?.email,
-      });
-
-      // Only update if we don't already have a session or if the session is different
-      if (!this.session && result.data.session) {
-        runInAction(() => {
-          this.session = result.data.session;
-          console.log("🔄 RootStore: Session set from refresh:", {
-            hasSession: !!this.session,
-            userEmail: this.session?.user?.email,
-          });
-        });
-        // Enable user store for new session
-        this.userStore.enable(result.data.session.access_token);
-      } else if (this.session && !result.data.session) {
-        runInAction(() => {
-          this.session = null;
-          console.log("🔄 RootStore: Session cleared from refresh");
-        });
-        // Disable user store when session is lost
-        this.userStore.disable();
-      } else {
-        console.log("🔄 RootStore: Session refresh - no change needed");
-      }
-    } catch (error) {
-      console.error("🔄 RootStore: Session refresh failed:", error);
-    }
+    await this.sessionManager.refreshSession();
+    // Session is updated via onSessionChange callback
   }
 
-  // Get or create stable browser ID (persists across page reloads)
-  private getBrowserId(): string {
-    if (typeof window === "undefined") {
-      return "server";
-    }
-
-    const STORAGE_KEY = "kingstack_browser_id";
-    let browserId = sessionStorage.getItem(STORAGE_KEY);
-
-    if (!browserId) {
-      browserId = `browser-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-      sessionStorage.setItem(STORAGE_KEY, browserId);
-    }
-
-    return browserId;
-  }
 
   // Cleanup method to properly dispose of the store
   dispose() {
@@ -299,36 +187,27 @@ export class RootStore {
     // Mark as disposed
     this.isDisposed = true;
 
-    // Clean up auth listener
-    if (this.authUnsubscribe) {
-      this.authUnsubscribe();
-      this.authUnsubscribe = null;
-    }
+    // Clean up session manager (unsubscribes from auth listener and disables stores)
+    this.sessionManager.dispose();
 
     // Clean up realtime connection
     this.teardownRealtime();
 
-    // Disable stores
-    this.todoStore.disable();
-    this.postStore.disable();
-    this.userStore.disable();
-
-    // Clear singleton reference if this is the current instance
-    if (RootStore.instance === this) {
-      RootStore.instance = null;
-    }
+    // Unregister from singleton manager
+    SingletonManager.unregister(SINGLETON_KEY, this);
 
     console.log("🧹 RootStore: Disposed");
   }
 
   // Static method to get the current instance (useful for debugging)
   static getInstance(): RootStore | null {
-    return RootStore.instance;
+    return SingletonManager.getInstance<RootStore>(SINGLETON_KEY);
   }
 
   // Static method to check if there's an active instance
   static hasActiveInstance(): boolean {
-    return RootStore.instance !== null && !RootStore.instance.isDisposed;
+    const instance = SingletonManager.getInstance<RootStore>(SINGLETON_KEY);
+    return instance !== null && !instance.isDisposed;
   }
 
   // Convenience getter for user data
