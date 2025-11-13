@@ -11,6 +11,7 @@ import useAdminGuard from "@/hooks/useAdminGuard";
 import data from "./data.json";
 
 export default function Page() {
+  // Use Next.js API route by default, or pass { backend: "nest" } to use NestJS
   const { isChecking, isAdmin } = useAdminGuard();
 
   // Don't render anything until we've confirmed admin status

@@ -4,7 +4,17 @@ import { RootStoreContext } from "@/context/rootStoreContext";
 import { isPlaygroundMode } from "@kingstack/shared";
 import { fetchWithAuth } from "@/lib/utils";
 
-export default function useAdminGuard() {
+export interface UseAdminGuardOptions {
+  /**
+   * Backend to use for admin check
+   * - "next": Use Next.js API route (/api/admin/check) - default
+   * - "nest": Use NestJS API route (/admin/check)
+   */
+  backend?: "next" | "nest";
+}
+
+export default function useAdminGuard(options?: UseAdminGuardOptions) {
+  const { backend = "next" } = options || {};
   const rootStore = useContext(RootStoreContext);
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
@@ -27,9 +37,15 @@ export default function useAdminGuard() {
       }
 
       try {
+        // Determine the API endpoint based on backend choice
+        const apiUrl =
+          backend === "nest"
+            ? `${process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000"}/admin/check`
+            : "/api/admin/check";
+
         const response = await fetchWithAuth(
           rootStore.session.access_token,
-          "/api/admin/check",
+          apiUrl,
         );
 
         if (!response.ok) {

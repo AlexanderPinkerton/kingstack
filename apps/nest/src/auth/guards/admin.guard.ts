@@ -4,16 +4,13 @@ import {
   Injectable,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "./jwt.auth.guard";
-import { PrismaClient } from "@prisma/client";
+import { AdminService } from "../services/admin.service";
 import { FastifyRequest } from "fastify";
 
 @Injectable()
 export class AdminGuard extends JwtAuthGuard {
-  private prisma: PrismaClient;
-
-  constructor() {
+  constructor(private readonly adminService: AdminService) {
     super();
-    this.prisma = new PrismaClient();
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -33,13 +30,10 @@ export class AdminGuard extends JwtAuthGuard {
       throw new ForbiddenException("User email not found in token");
     }
 
-    // Check if email exists in admin_emails table
-    const adminRecord = await this.prisma.admin_emails.findUnique({
-      where: { email },
-      select: { id: true, email: true },
-    });
+    // Check if user is an admin using the AdminService
+    const isAdmin = await this.adminService.isAdmin(email);
 
-    if (!adminRecord) {
+    if (!isAdmin) {
       throw new ForbiddenException("Admin access required");
     }
 
