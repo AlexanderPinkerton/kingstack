@@ -1,10 +1,10 @@
-// NextJS config: extends shared base + adds Next.js rules with backward compatibility
+// NextJS config: extends shared base + adds Next.js rules
+// Next.js 16's eslint-config-next already exports flat config format
 
 import baseConfig from "@kingstack/eslint-config";
 import path from "path";
 import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
-import { fixupConfigRules } from "@eslint/compat"; // Patches older plugin APIs for ESLint 9+
+import nextConfig from "eslint-config-next";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,19 +12,13 @@ const __dirname = path.dirname(__filename);
 // Log the current directory for debugging purposes
 console.log("Eslint NextJS Dir:", __dirname);
 
-// FlatCompat allows us to reuse existing eslint configs like 'next/core-web-vitals'
-const compat = new FlatCompat({
-    baseDirectory: __dirname,
-});
-
-// Fixup patches legacy plugin context issues (e.g., `getAncestors`) from ESLint 9+ updates
-const nextCompatRules = fixupConfigRules([
-    ...compat.extends("next/core-web-vitals"), // Add Next.js opinionated rules
-]);
+// Filter out the 'next/typescript' config from nextConfig since we handle TypeScript in baseConfig
+// This prevents plugin redefinition conflicts
+const nextBaseConfig = nextConfig.filter((config) => config.name !== "next/typescript");
 
 // Merge Next.js rules with our shared base config, and inject correct tsconfig path
 const esLintConfig = [
-    ...nextCompatRules,
+    ...nextBaseConfig, // Next.js base config (without TypeScript config to avoid conflicts)
     ...baseConfig.map((config) => {
         if (config.languageOptions?.parser === "@typescript-eslint/parser") {
             return {

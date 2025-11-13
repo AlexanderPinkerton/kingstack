@@ -1,26 +1,24 @@
-import { defineConfig } from 'vitest/config'
-import { resolve } from 'path'
+import { defineConfig } from "vitest/config";
+import { resolve } from "path";
 
 export default defineConfig({
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      "@": resolve(__dirname, "src"),
     },
   },
   test: {
-    include: [
-      '__tests__/**/*.test.ts',
-    ],
-    exclude: ['node_modules', 'dist'],
+    include: ["__tests__/**/*.test.ts"],
+    exclude: ["node_modules", "dist"],
     globals: true,
-    environment: 'node',
+    environment: "node",
     reporters: [
       [
-        'default',
+        "default",
         {
-          summary: false
-        }
-      ]
+          summary: false,
+        },
+      ],
     ],
   },
-})
+});

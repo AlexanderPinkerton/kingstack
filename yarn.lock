@@ -2046,6 +2046,7 @@ __metadata:
     sonner: "npm:^2.0.3"
     tailwind-merge: "npm:^3.2.0"
     tailwindcss: "npm:^4"
+    tailwindcss-animate: "npm:^1.0.7"
     tw-animate-css: "npm:^1.2.5"
     typescript: "npm:^5"
     typescript-eslint: "npm:^8.46.2"
@@ -14089,6 +14090,15 @@ __metadata:
   version: 3.2.0
   resolution: "tailwind-merge@npm:3.2.0"
   checksum: 10c0/294f6c2db0df74405bff126107107426c3126a70a1717d78e8d6811db65546c9bb3d61282bdb8d9fbded23f6bc8ec3e8e61031a4f53265f90b7f3dba558f88f4
+  languageName: node
+  linkType: hard
+
+"tailwindcss-animate@npm:^1.0.7":
+  version: 1.0.7
+  resolution: "tailwindcss-animate@npm:1.0.7"
+  peerDependencies:
+    tailwindcss: "*"
+  checksum: 10c0/ec7dbd1631076b97d66a1fbaaa06e0725fccfa63119221e8d87a997b02dcede98ad88bb1ef6665b968f5d260fcefb10592e0299ca70208d365b37761edf5e19a
   languageName: node
   linkType: hard
 
