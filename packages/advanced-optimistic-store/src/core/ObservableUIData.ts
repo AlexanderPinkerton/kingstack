@@ -141,14 +141,23 @@ export class ObservableUIData<T extends Entity> {
     // Update entities efficiently
     runInAction(() => {
       // Remove entities that are no longer in server data
-      for (const [id] of this.entities) {
+      // Also remove any optimistic items that weren't confirmed by server
+      for (const [id, entity] of this.entities) {
         if (!serverDataMap.has(id)) {
+          // Remove if not in server data
+          this.entities.delete(id);
+        } else if ((entity as any)._optimistic === true) {
+          // Remove optimistic items that are being replaced by server data
+          // (they'll be re-added below with server data)
           this.entities.delete(id);
         }
       }
 
       // Add or update entities from server data
       for (const [id, uiItem] of serverDataMap) {
+        // Ensure _optimistic flag is removed from server data
+        delete (uiItem as any)._optimistic;
+        delete (uiItem as any)._optimisticTempId;
         this.entities.set(id, uiItem);
       }
     });

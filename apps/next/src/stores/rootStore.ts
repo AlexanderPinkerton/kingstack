@@ -5,6 +5,7 @@ import { AdvancedTodoStore } from "./todoStore";
 import { AdvancedPostStore } from "./postStore";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { AdvancedUserStore } from "./userStore";
+import { PublicTodoStore } from "./publicTodoStore";
 import { isPlaygroundMode } from "@kingstack/shared";
 
 // Create Supabase client (will be null if env vars are missing)
@@ -29,6 +30,7 @@ export class RootStore {
   postStore: AdvancedPostStore;
   checkboxStore: RealtimeCheckboxStore;
   userStore: AdvancedUserStore;
+  publicTodoStore: PublicTodoStore;
 
   // WebSocket connection management
   socket: Socket | null = null;
@@ -95,6 +97,7 @@ export class RootStore {
     this.todoStore = new AdvancedTodoStore();
     this.postStore = new AdvancedPostStore();
     this.checkboxStore = new RealtimeCheckboxStore(this.browserId);
+    this.publicTodoStore = new PublicTodoStore();
     this.userStore = new AdvancedUserStore();
 
     // Make session and stores observable before setting up auth listener

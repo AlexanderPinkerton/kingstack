@@ -175,6 +175,7 @@ export function createOptimisticStore<
   const createMutationObserver = new MutationObserver(qc, {
     mutationFn: config.mutations.create,
     onMutate: async (data: any) => {
+      console.log("TESTLOG-onMutate:");
       await qc.cancelQueries({ queryKey: [config.name] });
       uiStore.pushSnapshot();
 
@@ -209,6 +210,10 @@ export function createOptimisticStore<
         optimisticItem = { id: tempId, ...data } as TUiData;
       }
 
+      // Mark as optimistic for proper cleanup during reconciliation
+      (optimisticItem as any)._optimistic = true;
+      (optimisticItem as any)._optimisticTempId = tempId;
+
       // Batch the optimistic update
       notifyManager.batch(() => {
         runInAction(() => {
@@ -216,20 +221,38 @@ export function createOptimisticStore<
         });
       });
 
-      return { tempId };
+      return { tempId, optimisticItemId: optimisticItem.id };
     },
     onSuccess: (result: TApiData, variables: any, context: any) => {
+      console.log("onSuccess:");
       // Batch the success update
       notifyManager.batch(() => {
         runInAction(() => {
-          // Remove temp item and add real one
-          uiStore.remove(context.tempId);
+          // Remove optimistic item(s) - find by _optimistic flag or tempId
+          // This handles cases where the optimistic ID doesn't match tempId
+          const optimisticItems = uiStore.list.filter(
+            (item: any) =>
+              item._optimistic === true ||
+              item.id === context.tempId ||
+              item.id === context.optimisticItemId,
+          );
 
+          optimisticItems.forEach((item) => {
+            uiStore.remove(item.id);
+          });
+
+          // Add real item from server
           if (transformer) {
             const uiData = transformer.toUi(result);
+            // Ensure _optimistic flag is removed from server data
+            delete (uiData as any)._optimistic;
+            delete (uiData as any)._optimisticTempId;
             uiStore.upsert(uiData);
           } else {
-            uiStore.upsert(result as unknown as TUiData);
+            const uiData = result as unknown as TUiData;
+            delete (uiData as any)._optimistic;
+            delete (uiData as any)._optimisticTempId;
+            uiStore.upsert(uiData);
           }
         });
       });
