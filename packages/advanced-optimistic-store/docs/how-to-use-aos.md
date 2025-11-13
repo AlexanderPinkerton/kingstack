@@ -45,6 +45,7 @@ const postStore = createOptimisticStore<PostApiData, PostUiData>({
   },
   
   // CRUD mutations - each returns the full updated object
+  // **IMPORTANT** IF your CRUD API endpoints do not return the object, instant update confirmations will not work!!
   mutations: {
     create: async (data) => {
       const response = await fetch("/api/posts", {
