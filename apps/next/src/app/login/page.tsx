@@ -1,6 +1,6 @@
 "use client";
 
-import { LoginForm } from "@/components/login-form";
+import { LoginForm } from "@/components/login/login-form";
 import { DefaultNavbar } from "@/components/navbar/presets/default";
 
 import { useContext, useEffect } from "react";
