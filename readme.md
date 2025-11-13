@@ -260,6 +260,9 @@ yarn shadow:stop     # Stop shadow DB
 ### NextJS App
 - Ensure the vercel cli is installed and authenticated
 - Run `vercel` command and follow prompts to deploy
+- When it asks "In which directory is your code located?" you can either hit enter (./) or specify ./apps/next
+  - Enter will use the root vercel.json
+  - Specifying will use the one in the next folder.
 - To enable auto-deployments, you need to add vercel details to github action secrets
   - VERCEL_PROJECT_ID - Get this from the project vercel generated on step 1
   - VERCEL_TOKEN - Create one from your Vercel account settings -> Tokens
