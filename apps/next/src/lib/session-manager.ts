@@ -142,9 +142,7 @@ export class SessionManager {
 
       if (session?.access_token && event === "SIGNED_IN") {
         // Handle auth-required setup
-        console.log(
-          "✅ SessionManager: Session established, enabling stores",
-        );
+        console.log("✅ SessionManager: Session established, enabling stores");
         this.enableStores(session.access_token);
       } else if (!session?.access_token) {
         // Handle auth-required teardown
@@ -247,4 +245,3 @@ export class SessionManager {
     this.session = null;
   }
 }
-

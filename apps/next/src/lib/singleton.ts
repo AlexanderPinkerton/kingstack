@@ -77,4 +77,3 @@ export class SingletonManager<T extends { dispose?: () => void }> {
     return this.instanceCounts.get(key) || 0;
   }
 }
-
