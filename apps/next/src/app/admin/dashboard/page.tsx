@@ -1,13 +1,30 @@
+"use client";
+
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/data-table";
 import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import useAdminGuard from "@/hooks/useAdminGuard";
 
 import data from "./data.json";
 
 export default function Page() {
+  const { isChecking, isAdmin } = useAdminGuard();
+
+  // Don't render anything until we've confirmed admin status
+  if (isChecking || !isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-black to-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white">Checking admin access...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider
       style={
