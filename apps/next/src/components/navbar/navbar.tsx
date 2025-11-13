@@ -45,7 +45,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isHomePage = pathname === "/home";
 
   // Mount guard to prevent hydration mismatches
-  useEffect(() => {
+  // Using useLayoutEffect for synchronous update before paint
+  React.useLayoutEffect(() => {
     setMounted(true);
   }, []);
 
@@ -67,7 +68,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   // Force initial transparent state for better UX
-  useEffect(() => {
+  // Using useLayoutEffect for synchronous update before paint
+  React.useLayoutEffect(() => {
     setScrolled(false); // Ensure navbar starts transparent
   }, []);
 

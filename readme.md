@@ -54,6 +54,8 @@ KingStack excels at making common tasks **easy**:
 - ✅ **Easy State Management** - MobX + TanStack Query with optimistic updates
 - ✅ **Easy Realtime** - Built-in realtime extensions for stores
 
+📖 **[State Management Architecture →](./docs/state-management/README.md)**
+
 ### Tackling Common Annoyances
 
 KingStack takes an **explicit approach** to avoid hidden pitfalls:
@@ -99,7 +101,8 @@ kingstack/
 │   ├── auth/                   # Authentication architecture
 │   ├── deployment/            # CI/CD and deployment guides
 │   ├── secrets/                # Secrets management guide
-│   └── scripts/                # Scripts and automation guide
+│   ├── scripts/                # Scripts and automation guide
+│   └── state-management/       # State management architecture
 ├── .yarn/                      # Yarn plugins, version, patches, etc.
 ├── .turbo/                     # Turborepo local task cache (gitignored)
 ├── .gitignore
@@ -257,6 +260,9 @@ yarn shadow:stop     # Stop shadow DB
 ### NextJS App
 - Ensure the vercel cli is installed and authenticated
 - Run `vercel` command and follow prompts to deploy
+- When it asks "In which directory is your code located?" you can either hit enter (./) or specify ./apps/next
+  - Enter will use the root vercel.json
+  - Specifying will use the one in the next folder.
 - To enable auto-deployments, you need to add vercel details to github action secrets
   - VERCEL_PROJECT_ID - Get this from the project vercel generated on step 1
   - VERCEL_TOKEN - Create one from your Vercel account settings -> Tokens

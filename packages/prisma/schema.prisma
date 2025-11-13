@@ -15,7 +15,7 @@ datasource db {
 // ❗ Never use capital letters ANYWHERE if you are using supabase or postgres...torment will follow
 
 // ❗❗❗ IMPORTANT ❗❗❗
-// Always update the db triggers in scripts/install-custom-user-trigger.ts if you change the user model 
+// Always update the 'handle_new_user' trigger via a new migration if you change the required fields for the user model.
 // ❗❗❗ Not doing this will BREAK ALL AUTH FOR THE APP ❗❗❗ 
 model user {
     id                  String    @id @default(cuid())

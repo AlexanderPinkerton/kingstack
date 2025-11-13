@@ -34,7 +34,8 @@ export function DefaultNavbar({
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
+  // Using useLayoutEffect for synchronous update before paint to prevent hydration mismatches
+  React.useLayoutEffect(() => {
     setMounted(true);
   }, []);
 
