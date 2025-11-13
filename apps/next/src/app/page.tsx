@@ -1,5 +1,6 @@
 import { HeroSection } from "@/components/core/hero-section";
 import { FeaturesSection } from "@/components/core/features-section";
+import { AuthSection } from "@/components/core/auth-section";
 import { CtaSection } from "@/components/core/cta-section";
 import { Footer } from "@/components/core/footer";
 import { AppNavbar } from "@/components/navbar/presets/app";
@@ -12,6 +13,7 @@ export default function Home() {
       <AppNavbar />
       <HeroSection />
       <FeaturesSection />
+      <AuthSection />
 
       {/* Public Todo Example - First Experience */}
       <section className="py-16 px-4">
