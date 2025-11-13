@@ -599,6 +599,10 @@ function SidebarMenuBadge({
   );
 }
 
+// Generate random width once at module level to avoid impure function during render
+const generateRandomWidth = () => `${Math.floor(Math.random() * 40) + 50}%`;
+const randomWidth = generateRandomWidth();
+
 function SidebarMenuSkeleton({
   className,
   showIcon = false,
@@ -606,10 +610,8 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<"div"> & {
   showIcon?: boolean;
 }) {
-  // Random width between 50 to 90%.
-  const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`;
-  }, []);
+  // Use module-level random width to avoid impure function during render
+  const width = randomWidth;
 
   return (
     <div
