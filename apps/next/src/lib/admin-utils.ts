@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/serverClient";
-// import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 export interface UserAuthDetails {
   isAuthenticated: boolean;
@@ -35,17 +35,31 @@ export async function getUserAuthDetails(
       };
     }
 
-    // // Check if user email exists in admin_emails table
-    // const adminRecord = await prisma.admin_emails.findUnique({
-    //   where: { email: userData.user.email },
-    //   select: { id: true, email: true },
-    // });
+    // Check if user email exists in admin_emails table
+    // Verify prisma client has the admin_emails model
+    if (!prisma.admin_emails) {
+      console.error(
+        "Prisma client does not have admin_emails model. Please regenerate Prisma client.",
+      );
+      return {
+        isAuthenticated: true,
+        userId: userData.user.id,
+        userEmail: userData.user.email,
+        isAdmin: false,
+        error: "Prisma client not properly initialized",
+      };
+    }
+
+    const adminRecord = await prisma.admin_emails.findUnique({
+      where: { email: userData.user.email },
+      select: { id: true, email: true },
+    });
 
     return {
       isAuthenticated: true,
       userId: userData.user.id,
       userEmail: userData.user.email,
-      isAdmin: false,
+      isAdmin: !!adminRecord,
     };
   } catch (error) {
     console.error("Error getting user auth details:", error);
