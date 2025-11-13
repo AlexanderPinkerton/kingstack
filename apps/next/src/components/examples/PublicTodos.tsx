@@ -11,8 +11,6 @@ export const PublicTodos = observer(() => {
   const [isClient, setIsClient] = useState(false);
   const [newTodoTitle, setNewTodoTitle] = useState("");
 
-  console.log("publicTodoStore", publicTodoStore.optimisticStore.ui.list);
-
   // Prevent hydration mismatch by only rendering after client mount
   useEffect(() => {
     setIsClient(true);

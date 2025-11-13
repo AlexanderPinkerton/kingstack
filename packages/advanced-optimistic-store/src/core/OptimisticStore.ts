@@ -175,7 +175,6 @@ export function createOptimisticStore<
   const createMutationObserver = new MutationObserver(qc, {
     mutationFn: config.mutations.create,
     onMutate: async (data: any) => {
-      console.log("TESTLOG-onMutate:");
       await qc.cancelQueries({ queryKey: [config.name] });
       uiStore.pushSnapshot();
 
@@ -224,7 +223,6 @@ export function createOptimisticStore<
       return { tempId, optimisticItemId: optimisticItem.id };
     },
     onSuccess: (result: TApiData, variables: any, context: any) => {
-      console.log("onSuccess:");
       // Batch the success update
       notifyManager.batch(() => {
         runInAction(() => {
