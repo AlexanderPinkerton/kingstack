@@ -53,29 +53,13 @@ export default function HomePage() {
       status: "available",
     },
     {
-      id: "theme-selector",
-      title: "Theme Selector",
-      description: "Quick theme switching with preset color schemes",
-      icon: <Palette className="w-6 h-6" />,
-      color: "from-orange-500 to-red-500",
-      status: "available",
-    },
-    {
-      id: "theme-editor",
-      title: "Theme Editor",
-      description: "Live CSS variable editor for custom theme creation",
-      icon: <Sparkles className="w-6 h-6" />,
-      color: "from-pink-500 to-rose-500",
-      status: "available",
-    },
-    {
       id: "theme-builder",
       title: "Theme Builder",
       description:
-        "Advanced theme customization with visual preview (Coming Soon)",
+        "Preset themes and full CSS variable editor with live preview and export",
       icon: <Palette className="w-6 h-6" />,
-      color: "from-slate-500 to-slate-600",
-      status: "coming-soon",
+      color: "from-orange-500 to-pink-500",
+      status: "available",
     },
     {
       id: "font-chooser",
@@ -93,7 +77,7 @@ export default function HomePage() {
       window.open("/chat", "_blank");
       return;
     }
-    if (featureId === "theme-builder" || featureId === "font-chooser") {
+    if (featureId === "font-chooser") {
       return; // Coming soon features don't do anything
     }
     router.push(`/home/${featureId}`);
