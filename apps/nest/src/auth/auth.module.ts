@@ -6,6 +6,7 @@ import { JwtAuthGuard } from "./guards/jwt.auth.guard";
 import { AdminGuard } from "./guards/admin.guard";
 import { AdminService } from "./services/admin.service";
 import { SupabaseStrategy } from "./strategies/supabase.strategy";
+import { AdminEmailsController } from "./admin-emails.controller";
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { SupabaseStrategy } from "./strategies/supabase.strategy";
       inject: [ConfigService],
     }),
   ],
+  controllers: [AdminEmailsController],
   providers: [JwtAuthGuard, AdminGuard, AdminService, SupabaseStrategy],
   exports: [JwtAuthGuard, AdminGuard, AdminService, JwtModule],
 })

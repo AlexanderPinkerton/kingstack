@@ -1,13 +1,17 @@
 import { makeAutoObservable } from "mobx";
-import { AdvancedTodoStore } from "./todoStore";
-import { AdvancedPostStore } from "./postStore";
-import { RealtimeCheckboxStore } from "./checkboxStore";
-import { AdvancedUserStore } from "./userStore";
-import { PublicTodoStore } from "./publicTodoStore";
 import { SingletonManager } from "@/lib/singleton";
 import { SessionManager, type SupabaseSession } from "@/lib/session-manager";
 import { RealtimeManager } from "@/lib/realtime-manager";
 import { getBrowserId } from "@/lib/browser-id";
+import { UserStoreManager } from "./userStoreManager";
+import { AdminStoreManager } from "./adminStoreManager";
+
+// Re-export store types for backward compatibility
+export type { AdvancedTodoStore } from "./todoStore";
+export type { AdvancedPostStore } from "./postStore";
+export type { RealtimeCheckboxStore } from "./checkboxStore";
+export type { AdvancedUserStore } from "./userStore";
+export type { PublicTodoStore } from "./publicTodoStore";
 
 const SINGLETON_KEY = "RootStore";
 
@@ -19,12 +23,9 @@ export class RootStore {
   // Realtime management
   private realtimeManager: RealtimeManager;
 
-  // Optimistic stores
-  todoStore: AdvancedTodoStore;
-  postStore: AdvancedPostStore;
-  checkboxStore: RealtimeCheckboxStore;
-  userStore: AdvancedUserStore;
-  publicTodoStore: PublicTodoStore;
+  // Store managers (lazy-loaded)
+  userStore: UserStoreManager;
+  adminStore: AdminStoreManager;
 
   // Stable browser ID for filtering out self-originated realtime events
   browserId: string = getBrowserId();
@@ -43,30 +44,32 @@ export class RootStore {
       isDevelopment,
     });
 
-    // Create all optimistic stores
-    this.todoStore = new AdvancedTodoStore();
-    this.postStore = new AdvancedPostStore();
-    this.checkboxStore = new RealtimeCheckboxStore(this.browserId);
-    this.publicTodoStore = new PublicTodoStore();
-    this.userStore = new AdvancedUserStore();
+    // Create store managers (stores are lazy-loaded)
+    this.userStore = new UserStoreManager();
+    this.adminStore = new AdminStoreManager();
 
-    // Initialize realtime manager with stores that support realtime
+    // Initialize realtime manager (stores will be registered lazily)
     this.realtimeManager = new RealtimeManager({
-      stores: [
-        this.todoStore,
-        this.postStore,
-        this.checkboxStore,
-        this.userStore,
-      ],
+      stores: [],
       browserId: this.browserId,
     });
 
-    // Initialize session manager with stores that require auth
+    // Register store managers with realtime manager
+    // They will register their stores when initialized
+    this.userStore.registerRealtime(this.realtimeManager);
+    this.adminStore.registerRealtime(this.realtimeManager);
+
+    // Initialize session manager (no stores initially - they're lazy-loaded)
     this.sessionManager = new SessionManager({
-      stores: [this.todoStore, this.postStore, this.userStore],
+      stores: [],
       onSessionChange: (session, event) => {
         // Update observable session
         this.session = session;
+
+        // Update store managers with new session
+        // Only update user stores automatically - admin stores load only when accessed
+        this.userStore.updateSession(session);
+        // Admin stores are lazy-loaded only when accessed (via getters) or explicitly initialized
 
         // Handle realtime connection based on session state
         if (session?.access_token && event === "SIGNED_IN") {
@@ -79,19 +82,34 @@ export class RootStore {
       },
     });
 
-    // Make session and stores observable
+    // Make session and store managers observable
     makeAutoObservable(this, {
       session: true,
-      todoStore: true,
-      postStore: true,
-      checkboxStore: true,
       userStore: true,
+      adminStore: true,
     });
 
     // Initialize session management (sets up auth listener or playground mode)
     this.sessionManager.initialize();
 
     console.log("🔧 RootStore: Initialized");
+  }
+
+  // Backward compatibility: delegate to userStore for existing code
+  get todoStore() {
+    return this.userStore.todoStore;
+  }
+
+  get postStore() {
+    return this.userStore.postStore;
+  }
+
+  get checkboxStore() {
+    return this.userStore.checkboxStore;
+  }
+
+  get publicTodoStore() {
+    return this.userStore.publicTodoStore;
   }
 
   // Expose socket for external access if needed
@@ -116,7 +134,11 @@ export class RootStore {
     // Mark as disposed
     this.isDisposed = true;
 
-    // Clean up session manager (unsubscribes from auth listener and disables stores)
+    // Clean up store managers
+    this.userStore.dispose();
+    this.adminStore.dispose();
+
+    // Clean up session manager (unsubscribes from auth listener)
     this.sessionManager.dispose();
 
     // Clean up realtime connection
@@ -141,6 +163,6 @@ export class RootStore {
 
   // Convenience getter for user data
   get userData() {
-    return this.userStore.currentUser;
+    return this.userStore.userStore.currentUser;
   }
 }
