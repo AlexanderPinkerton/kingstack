@@ -257,6 +257,7 @@ export default observer(function HomePage() {
                                 }`}
                               >
                                 <input
+                                  id={todo.id}
                                   type="checkbox"
                                   checked={todo.done}
                                   onChange={() =>
