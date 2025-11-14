@@ -72,8 +72,14 @@ export class RootStore {
         // Admin stores are lazy-loaded only when accessed (via getters) or explicitly initialized
 
         // Handle realtime connection based on session state
-        if (session?.access_token && event === "SIGNED_IN") {
-          console.log("✅ RootStore: Session established, setting up realtime");
+        // Set up realtime for both SIGNED_IN and INITIAL_SESSION events
+        if (
+          session?.access_token &&
+          (event === "SIGNED_IN" || event === "INITIAL_SESSION")
+        ) {
+          console.log(
+            `✅ RootStore: Session established (${event}), setting up realtime`,
+          );
           this.realtimeManager.setup(session.access_token);
         } else if (!session?.access_token) {
           console.log("❌ RootStore: Session lost, tearing down realtime");

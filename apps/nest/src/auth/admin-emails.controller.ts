@@ -105,4 +105,3 @@ export class AdminEmailsController {
     return { id };
   }
 }
-

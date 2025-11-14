@@ -38,7 +38,10 @@ export class AdminMgmtStore {
   }
 
   private initialize() {
-    this.optimisticStore = createOptimisticStore<AdminEmailApiData, AdminEmailUiData>({
+    this.optimisticStore = createOptimisticStore<
+      AdminEmailApiData,
+      AdminEmailUiData
+    >({
       name: "admin-emails",
       queryFn: this.getQueryFn(),
       mutations: {
@@ -156,7 +159,9 @@ export class AdminMgmtStore {
   private apiQueryFn = async (): Promise<AdminEmailApiData[]> => {
     const token = this.authToken || "";
     const baseUrl = process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
-    return fetchWithAuth(token, `${baseUrl}/admin/emails`).then((res) => res.json());
+    return fetchWithAuth(token, `${baseUrl}/admin/emails`).then((res) =>
+      res.json(),
+    );
   };
 
   private apiCreateMutation = async (data: {
@@ -188,9 +193,13 @@ export class AdminMgmtStore {
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
     const token = this.authToken || "";
     const baseUrl = process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
-    const response = await fetchWithAuth(token, `${baseUrl}/admin/emails/${id}`, {
-      method: "DELETE",
-    });
+    const response = await fetchWithAuth(
+      token,
+      `${baseUrl}/admin/emails/${id}`,
+      {
+        method: "DELETE",
+      },
+    );
 
     if (!response.ok) {
       throw new Error(
@@ -215,7 +224,9 @@ export class AdminMgmtStore {
         {
           id: "admin-2",
           email: "superadmin@example.com",
-          created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), // 8 days ago
+          created_at: new Date(
+            Date.now() - 8 * 24 * 60 * 60 * 1000,
+          ).toISOString(), // 8 days ago
         },
       ];
     }
@@ -226,9 +237,9 @@ export class AdminMgmtStore {
     }));
   };
 
-  private playgroundCreateMutation = async (
-    data: { email: string },
-  ): Promise<AdminEmailApiData> => {
+  private playgroundCreateMutation = async (data: {
+    email: string;
+  }): Promise<AdminEmailApiData> => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
       id: `admin-${Date.now()}`,
@@ -259,4 +270,3 @@ export class AdminMgmtStore {
     return { id };
   };
 }
-
