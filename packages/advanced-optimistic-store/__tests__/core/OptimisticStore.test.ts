@@ -468,6 +468,83 @@ describe("createOptimisticStore", () => {
       dispose();
       mockUpdateMutation.mockImplementation(originalUpdateMutation!);
     });
+
+    it("should replace optimistic item even when optimistic ID doesn't match tempId", async () => {
+      // This test verifies the fix for the bug where optimistic items with custom IDs
+      // (from createOptimisticUiData) weren't being properly replaced by server responses
+      const configWithOptimistic = {
+        ...config,
+        enabled: () => false, // Disable query to prevent interference
+        optimisticDefaults: {
+          createOptimisticUiData: (userInput: any) => ({
+            // Generate a different ID than what tempId would be
+            id: `optimistic-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            title: userInput.title,
+            completed: userInput.completed || false,
+            priority: userInput.priority || 1,
+            created_at: new Date(),
+          }),
+        },
+      };
+
+      const store = createOptimisticStore(configWithOptimistic, queryClient);
+
+      // Make the server response take longer
+      const originalCreateMutation = mockCreateMutation.getMockImplementation();
+      mockCreateMutation.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  id: "server-generated-id",
+                  title: "Server Task",
+                  completed: "false",
+                  priority: "3",
+                  created_at: "2023-01-03T00:00:00.000Z",
+                }),
+              200,
+            ),
+          ),
+      );
+
+      const newData = {
+        title: "Optimistic Task",
+        completed: false,
+        priority: 2,
+      };
+
+      // Start the mutation
+      const mutationPromise = store.api.create(newData);
+
+      // Wait a bit for the onMutate callback to run
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Check that optimistic data is added
+      expect(store.ui.count).toBe(1);
+      const optimisticTask = store.ui.list[0];
+      expect(optimisticTask.title).toBe("Optimistic Task");
+      expect(optimisticTask.id).toMatch(/^optimistic-/);
+      // Verify it's marked as optimistic
+      expect((optimisticTask as any)._optimistic).toBe(true);
+      expect((optimisticTask as any)._optimisticTempId).toBeDefined();
+
+      // Wait for mutation to complete
+      await mutationPromise;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Verify that optimistic item was replaced (not duplicated)
+      expect(store.ui.count).toBe(1);
+      const finalTask = store.ui.list[0];
+      expect(finalTask.title).toBe("Server Task"); // From mock response
+      expect(finalTask.id).toBe("server-generated-id"); // From mock response
+      // Verify optimistic flags are removed
+      expect((finalTask as any)._optimistic).toBeUndefined();
+      expect((finalTask as any)._optimisticTempId).toBeUndefined();
+
+      // Cleanup
+      mockCreateMutation.mockImplementation(originalCreateMutation!);
+    });
   });
 
   describe("realtime functionality", () => {

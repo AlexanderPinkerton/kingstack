@@ -7,7 +7,7 @@ import { fetchWithAuth } from "@/lib/utils";
 import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 
 // API data structure (what comes from the server)
-export interface UserApiData {
+export interface CurrentUserApiData {
   id: string;
   email: string;
   username: string;
@@ -17,7 +17,7 @@ export interface UserApiData {
 }
 
 // UI data structure (enhanced for the frontend)
-export interface UserUiData {
+export interface CurrentUserUiData {
   id: string;
   email: string;
   username: string;
@@ -32,8 +32,10 @@ export interface UserUiData {
 }
 
 // Transformer to convert API data to UI data with computed fields
-class UserTransformer implements DataTransformer<UserApiData, UserUiData> {
-  toUi(apiData: UserApiData): UserUiData {
+class CurrentUserTransformer
+  implements DataTransformer<CurrentUserApiData, CurrentUserUiData>
+{
+  toUi(apiData: CurrentUserApiData): CurrentUserUiData {
     const created_at = new Date(apiData.created_at);
     const username_changed_at = apiData.username_changed_at
       ? new Date(apiData.username_changed_at)
@@ -61,7 +63,7 @@ class UserTransformer implements DataTransformer<UserApiData, UserUiData> {
     };
   }
 
-  toApi(uiData: UserUiData): UserApiData {
+  toApi(uiData: CurrentUserUiData): CurrentUserApiData {
     return {
       id: uiData.id,
       email: uiData.email,
@@ -73,12 +75,14 @@ class UserTransformer implements DataTransformer<UserApiData, UserUiData> {
   }
 }
 
-export class AdvancedUserStore {
-  private optimisticStore: OptimisticStore<UserApiData, UserUiData> | null =
-    null;
+export class CurrentUserStore {
+  private optimisticStore: OptimisticStore<
+    CurrentUserApiData,
+    CurrentUserUiData
+  > | null = null;
   private authToken: string | null = null;
   private isEnabled: boolean = false;
-  private transformer = new UserTransformer();
+  private transformer = new CurrentUserTransformer();
 
   constructor() {
     // Store is created but not enabled until auth is available
@@ -86,7 +90,10 @@ export class AdvancedUserStore {
   }
 
   private initialize() {
-    this.optimisticStore = createOptimisticStore<UserApiData, UserUiData>({
+    this.optimisticStore = createOptimisticStore<
+      CurrentUserApiData,
+      CurrentUserUiData
+    >({
       name: "user",
       queryFn: this.getQueryFn(),
       mutations: {
@@ -101,17 +108,19 @@ export class AdvancedUserStore {
   }
 
   // API Implementations
-  private apiQueryFn = async (): Promise<UserApiData[]> => {
+  private apiQueryFn = async (): Promise<CurrentUserApiData[]> => {
     const token = this.authToken || "";
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3069";
-    const user = await fetchWithAuth(token, `${baseUrl}/api/user`).then((res) =>
-      res.json(),
+    const currentUser = await fetchWithAuth(token, `${baseUrl}/api/user`).then(
+      (res) => res.json(),
     );
     // Wrap single user object in array since optimistic store expects array of entities
-    return [user];
+    return [currentUser];
   };
 
-  private apiCreateMutation = async (data: any): Promise<UserApiData> => {
+  private apiCreateMutation = async (
+    data: any,
+  ): Promise<CurrentUserApiData> => {
     const token = this.authToken || "";
     const baseUrl = process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/api/user`, {
@@ -126,7 +135,7 @@ export class AdvancedUserStore {
   }: {
     id: string;
     data: any;
-  }): Promise<UserApiData> => {
+  }): Promise<CurrentUserApiData> => {
     const token = this.authToken || "";
     const baseUrl = process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/api/user`, {
@@ -150,11 +159,11 @@ export class AdvancedUserStore {
   };
 
   // Playground Implementations
-  private playgroundQueryFn = async (): Promise<UserApiData[]> => {
+  private playgroundQueryFn = async (): Promise<CurrentUserApiData[]> => {
     await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
     const mockUsers = getMockData("users") as any[];
-    // Transform mock data to match UserApiData interface
-    const userData: UserApiData = {
+    // Transform mock data to match CurrentUserApiData interface
+    const userData: CurrentUserApiData = {
       id: mockUsers[0]?.id || "playground-user",
       email: mockUsers[0]?.email || "playground@kingstack.dev",
       username: "playground-user",
@@ -167,7 +176,7 @@ export class AdvancedUserStore {
 
   private playgroundCreateMutation = async (
     data: any,
-  ): Promise<UserApiData> => {
+  ): Promise<CurrentUserApiData> => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
       id: `temp-${Date.now()}`,
@@ -186,7 +195,7 @@ export class AdvancedUserStore {
   }: {
     id: string;
     data: any;
-  }): Promise<UserApiData> => {
+  }): Promise<CurrentUserApiData> => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
       id,
