@@ -11,11 +11,19 @@ secrets/
 │   ├── .env.next           # Next app environment variables
 │   ├── .env.nest            # Nest app environment variables
 │   └── .env.prisma             # Database connection variables
+├── local/                       # Local Supabase environment (supabase start)
+│   ├── .env.next
+│   ├── .env.nest
+│   └── .env.prisma
 ├── development/                 # Development environment secrets
 │   ├── .env.next
 │   ├── .env.nest
 │   └── .env.prisma
-└── production/                  # Production environment secrets
+├── production/                  # Production environment secrets
+│   ├── .env.next
+│   ├── .env.nest
+│   └── .env.prisma
+└── playground/                  # Playground environment (no backend DB)
     ├── .env.next
     ├── .env.nest
     └── .env.prisma
@@ -48,6 +56,11 @@ bun scripts/swap-env.ts --current
 bun scripts/swap-env.ts status
 ```
 
+### Switch to Local (Supabase Local)
+```bash
+bun scripts/swap-env.ts local
+```
+
 ### Switch to Development
 ```bash
 bun scripts/swap-env.ts development
@@ -56,6 +69,11 @@ bun scripts/swap-env.ts development
 ### Switch to Production
 ```bash
 bun scripts/swap-env.ts production
+```
+
+### Switch to Playground
+```bash
+bun scripts/swap-env.ts playground
 ```
 
 ## Environment Variables
@@ -123,6 +141,35 @@ bun scripts/swap-env.ts production
    ```bash
    bun scripts/swap-env.ts production
    ```
+
+### For Local Development with Supabase
+
+The `local` environment is pre-configured for use with Supabase CLI's local development:
+
+1. **Start Supabase locally:**
+   ```bash
+   supabase start
+   ```
+
+2. **Switch to local environment:**
+   ```bash
+   bun scripts/swap-env.ts local
+   ```
+
+3. **Run your app:**
+   Your app will now connect to the local Supabase instance running at:
+   - API: http://localhost:54321
+   - Database: postgresql://postgres:postgres@localhost:54322/postgres
+   - Studio: http://localhost:54323
+
+**Note:** The `local` environment uses default Supabase local credentials. No configuration needed!
+
+## Environments Overview
+
+- **local**: Uses local Supabase instance (`supabase start`) - perfect for offline development
+- **development**: Points to a remote development Supabase project - for team collaboration
+- **production**: Points to the production Supabase project - for live deployments
+- **playground**: No backend DB - allows users to play without database connection
 
 ## Security Notes
 
