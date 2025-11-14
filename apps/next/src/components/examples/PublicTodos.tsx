@@ -7,7 +7,7 @@ import { isPlaygroundMode } from "@kingstack/shared";
 
 export const PublicTodos = observer(() => {
   const rootStore = useContext(RootStoreContext);
-  const { publicTodoStore } = rootStore;
+  const publicTodoStore = rootStore.userStore.publicTodoStore;
   const [isClient, setIsClient] = useState(false);
   const [newTodoTitle, setNewTodoTitle] = useState("");
 

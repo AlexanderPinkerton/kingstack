@@ -33,20 +33,40 @@ export const AdminManagement = observer(() => {
   const [newEmail, setNewEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Initialize admin store when component mounts
+  // Client-side only
   useEffect(() => {
     setIsClient(true);
-    if (rootStore.session) {
+  }, []);
+
+  // Ensure admin store is initialized before accessing
+  useEffect(() => {
+    if (rootStore.session && !rootStore.adminStore.initialized) {
       rootStore.adminStore.initializeWithSession(rootStore.session);
     }
-  }, [rootStore.session]);
+  }, [rootStore.session, rootStore]);
 
-  // Get the admin management store
+  // Prevent hydration mismatch and ensure store is initialized
+  if (!isClient) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  // Get the admin management store (only after initialization)
+  if (!rootStore.adminStore.initialized) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-lg">Initializing admin store...</div>
+      </div>
+    );
+  }
+
   const adminMgmtStore = rootStore.adminStore.adminMgmtStore;
   const { ui, api } = adminMgmtStore;
 
-  // Prevent hydration mismatch
-  if (!isClient || !ui) {
+  if (!ui) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-lg">Loading admin management...</div>

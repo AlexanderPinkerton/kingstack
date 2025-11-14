@@ -47,7 +47,7 @@ export default observer(function HomePage() {
   }, []);
 
   // Use the optimistic store - dead simple! 🚀
-  const todoStore = rootStore.todoStore;
+  const todoStore = rootStore.userStore.todoStore;
   const { ui, api } = todoStore;
 
   const [newTodoTitle, setNewTodoTitle] = useState("");

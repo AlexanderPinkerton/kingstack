@@ -6,13 +6,6 @@ import { getBrowserId } from "@/lib/browser-id";
 import { UserStoreManager } from "./userApp/userStoreManager";
 import { AdminStoreManager } from "./adminApp/adminStoreManager";
 
-// Re-export store types for backward compatibility
-export type { AdvancedTodoStore } from "./userApp/todoStore";
-export type { AdvancedPostStore } from "./userApp/postStore";
-export type { RealtimeCheckboxStore } from "./userApp/checkboxStore";
-export type { CurrentUserStore } from "./userApp/currentUserStore";
-export type { PublicTodoStore } from "./userApp/publicTodoStore";
-
 const SINGLETON_KEY = "RootStore";
 
 export class RootStore {
@@ -99,23 +92,6 @@ export class RootStore {
     this.sessionManager.initialize();
 
     console.log("🔧 RootStore: Initialized");
-  }
-
-  // Backward compatibility: delegate to userStore for existing code
-  get todoStore() {
-    return this.userStore.todoStore;
-  }
-
-  get postStore() {
-    return this.userStore.postStore;
-  }
-
-  get checkboxStore() {
-    return this.userStore.checkboxStore;
-  }
-
-  get publicTodoStore() {
-    return this.userStore.publicTodoStore;
   }
 
   // Expose socket for external access if needed
