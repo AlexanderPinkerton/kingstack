@@ -4,7 +4,7 @@ import {
   type ObservableUIData,
 } from "@kingstack/advanced-optimistic-store";
 import { fetchWithAuth } from "@/lib/utils";
-import { getMockData, isPlaygroundMode } from "@kingstack/shared";
+import { isPlaygroundMode } from "@kingstack/shared";
 
 // API data structure (what comes from the server)
 export interface AdminEmailApiData {
@@ -212,29 +212,21 @@ export class AdminMgmtStore {
   // Playground Implementations
   private playgroundQueryFn = async (): Promise<AdminEmailApiData[]> => {
     await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
-    const mockAdmins = getMockData("admin-emails") as any[];
-    if (!mockAdmins || mockAdmins.length === 0) {
-      // Return some default mock data
-      return [
-        {
-          id: "admin-1",
-          email: "admin@example.com",
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: "admin-2",
-          email: "superadmin@example.com",
-          created_at: new Date(
-            Date.now() - 8 * 24 * 60 * 60 * 1000,
-          ).toISOString(), // 8 days ago
-        },
-      ];
-    }
-    return mockAdmins.map((admin) => ({
-      id: admin.id || `admin-${Date.now()}`,
-      email: admin.email || "admin@example.com",
-      created_at: admin.created_at || new Date().toISOString(),
-    }));
+    // Return default mock data for admin emails
+    return [
+      {
+        id: "admin-1",
+        email: "admin@example.com",
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: "admin-2",
+        email: "superadmin@example.com",
+        created_at: new Date(
+          Date.now() - 8 * 24 * 60 * 60 * 1000,
+        ).toISOString(), // 8 days ago
+      },
+    ];
   };
 
   private playgroundCreateMutation = async (data: {

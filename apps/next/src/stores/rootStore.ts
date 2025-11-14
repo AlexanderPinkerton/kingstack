@@ -3,15 +3,15 @@ import { SingletonManager } from "@/lib/singleton";
 import { SessionManager, type SupabaseSession } from "@/lib/session-manager";
 import { RealtimeManager } from "@/lib/realtime-manager";
 import { getBrowserId } from "@/lib/browser-id";
-import { UserStoreManager } from "./userStoreManager";
-import { AdminStoreManager } from "./adminStoreManager";
+import { UserStoreManager } from "./userApp/userStoreManager";
+import { AdminStoreManager } from "./adminApp/adminStoreManager";
 
 // Re-export store types for backward compatibility
-export type { AdvancedTodoStore } from "./todoStore";
-export type { AdvancedPostStore } from "./postStore";
-export type { RealtimeCheckboxStore } from "./checkboxStore";
-export type { AdvancedUserStore } from "./userStore";
-export type { PublicTodoStore } from "./publicTodoStore";
+export type { AdvancedTodoStore } from "./userApp/todoStore";
+export type { AdvancedPostStore } from "./userApp/postStore";
+export type { RealtimeCheckboxStore } from "./userApp/checkboxStore";
+export type { CurrentUserStore } from "./userApp/currentUserStore";
+export type { PublicTodoStore } from "./userApp/publicTodoStore";
 
 const SINGLETON_KEY = "RootStore";
 
@@ -169,6 +169,6 @@ export class RootStore {
 
   // Convenience getter for user data
   get userData() {
-    return this.userStore.userStore.currentUser;
+    return this.userStore.currentUserStore.currentUser;
   }
 }

@@ -1,4 +1,4 @@
-import { StoreManager } from "./store-manager";
+import { StoreManager } from "@/lib/store-manager";
 import { SessionManager } from "@/lib/session-manager";
 import { AdminMgmtStore } from "./adminMgmtStore";
 import type { SupabaseSession } from "@/lib/session-manager";
@@ -20,23 +20,30 @@ export class AdminStoreManager extends StoreManager {
 
   // Getters with lazy initialization
   get adminMgmtStore(): AdminMgmtStore {
-    if (!this._adminMgmtStore) {
-      this._adminMgmtStore = new AdminMgmtStore();
-      this.ensureInitialized();
+    if (this.isDisposed) {
+      throw new Error("AdminStoreManager has been disposed");
     }
-    return this._adminMgmtStore;
-  }
 
-  /**
-   * Ensure stores are initialized with current session
-   */
-  private ensureInitialized(): void {
-    if (!this.isInitialized) {
-      // Get session from RootStore if available
-      // For now, we'll initialize when accessed - session will be set via initializeWithSession
-      console.log(
-        "👑 AdminStoreManager: Store accessed, initialization needed",
-      );
+    if (this._adminMgmtStore) return this._adminMgmtStore;
+
+    try {
+      this._adminMgmtStore = new AdminMgmtStore();
+
+      // Note: Admin stores require explicit initialization via initializeWithSession()
+      // This ensures they only load when actually needed (e.g., on admin pages)
+      // If accessed before initialization, the store will be created but not enabled
+      if (!this.isInitialized) {
+        console.warn(
+          "⚠️ AdminStoreManager: Store accessed before initialization. " +
+            "Call initializeWithSession() explicitly (e.g., from admin page component).",
+        );
+      }
+
+      return this._adminMgmtStore;
+    } catch (error) {
+      console.error("Failed to initialize adminMgmtStore:", error);
+      this._adminMgmtStore = null;
+      throw error;
     }
   }
 
@@ -72,6 +79,13 @@ export class AdminStoreManager extends StoreManager {
    * Initialize stores with session
    */
   initialize(session: SupabaseSession | null): void {
+    if (this.isDisposed) {
+      console.warn(
+        "⚠️ AdminStoreManager: Attempted to initialize after disposal",
+      );
+      return;
+    }
+
     if (this.isInitialized) {
       return;
     }
@@ -128,10 +142,20 @@ export class AdminStoreManager extends StoreManager {
    * Cleanup all stores
    */
   dispose(): void {
+    if (this.isDisposed) {
+      return;
+    }
+
     console.log("👑 AdminStoreManager: Disposing admin stores");
 
+    this.isDisposed = true;
+
     // Disable all stores
-    this.getAuthStores().forEach((store) => store.disable());
+    try {
+      this.getAuthStores().forEach((store) => store.disable());
+    } catch (error) {
+      console.error("Error disabling stores during disposal:", error);
+    }
 
     // Clear references
     this._adminMgmtStore = null;
