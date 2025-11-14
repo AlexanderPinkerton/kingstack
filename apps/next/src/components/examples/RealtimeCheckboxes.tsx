@@ -9,7 +9,7 @@ import { isPlaygroundMode } from "@kingstack/shared";
 
 export const RealtimeCheckboxes = observer(() => {
   const rootStore = useContext(RootStoreContext);
-  const { checkboxStore } = rootStore;
+  const checkboxStore = rootStore.userStore.checkboxStore;
   const [isClient, setIsClient] = useState(false);
 
   // Prevent hydration mismatch by only rendering after client mount

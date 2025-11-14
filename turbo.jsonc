@@ -5,8 +5,10 @@
       "cache": false,
       "dependsOn": [
         "@kingstack/shared#build",
-        "@kingstack/prisma#generate"
-      ]
+        "@kingstack/prisma#generate",
+        "@kingstack/advanced-optimistic-store#build"
+      ],
+      "outputs": []
     },
     "build": {
       "dependsOn": [

@@ -1,287 +1,107 @@
-import { makeAutoObservable, runInAction } from "mobx";
-import { io, Socket } from "socket.io-client";
-import { createClient } from "@/lib/supabase/browserClient";
-import { AdvancedTodoStore } from "./todoStore";
-import { AdvancedPostStore } from "./postStore";
-import { RealtimeCheckboxStore } from "./checkboxStore";
-import { AdvancedUserStore } from "./userStore";
-import { isPlaygroundMode } from "@kingstack/shared";
+import { makeAutoObservable } from "mobx";
+import { SingletonManager } from "@/lib/singleton";
+import { SessionManager, type SupabaseSession } from "@/lib/session-manager";
+import { RealtimeManager } from "@/lib/realtime-manager";
+import { getBrowserId } from "@/lib/browser-id";
+import { UserStoreManager } from "./userApp/userStoreManager";
+import { AdminStoreManager } from "./adminApp/adminStoreManager";
 
-// Create Supabase client (will be null if env vars are missing)
-const supabase = createClient();
-
-// Type for any store that might support realtime
-type AnyStore = {
-  connectRealtime?: (socket: any) => void;
-  disconnectRealtime?: () => void;
-  [key: string]: any;
-};
+const SINGLETON_KEY = "RootStore";
 
 export class RootStore {
-  // Singleton instance tracking
-  private static instance: RootStore | null = null;
-  private static instanceCount = 0;
+  // Session management
+  private sessionManager: SessionManager;
+  session: SupabaseSession = null;
 
-  session: any = null;
+  // Realtime management
+  private realtimeManager: RealtimeManager;
 
-  // Optimistic stores
-  todoStore: AdvancedTodoStore;
-  postStore: AdvancedPostStore;
-  checkboxStore: RealtimeCheckboxStore;
-  userStore: AdvancedUserStore;
+  // Store managers (lazy-loaded)
+  userStore: UserStoreManager;
+  adminStore: AdminStoreManager;
 
-  // WebSocket connection management
-  socket: Socket | null = null;
   // Stable browser ID for filtering out self-originated realtime events
-  browserId: string = this.getBrowserId();
+  browserId: string = getBrowserId();
 
-  // Auth listener cleanup
-  private authUnsubscribe: (() => void) | null = null;
   private isDisposed = false;
 
-  // Get all optimistic stores
-  private getOptimisticStores(): AnyStore[] {
-    return [this.todoStore, this.postStore, this.checkboxStore, this.userStore];
-  }
-
-  // Connect all stores that support realtime
-  private connectAllRealtime(socket: Socket): void {
-    console.log("🔌 RootStore: Connecting stores that support realtime");
-    this.getOptimisticStores().forEach((store, index) => {
-      if (store.connectRealtime) {
-        store.connectRealtime(socket);
-        console.log(`🔌 RootStore: Connected store ${index} to realtime`);
-      }
-    });
-  }
-
-  // Disconnect all stores from realtime
-  private disconnectAllRealtime(): void {
-    console.log("🔌 RootStore: Disconnecting stores from realtime");
-    this.getOptimisticStores().forEach((store, index) => {
-      if (store.disconnectRealtime) {
-        store.disconnectRealtime();
-        console.log(`🔌 RootStore: Disconnected store ${index} from realtime`);
-      }
-    });
-  }
-
   constructor() {
-    // Track instance creation
-    RootStore.instanceCount++;
-    const instanceId = RootStore.instanceCount;
+    // Register with singleton manager
+    const instanceId = SingletonManager.getInstanceCount(SINGLETON_KEY) + 1;
     console.log(`🔧 RootStore: Constructor called (instance #${instanceId})`);
     console.log("🔧 RootStore: Browser ID:", this.browserId);
 
-    // Warn if multiple instances detected (possible memory leak)
-    if (RootStore.instance && !RootStore.instance.isDisposed) {
-      // In development, HMR causes module re-execution - this is expected
-      const isDevelopment = process.env.NODE_ENV === "development";
-      const logLevel = isDevelopment ? "log" : "warn";
-
-      console[logLevel](
-        `${isDevelopment ? "🔄" : "⚠️"} RootStore: Multiple instances detected (${isDevelopment ? "HMR" : "memory leak"})`,
-        "Auto-disposing previous instance...",
-      );
-      RootStore.instance.dispose();
-    }
-
-    // Store reference to this instance
-    RootStore.instance = this;
-
-    this.session = null;
-
-    // Create all optimistic stores
-    this.todoStore = new AdvancedTodoStore();
-    this.postStore = new AdvancedPostStore();
-    this.checkboxStore = new RealtimeCheckboxStore(this.browserId);
-    this.userStore = new AdvancedUserStore();
-
-    // Make session and stores observable before setting up auth listener
-    makeAutoObservable(this, {
-      session: true,
-      todoStore: true,
-      postStore: true,
-      checkboxStore: true,
-      userStore: true,
+    const isDevelopment = process.env.NODE_ENV === "development";
+    SingletonManager.register(SINGLETON_KEY, this, {
+      autoDisposePrevious: true,
+      isDevelopment,
     });
 
-    // Clean up any existing auth listener first
-    if (this.authUnsubscribe) {
-      this.authUnsubscribe();
-    }
+    // Create store managers (stores are lazy-loaded)
+    this.userStore = new UserStoreManager();
+    this.adminStore = new AdminStoreManager();
 
-    // Handle playground mode vs normal mode
-    if (isPlaygroundMode() || !supabase) {
-      console.log(
-        "🎮 RootStore: Playground mode detected - enabling stores with mock data",
-      );
-      runInAction(() => {
-        // In playground mode, enable stores without authentication
-        this.todoStore.enable("playground-token");
-        this.postStore.enable("playground-token");
-        this.userStore.enable("playground-token");
-        // Checkboxes work without auth in playground mode
-      });
-    } else if (supabase) {
-      // Set up new auth listener and store the unsubscribe function
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((event: any, session: any) => {
-        console.log("🔐 RootStore: Auth state changed:", {
-          event,
-          hasSession: !!session,
-          userEmail: session?.user?.email,
-          timestamp: new Date().toISOString(),
-        });
+    // Initialize realtime manager (stores will be registered lazily)
+    this.realtimeManager = new RealtimeManager({
+      stores: [],
+      browserId: this.browserId,
+    });
 
-        runInAction(() => {
-          // Update session state
-          this.session = session;
+    // Register store managers with realtime manager
+    // They will register their stores when initialized
+    this.userStore.registerRealtime(this.realtimeManager);
+    this.adminStore.registerRealtime(this.realtimeManager);
 
-          if (session?.access_token && event === "SIGNED_IN") {
-            // Handle auth-required setup here
-            console.log(
-              "✅ RootStore: Session established, setting up realtime",
-            );
-            // Enable stores with new token
-            this.todoStore.enable(session.access_token);
-            this.postStore.enable(session.access_token);
-            this.userStore.enable(session.access_token);
-            // Setup realtime connection
-            this.setupRealtime(session.access_token);
-          } else if (!session?.access_token) {
-            // Handle auth-required teardown here
-            console.log("❌ RootStore: Session lost, tearing down realtime");
-            // Teardown realtime connection
-            this.teardownRealtime();
-            // Disable stores when session is lost
-            this.todoStore.disable();
-            this.postStore.disable();
-            this.userStore.disable();
-          }
+    // Initialize session manager (no stores initially - they're lazy-loaded)
+    this.sessionManager = new SessionManager({
+      stores: [],
+      onSessionChange: (session, event) => {
+        // Update observable session
+        this.session = session;
 
-          // Note: Realtime is only available with authentication
-          // Checkboxes will work without realtime when not authenticated
-        });
-      });
+        // Update store managers with new session
+        // Only update user stores automatically - admin stores load only when accessed
+        this.userStore.updateSession(session);
+        // Admin stores are lazy-loaded only when accessed (via getters) or explicitly initialized
 
-      // Store the unsubscribe function
-      this.authUnsubscribe = () => subscription.unsubscribe();
-    }
+        // Handle realtime connection based on session state
+        // Set up realtime for both SIGNED_IN and INITIAL_SESSION events
+        if (
+          session?.access_token &&
+          (event === "SIGNED_IN" || event === "INITIAL_SESSION")
+        ) {
+          console.log(
+            `✅ RootStore: Session established (${event}), setting up realtime`,
+          );
+          this.realtimeManager.setup(session.access_token);
+        } else if (!session?.access_token) {
+          console.log("❌ RootStore: Session lost, tearing down realtime");
+          this.realtimeManager.teardown();
+        }
+      },
+    });
+
+    // Make session and store managers observable
+    makeAutoObservable(this, {
+      session: true,
+      userStore: true,
+      adminStore: true,
+    });
+
+    // Initialize session management (sets up auth listener or playground mode)
+    this.sessionManager.initialize();
 
     console.log("🔧 RootStore: Initialized");
   }
 
-  // Setup realtime (requires authentication)
-  setupRealtime(token: string) {
-    console.log("🔌 RootStore: Setting up realtime");
-    const socket = this.createSocket();
-
-    socket.on("connect", () => {
-      console.log("🔌 RootStore: Realtime socket connected");
-      socket.emit("register", {
-        token,
-        browserId: this.browserId,
-      });
-      this.connectAllRealtime(socket);
-    });
-  }
-
-  // Create socket connection
-  private createSocket(): Socket {
-    // Clean up existing socket first
-    if (this.socket) {
-      console.log("🔌 RootStore: Cleaning up existing socket");
-      this.socket.disconnect();
-      this.socket = null;
-    }
-
-    const REALTIME_SERVER_URL =
-      process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
-
-    const socket = io(REALTIME_SERVER_URL, {
-      transports: ["websocket"],
-      autoConnect: true,
-    });
-
-    socket.on("disconnect", () => {
-      console.log("🔌 RootStore: Realtime socket disconnected");
-    });
-
-    this.socket = socket;
-    return socket;
-  }
-
-  // Teardown realtime connections
-  teardownRealtime() {
-    console.log("🔌 RootStore: Tearing down realtime");
-    this.disconnectAllRealtime();
-
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-    }
+  // Expose socket for external access if needed
+  get socket() {
+    return this.realtimeManager.getSocket();
   }
 
   async refreshSession() {
-    console.log("🔄 RootStore: Refreshing session");
-
-    if (!supabase) {
-      console.log(
-        "🔄 RootStore: No Supabase client available (playground mode)",
-      );
-      return;
-    }
-
-    try {
-      const result = await supabase.auth.getSession();
-      console.log("🔄 RootStore: Session refresh result:", {
-        hasSession: !!result.data.session,
-        userEmail: result.data.session?.user?.email,
-      });
-
-      // Only update if we don't already have a session or if the session is different
-      if (!this.session && result.data.session) {
-        runInAction(() => {
-          this.session = result.data.session;
-          console.log("🔄 RootStore: Session set from refresh:", {
-            hasSession: !!this.session,
-            userEmail: this.session?.user?.email,
-          });
-        });
-        // Enable user store for new session
-        this.userStore.enable(result.data.session.access_token);
-      } else if (this.session && !result.data.session) {
-        runInAction(() => {
-          this.session = null;
-          console.log("🔄 RootStore: Session cleared from refresh");
-        });
-        // Disable user store when session is lost
-        this.userStore.disable();
-      } else {
-        console.log("🔄 RootStore: Session refresh - no change needed");
-      }
-    } catch (error) {
-      console.error("🔄 RootStore: Session refresh failed:", error);
-    }
-  }
-
-  // Get or create stable browser ID (persists across page reloads)
-  private getBrowserId(): string {
-    if (typeof window === "undefined") {
-      return "server";
-    }
-
-    const STORAGE_KEY = "kingstack_browser_id";
-    let browserId = sessionStorage.getItem(STORAGE_KEY);
-
-    if (!browserId) {
-      browserId = `browser-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-      sessionStorage.setItem(STORAGE_KEY, browserId);
-    }
-
-    return browserId;
+    await this.sessionManager.refreshSession();
+    // Session is updated via onSessionChange callback
   }
 
   // Cleanup method to properly dispose of the store
@@ -296,40 +116,35 @@ export class RootStore {
     // Mark as disposed
     this.isDisposed = true;
 
-    // Clean up auth listener
-    if (this.authUnsubscribe) {
-      this.authUnsubscribe();
-      this.authUnsubscribe = null;
-    }
+    // Clean up store managers
+    this.userStore.dispose();
+    this.adminStore.dispose();
+
+    // Clean up session manager (unsubscribes from auth listener)
+    this.sessionManager.dispose();
 
     // Clean up realtime connection
-    this.teardownRealtime();
+    this.realtimeManager.dispose();
 
-    // Disable stores
-    this.todoStore.disable();
-    this.postStore.disable();
-    this.userStore.disable();
-
-    // Clear singleton reference if this is the current instance
-    if (RootStore.instance === this) {
-      RootStore.instance = null;
-    }
+    // Unregister from singleton manager
+    SingletonManager.unregister(SINGLETON_KEY, this);
 
     console.log("🧹 RootStore: Disposed");
   }
 
   // Static method to get the current instance (useful for debugging)
   static getInstance(): RootStore | null {
-    return RootStore.instance;
+    return SingletonManager.getInstance<RootStore>(SINGLETON_KEY);
   }
 
   // Static method to check if there's an active instance
   static hasActiveInstance(): boolean {
-    return RootStore.instance !== null && !RootStore.instance.isDisposed;
+    const instance = SingletonManager.getInstance<RootStore>(SINGLETON_KEY);
+    return instance !== null && !instance.isDisposed;
   }
 
   // Convenience getter for user data
   get userData() {
-    return this.userStore.currentUser;
+    return this.userStore.currentUserStore.currentUser;
   }
 }
