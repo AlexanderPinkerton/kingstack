@@ -24,6 +24,7 @@ export class RealtimeManager {
   private browserId: string;
   private serverUrl: string;
   private isConnected = false;
+  private currentToken: string | null = null;
 
   constructor(options?: {
     stores?: RealtimeStore[];
@@ -62,10 +63,30 @@ export class RealtimeManager {
    * Setup realtime connection with authentication token
    */
   setup(token: string): void {
+    // Skip if already connected with the same token
+    if (
+      this.isConnected &&
+      this.socket?.connected &&
+      this.currentToken === token
+    ) {
+      console.log(
+        "🔌 RealtimeManager: Already connected with same token, skipping setup",
+      );
+      return;
+    }
+
     console.log("🔌 RealtimeManager: Setting up realtime connection");
 
-    // Clean up existing connection first
-    this.teardown();
+    // Only clean up existing connection if there is one
+    if (this.socket || this.isConnected) {
+      console.log(
+        "🔌 RealtimeManager: Cleaning up existing connection before setup",
+      );
+      this.teardown();
+    }
+
+    // Store the token
+    this.currentToken = token;
 
     // Create new socket connection
     this.socket = this.createSocket();
@@ -116,6 +137,7 @@ export class RealtimeManager {
     }
 
     this.isConnected = false;
+    this.currentToken = null;
   }
 
   /**

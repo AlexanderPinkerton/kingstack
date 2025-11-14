@@ -176,9 +176,7 @@ export const AdminManagement = observer(() => {
                   <TableCell className="font-medium">
                     {admin.displayEmail}
                   </TableCell>
-                  <TableCell>
-                    {admin.created_at.toLocaleDateString()}
-                  </TableCell>
+                  <TableCell>{admin.created_at.toLocaleDateString()}</TableCell>
                   <TableCell>
                     {admin.isRecent && (
                       <Badge variant="secondary">Recent</Badge>
@@ -203,4 +201,3 @@ export const AdminManagement = observer(() => {
     </div>
   );
 });
-

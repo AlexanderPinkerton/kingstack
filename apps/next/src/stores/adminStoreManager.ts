@@ -10,7 +10,7 @@ import type { RealtimeStore } from "@/lib/realtime-manager";
  * Stores are lazy-loaded ONLY when:
  * 1. A store getter is accessed (e.g., rootStore.adminStore.adminMgmtStore)
  * 2. Explicitly initialized via initializeWithSession() (e.g., from an admin page)
- * 
+ *
  * Admin stores do NOT auto-initialize on session changes - they only load when needed
  * Note: This class doesn't need to be observable - the stores themselves are observable
  */
@@ -34,7 +34,9 @@ export class AdminStoreManager extends StoreManager {
     if (!this.isInitialized) {
       // Get session from RootStore if available
       // For now, we'll initialize when accessed - session will be set via initializeWithSession
-      console.log("👑 AdminStoreManager: Store accessed, initialization needed");
+      console.log(
+        "👑 AdminStoreManager: Store accessed, initialization needed",
+      );
     }
   }
 
