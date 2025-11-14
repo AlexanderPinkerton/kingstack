@@ -1,6 +1,7 @@
 "use client";
 
 import { useContext, useEffect } from "react";
+import { observer } from "mobx-react-lite";
 import { AppSidebar } from "@/components/admin/app-sidebar";
 import { ChartAreaInteractive } from "@/components/admin/chart-area-interactive";
 import { DataTable } from "@/components/admin/data-table";
@@ -13,7 +14,7 @@ import { RootStoreContext } from "@/context/rootStoreContext";
 
 import data from "./data.json";
 
-export default function Page() {
+export default observer(function Page() {
   // Use Next.js API route by default, or pass { backend: "nest" } to use NestJS
   const { isChecking, isAdmin } = useAdminGuard();
   const rootStore = useContext(RootStoreContext);
@@ -66,4 +67,4 @@ export default function Page() {
       </SidebarInset>
     </SidebarProvider>
   );
-}
+});
