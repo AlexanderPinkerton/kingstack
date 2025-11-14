@@ -1,4 +1,3 @@
-import { AdvancedTodoStore } from "./todoStore";
 import { AdvancedPostStore } from "./postStore";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { CurrentUserStore } from "./currentUserStore";
@@ -28,12 +27,6 @@ export class UserStoreManager extends StoreManager {
 
   // Store registry - define all stores here
   private readonly storeConfigs: StoreConfig<any>[] = [
-    {
-      name: "todoStore",
-      factory: () => new AdvancedTodoStore(),
-      requiresAuth: true,
-      supportsRealtime: false,
-    },
     {
       name: "postStore",
       factory: () => new AdvancedPostStore(),
@@ -100,10 +93,6 @@ export class UserStoreManager extends StoreManager {
   }
 
   // Type-safe getters for each store
-  get todoStore(): AdvancedTodoStore {
-    return this.getStore<AdvancedTodoStore>("todoStore");
-  }
-
   get postStore(): AdvancedPostStore {
     return this.getStore<AdvancedPostStore>("postStore");
   }
