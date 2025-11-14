@@ -6,10 +6,11 @@ KingStack uses a sophisticated state management pattern that combines **MobX** f
 
 ## 🎯 Overview
 
-The state management architecture follows a **two-layer approach**:
+The state management architecture follows a **three-layer approach**:
 
-1. **RootStore** - A singleton MobX store that orchestrates authentication, realtime connections, and lifecycle management
-2. **Advanced Optimistic Stores** - Individual domain stores that combine MobX observables with TanStack Query for optimistic updates
+1. **RootStore** - A singleton MobX store that orchestrates SessionManager and RealtimeManager
+2. **Store Managers** - UserStoreManager and AdminStoreManager handle lazy loading and lifecycle of domain stores
+3. **Advanced Optimistic Stores** - Individual domain stores that combine MobX observables with TanStack Query for optimistic updates
 
 This pattern provides:
 - ✅ **Instant UI feedback** with optimistic updates
@@ -35,50 +36,50 @@ This pattern provides:
 ┌──────────────────────▼──────────────────────────────────────┐
 │                    RootStore (Singleton)                    │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │ • Authentication state (session)                     │   │
-│  │ • WebSocket connection management                    │   │
+│  │ • SessionManager (auth state & lifecycle)            │   │
+│  │ • RealtimeManager (WebSocket connections)           │   │
 │  │ • Browser ID (for self-echo prevention)             │   │
-│  │ • Lifecycle management (enable/disable stores)       │   │
 │  └──────────────────────────────────────────────────────┘   │
 │                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ todoStore    │  │ postStore    │  │ checkboxStore│      │
-│  │ (Advanced)   │  │ (Advanced)   │  │ (Realtime)   │      │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
-│         │                 │                 │               │
-│         └─────────────────┴─────────────────┘               │
-│                           │                                   │
-│                  ┌────────▼────────┐                          │
-│                  │ userStore       │                          │
-│                  │ (Advanced)      │                          │
-│                  └────────┬────────┘                          │
-└───────────────────────────┼───────────────────────────────────┘
-                            │
-                            │ wraps
-                            │
-┌───────────────────────────▼───────────────────────────────────┐
-│         @kingstack/advanced-optimistic-store                 │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ UI Domain (MobX)      │  API Domain (TanStack Query) │   │
-│  │ • Observable state    │  • Mutations                 │   │
-│  │ • Optimistic updates  │  • Query caching             │   │
-│  │ • Computed values     │  • Background sync           │   │
-│  │ • Snapshot/rollback   │  • Loading states            │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                              │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ Data Transformation Layer                            │   │
-│  │ • API data → UI data (with computed fields)          │   │
-│  │ • UI data → API data (for mutations)                │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                              │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ Optional Realtime Layer                              │   │
-│  │ • WebSocket integration                              │   │
-│  │ • Conflict resolution                                │   │
-│  │ • Self-echo prevention                               │   │
-│  └──────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────┘
+│  ┌──────────────────────┐  ┌──────────────────────┐          │
+│  │ UserStoreManager    │  │ AdminStoreManager    │          │
+│  │ (Lazy-loaded)       │  │ (Lazy-loaded)       │          │
+│  └──────────┬──────────┘  └──────────┬──────────┘          │
+│             │                        │                      │
+│  ┌──────────▼──────────┐  ┌──────────▼──────────┐          │
+│  │ postStore           │  │ adminMgmtStore      │          │
+│  │ checkboxStore       │  │ (created on access) │          │
+│  │ publicTodoStore    │  └─────────────────────┘          │
+│  │ currentUserStore   │                                    │
+│  │ (created on access)│                                    │
+│  └──────────┬──────────┘                                    │
+└─────────────┼───────────────────────────────────────────────┘
+              │
+              │ wraps
+              │
+┌─────────────▼───────────────────────────────────────────────┐
+│         @kingstack/advanced-optimistic-store               │
+│  ┌──────────────────────────────────────────────────────┐ │
+│  │ UI Domain (MobX)      │  API Domain (TanStack Query) │ │
+│  │ • Observable state    │  • Mutations                 │ │
+│  │ • Optimistic updates  │  • Query caching             │ │
+│  │ • Computed values     │  • Background sync           │ │
+│  │ • Snapshot/rollback   │  • Loading states            │ │
+│  └──────────────────────────────────────────────────────┘ │
+│                                                            │
+│  ┌──────────────────────────────────────────────────────┐ │
+│  │ Data Transformation Layer                            │ │
+│  │ • API data → UI data (with computed fields)          │ │
+│  │ • UI data → API data (for mutations)                │ │
+│  └──────────────────────────────────────────────────────┘ │
+│                                                            │
+│  ┌──────────────────────────────────────────────────────┐ │
+│  │ Optional Realtime Layer                              │ │
+│  │ • WebSocket integration                              │ │
+│  │ • Conflict resolution                                │ │
+│  │ • Self-echo prevention                               │ │
+│  └──────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -89,122 +90,204 @@ The `RootStore` is a **singleton MobX store** that serves as the central orchest
 
 ### Key Responsibilities
 
-1. **Authentication Management**
+1. **Orchestration**
+   - Coordinates SessionManager and RealtimeManager
+   - Provides singleton access point for all stores
+   - Manages browser ID for self-echo prevention
+
+2. **Session Management (via SessionManager)**
    - Listens to Supabase auth state changes
-   - Enables/disables stores based on session availability
+   - Updates store managers when session changes
+   - Handles playground mode detection
    - Manages JWT token distribution to stores
 
-2. **Realtime Connection Management**
+3. **Realtime Management (via RealtimeManager)**
    - Creates and manages WebSocket connections (Socket.io)
    - Connects/disconnects stores that support realtime
-   - Handles browser ID for self-echo prevention
+   - Registers stores lazily as they're created
 
-3. **Store Lifecycle**
-   - Creates all optimistic stores on initialization
-   - Enables stores when authenticated
-   - Disables stores on logout
-   - Cleans up on disposal (prevents memory leaks)
-
-4. **Playground Mode Support**
-   - Detects playground mode (no Supabase backend)
-   - Enables stores with mock data
-   - Skips authentication requirements
+4. **Store Manager Coordination**
+   - Creates UserStoreManager and AdminStoreManager
+   - Delegates store lifecycle to managers
+   - Cleans up managers on disposal (prevents memory leaks)
 
 ### RootStore Structure
 
 ```typescript
 export class RootStore {
-  // Singleton tracking
-  private static instance: RootStore | null = null;
+  // Session management (via SessionManager)
+  private sessionManager: SessionManager;
+  session: SupabaseSession = null;
   
-  // Authentication state
-  session: any = null;
+  // Realtime management (via RealtimeManager)
+  private realtimeManager: RealtimeManager;
+  get socket(): Socket | null;
   
-  // Domain stores
-  todoStore: AdvancedTodoStore;
-  postStore: AdvancedPostStore;
-  checkboxStore: RealtimeCheckboxStore;
-  userStore: AdvancedUserStore;
+  // Store managers (lazy-loaded stores)
+  userStore: UserStoreManager;
+  adminStore: AdminStoreManager;
   
-  // Realtime management
-  socket: Socket | null = null;
+  // Browser ID for self-echo prevention
   browserId: string;
   
   // Lifecycle
   dispose(): void;
-  setupRealtime(token: string): void;
-  teardownRealtime(): void;
   refreshSession(): Promise<void>;
+  static getInstance(): RootStore | null;
+  static hasActiveInstance(): boolean;
 }
 ```
 
 ### Initialization Flow
 
 ```typescript
-// 1. RootStore is created once (singleton)
+// 1. RootStore is created once (singleton, managed by SingletonManager)
 const rootStore = new RootStore();
 
-// 2. Constructor creates all stores (disabled by default)
-this.todoStore = new AdvancedTodoStore();
-this.postStore = new AdvancedPostStore();
-this.checkboxStore = new RealtimeCheckboxStore(this.browserId);
-this.userStore = new AdvancedUserStore();
+// 2. Constructor creates store managers (stores are lazy-loaded)
+this.userStore = new UserStoreManager();
+this.adminStore = new AdminStoreManager();
 
-// 3. Auth listener watches for session changes
-supabase.auth.onAuthStateChange((event, session) => {
-  if (session?.access_token && event === "SIGNED_IN") {
-    // Enable all stores with token
-    this.todoStore.enable(session.access_token);
-    this.postStore.enable(session.access_token);
-    this.userStore.enable(session.access_token);
-    // Setup realtime connection
-    this.setupRealtime(session.access_token);
-  } else if (!session?.access_token) {
-    // Disable all stores
-    this.todoStore.disable();
-    this.postStore.disable();
-    this.userStore.disable();
-    // Teardown realtime
-    this.teardownRealtime();
-  }
+// 3. SessionManager handles authentication state
+this.sessionManager = new SessionManager({
+  stores: [], // Stores registered lazily via store managers
+  onSessionChange: (session, event) => {
+    this.session = session;
+    
+    // Update store managers with new session
+    this.userStore.updateSession(session);
+    
+    // Setup/teardown realtime based on session
+    if (session?.access_token && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+      this.realtimeManager.setup(session.access_token);
+    } else if (!session?.access_token) {
+      this.realtimeManager.teardown();
+    }
+  },
 });
+
+// 4. RealtimeManager handles WebSocket connections
+this.realtimeManager = new RealtimeManager({
+  stores: [], // Stores registered lazily via store managers
+  browserId: this.browserId,
+});
+
+// 5. Store managers register with realtime manager
+this.userStore.registerRealtime(this.realtimeManager);
+this.adminStore.registerRealtime(this.realtimeManager);
+
+// 6. SessionManager initializes (sets up auth listener or playground mode)
+this.sessionManager.initialize();
 ```
 
 ### Realtime Connection Flow
 
 ```typescript
-// When authenticated, RootStore sets up realtime
-setupRealtime(token: string) {
-  const socket = io(REALTIME_SERVER_URL);
+// When authenticated, RootStore's SessionManager callback triggers
+onSessionChange: (session, event) => {
+  if (session?.access_token && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+    // RealtimeManager sets up WebSocket connection
+    this.realtimeManager.setup(session.access_token);
+  }
+}
+
+// RealtimeManager handles connection internally
+setup(token: string) {
+  this.socket = io(REALTIME_SERVER_URL);
   
-  socket.on("connect", () => {
-    socket.emit("register", { token, browserId: this.browserId });
-    // Connect all stores that support realtime
-    this.connectAllRealtime(socket);
+  this.socket.on("connect", () => {
+    this.socket?.emit("register", { token, browserId: this.browserId });
+    
+    // Connect all registered stores that support realtime
+    this.stores.forEach((store) => {
+      if (store.connectRealtime) {
+        store.connectRealtime(this.socket!);
+      } else if (store.realtime?.connect) {
+        store.realtime.connect(this.socket!);
+      }
+    });
   });
 }
 
-// Each store that supports realtime gets connected
-private connectAllRealtime(socket: Socket): void {
-  this.getOptimisticStores().forEach((store) => {
-    if (store.connectRealtime) {
-      store.connectRealtime(socket);
-    }
-  });
-}
+// Store managers register their realtime stores lazily
+// When a store with realtime support is first accessed, it's registered
 ```
 
 ---
 
-## 🎨 Advanced Optimistic Store Pattern
+## 🎨 Store Manager Pattern
 
-Each domain store (e.g., `AdvancedTodoStore`, `AdvancedPostStore`) wraps the `createOptimisticStore` function with additional features:
+Stores are managed through **Store Managers** that implement lazy loading and lifecycle management:
 
-### Store Wrapper Structure
+### UserStoreManager Structure
 
 ```typescript
-export class AdvancedTodoStore {
-  private optimisticStore: OptimisticStore<TodoApiData, TodoUiData> | null = null;
+export class UserStoreManager extends StoreManager {
+  // Store registry - defines all available stores
+  private readonly storeConfigs: StoreConfig<any>[] = [
+    {
+      name: "postStore",
+      factory: () => new AdvancedPostStore(),
+      requiresAuth: true,
+      supportsRealtime: false,
+    },
+    {
+      name: "checkboxStore",
+      factory: () => new RealtimeCheckboxStore(this.browserId),
+      requiresAuth: false,
+      supportsRealtime: true,
+    },
+    // ... more stores
+  ];
+
+  // Store instances cache (lazy-loaded)
+  private readonly stores = new Map<string, any>();
+
+  // Type-safe getters (create stores on first access)
+  get postStore(): AdvancedPostStore {
+    return this.getStore<AdvancedPostStore>("postStore");
+  }
+
+  get checkboxStore(): RealtimeCheckboxStore {
+    return this.getStore<RealtimeCheckboxStore>("checkboxStore");
+  }
+
+  // Generic lazy getter
+  private getStore<T>(name: string): T {
+    // Return cached if exists
+    if (this.stores.has(name)) {
+      return this.stores.get(name);
+    }
+
+    // Create from registry
+    const config = this.storeConfigs.find((c) => c.name === name);
+    const store = config.factory();
+    this.stores.set(name, store);
+    this.ensureInitialized();
+    return store;
+  }
+
+  // Initialize all stores with session
+  initialize(session: SupabaseSession | null): void {
+    // Create all stores, enable those requiring auth
+    const token = session?.access_token || "playground-token";
+    this.getAuthStores().forEach((store) => store.enable(token));
+  }
+
+  // Update session (called by RootStore on auth changes)
+  updateSession(session: SupabaseSession | null): void {
+    this.initialize(session);
+  }
+}
+```
+
+### Individual Store Structure
+
+Each domain store (e.g., `AdvancedPostStore`) wraps the `createOptimisticStore` function:
+
+```typescript
+export class AdvancedPostStore {
+  private optimisticStore: OptimisticStore<PostApiData, PostUiData> | null = null;
   private authToken: string | null = null;
   private isEnabled: boolean = false;
 
@@ -213,14 +296,14 @@ export class AdvancedTodoStore {
     this.initialize();
   }
 
-  // Enable store with auth token
+  // Enable store with auth token (called by StoreManager)
   enable(authToken: string): void {
     this.authToken = authToken;
     this.isEnabled = true;
     this.optimisticStore?.updateOptions();
   }
 
-  // Disable store
+  // Disable store (called by StoreManager)
   disable(): void {
     this.isEnabled = false;
     this.authToken = null;
@@ -241,33 +324,40 @@ export class AdvancedTodoStore {
 
 ### Key Features
 
-1. **Enable/Disable Pattern**
+1. **Lazy Loading Pattern**
+   - Stores are created only when first accessed via getter
+   - Reduces initial bundle size and memory footprint
+   - Store managers maintain a registry of available stores
+
+2. **Enable/Disable Pattern**
    - Stores are created but disabled by default
-   - RootStore enables them when authenticated
+   - StoreManager enables them when session is available
    - Prevents unnecessary API calls when not authenticated
 
-2. **Playground Mode Support**
+3. **Playground Mode Support**
    - Detects playground mode via `isPlaygroundMode()`
    - Switches between API and mock implementations
    - No authentication required
+   - SessionManager handles playground mode automatically
 
-3. **Data Transformation**
+4. **Data Transformation**
    - Converts API data (ISO strings) to UI data (Date objects)
    - Adds computed fields (e.g., `isNew`, `readingTime`)
    - Type-safe transformations
 
-4. **Realtime Support (Optional)**
+5. **Realtime Support (Optional)**
    - Some stores support realtime (e.g., `RealtimeCheckboxStore`)
-   - Realtime is configured but not connected until RootStore connects it
+   - RealtimeManager handles WebSocket connections
+   - Stores register with RealtimeManager when created
    - Browser ID prevents self-echo
 
-### Example: AdvancedTodoStore
+### Example: AdvancedPostStore
 
 ```typescript
-export class AdvancedTodoStore {
+export class AdvancedPostStore {
   private initialize() {
-    this.optimisticStore = createOptimisticStore<TodoApiData, TodoUiData>({
-      name: "todos",
+    this.optimisticStore = createOptimisticStore<PostApiData, PostUiData>({
+      name: "posts",
       queryFn: this.getQueryFn(), // Switches based on playground mode
       mutations: {
         create: this.getCreateMutation(),
@@ -279,6 +369,9 @@ export class AdvancedTodoStore {
           ...apiData,
           created_at: new Date(apiData.created_at),
           updated_at: new Date(apiData.updated_at),
+          // Computed fields
+          isNew: this.isPostNew(apiData.created_at),
+          readingTime: this.calculateReadingTime(apiData.content),
         }),
         toApi: (uiData) => ({
           ...uiData,
@@ -361,23 +454,23 @@ export const RootStoreContext = createContext(rootStore);
 import { observer } from "mobx-react-lite";
 import { useRootStore } from "@/hooks/useRootStore";
 
-export default observer(function TodoList() {
+export default observer(function PostList() {
   const rootStore = useRootStore();
-  const { ui, api } = rootStore.todoStore;
+  const { ui, api } = rootStore.userStore.postStore;
 
   // Reactive data (MobX)
-  const todos = ui?.list || [];
+  const posts = ui?.list || [];
   const isLoading = api?.status.isLoading || false;
 
   // Optimistic mutations
   const handleCreate = () => {
-    api?.create({ title: "New todo", done: false });
+    api?.create({ title: "New post", content: "Post content" });
   };
 
   return (
     <div>
-      {todos.map(todo => (
-        <div key={todo.id}>{todo.title}</div>
+      {posts.map(post => (
+        <div key={post.id}>{post.title}</div>
       ))}
     </div>
   );
@@ -387,10 +480,12 @@ export default observer(function TodoList() {
 ### Key Points
 
 1. **Always use `observer()`** - Wraps component to react to MobX changes
-2. **Access via RootStore** - `rootStore.todoStore`, `rootStore.postStore`, etc.
-3. **Use `ui` for reactive data** - MobX observables, computed values
-4. **Use `api` for mutations** - Optimistic updates, query control
-5. **Null checks** - Stores may be disabled, so check for null
+2. **Access via Store Managers** - `rootStore.userStore.postStore`, `rootStore.userStore.checkboxStore`, etc.
+3. **Lazy Loading** - Stores are created on first access, not at RootStore initialization
+4. **Use `ui` for reactive data** - MobX observables, computed values
+5. **Use `api` for mutations** - Optimistic updates, query control
+6. **Null checks** - Stores may be disabled, so check for null
+7. **Admin Stores** - Require explicit initialization: `rootStore.adminStore.initializeWithSession(session)`
 
 ---
 
@@ -446,13 +541,17 @@ User Signs In
 Supabase Auth State Change
     │
     ▼
-RootStore Auth Listener
+SessionManager Auth Listener
     │
-    ├─► Enable todoStore.enable(token)
-    ├─► Enable postStore.enable(token)
-    ├─► Enable userStore.enable(token)
-    └─► Setup realtime connection
-        └─► Connect stores that support realtime
+    ▼
+RootStore onSessionChange Callback
+    │
+    ├─► Update observable session
+    ├─► userStore.updateSession(session)
+    │   └─► Initialize stores, enable those requiring auth
+    ├─► realtimeManager.setup(token)
+    │   └─► Connect stores that support realtime
+    └─► Admin stores require explicit initialization
 ```
 
 ---
@@ -462,13 +561,21 @@ RootStore Auth Listener
 Playground mode allows development without a Supabase backend:
 
 ```typescript
-// Detected via isPlaygroundMode() from @kingstack/shared
+// SessionManager automatically detects playground mode
+// In rootStore.ts constructor:
+this.sessionManager = new SessionManager({
+  stores: [], // Stores registered lazily
+  onSessionChange: (session, event) => {
+    // Handle session changes
+  },
+});
+
+// SessionManager.initialize() detects playground mode:
 if (isPlaygroundMode() || !supabase) {
-  // Enable stores with playground token
-  this.todoStore.enable("playground-token");
-  this.postStore.enable("playground-token");
-  this.userStore.enable("playground-token");
-  // Checkboxes work without auth in playground mode
+  // Enable all registered stores with playground token
+  this.stores.forEach((store) => {
+    store.enable("playground-token");
+  });
 }
 ```
 
@@ -591,35 +698,31 @@ export class AdvancedMyEntityStore {
 }
 ```
 
-### Step 3: Add to RootStore
+### Step 3: Add to Store Manager
 
 ```typescript
-// In rootStore.ts
+// In userApp/userStoreManager.ts (or adminApp/adminStoreManager.ts)
 import { AdvancedMyEntityStore } from "./myEntityStore";
 
-export class RootStore {
-  // ... existing stores
-  myEntityStore: AdvancedMyEntityStore;
+export class UserStoreManager extends StoreManager {
+  // Add to store registry
+  private readonly storeConfigs: StoreConfig<any>[] = [
+    // ... existing stores
+    {
+      name: "myEntityStore",
+      factory: () => new AdvancedMyEntityStore(),
+      requiresAuth: true, // or false
+      supportsRealtime: false, // or true
+    },
+  ];
 
-  constructor() {
-    // ... existing initialization
-    this.myEntityStore = new AdvancedMyEntityStore();
-
-    // Make observable
-    makeAutoObservable(this, {
-      // ... existing stores
-      myEntityStore: true,
-    });
-
-    // Enable in auth listener
-    if (session?.access_token && event === "SIGNED_IN") {
-      // ... existing enables
-      this.myEntityStore.enable(session.access_token);
-    } else if (!session?.access_token) {
-      // ... existing disables
-      this.myEntityStore.disable();
-    }
+  // Add type-safe getter
+  get myEntityStore(): AdvancedMyEntityStore {
+    return this.getStore<AdvancedMyEntityStore>("myEntityStore");
   }
+
+  // StoreManager automatically handles enable/disable via getAuthStores()
+  // No additional code needed - it's handled by the registry pattern
 }
 ```
 
@@ -631,7 +734,7 @@ import { useRootStore } from "@/hooks/useRootStore";
 
 export default observer(function MyEntityList() {
   const rootStore = useRootStore();
-  const { ui, api } = rootStore.myEntityStore;
+  const { ui, api } = rootStore.userStore.myEntityStore; // Access via userStore manager
 
   const entities = ui?.list || [];
 
@@ -655,15 +758,15 @@ export default observer(function MyEntityList() {
 // ✅ Good
 export default observer(function MyComponent() {
   const rootStore = useRootStore();
-  const todos = rootStore.todoStore.ui?.list || [];
-  return <div>{todos.length}</div>;
+  const posts = rootStore.userStore.postStore.ui?.list || [];
+  return <div>{posts.length}</div>;
 });
 
 // ❌ Bad - Won't react to MobX changes
 export default function MyComponent() {
   const rootStore = useRootStore();
-  const todos = rootStore.todoStore.ui?.list || [];
-  return <div>{todos.length}</div>;
+  const posts = rootStore.userStore.postStore.ui?.list || [];
+  return <div>{posts.length}</div>;
 }
 ```
 
@@ -671,14 +774,14 @@ export default function MyComponent() {
 
 ```typescript
 // ✅ Good - Stores may be disabled
-const { ui, api } = rootStore.todoStore;
+const { ui, api } = rootStore.userStore.postStore;
 if (!ui || !api) return <div>Loading...</div>;
 
-const todos = ui.list;
-api.create({ title: "New todo" });
+const posts = ui.list;
+api.create({ title: "New post", content: "Content" });
 
 // ❌ Bad - May throw errors
-const todos = rootStore.todoStore.ui.list; // ui might be null
+const posts = rootStore.userStore.postStore.ui.list; // ui might be null
 ```
 
 ### 3. Use `fetchWithAuth` for Internal APIs
@@ -750,14 +853,16 @@ transformer: {
 
 The KingStack state management pattern provides:
 
-1. **Centralized Orchestration** - RootStore manages auth, realtime, and lifecycle
-2. **Domain Separation** - Each store handles its own domain (todos, posts, etc.)
-3. **Optimistic Updates** - Instant UI feedback with automatic rollback
-4. **Reactive State** - MobX observables for computed values and reactions
-5. **Smart Caching** - TanStack Query handles server state efficiently
-6. **Realtime Support** - Optional WebSocket integration with conflict resolution
-7. **Type Safety** - Full TypeScript support with data transformations
-8. **Playground Mode** - Development without backend dependencies
+1. **Centralized Orchestration** - RootStore coordinates SessionManager and RealtimeManager
+2. **Lazy Loading** - Stores are created only when accessed, reducing bundle size
+3. **Store Managers** - UserStoreManager and AdminStoreManager handle store lifecycle
+4. **Domain Separation** - Each store handles its own domain (posts, checkboxes, etc.)
+5. **Optimistic Updates** - Instant UI feedback with automatic rollback
+6. **Reactive State** - MobX observables for computed values and reactions
+7. **Smart Caching** - TanStack Query handles server state efficiently
+8. **Realtime Support** - Optional WebSocket integration via RealtimeManager
+9. **Type Safety** - Full TypeScript support with data transformations
+10. **Playground Mode** - Development without backend dependencies (handled by SessionManager)
 
-This architecture makes it easy to build responsive, real-time applications with minimal boilerplate while maintaining clear separation of concerns.
+This architecture makes it easy to build responsive, real-time applications with minimal boilerplate while maintaining clear separation of concerns and optimal performance through lazy loading.
 
