@@ -57,7 +57,7 @@ export const AdminManagement = observer(() => {
   const admins = ui.list || [];
   const isLoading = api?.status.isLoading || false;
   const isCreating = api?.status.createPending || false;
-  const isDeleting = api?.status.removePending || false;
+  const isDeleting = api?.status.deletePending || false;
 
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();

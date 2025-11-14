@@ -13,6 +13,7 @@ export abstract class StoreManager {
   protected realtimeManager: RealtimeManager | null = null;
   protected sessionManager: SessionManager | null = null;
   protected isInitialized = false;
+  protected isDisposed = false;
 
   constructor() {
     this.browserId = getBrowserId();
@@ -42,6 +43,13 @@ export abstract class StoreManager {
    * Note: For context-specific stores (like admin), prefer explicit initialization
    */
   updateSession(session: SupabaseSession | null): void {
+    if (this.isDisposed) {
+      console.warn(
+        "⚠️ StoreManager: Attempted to update session after disposal",
+      );
+      return;
+    }
+
     // Initialize if not already done (lazy initialization)
     if (!this.isInitialized) {
       this.initialize(session);
