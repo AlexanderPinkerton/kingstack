@@ -1,9 +1,18 @@
 import { StoreManager } from "@/lib/store-manager";
-import { SessionManager } from "@/lib/session-manager";
 import { AdminMgmtStore } from "./adminMgmtStore";
 import type { SupabaseSession } from "@/lib/session-manager";
 import type { AuthEnabledStore } from "@/lib/session-manager";
 import type { RealtimeStore } from "@/lib/realtime-manager";
+
+/**
+ * Store configuration for lazy loading
+ */
+type StoreConfig<T> = {
+  name: string;
+  factory: () => T;
+  requiresAuth?: boolean;
+  supportsRealtime?: boolean;
+};
 
 /**
  * AdminStore manages all admin-facing stores
@@ -15,19 +24,47 @@ import type { RealtimeStore } from "@/lib/realtime-manager";
  * Note: This class doesn't need to be observable - the stores themselves are observable
  */
 export class AdminStoreManager extends StoreManager {
-  // Admin-facing stores (lazy-loaded)
-  private _adminMgmtStore: AdminMgmtStore | null = null;
+  // Store registry - define all stores here
+  private readonly storeConfigs: StoreConfig<any>[] = [
+    {
+      name: "adminMgmtStore",
+      factory: () => new AdminMgmtStore(),
+      requiresAuth: true,
+      supportsRealtime: false,
+    },
+  ];
 
-  // Getters with lazy initialization
-  get adminMgmtStore(): AdminMgmtStore {
+  // Store instances cache
+  private readonly stores = new Map<string, any>();
+
+  constructor() {
+    super();
+    // No need to make this observable - the stores themselves are observable
+  }
+
+  /**
+   * Generic lazy store getter
+   */
+  private getStore<T>(name: string): T {
     if (this.isDisposed) {
-      throw new Error("AdminStoreManager has been disposed");
+      throw new Error(`AdminStoreManager has been disposed`);
     }
 
-    if (this._adminMgmtStore) return this._adminMgmtStore;
+    // Return cached instance if exists
+    if (this.stores.has(name)) {
+      return this.stores.get(name);
+    }
 
+    // Find store config
+    const config = this.storeConfigs.find((c) => c.name === name);
+    if (!config) {
+      throw new Error(`Store "${name}" not found in registry`);
+    }
+
+    // Create store instance
     try {
-      this._adminMgmtStore = new AdminMgmtStore();
+      const store = config.factory();
+      this.stores.set(name, store);
 
       // Note: Admin stores require explicit initialization via initializeWithSession()
       // This ensures they only load when actually needed (e.g., on admin pages)
@@ -39,17 +76,16 @@ export class AdminStoreManager extends StoreManager {
         );
       }
 
-      return this._adminMgmtStore;
+      return store;
     } catch (error) {
-      console.error("Failed to initialize adminMgmtStore:", error);
-      this._adminMgmtStore = null;
+      console.error(`Failed to initialize ${name}:`, error);
       throw error;
     }
   }
 
-  constructor() {
-    super();
-    // No need to make this observable - the stores themselves are observable
+  // Type-safe getters for each store
+  get adminMgmtStore(): AdminMgmtStore {
+    return this.getStore<AdminMgmtStore>("adminMgmtStore");
   }
 
   /**
@@ -92,9 +128,16 @@ export class AdminStoreManager extends StoreManager {
 
     console.log("👑 AdminStoreManager: Initializing admin stores");
 
-    // Create stores if they don't exist yet
-    if (!this._adminMgmtStore) {
-      this._adminMgmtStore = new AdminMgmtStore();
+    // Create all stores that haven't been created yet
+    for (const config of this.storeConfigs) {
+      if (!this.stores.has(config.name)) {
+        try {
+          const store = config.factory();
+          this.stores.set(config.name, store);
+        } catch (error) {
+          console.error(`Failed to create ${config.name}:`, error);
+        }
+      }
     }
 
     // Mark as initialized BEFORE enabling stores to prevent recursion
@@ -124,7 +167,14 @@ export class AdminStoreManager extends StoreManager {
    */
   getAuthStores(): AuthEnabledStore[] {
     const stores: AuthEnabledStore[] = [];
-    if (this._adminMgmtStore) stores.push(this._adminMgmtStore);
+    for (const config of this.storeConfigs) {
+      if (config.requiresAuth) {
+        const store = this.stores.get(config.name);
+        if (store) {
+          stores.push(store as AuthEnabledStore);
+        }
+      }
+    }
     return stores;
   }
 
@@ -133,8 +183,14 @@ export class AdminStoreManager extends StoreManager {
    */
   getRealtimeStores(): RealtimeStore[] {
     const stores: RealtimeStore[] = [];
-    // Admin stores don't currently support realtime, but can be added here
-    // if (this._adminMgmtStore) stores.push(this._adminMgmtStore);
+    for (const config of this.storeConfigs) {
+      if (config.supportsRealtime) {
+        const store = this.stores.get(config.name);
+        if (store) {
+          stores.push(store as RealtimeStore);
+        }
+      }
+    }
     return stores;
   }
 
@@ -157,8 +213,8 @@ export class AdminStoreManager extends StoreManager {
       console.error("Error disabling stores during disposal:", error);
     }
 
-    // Clear references
-    this._adminMgmtStore = null;
+    // Clear all store references
+    this.stores.clear();
 
     // Note: Session manager cleanup is handled by RootStore
 
