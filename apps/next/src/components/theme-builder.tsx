@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Download, Copy, RotateCcw, Palette } from "lucide-react";
-import { ThemedButton } from "@/components/ui/themed-button";
+import { Button } from "@/components/ui/button";
 import { NeonCard } from "@/components/ui/neon-card";
 
 const THEMES = [
@@ -294,10 +294,12 @@ export const ThemeBuilder: React.FC = () => {
         const numMatch = val.match(/[\d.]+/);
         newValues[name] = numMatch ? numMatch[0] : "0.625";
       } else {
-        if (val.startsWith("oklch")) {
-          newValues[name] = oklchToHex(val);
+        if (val) {
+          // Convert any color format to hex
+          const hex = colorToHex(val);
+          newValues[name] = hex;
         } else {
-          newValues[name] = val || "#ffffff";
+          newValues[name] = "#ffffff";
         }
       }
     });
@@ -369,38 +371,38 @@ export const ThemeBuilder: React.FC = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <ThemedButton
+          <Button
             onClick={handleReset}
             className="text-sm px-4 py-2"
             variant="outline"
           >
             <RotateCcw className="w-4 h-4 mr-2" />
             Reset
-          </ThemedButton>
-          <ThemedButton
+          </Button>
+          <Button
             onClick={handleCopyCSS}
             className="text-sm px-4 py-2"
             variant="outline"
           >
             <Copy className="w-4 h-4 mr-2" />
             Copy CSS
-          </ThemedButton>
-          <ThemedButton
+          </Button>
+          <Button
             onClick={handleExportCSS}
             className="text-sm px-4 py-2"
             variant="outline"
           >
             <Download className="w-4 h-4 mr-2" />
             Export CSS
-          </ThemedButton>
-          <ThemedButton
+          </Button>
+          <Button
             onClick={handleExportJSON}
             className="text-sm px-4 py-2"
             variant="outline"
           >
             <Download className="w-4 h-4 mr-2" />
             Export JSON
-          </ThemedButton>
+          </Button>
         </div>
       </div>
 
