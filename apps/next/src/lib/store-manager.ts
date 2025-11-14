@@ -15,6 +15,13 @@ export abstract class StoreManager {
   protected isInitialized = false;
   protected isDisposed = false;
 
+  /**
+   * Check if stores have been initialized
+   */
+  get initialized(): boolean {
+    return this.isInitialized;
+  }
+
   constructor() {
     this.browserId = getBrowserId();
     // Note: makeAutoObservable cannot be used in base classes

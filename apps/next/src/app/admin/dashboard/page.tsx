@@ -1,5 +1,6 @@
 "use client";
 
+import { useContext, useEffect } from "react";
 import { AppSidebar } from "@/components/admin/app-sidebar";
 import { ChartAreaInteractive } from "@/components/admin/chart-area-interactive";
 import { DataTable } from "@/components/admin/data-table";
@@ -8,12 +9,21 @@ import { SiteHeader } from "@/components/admin/site-header";
 import { AdminManagement } from "@/components/admin/admin-management";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import useAdminGuard from "@/hooks/useAdminGuard";
+import { RootStoreContext } from "@/context/rootStoreContext";
 
 import data from "./data.json";
 
 export default function Page() {
   // Use Next.js API route by default, or pass { backend: "nest" } to use NestJS
   const { isChecking, isAdmin } = useAdminGuard();
+  const rootStore = useContext(RootStoreContext);
+
+  // Initialize admin stores when admin access is confirmed and session is available
+  useEffect(() => {
+    if (isAdmin && rootStore.session && !rootStore.adminStore.initialized) {
+      rootStore.adminStore.initializeWithSession(rootStore.session);
+    }
+  }, [isAdmin, rootStore.session, rootStore]);
 
   // Don't render anything until we've confirmed admin status
   if (isChecking || !isAdmin) {

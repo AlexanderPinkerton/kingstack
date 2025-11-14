@@ -15,7 +15,7 @@ import { PostApiData, PostUiData } from "@/stores/userApp/postStore";
 
 export const AdvancedPostsExample = observer(() => {
   const rootStore = useContext(RootStoreContext);
-  const postStore = rootStore.postStore;
+  const postStore = rootStore.userStore.postStore;
   const { ui, api } = postStore;
 
   // Client-side only state to prevent hydration mismatches
