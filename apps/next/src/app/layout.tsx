@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/QueryClientProvider";
 import { PlaygroundIndicator } from "@/components/PlaygroundIndicator";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({
       >
         <AppProviders>
           {children}
+          <Toaster richColors duration={4000} />
           <PlaygroundIndicator />
         </AppProviders>
       </body>
