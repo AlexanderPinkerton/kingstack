@@ -30,7 +30,7 @@
 *
 */
 @font-face {
-	font-family: "AzeretMono-Thin";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-Thin.woff2") format("woff2"),
 		url("../fonts/AzeretMono-Thin.woff") format("woff"),
@@ -40,7 +40,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "AzeretMono-ThinItalic";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-ThinItalic.woff2") format("woff2"),
 		url("../fonts/AzeretMono-ThinItalic.woff") format("woff"),
@@ -50,7 +50,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "AzeretMono-ExtraLight";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-ExtraLight.woff2") format("woff2"),
 		url("../fonts/AzeretMono-ExtraLight.woff") format("woff"),
@@ -60,7 +60,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "AzeretMono-ExtraLightItalic";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-ExtraLightItalic.woff2") format("woff2"),
 		url("../fonts/AzeretMono-ExtraLightItalic.woff") format("woff"),
@@ -70,7 +70,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "AzeretMono-Light";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-Light.woff2") format("woff2"),
 		url("../fonts/AzeretMono-Light.woff") format("woff"),
@@ -80,7 +80,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "AzeretMono-LightItalic";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-LightItalic.woff2") format("woff2"),
 		url("../fonts/AzeretMono-LightItalic.woff") format("woff"),
@@ -90,7 +90,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "AzeretMono-Regular";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-Regular.woff2") format("woff2"),
 		url("../fonts/AzeretMono-Regular.woff") format("woff"),
@@ -100,7 +100,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "AzeretMono-Italic";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-Italic.woff2") format("woff2"),
 		url("../fonts/AzeretMono-Italic.woff") format("woff"),
@@ -110,7 +110,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "AzeretMono-Medium";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-Medium.woff2") format("woff2"),
 		url("../fonts/AzeretMono-Medium.woff") format("woff"),
@@ -120,7 +120,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "AzeretMono-MediumItalic";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-MediumItalic.woff2") format("woff2"),
 		url("../fonts/AzeretMono-MediumItalic.woff") format("woff"),
@@ -130,7 +130,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "AzeretMono-SemiBold";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-SemiBold.woff2") format("woff2"),
 		url("../fonts/AzeretMono-SemiBold.woff") format("woff"),
@@ -140,7 +140,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "AzeretMono-SemiBoldItalic";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-SemiBoldItalic.woff2") format("woff2"),
 		url("../fonts/AzeretMono-SemiBoldItalic.woff") format("woff"),
@@ -150,7 +150,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "AzeretMono-Bold";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-Bold.woff2") format("woff2"),
 		url("../fonts/AzeretMono-Bold.woff") format("woff"),
@@ -160,7 +160,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "AzeretMono-BoldItalic";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-BoldItalic.woff2") format("woff2"),
 		url("../fonts/AzeretMono-BoldItalic.woff") format("woff"),
@@ -170,7 +170,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "AzeretMono-ExtraBold";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-ExtraBold.woff2") format("woff2"),
 		url("../fonts/AzeretMono-ExtraBold.woff") format("woff"),
@@ -180,7 +180,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "AzeretMono-ExtraBoldItalic";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-ExtraBoldItalic.woff2") format("woff2"),
 		url("../fonts/AzeretMono-ExtraBoldItalic.woff") format("woff"),
@@ -190,7 +190,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "AzeretMono-Black";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-Black.woff2") format("woff2"),
 		url("../fonts/AzeretMono-Black.woff") format("woff"),
@@ -200,7 +200,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "AzeretMono-BlackItalic";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-BlackItalic.woff2") format("woff2"),
 		url("../fonts/AzeretMono-BlackItalic.woff") format("woff"),
@@ -218,7 +218,7 @@
 'wght' (range from 100.0 to 900.0
 */
 @font-face {
-	font-family: "AzeretMono-Variable";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-Variable.woff2") format("woff2"),
 		url("../fonts/AzeretMono-Variable.woff") format("woff"),
@@ -236,7 +236,7 @@
 'wght' (range from 100.0 to 900.0
 */
 @font-face {
-	font-family: "AzeretMono-VariableItalic";
+	font-family: "AzeretMono";
 	src:
 		url("../fonts/AzeretMono-VariableItalic.woff2") format("woff2"),
 		url("../fonts/AzeretMono-VariableItalic.woff") format("woff"),

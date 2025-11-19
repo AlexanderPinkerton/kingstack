@@ -22,7 +22,7 @@
 *
 */
 @font-face {
-	font-family: "Ranade-Thin";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-Thin.woff2") format("woff2"),
 		url("../fonts/Ranade-Thin.woff") format("woff"),
@@ -32,7 +32,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Ranade-ThinItalic";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-ThinItalic.woff2") format("woff2"),
 		url("../fonts/Ranade-ThinItalic.woff") format("woff"),
@@ -42,7 +42,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Ranade-Light";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-Light.woff2") format("woff2"),
 		url("../fonts/Ranade-Light.woff") format("woff"),
@@ -52,7 +52,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Ranade-LightItalic";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-LightItalic.woff2") format("woff2"),
 		url("../fonts/Ranade-LightItalic.woff") format("woff"),
@@ -62,7 +62,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Ranade-Regular";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-Regular.woff2") format("woff2"),
 		url("../fonts/Ranade-Regular.woff") format("woff"),
@@ -72,7 +72,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Ranade-Italic";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-Italic.woff2") format("woff2"),
 		url("../fonts/Ranade-Italic.woff") format("woff"),
@@ -82,7 +82,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Ranade-Medium";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-Medium.woff2") format("woff2"),
 		url("../fonts/Ranade-Medium.woff") format("woff"),
@@ -92,7 +92,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Ranade-MediumItalic";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Ranade-MediumItalic.woff") format("woff"),
@@ -102,7 +102,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Ranade-Bold";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-Bold.woff2") format("woff2"),
 		url("../fonts/Ranade-Bold.woff") format("woff"),
@@ -112,7 +112,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Ranade-BoldItalic";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Ranade-BoldItalic.woff") format("woff"),
@@ -130,7 +130,7 @@
 'wght' (range from 100.0 to 700.0
 */
 @font-face {
-	font-family: "Ranade-Variable";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-Variable.woff2") format("woff2"),
 		url("../fonts/Ranade-Variable.woff") format("woff"),
@@ -148,7 +148,7 @@
 'wght' (range from 100.0 to 700.0
 */
 @font-face {
-	font-family: "Ranade-VariableItalic";
+	font-family: "Ranade";
 	src:
 		url("../fonts/Ranade-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Ranade-VariableItalic.woff") format("woff"),

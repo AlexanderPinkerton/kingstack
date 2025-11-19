@@ -17,7 +17,7 @@
 *
 */
 @font-face {
-	font-family: "Synonym-Extralight";
+	font-family: "Synonym";
 	src:
 		url("../fonts/Synonym-Extralight.woff2") format("woff2"),
 		url("../fonts/Synonym-Extralight.woff") format("woff"),
@@ -27,7 +27,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Synonym-Light";
+	font-family: "Synonym";
 	src:
 		url("../fonts/Synonym-Light.woff2") format("woff2"),
 		url("../fonts/Synonym-Light.woff") format("woff"),
@@ -37,7 +37,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Synonym-Regular";
+	font-family: "Synonym";
 	src:
 		url("../fonts/Synonym-Regular.woff2") format("woff2"),
 		url("../fonts/Synonym-Regular.woff") format("woff"),
@@ -47,7 +47,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Synonym-Medium";
+	font-family: "Synonym";
 	src:
 		url("../fonts/Synonym-Medium.woff2") format("woff2"),
 		url("../fonts/Synonym-Medium.woff") format("woff"),
@@ -57,7 +57,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Synonym-Semibold";
+	font-family: "Synonym";
 	src:
 		url("../fonts/Synonym-Semibold.woff2") format("woff2"),
 		url("../fonts/Synonym-Semibold.woff") format("woff"),
@@ -67,7 +67,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Synonym-Bold";
+	font-family: "Synonym";
 	src:
 		url("../fonts/Synonym-Bold.woff2") format("woff2"),
 		url("../fonts/Synonym-Bold.woff") format("woff"),
@@ -85,7 +85,7 @@
 'wght' (range from 200.0 to 700.0
 */
 @font-face {
-	font-family: "Synonym-Variable";
+	font-family: "Synonym";
 	src:
 		url("../fonts/Synonym-Variable.woff2") format("woff2"),
 		url("../fonts/Synonym-Variable.woff") format("woff"),

@@ -14,7 +14,7 @@
 *
 */
 @font-face {
-	font-family: "Paquito-Regular";
+	font-family: "Paquito";
 	src:
 		url("../fonts/Paquito-Regular.woff2") format("woff2"),
 		url("../fonts/Paquito-Regular.woff") format("woff"),
@@ -24,7 +24,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Paquito-Medium";
+	font-family: "Paquito";
 	src:
 		url("../fonts/Paquito-Medium.woff2") format("woff2"),
 		url("../fonts/Paquito-Medium.woff") format("woff"),
@@ -34,7 +34,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Paquito-Bold";
+	font-family: "Paquito";
 	src:
 		url("../fonts/Paquito-Bold.woff2") format("woff2"),
 		url("../fonts/Paquito-Bold.woff") format("woff"),
@@ -52,7 +52,7 @@
 'wght' (range from 300.0 to 700.0
 */
 @font-face {
-	font-family: "Paquito-Variable";
+	font-family: "Paquito";
 	src:
 		url("../fonts/Paquito-Variable.woff2") format("woff2"),
 		url("../fonts/Paquito-Variable.woff") format("woff"),

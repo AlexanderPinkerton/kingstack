@@ -28,7 +28,7 @@
 *
 */
 @font-face {
-	font-family: "PramukhRounded-Extralight";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-Extralight.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-Extralight.woff") format("woff"),
@@ -38,7 +38,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "PramukhRounded-ExtralightItalic";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-ExtralightItalic.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-ExtralightItalic.woff") format("woff"),
@@ -48,7 +48,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "PramukhRounded-Light";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-Light.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-Light.woff") format("woff"),
@@ -58,7 +58,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "PramukhRounded-LightItalic";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-LightItalic.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-LightItalic.woff") format("woff"),
@@ -68,7 +68,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "PramukhRounded-Semilight";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-Semilight.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-Semilight.woff") format("woff"),
@@ -78,7 +78,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "PramukhRounded-SemilightItalic";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-SemilightItalic.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-SemilightItalic.woff") format("woff"),
@@ -88,7 +88,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "PramukhRounded-Regular";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-Regular.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-Regular.woff") format("woff"),
@@ -98,7 +98,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "PramukhRounded-Italic";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-Italic.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-Italic.woff") format("woff"),
@@ -108,7 +108,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "PramukhRounded-Semibold";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-Semibold.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-Semibold.woff") format("woff"),
@@ -118,7 +118,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "PramukhRounded-SemiboldItalic";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-SemiboldItalic.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-SemiboldItalic.woff") format("woff"),
@@ -128,7 +128,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "PramukhRounded-Bold";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-Bold.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-Bold.woff") format("woff"),
@@ -138,7 +138,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "PramukhRounded-BoldItalic";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-BoldItalic.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-BoldItalic.woff") format("woff"),
@@ -148,7 +148,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "PramukhRounded-Extrabold";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-Extrabold.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-Extrabold.woff") format("woff"),
@@ -158,7 +158,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "PramukhRounded-ExtraboldItalic";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-ExtraboldItalic.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-ExtraboldItalic.woff") format("woff"),
@@ -168,7 +168,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "PramukhRounded-Black";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-Black.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-Black.woff") format("woff"),
@@ -178,7 +178,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "PramukhRounded-BlackItalic";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-BlackItalic.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-BlackItalic.woff") format("woff"),
@@ -196,7 +196,7 @@
 'wght' (range from 200.0 to 900.0
 */
 @font-face {
-	font-family: "PramukhRounded-Variable";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-Variable.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-Variable.woff") format("woff"),
@@ -214,7 +214,7 @@
 'wght' (range from 200.0 to 900.0
 */
 @font-face {
-	font-family: "PramukhRounded-VariableItalic";
+	font-family: "PramukhRounded";
 	src:
 		url("../fonts/PramukhRounded-VariableItalic.woff2") format("woff2"),
 		url("../fonts/PramukhRounded-VariableItalic.woff") format("woff"),

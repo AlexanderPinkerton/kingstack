@@ -22,7 +22,7 @@
 *
 */
 @font-face {
-	font-family: "Recia-Light";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-Light.woff2") format("woff2"),
 		url("../fonts/Recia-Light.woff") format("woff"),
@@ -32,7 +32,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Recia-LightItalic";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-LightItalic.woff2") format("woff2"),
 		url("../fonts/Recia-LightItalic.woff") format("woff"),
@@ -42,7 +42,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Recia-Regular";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-Regular.woff2") format("woff2"),
 		url("../fonts/Recia-Regular.woff") format("woff"),
@@ -52,7 +52,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Recia-Italic";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-Italic.woff2") format("woff2"),
 		url("../fonts/Recia-Italic.woff") format("woff"),
@@ -62,7 +62,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Recia-Medium";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-Medium.woff2") format("woff2"),
 		url("../fonts/Recia-Medium.woff") format("woff"),
@@ -72,7 +72,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Recia-MediumItalic";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Recia-MediumItalic.woff") format("woff"),
@@ -82,7 +82,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Recia-Semibold";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-Semibold.woff2") format("woff2"),
 		url("../fonts/Recia-Semibold.woff") format("woff"),
@@ -92,7 +92,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Recia-SemiboldItalic";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-SemiboldItalic.woff2") format("woff2"),
 		url("../fonts/Recia-SemiboldItalic.woff") format("woff"),
@@ -102,7 +102,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Recia-Bold";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-Bold.woff2") format("woff2"),
 		url("../fonts/Recia-Bold.woff") format("woff"),
@@ -112,7 +112,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Recia-BoldItalic";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Recia-BoldItalic.woff") format("woff"),
@@ -130,7 +130,7 @@
 'wght' (range from 300.0 to 700.0'wght' (range from 300.0 to 700.0
 */
 @font-face {
-	font-family: "Recia-Variable";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-Variable.woff2") format("woff2"),
 		url("../fonts/Recia-Variable.woff") format("woff"),
@@ -148,7 +148,7 @@
 'wght' (range from 300.0 to 700.0'wght' (range from 300.0 to 700.0
 */
 @font-face {
-	font-family: "Recia-VariableItalic";
+	font-family: "Recia";
 	src:
 		url("../fonts/Recia-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Recia-VariableItalic.woff") format("woff"),

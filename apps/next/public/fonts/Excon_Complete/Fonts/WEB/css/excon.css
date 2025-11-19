@@ -17,7 +17,7 @@
 *
 */
 @font-face {
-	font-family: "Excon-Thin";
+	font-family: "Excon";
 	src:
 		url("../fonts/Excon-Thin.woff2") format("woff2"),
 		url("../fonts/Excon-Thin.woff") format("woff"),
@@ -27,7 +27,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Excon-Light";
+	font-family: "Excon";
 	src:
 		url("../fonts/Excon-Light.woff2") format("woff2"),
 		url("../fonts/Excon-Light.woff") format("woff"),
@@ -37,7 +37,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Excon-Regular";
+	font-family: "Excon";
 	src:
 		url("../fonts/Excon-Regular.woff2") format("woff2"),
 		url("../fonts/Excon-Regular.woff") format("woff"),
@@ -47,7 +47,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Excon-Medium";
+	font-family: "Excon";
 	src:
 		url("../fonts/Excon-Medium.woff2") format("woff2"),
 		url("../fonts/Excon-Medium.woff") format("woff"),
@@ -57,7 +57,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Excon-Bold";
+	font-family: "Excon";
 	src:
 		url("../fonts/Excon-Bold.woff2") format("woff2"),
 		url("../fonts/Excon-Bold.woff") format("woff"),
@@ -67,7 +67,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Excon-Black";
+	font-family: "Excon";
 	src:
 		url("../fonts/Excon-Black.woff2") format("woff2"),
 		url("../fonts/Excon-Black.woff") format("woff"),
@@ -85,7 +85,7 @@
 'wght' (range from 100.0 to 900.0
 */
 @font-face {
-	font-family: "Excon-Variable";
+	font-family: "Excon";
 	src:
 		url("../fonts/Excon-Variable.woff2") format("woff2"),
 		url("../fonts/Excon-Variable.woff") format("woff"),

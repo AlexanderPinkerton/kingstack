@@ -24,7 +24,7 @@
 *
 */
 @font-face {
-	font-family: "Boska-Extralight";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-Extralight.woff2") format("woff2"),
 		url("../fonts/Boska-Extralight.woff") format("woff"),
@@ -34,7 +34,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Boska-ExtralightItalic";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-ExtralightItalic.woff2") format("woff2"),
 		url("../fonts/Boska-ExtralightItalic.woff") format("woff"),
@@ -44,7 +44,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Boska-Light";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-Light.woff2") format("woff2"),
 		url("../fonts/Boska-Light.woff") format("woff"),
@@ -54,7 +54,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Boska-LightItalic";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-LightItalic.woff2") format("woff2"),
 		url("../fonts/Boska-LightItalic.woff") format("woff"),
@@ -64,7 +64,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Boska-Regular";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-Regular.woff2") format("woff2"),
 		url("../fonts/Boska-Regular.woff") format("woff"),
@@ -74,7 +74,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Boska-Italic";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-Italic.woff2") format("woff2"),
 		url("../fonts/Boska-Italic.woff") format("woff"),
@@ -84,7 +84,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Boska-Medium";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-Medium.woff2") format("woff2"),
 		url("../fonts/Boska-Medium.woff") format("woff"),
@@ -94,7 +94,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Boska-MediumItalic";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Boska-MediumItalic.woff") format("woff"),
@@ -104,7 +104,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Boska-Bold";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-Bold.woff2") format("woff2"),
 		url("../fonts/Boska-Bold.woff") format("woff"),
@@ -114,7 +114,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Boska-BoldItalic";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Boska-BoldItalic.woff") format("woff"),
@@ -124,7 +124,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Boska-Black";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-Black.woff2") format("woff2"),
 		url("../fonts/Boska-Black.woff") format("woff"),
@@ -134,7 +134,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Boska-BlackItalic";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-BlackItalic.woff2") format("woff2"),
 		url("../fonts/Boska-BlackItalic.woff") format("woff"),
@@ -152,7 +152,7 @@
 'wght' (range from 200.0 to 900.0
 */
 @font-face {
-	font-family: "Boska-Variable";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-Variable.woff2") format("woff2"),
 		url("../fonts/Boska-Variable.woff") format("woff"),
@@ -170,7 +170,7 @@
 'wght' (range from 200.0 to 900.0
 */
 @font-face {
-	font-family: "Boska-VariableItalic";
+	font-family: "Boska";
 	src:
 		url("../fonts/Boska-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Boska-VariableItalic.woff") format("woff"),

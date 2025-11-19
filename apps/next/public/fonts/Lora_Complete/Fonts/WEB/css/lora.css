@@ -20,7 +20,7 @@
 *
 */
 @font-face {
-	font-family: "Lora-Regular";
+	font-family: "Lora";
 	src:
 		url("../fonts/Lora-Regular.woff2") format("woff2"),
 		url("../fonts/Lora-Regular.woff") format("woff"),
@@ -30,7 +30,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Lora-Italic";
+	font-family: "Lora";
 	src:
 		url("../fonts/Lora-Italic.woff2") format("woff2"),
 		url("../fonts/Lora-Italic.woff") format("woff"),
@@ -40,7 +40,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Lora-Medium";
+	font-family: "Lora";
 	src:
 		url("../fonts/Lora-Medium.woff2") format("woff2"),
 		url("../fonts/Lora-Medium.woff") format("woff"),
@@ -50,7 +50,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Lora-MediumItalic";
+	font-family: "Lora";
 	src:
 		url("../fonts/Lora-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Lora-MediumItalic.woff") format("woff"),
@@ -60,7 +60,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Lora-SemiBold";
+	font-family: "Lora";
 	src:
 		url("../fonts/Lora-SemiBold.woff2") format("woff2"),
 		url("../fonts/Lora-SemiBold.woff") format("woff"),
@@ -70,7 +70,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Lora-SemiBoldItalic";
+	font-family: "Lora";
 	src:
 		url("../fonts/Lora-SemiBoldItalic.woff2") format("woff2"),
 		url("../fonts/Lora-SemiBoldItalic.woff") format("woff"),
@@ -80,7 +80,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Lora-Bold";
+	font-family: "Lora";
 	src:
 		url("../fonts/Lora-Bold.woff2") format("woff2"),
 		url("../fonts/Lora-Bold.woff") format("woff"),
@@ -90,7 +90,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Lora-BoldItalic";
+	font-family: "Lora";
 	src:
 		url("../fonts/Lora-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Lora-BoldItalic.woff") format("woff"),
@@ -108,7 +108,7 @@
 'wght' (range from 400.0 to 700.0
 */
 @font-face {
-	font-family: "Lora-Variable";
+	font-family: "Lora";
 	src:
 		url("../fonts/Lora-Variable.woff2") format("woff2"),
 		url("../fonts/Lora-Variable.woff") format("woff"),
@@ -126,7 +126,7 @@
 'wght' (range from 400.0 to 700.0
 */
 @font-face {
-	font-family: "Lora-VariableItalic";
+	font-family: "Lora";
 	src:
 		url("../fonts/Lora-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Lora-VariableItalic.woff") format("woff"),

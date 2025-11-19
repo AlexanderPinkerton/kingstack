@@ -22,7 +22,7 @@
 *
 */
 @font-face {
-	font-family: "Rowan-Light";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-Light.woff2") format("woff2"),
 		url("../fonts/Rowan-Light.woff") format("woff"),
@@ -32,7 +32,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Rowan-LightItalic";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-LightItalic.woff2") format("woff2"),
 		url("../fonts/Rowan-LightItalic.woff") format("woff"),
@@ -42,7 +42,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Rowan-Regular";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-Regular.woff2") format("woff2"),
 		url("../fonts/Rowan-Regular.woff") format("woff"),
@@ -52,7 +52,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Rowan-Italic";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-Italic.woff2") format("woff2"),
 		url("../fonts/Rowan-Italic.woff") format("woff"),
@@ -62,7 +62,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Rowan-Medium";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-Medium.woff2") format("woff2"),
 		url("../fonts/Rowan-Medium.woff") format("woff"),
@@ -72,7 +72,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Rowan-MediumItalic";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Rowan-MediumItalic.woff") format("woff"),
@@ -82,7 +82,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Rowan-Semibold";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-Semibold.woff2") format("woff2"),
 		url("../fonts/Rowan-Semibold.woff") format("woff"),
@@ -92,7 +92,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Rowan-SemiboldItalic";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-SemiboldItalic.woff2") format("woff2"),
 		url("../fonts/Rowan-SemiboldItalic.woff") format("woff"),
@@ -102,7 +102,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Rowan-Bold";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-Bold.woff2") format("woff2"),
 		url("../fonts/Rowan-Bold.woff") format("woff"),
@@ -112,7 +112,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Rowan-BoldItalic";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Rowan-BoldItalic.woff") format("woff"),
@@ -130,7 +130,7 @@
 'wght' (range from 300.0 to 700.0
 */
 @font-face {
-	font-family: "Rowan-Variable";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-Variable.woff2") format("woff2"),
 		url("../fonts/Rowan-Variable.woff") format("woff"),
@@ -148,7 +148,7 @@
 'wght' (range from 300.0 to 700.0
 */
 @font-face {
-	font-family: "Rowan-VariableItalic";
+	font-family: "Rowan";
 	src:
 		url("../fonts/Rowan-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Rowan-VariableItalic.woff") format("woff"),

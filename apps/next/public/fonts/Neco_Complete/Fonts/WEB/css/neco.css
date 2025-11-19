@@ -20,7 +20,7 @@
 *
 */
 @font-face {
-	font-family: "Neco-Regular";
+	font-family: "Neco";
 	src:
 		url("../fonts/Neco-Regular.woff2") format("woff2"),
 		url("../fonts/Neco-Regular.woff") format("woff"),
@@ -30,7 +30,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Neco-Italic";
+	font-family: "Neco";
 	src:
 		url("../fonts/Neco-Italic.woff2") format("woff2"),
 		url("../fonts/Neco-Italic.woff") format("woff"),
@@ -40,7 +40,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Neco-Medium";
+	font-family: "Neco";
 	src:
 		url("../fonts/Neco-Medium.woff2") format("woff2"),
 		url("../fonts/Neco-Medium.woff") format("woff"),
@@ -50,7 +50,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Neco-MediumItalic";
+	font-family: "Neco";
 	src:
 		url("../fonts/Neco-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Neco-MediumItalic.woff") format("woff"),
@@ -60,7 +60,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Neco-Bold";
+	font-family: "Neco";
 	src:
 		url("../fonts/Neco-Bold.woff2") format("woff2"),
 		url("../fonts/Neco-Bold.woff") format("woff"),
@@ -70,7 +70,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Neco-BoldItalic";
+	font-family: "Neco";
 	src:
 		url("../fonts/Neco-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Neco-BoldItalic.woff") format("woff"),
@@ -80,7 +80,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Neco-Black";
+	font-family: "Neco";
 	src:
 		url("../fonts/Neco-Black.woff2") format("woff2"),
 		url("../fonts/Neco-Black.woff") format("woff"),
@@ -90,7 +90,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Neco-BlackItalic";
+	font-family: "Neco";
 	src:
 		url("../fonts/Neco-BlackItalic.woff2") format("woff2"),
 		url("../fonts/Neco-BlackItalic.woff") format("woff"),
@@ -108,7 +108,7 @@
 'wght' (range from 400.0 to 900.0
 */
 @font-face {
-	font-family: "Neco-Variable";
+	font-family: "Neco";
 	src:
 		url("../fonts/Neco-Variable.woff2") format("woff2"),
 		url("../fonts/Neco-Variable.woff") format("woff"),
@@ -126,7 +126,7 @@
 'wght' (range from 400.0 to 900.0
 */
 @font-face {
-	font-family: "Neco-VariableItalic";
+	font-family: "Neco";
 	src:
 		url("../fonts/Neco-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Neco-VariableItalic.woff") format("woff"),

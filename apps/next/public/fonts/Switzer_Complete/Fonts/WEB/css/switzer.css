@@ -30,7 +30,7 @@
 *
 */
 @font-face {
-	font-family: "Switzer-Thin";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-Thin.woff2") format("woff2"),
 		url("../fonts/Switzer-Thin.woff") format("woff"),
@@ -40,7 +40,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Switzer-ThinItalic";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-ThinItalic.woff2") format("woff2"),
 		url("../fonts/Switzer-ThinItalic.woff") format("woff"),
@@ -50,7 +50,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Switzer-Extralight";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-Extralight.woff2") format("woff2"),
 		url("../fonts/Switzer-Extralight.woff") format("woff"),
@@ -60,7 +60,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Switzer-ExtralightItalic";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-ExtralightItalic.woff2") format("woff2"),
 		url("../fonts/Switzer-ExtralightItalic.woff") format("woff"),
@@ -70,7 +70,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Switzer-Light";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-Light.woff2") format("woff2"),
 		url("../fonts/Switzer-Light.woff") format("woff"),
@@ -80,7 +80,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Switzer-LightItalic";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-LightItalic.woff2") format("woff2"),
 		url("../fonts/Switzer-LightItalic.woff") format("woff"),
@@ -90,7 +90,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Switzer-Regular";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-Regular.woff2") format("woff2"),
 		url("../fonts/Switzer-Regular.woff") format("woff"),
@@ -100,7 +100,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Switzer-Italic";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-Italic.woff2") format("woff2"),
 		url("../fonts/Switzer-Italic.woff") format("woff"),
@@ -110,7 +110,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Switzer-Medium";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-Medium.woff2") format("woff2"),
 		url("../fonts/Switzer-Medium.woff") format("woff"),
@@ -120,7 +120,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Switzer-MediumItalic";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Switzer-MediumItalic.woff") format("woff"),
@@ -130,7 +130,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Switzer-Semibold";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-Semibold.woff2") format("woff2"),
 		url("../fonts/Switzer-Semibold.woff") format("woff"),
@@ -140,7 +140,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Switzer-SemiboldItalic";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-SemiboldItalic.woff2") format("woff2"),
 		url("../fonts/Switzer-SemiboldItalic.woff") format("woff"),
@@ -150,7 +150,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Switzer-Bold";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-Bold.woff2") format("woff2"),
 		url("../fonts/Switzer-Bold.woff") format("woff"),
@@ -160,7 +160,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Switzer-BoldItalic";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Switzer-BoldItalic.woff") format("woff"),
@@ -170,7 +170,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Switzer-Extrabold";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-Extrabold.woff2") format("woff2"),
 		url("../fonts/Switzer-Extrabold.woff") format("woff"),
@@ -180,7 +180,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Switzer-ExtraboldItalic";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-ExtraboldItalic.woff2") format("woff2"),
 		url("../fonts/Switzer-ExtraboldItalic.woff") format("woff"),
@@ -190,7 +190,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Switzer-Black";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-Black.woff2") format("woff2"),
 		url("../fonts/Switzer-Black.woff") format("woff"),
@@ -200,7 +200,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Switzer-BlackItalic";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-BlackItalic.woff2") format("woff2"),
 		url("../fonts/Switzer-BlackItalic.woff") format("woff"),
@@ -218,7 +218,7 @@
 'wght' (range from 100.0 to 900.0
 */
 @font-face {
-	font-family: "Switzer-Variable";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-Variable.woff2") format("woff2"),
 		url("../fonts/Switzer-Variable.woff") format("woff"),
@@ -236,7 +236,7 @@
 'wght' (range from 100.0 to 900.0
 */
 @font-face {
-	font-family: "Switzer-VariableItalic";
+	font-family: "Switzer";
 	src:
 		url("../fonts/Switzer-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Switzer-VariableItalic.woff") format("woff"),

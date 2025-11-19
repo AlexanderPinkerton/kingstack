@@ -30,7 +30,7 @@
 *
 */
 @font-face {
-	font-family: "Epilogue-Thin";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-Thin.woff2") format("woff2"),
 		url("../fonts/Epilogue-Thin.woff") format("woff"),
@@ -40,7 +40,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Epilogue-ThinItalic";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-ThinItalic.woff2") format("woff2"),
 		url("../fonts/Epilogue-ThinItalic.woff") format("woff"),
@@ -50,7 +50,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Epilogue-ExtraLight";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-ExtraLight.woff2") format("woff2"),
 		url("../fonts/Epilogue-ExtraLight.woff") format("woff"),
@@ -60,7 +60,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Epilogue-ExtraLightItalic";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-ExtraLightItalic.woff2") format("woff2"),
 		url("../fonts/Epilogue-ExtraLightItalic.woff") format("woff"),
@@ -70,7 +70,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Epilogue-Light";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-Light.woff2") format("woff2"),
 		url("../fonts/Epilogue-Light.woff") format("woff"),
@@ -80,7 +80,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Epilogue-LightItalic";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-LightItalic.woff2") format("woff2"),
 		url("../fonts/Epilogue-LightItalic.woff") format("woff"),
@@ -90,7 +90,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Epilogue-Regular";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-Regular.woff2") format("woff2"),
 		url("../fonts/Epilogue-Regular.woff") format("woff"),
@@ -100,7 +100,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Epilogue-Italic";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-Italic.woff2") format("woff2"),
 		url("../fonts/Epilogue-Italic.woff") format("woff"),
@@ -110,7 +110,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Epilogue-Medium";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-Medium.woff2") format("woff2"),
 		url("../fonts/Epilogue-Medium.woff") format("woff"),
@@ -120,7 +120,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Epilogue-MediumItalic";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Epilogue-MediumItalic.woff") format("woff"),
@@ -130,7 +130,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Epilogue-SemiBold";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-SemiBold.woff2") format("woff2"),
 		url("../fonts/Epilogue-SemiBold.woff") format("woff"),
@@ -140,7 +140,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Epilogue-SemiBoldItalic";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-SemiBoldItalic.woff2") format("woff2"),
 		url("../fonts/Epilogue-SemiBoldItalic.woff") format("woff"),
@@ -150,7 +150,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Epilogue-Bold";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-Bold.woff2") format("woff2"),
 		url("../fonts/Epilogue-Bold.woff") format("woff"),
@@ -160,7 +160,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Epilogue-BoldItalic";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Epilogue-BoldItalic.woff") format("woff"),
@@ -170,7 +170,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Epilogue-ExtraBold";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-ExtraBold.woff2") format("woff2"),
 		url("../fonts/Epilogue-ExtraBold.woff") format("woff"),
@@ -180,7 +180,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Epilogue-ExtraBoldItalic";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-ExtraBoldItalic.woff2") format("woff2"),
 		url("../fonts/Epilogue-ExtraBoldItalic.woff") format("woff"),
@@ -190,7 +190,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Epilogue-Black";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-Black.woff2") format("woff2"),
 		url("../fonts/Epilogue-Black.woff") format("woff"),
@@ -200,7 +200,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Epilogue-BlackItalic";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-BlackItalic.woff2") format("woff2"),
 		url("../fonts/Epilogue-BlackItalic.woff") format("woff"),
@@ -218,7 +218,7 @@
 'wght' (range from 100.0 to 900.0
 */
 @font-face {
-	font-family: "Epilogue-Variable";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-Variable.woff2") format("woff2"),
 		url("../fonts/Epilogue-Variable.woff") format("woff"),
@@ -236,7 +236,7 @@
 'wght' (range from 100.0 to 900.0
 */
 @font-face {
-	font-family: "Epilogue-VariableItalic";
+	font-family: "Epilogue";
 	src:
 		url("../fonts/Epilogue-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Epilogue-VariableItalic.woff") format("woff"),

@@ -26,7 +26,7 @@
 *
 */
 @font-face {
-	font-family: "Supreme-Thin";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-Thin.woff2") format("woff2"),
 		url("../fonts/Supreme-Thin.woff") format("woff"),
@@ -36,7 +36,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Supreme-ThinItalic";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-ThinItalic.woff2") format("woff2"),
 		url("../fonts/Supreme-ThinItalic.woff") format("woff"),
@@ -46,7 +46,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Supreme-Extralight";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-Extralight.woff2") format("woff2"),
 		url("../fonts/Supreme-Extralight.woff") format("woff"),
@@ -56,7 +56,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Supreme-ExtralightItalic";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-ExtralightItalic.woff2") format("woff2"),
 		url("../fonts/Supreme-ExtralightItalic.woff") format("woff"),
@@ -66,7 +66,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Supreme-Light";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-Light.woff2") format("woff2"),
 		url("../fonts/Supreme-Light.woff") format("woff"),
@@ -76,7 +76,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Supreme-LightItalic";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-LightItalic.woff2") format("woff2"),
 		url("../fonts/Supreme-LightItalic.woff") format("woff"),
@@ -86,7 +86,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Supreme-Regular";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-Regular.woff2") format("woff2"),
 		url("../fonts/Supreme-Regular.woff") format("woff"),
@@ -96,7 +96,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Supreme-Italic";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-Italic.woff2") format("woff2"),
 		url("../fonts/Supreme-Italic.woff") format("woff"),
@@ -106,7 +106,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Supreme-Medium";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-Medium.woff2") format("woff2"),
 		url("../fonts/Supreme-Medium.woff") format("woff"),
@@ -116,7 +116,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Supreme-MediumItalic";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Supreme-MediumItalic.woff") format("woff"),
@@ -126,7 +126,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Supreme-Bold";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-Bold.woff2") format("woff2"),
 		url("../fonts/Supreme-Bold.woff") format("woff"),
@@ -136,7 +136,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Supreme-BoldItalic";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Supreme-BoldItalic.woff") format("woff"),
@@ -146,7 +146,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Supreme-Extrabold";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-Extrabold.woff2") format("woff2"),
 		url("../fonts/Supreme-Extrabold.woff") format("woff"),
@@ -156,7 +156,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Supreme-ExtraboldItalic";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-ExtraboldItalic.woff2") format("woff2"),
 		url("../fonts/Supreme-ExtraboldItalic.woff") format("woff"),
@@ -174,7 +174,7 @@
 'wght' (range from 100.0 to 800.0
 */
 @font-face {
-	font-family: "Supreme-Variable";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-Variable.woff2") format("woff2"),
 		url("../fonts/Supreme-Variable.woff") format("woff"),
@@ -192,7 +192,7 @@
 'wght' (range from 100.0 to 800.0
 */
 @font-face {
-	font-family: "Supreme-VariableItalic";
+	font-family: "Supreme";
 	src:
 		url("../fonts/Supreme-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Supreme-VariableItalic.woff") format("woff"),

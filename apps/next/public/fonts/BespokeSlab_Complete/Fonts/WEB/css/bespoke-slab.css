@@ -22,7 +22,7 @@
 *
 */
 @font-face {
-	font-family: "BespokeSlab-Light";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-Light.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-Light.woff") format("woff"),
@@ -32,7 +32,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "BespokeSlab-LightItalic";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-LightItalic.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-LightItalic.woff") format("woff"),
@@ -42,7 +42,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "BespokeSlab-Regular";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-Regular.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-Regular.woff") format("woff"),
@@ -52,7 +52,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "BespokeSlab-Italic";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-Italic.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-Italic.woff") format("woff"),
@@ -62,7 +62,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "BespokeSlab-Medium";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-Medium.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-Medium.woff") format("woff"),
@@ -72,7 +72,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "BespokeSlab-MediumItalic";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-MediumItalic.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-MediumItalic.woff") format("woff"),
@@ -82,7 +82,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "BespokeSlab-Bold";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-Bold.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-Bold.woff") format("woff"),
@@ -92,7 +92,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "BespokeSlab-BoldItalic";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-BoldItalic.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-BoldItalic.woff") format("woff"),
@@ -102,7 +102,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "BespokeSlab-Extrabold";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-Extrabold.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-Extrabold.woff") format("woff"),
@@ -112,7 +112,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "BespokeSlab-ExtraboldItalic";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-ExtraboldItalic.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-ExtraboldItalic.woff") format("woff"),
@@ -130,7 +130,7 @@
 'wght' (range from 300.0 to 800.0
 */
 @font-face {
-	font-family: "BespokeSlab-Variable";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-Variable.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-Variable.woff") format("woff"),
@@ -148,7 +148,7 @@
 'wght' (range from 300.0 to 800.0
 */
 @font-face {
-	font-family: "BespokeSlab-VariableItalic";
+	font-family: "BespokeSlab";
 	src:
 		url("../fonts/BespokeSlab-VariableItalic.woff2") format("woff2"),
 		url("../fonts/BespokeSlab-VariableItalic.woff") format("woff"),

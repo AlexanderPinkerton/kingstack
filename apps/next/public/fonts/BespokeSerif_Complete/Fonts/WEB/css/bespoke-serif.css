@@ -22,7 +22,7 @@
 *
 */
 @font-face {
-	font-family: "BespokeSerif-Light";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-Light.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-Light.woff") format("woff"),
@@ -32,7 +32,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "BespokeSerif-LightItalic";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-LightItalic.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-LightItalic.woff") format("woff"),
@@ -42,7 +42,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "BespokeSerif-Regular";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-Regular.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-Regular.woff") format("woff"),
@@ -52,7 +52,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "BespokeSerif-Italic";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-Italic.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-Italic.woff") format("woff"),
@@ -62,7 +62,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "BespokeSerif-Medium";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-Medium.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-Medium.woff") format("woff"),
@@ -72,7 +72,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "BespokeSerif-MediumItalic";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-MediumItalic.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-MediumItalic.woff") format("woff"),
@@ -82,7 +82,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "BespokeSerif-Bold";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-Bold.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-Bold.woff") format("woff"),
@@ -92,7 +92,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "BespokeSerif-BoldItalic";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-BoldItalic.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-BoldItalic.woff") format("woff"),
@@ -102,7 +102,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "BespokeSerif-Extrabold";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-Extrabold.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-Extrabold.woff") format("woff"),
@@ -112,7 +112,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "BespokeSerif-ExtraboldItalic";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-ExtraboldItalic.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-ExtraboldItalic.woff") format("woff"),
@@ -130,7 +130,7 @@
 'wght' (range from 300.0 to 800.0'wght' (range from 300.0 to 800.0
 */
 @font-face {
-	font-family: "BespokeSerif-Variable";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-Variable.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-Variable.woff") format("woff"),
@@ -148,7 +148,7 @@
 'wght' (range from 300.0 to 800.0'wght' (range from 300.0 to 800.0
 */
 @font-face {
-	font-family: "BespokeSerif-VariableItalic";
+	font-family: "BespokeSerif";
 	src:
 		url("../fonts/BespokeSerif-VariableItalic.woff2") format("woff2"),
 		url("../fonts/BespokeSerif-VariableItalic.woff") format("woff"),

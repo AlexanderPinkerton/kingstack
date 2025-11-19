@@ -16,7 +16,7 @@
 *
 */
 @font-face {
-	font-family: "Bonny-Thin";
+	font-family: "Bonny";
 	src:
 		url("../fonts/Bonny-Thin.woff2") format("woff2"),
 		url("../fonts/Bonny-Thin.woff") format("woff"),
@@ -26,7 +26,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Bonny-Light";
+	font-family: "Bonny";
 	src:
 		url("../fonts/Bonny-Light.woff2") format("woff2"),
 		url("../fonts/Bonny-Light.woff") format("woff"),
@@ -36,7 +36,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Bonny-Regular";
+	font-family: "Bonny";
 	src:
 		url("../fonts/Bonny-Regular.woff2") format("woff2"),
 		url("../fonts/Bonny-Regular.woff") format("woff"),
@@ -46,7 +46,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Bonny-Medium";
+	font-family: "Bonny";
 	src:
 		url("../fonts/Bonny-Medium.woff2") format("woff2"),
 		url("../fonts/Bonny-Medium.woff") format("woff"),
@@ -56,7 +56,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Bonny-Bold";
+	font-family: "Bonny";
 	src:
 		url("../fonts/Bonny-Bold.woff2") format("woff2"),
 		url("../fonts/Bonny-Bold.woff") format("woff"),
@@ -74,7 +74,7 @@
 'wght' (range from 100.0 to 700.0
 */
 @font-face {
-	font-family: "Bonny-Variable";
+	font-family: "Bonny";
 	src:
 		url("../fonts/Bonny-Variable.woff2") format("woff2"),
 		url("../fonts/Bonny-Variable.woff") format("woff"),

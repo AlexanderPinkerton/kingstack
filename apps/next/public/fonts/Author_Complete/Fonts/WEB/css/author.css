@@ -24,7 +24,7 @@
 *
 */
 @font-face {
-	font-family: "Author-Extralight";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-Extralight.woff2") format("woff2"),
 		url("../fonts/Author-Extralight.woff") format("woff"),
@@ -34,7 +34,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Author-ExtralightItalic";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-ExtralightItalic.woff2") format("woff2"),
 		url("../fonts/Author-ExtralightItalic.woff") format("woff"),
@@ -44,7 +44,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Author-Light";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-Light.woff2") format("woff2"),
 		url("../fonts/Author-Light.woff") format("woff"),
@@ -54,7 +54,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Author-LightItalic";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-LightItalic.woff2") format("woff2"),
 		url("../fonts/Author-LightItalic.woff") format("woff"),
@@ -64,7 +64,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Author-Regular";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-Regular.woff2") format("woff2"),
 		url("../fonts/Author-Regular.woff") format("woff"),
@@ -74,7 +74,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Author-Italic";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-Italic.woff2") format("woff2"),
 		url("../fonts/Author-Italic.woff") format("woff"),
@@ -84,7 +84,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Author-Medium";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-Medium.woff2") format("woff2"),
 		url("../fonts/Author-Medium.woff") format("woff"),
@@ -94,7 +94,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Author-MediumItalic";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Author-MediumItalic.woff") format("woff"),
@@ -104,7 +104,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Author-Semibold";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-Semibold.woff2") format("woff2"),
 		url("../fonts/Author-Semibold.woff") format("woff"),
@@ -114,7 +114,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Author-SemiboldItalic";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-SemiboldItalic.woff2") format("woff2"),
 		url("../fonts/Author-SemiboldItalic.woff") format("woff"),
@@ -124,7 +124,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Author-Bold";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-Bold.woff2") format("woff2"),
 		url("../fonts/Author-Bold.woff") format("woff"),
@@ -134,7 +134,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Author-BoldItalic";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Author-BoldItalic.woff") format("woff"),
@@ -152,7 +152,7 @@
 'wght' (range from 200.0 to 700.0
 */
 @font-face {
-	font-family: "Author-Variable";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-Variable.woff2") format("woff2"),
 		url("../fonts/Author-Variable.woff") format("woff"),
@@ -170,7 +170,7 @@
 'wght' (range from 200.0 to 700.0
 */
 @font-face {
-	font-family: "Author-VariableItalic";
+	font-family: "Author";
 	src:
 		url("../fonts/Author-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Author-VariableItalic.woff") format("woff"),

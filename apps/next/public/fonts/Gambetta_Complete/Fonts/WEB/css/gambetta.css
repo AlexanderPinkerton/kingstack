@@ -22,7 +22,7 @@
 *
 */
 @font-face {
-	font-family: "Gambetta-Light";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-Light.woff2") format("woff2"),
 		url("../fonts/Gambetta-Light.woff") format("woff"),
@@ -32,7 +32,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Gambetta-LightItalic";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-LightItalic.woff2") format("woff2"),
 		url("../fonts/Gambetta-LightItalic.woff") format("woff"),
@@ -42,7 +42,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Gambetta-Regular";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-Regular.woff2") format("woff2"),
 		url("../fonts/Gambetta-Regular.woff") format("woff"),
@@ -52,7 +52,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Gambetta-Italic";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-Italic.woff2") format("woff2"),
 		url("../fonts/Gambetta-Italic.woff") format("woff"),
@@ -62,7 +62,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Gambetta-Medium";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-Medium.woff2") format("woff2"),
 		url("../fonts/Gambetta-Medium.woff") format("woff"),
@@ -72,7 +72,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Gambetta-MediumItalic";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Gambetta-MediumItalic.woff") format("woff"),
@@ -82,7 +82,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Gambetta-Semibold";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-Semibold.woff2") format("woff2"),
 		url("../fonts/Gambetta-Semibold.woff") format("woff"),
@@ -92,7 +92,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Gambetta-SemiboldItalic";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-SemiboldItalic.woff2") format("woff2"),
 		url("../fonts/Gambetta-SemiboldItalic.woff") format("woff"),
@@ -102,7 +102,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Gambetta-Bold";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-Bold.woff2") format("woff2"),
 		url("../fonts/Gambetta-Bold.woff") format("woff"),
@@ -112,7 +112,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Gambetta-BoldItalic";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Gambetta-BoldItalic.woff") format("woff"),
@@ -130,7 +130,7 @@
 'wght' (range from 300.0 to 700.0'wght' (range from 300.0 to 700.0
 */
 @font-face {
-	font-family: "Gambetta-Variable";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-Variable.woff2") format("woff2"),
 		url("../fonts/Gambetta-Variable.woff") format("woff"),
@@ -148,7 +148,7 @@
 'wght' (range from 300.0 to 700.0'wght' (range from 300.0 to 700.0
 */
 @font-face {
-	font-family: "Gambetta-VariableItalic";
+	font-family: "Gambetta";
 	src:
 		url("../fonts/Gambetta-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Gambetta-VariableItalic.woff") format("woff"),

@@ -22,7 +22,7 @@
 *
 */
 @font-face {
-	font-family: "Tabular-Light";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-Light.woff2") format("woff2"),
 		url("../fonts/Tabular-Light.woff") format("woff"),
@@ -32,7 +32,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Tabular-LightItalic";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-LightItalic.woff2") format("woff2"),
 		url("../fonts/Tabular-LightItalic.woff") format("woff"),
@@ -42,7 +42,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Tabular-Regular";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-Regular.woff2") format("woff2"),
 		url("../fonts/Tabular-Regular.woff") format("woff"),
@@ -52,7 +52,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Tabular-Italic";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-Italic.woff2") format("woff2"),
 		url("../fonts/Tabular-Italic.woff") format("woff"),
@@ -62,7 +62,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Tabular-Medium";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-Medium.woff2") format("woff2"),
 		url("../fonts/Tabular-Medium.woff") format("woff"),
@@ -72,7 +72,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Tabular-MediumItalic";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-MediumItalic.woff2") format("woff2"),
 		url("../fonts/Tabular-MediumItalic.woff") format("woff"),
@@ -82,7 +82,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Tabular-Semibold";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-Semibold.woff2") format("woff2"),
 		url("../fonts/Tabular-Semibold.woff") format("woff"),
@@ -92,7 +92,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Tabular-SemiboldItalic";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-SemiboldItalic.woff2") format("woff2"),
 		url("../fonts/Tabular-SemiboldItalic.woff") format("woff"),
@@ -102,7 +102,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "Tabular-Bold";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-Bold.woff2") format("woff2"),
 		url("../fonts/Tabular-Bold.woff") format("woff"),
@@ -112,7 +112,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Tabular-BoldItalic";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-BoldItalic.woff2") format("woff2"),
 		url("../fonts/Tabular-BoldItalic.woff") format("woff"),
@@ -130,7 +130,7 @@
 'wght' (range from 300.0 to 700.0
 */
 @font-face {
-	font-family: "Tabular-Variable";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-Variable.woff2") format("woff2"),
 		url("../fonts/Tabular-Variable.woff") format("woff"),
@@ -148,7 +148,7 @@
 'wght' (range from 300.0 to 700.0
 */
 @font-face {
-	font-family: "Tabular-VariableItalic";
+	font-family: "Tabular";
 	src:
 		url("../fonts/Tabular-VariableItalic.woff2") format("woff2"),
 		url("../fonts/Tabular-VariableItalic.woff") format("woff"),

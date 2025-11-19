@@ -14,7 +14,7 @@
 *
 */
 @font-face {
-	font-family: "Pally-Regular";
+	font-family: "Pally";
 	src:
 		url("../fonts/Pally-Regular.woff2") format("woff2"),
 		url("../fonts/Pally-Regular.woff") format("woff"),
@@ -24,7 +24,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Pally-Medium";
+	font-family: "Pally";
 	src:
 		url("../fonts/Pally-Medium.woff2") format("woff2"),
 		url("../fonts/Pally-Medium.woff") format("woff"),
@@ -34,7 +34,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Pally-Bold";
+	font-family: "Pally";
 	src:
 		url("../fonts/Pally-Bold.woff2") format("woff2"),
 		url("../fonts/Pally-Bold.woff") format("woff"),
@@ -52,7 +52,7 @@
 'wght' (range from 400.0 to 700.0
 */
 @font-face {
-	font-family: "Pally-Variable";
+	font-family: "Pally";
 	src:
 		url("../fonts/Pally-Variable.woff2") format("woff2"),
 		url("../fonts/Pally-Variable.woff") format("woff"),

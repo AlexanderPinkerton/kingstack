@@ -17,7 +17,7 @@
 *
 */
 @font-face {
-	font-family: "Oswald-ExtraLight";
+	font-family: "Oswald";
 	src:
 		url("../fonts/Oswald-ExtraLight.woff2") format("woff2"),
 		url("../fonts/Oswald-ExtraLight.woff") format("woff"),
@@ -27,7 +27,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Oswald-Light";
+	font-family: "Oswald";
 	src:
 		url("../fonts/Oswald-Light.woff2") format("woff2"),
 		url("../fonts/Oswald-Light.woff") format("woff"),
@@ -37,7 +37,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Oswald-Regular";
+	font-family: "Oswald";
 	src:
 		url("../fonts/Oswald-Regular.woff2") format("woff2"),
 		url("../fonts/Oswald-Regular.woff") format("woff"),
@@ -47,7 +47,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Oswald-Medium";
+	font-family: "Oswald";
 	src:
 		url("../fonts/Oswald-Medium.woff2") format("woff2"),
 		url("../fonts/Oswald-Medium.woff") format("woff"),
@@ -57,7 +57,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Oswald-SemiBold";
+	font-family: "Oswald";
 	src:
 		url("../fonts/Oswald-SemiBold.woff2") format("woff2"),
 		url("../fonts/Oswald-SemiBold.woff") format("woff"),
@@ -67,7 +67,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Oswald-Bold";
+	font-family: "Oswald";
 	src:
 		url("../fonts/Oswald-Bold.woff2") format("woff2"),
 		url("../fonts/Oswald-Bold.woff") format("woff"),
@@ -85,7 +85,7 @@
 'wght' (range from 200.0 to 700.0
 */
 @font-face {
-	font-family: "Oswald-Variable";
+	font-family: "Oswald";
 	src:
 		url("../fonts/Oswald-Variable.woff2") format("woff2"),
 		url("../fonts/Oswald-Variable.woff") format("woff"),

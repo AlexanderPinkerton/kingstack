@@ -16,7 +16,7 @@
 *
 */
 @font-face {
-	font-family: "NewTitle-Extralight";
+	font-family: "NewTitle";
 	src:
 		url("../fonts/NewTitle-Extralight.woff2") format("woff2"),
 		url("../fonts/NewTitle-Extralight.woff") format("woff"),
@@ -26,7 +26,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "NewTitle-Light";
+	font-family: "NewTitle";
 	src:
 		url("../fonts/NewTitle-Light.woff2") format("woff2"),
 		url("../fonts/NewTitle-Light.woff") format("woff"),
@@ -36,7 +36,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "NewTitle-Regular";
+	font-family: "NewTitle";
 	src:
 		url("../fonts/NewTitle-Regular.woff2") format("woff2"),
 		url("../fonts/NewTitle-Regular.woff") format("woff"),
@@ -46,7 +46,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "NewTitle-Medium";
+	font-family: "NewTitle";
 	src:
 		url("../fonts/NewTitle-Medium.woff2") format("woff2"),
 		url("../fonts/NewTitle-Medium.woff") format("woff"),
@@ -56,7 +56,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "NewTitle-Bold";
+	font-family: "NewTitle";
 	src:
 		url("../fonts/NewTitle-Bold.woff2") format("woff2"),
 		url("../fonts/NewTitle-Bold.woff") format("woff"),
@@ -74,7 +74,7 @@
 'wght' (range from 200.0 to 700.0
 */
 @font-face {
-	font-family: "NewTitle-Variable";
+	font-family: "NewTitle";
 	src:
 		url("../fonts/NewTitle-Variable.woff2") format("woff2"),
 		url("../fonts/NewTitle-Variable.woff") format("woff"),

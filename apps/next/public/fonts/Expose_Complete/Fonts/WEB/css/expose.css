@@ -15,7 +15,7 @@
 *
 */
 @font-face {
-	font-family: "Expose-Regular";
+	font-family: "Expose";
 	src:
 		url("../fonts/Expose-Regular.woff2") format("woff2"),
 		url("../fonts/Expose-Regular.woff") format("woff"),
@@ -25,7 +25,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Expose-Medium";
+	font-family: "Expose";
 	src:
 		url("../fonts/Expose-Medium.woff2") format("woff2"),
 		url("../fonts/Expose-Medium.woff") format("woff"),
@@ -35,7 +35,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Expose-Bold";
+	font-family: "Expose";
 	src:
 		url("../fonts/Expose-Bold.woff2") format("woff2"),
 		url("../fonts/Expose-Bold.woff") format("woff"),
@@ -45,7 +45,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Expose-Black";
+	font-family: "Expose";
 	src:
 		url("../fonts/Expose-Black.woff2") format("woff2"),
 		url("../fonts/Expose-Black.woff") format("woff"),
@@ -63,7 +63,7 @@
 'wght' (range from 400.0 to 900.0
 */
 @font-face {
-	font-family: "Expose-Variable";
+	font-family: "Expose";
 	src:
 		url("../fonts/Expose-Variable.woff2") format("woff2"),
 		url("../fonts/Expose-Variable.woff") format("woff"),

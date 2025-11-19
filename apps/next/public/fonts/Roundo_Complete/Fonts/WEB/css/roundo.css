@@ -17,7 +17,7 @@
 *
 */
 @font-face {
-	font-family: "Roundo-ExtraLight";
+	font-family: "Roundo";
 	src:
 		url("../fonts/Roundo-ExtraLight.woff2") format("woff2"),
 		url("../fonts/Roundo-ExtraLight.woff") format("woff"),
@@ -27,7 +27,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Roundo-Light";
+	font-family: "Roundo";
 	src:
 		url("../fonts/Roundo-Light.woff2") format("woff2"),
 		url("../fonts/Roundo-Light.woff") format("woff"),
@@ -37,7 +37,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Roundo-Regular";
+	font-family: "Roundo";
 	src:
 		url("../fonts/Roundo-Regular.woff2") format("woff2"),
 		url("../fonts/Roundo-Regular.woff") format("woff"),
@@ -47,7 +47,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Roundo-Medium";
+	font-family: "Roundo";
 	src:
 		url("../fonts/Roundo-Medium.woff2") format("woff2"),
 		url("../fonts/Roundo-Medium.woff") format("woff"),
@@ -57,7 +57,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Roundo-SemiBold";
+	font-family: "Roundo";
 	src:
 		url("../fonts/Roundo-SemiBold.woff2") format("woff2"),
 		url("../fonts/Roundo-SemiBold.woff") format("woff"),
@@ -67,7 +67,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "Roundo-Bold";
+	font-family: "Roundo";
 	src:
 		url("../fonts/Roundo-Bold.woff2") format("woff2"),
 		url("../fonts/Roundo-Bold.woff") format("woff"),
@@ -85,7 +85,7 @@
 'wght' (range from 200.0 to 700.0
 */
 @font-face {
-	font-family: "Roundo-Variable";
+	font-family: "Roundo";
 	src:
 		url("../fonts/Roundo-Variable.woff2") format("woff2"),
 		url("../fonts/Roundo-Variable.woff") format("woff"),

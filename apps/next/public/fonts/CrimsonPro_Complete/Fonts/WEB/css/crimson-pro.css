@@ -28,7 +28,7 @@
 *
 */
 @font-face {
-	font-family: "CrimsonPro-ExtraLight";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-ExtraLight.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-ExtraLight.woff") format("woff"),
@@ -38,7 +38,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "CrimsonPro-ExtraLightItalic";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-ExtraLightItalic.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-ExtraLightItalic.woff") format("woff"),
@@ -48,7 +48,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "CrimsonPro-Light";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-Light.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-Light.woff") format("woff"),
@@ -58,7 +58,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "CrimsonPro-LightItalic";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-LightItalic.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-LightItalic.woff") format("woff"),
@@ -68,7 +68,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "CrimsonPro-Regular";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-Regular.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-Regular.woff") format("woff"),
@@ -78,7 +78,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "CrimsonPro-Italic";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-Italic.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-Italic.woff") format("woff"),
@@ -88,7 +88,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "CrimsonPro-Medium";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-Medium.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-Medium.woff") format("woff"),
@@ -98,7 +98,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "CrimsonPro-MediumItalic";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-MediumItalic.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-MediumItalic.woff") format("woff"),
@@ -108,7 +108,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "CrimsonPro-SemiBold";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-SemiBold.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-SemiBold.woff") format("woff"),
@@ -118,7 +118,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "CrimsonPro-SemiBoldItalic";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-SemiBoldItalic.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-SemiBoldItalic.woff") format("woff"),
@@ -128,7 +128,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "CrimsonPro-Bold";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-Bold.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-Bold.woff") format("woff"),
@@ -138,7 +138,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "CrimsonPro-BoldItalic";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-BoldItalic.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-BoldItalic.woff") format("woff"),
@@ -148,7 +148,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "CrimsonPro-ExtraBold";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-ExtraBold.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-ExtraBold.woff") format("woff"),
@@ -158,7 +158,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "CrimsonPro-ExtraBoldItalic";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-ExtraBoldItalic.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-ExtraBoldItalic.woff") format("woff"),
@@ -168,7 +168,7 @@
 	font-style: italic;
 }
 @font-face {
-	font-family: "CrimsonPro-Black";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-Black.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-Black.woff") format("woff"),
@@ -178,7 +178,7 @@
 	font-style: normal;
 }
 @font-face {
-	font-family: "CrimsonPro-BlackItalic";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-BlackItalic.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-BlackItalic.woff") format("woff"),
@@ -196,7 +196,7 @@
 'wght' (range from 200.0 to 900.0
 */
 @font-face {
-	font-family: "CrimsonPro-Variable";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-Variable.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-Variable.woff") format("woff"),
@@ -214,7 +214,7 @@
 'wght' (range from 200.0 to 900.0
 */
 @font-face {
-	font-family: "CrimsonPro-VariableItalic";
+	font-family: "CrimsonPro";
 	src:
 		url("../fonts/CrimsonPro-VariableItalic.woff2") format("woff2"),
 		url("../fonts/CrimsonPro-VariableItalic.woff") format("woff"),
