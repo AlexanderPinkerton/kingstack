@@ -1,0 +1,63 @@
+/**
+* @license
+*
+* Font Family: Paquito
+* Designed by: Juanjo Lopez
+* URL: https://www.fontshare.com/fonts/paquito
+* © 2025 Indian Type Foundry
+*
+* Paquito Regular 
+* Paquito Medium 
+* Paquito Bold 
+* Paquito Variable (Variable font)
+
+*
+*/
+@font-face {
+	font-family: "Paquito-Regular";
+	src:
+		url("../fonts/Paquito-Regular.woff2") format("woff2"),
+		url("../fonts/Paquito-Regular.woff") format("woff"),
+		url("../fonts/Paquito-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Paquito-Medium";
+	src:
+		url("../fonts/Paquito-Medium.woff2") format("woff2"),
+		url("../fonts/Paquito-Medium.woff") format("woff"),
+		url("../fonts/Paquito-Medium.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Paquito-Bold";
+	src:
+		url("../fonts/Paquito-Bold.woff2") format("woff2"),
+		url("../fonts/Paquito-Bold.woff") format("woff"),
+		url("../fonts/Paquito-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: normal;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 300.0;
+*
+* available axes:
+'wght' (range from 300.0 to 700.0
+*/
+@font-face {
+	font-family: "Paquito-Variable";
+	src:
+		url("../fonts/Paquito-Variable.woff2") format("woff2"),
+		url("../fonts/Paquito-Variable.woff") format("woff"),
+		url("../fonts/Paquito-Variable.ttf") format("truetype");
+	font-weight: 300 700;
+	font-display: swap;
+	font-style: normal;
+}

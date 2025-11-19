@@ -1,0 +1,159 @@
+/**
+* @license
+*
+* Font Family: Bespoke Serif
+* Designed by: Jeremie Hornus, Theo Guillard, Morgane Pambrun, Alisa Nowak, Joachim Vu
+* URL: https://www.fontshare.com/fonts/bespoke-serif
+* © 2025 Indian Type Foundry
+*
+* Bespoke Serif Light 
+* Bespoke Serif LightItalic 
+* Bespoke Serif Regular 
+* Bespoke Serif Italic 
+* Bespoke Serif Medium 
+* Bespoke Serif MediumItalic 
+* Bespoke Serif Bold 
+* Bespoke Serif BoldItalic 
+* Bespoke Serif Extrabold 
+* Bespoke Serif ExtraboldItalic 
+* Bespoke Serif Variable (Variable font)
+* Bespoke Serif VariableItalic (Variable font)
+
+*
+*/
+@font-face {
+	font-family: "BespokeSerif-Light";
+	src:
+		url("../fonts/BespokeSerif-Light.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-Light.woff") format("woff"),
+		url("../fonts/BespokeSerif-Light.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "BespokeSerif-LightItalic";
+	src:
+		url("../fonts/BespokeSerif-LightItalic.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-LightItalic.woff") format("woff"),
+		url("../fonts/BespokeSerif-LightItalic.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "BespokeSerif-Regular";
+	src:
+		url("../fonts/BespokeSerif-Regular.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-Regular.woff") format("woff"),
+		url("../fonts/BespokeSerif-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "BespokeSerif-Italic";
+	src:
+		url("../fonts/BespokeSerif-Italic.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-Italic.woff") format("woff"),
+		url("../fonts/BespokeSerif-Italic.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "BespokeSerif-Medium";
+	src:
+		url("../fonts/BespokeSerif-Medium.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-Medium.woff") format("woff"),
+		url("../fonts/BespokeSerif-Medium.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "BespokeSerif-MediumItalic";
+	src:
+		url("../fonts/BespokeSerif-MediumItalic.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-MediumItalic.woff") format("woff"),
+		url("../fonts/BespokeSerif-MediumItalic.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "BespokeSerif-Bold";
+	src:
+		url("../fonts/BespokeSerif-Bold.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-Bold.woff") format("woff"),
+		url("../fonts/BespokeSerif-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "BespokeSerif-BoldItalic";
+	src:
+		url("../fonts/BespokeSerif-BoldItalic.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-BoldItalic.woff") format("woff"),
+		url("../fonts/BespokeSerif-BoldItalic.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "BespokeSerif-Extrabold";
+	src:
+		url("../fonts/BespokeSerif-Extrabold.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-Extrabold.woff") format("woff"),
+		url("../fonts/BespokeSerif-Extrabold.ttf") format("truetype");
+	font-weight: 800;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "BespokeSerif-ExtraboldItalic";
+	src:
+		url("../fonts/BespokeSerif-ExtraboldItalic.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-ExtraboldItalic.woff") format("woff"),
+		url("../fonts/BespokeSerif-ExtraboldItalic.ttf") format("truetype");
+	font-weight: 800;
+	font-display: swap;
+	font-style: italic;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 300.0wght 800.0;
+*
+* available axes:
+'wght' (range from 300.0 to 800.0'wght' (range from 300.0 to 800.0
+*/
+@font-face {
+	font-family: "BespokeSerif-Variable";
+	src:
+		url("../fonts/BespokeSerif-Variable.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-Variable.woff") format("woff"),
+		url("../fonts/BespokeSerif-Variable.ttf") format("truetype");
+	font-weight: 300 800;
+	font-display: swap;
+	font-style: normal;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 300.0wght 800.0;
+*
+* available axes:
+'wght' (range from 300.0 to 800.0'wght' (range from 300.0 to 800.0
+*/
+@font-face {
+	font-family: "BespokeSerif-VariableItalic";
+	src:
+		url("../fonts/BespokeSerif-VariableItalic.woff2") format("woff2"),
+		url("../fonts/BespokeSerif-VariableItalic.woff") format("woff"),
+		url("../fonts/BespokeSerif-VariableItalic.ttf") format("truetype");
+	font-weight: 300 800;
+	font-display: swap;
+	font-style: italic;
+}
