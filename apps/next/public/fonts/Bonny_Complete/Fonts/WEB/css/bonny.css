@@ -1,0 +1,85 @@
+/**
+* @license
+*
+* Font Family: Bonny
+* Designed by: Barbara Bigosinska
+* URL: https://www.fontshare.com/fonts/bonny
+* © 2025 Indian Type Foundry
+*
+* Bonny Thin 
+* Bonny Light 
+* Bonny Regular 
+* Bonny Medium 
+* Bonny Bold 
+* Bonny Variable (Variable font)
+
+*
+*/
+@font-face {
+	font-family: "Bonny-Thin";
+	src:
+		url("../fonts/Bonny-Thin.woff2") format("woff2"),
+		url("../fonts/Bonny-Thin.woff") format("woff"),
+		url("../fonts/Bonny-Thin.ttf") format("truetype");
+	font-weight: 100;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Bonny-Light";
+	src:
+		url("../fonts/Bonny-Light.woff2") format("woff2"),
+		url("../fonts/Bonny-Light.woff") format("woff"),
+		url("../fonts/Bonny-Light.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Bonny-Regular";
+	src:
+		url("../fonts/Bonny-Regular.woff2") format("woff2"),
+		url("../fonts/Bonny-Regular.woff") format("woff"),
+		url("../fonts/Bonny-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Bonny-Medium";
+	src:
+		url("../fonts/Bonny-Medium.woff2") format("woff2"),
+		url("../fonts/Bonny-Medium.woff") format("woff"),
+		url("../fonts/Bonny-Medium.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Bonny-Bold";
+	src:
+		url("../fonts/Bonny-Bold.woff2") format("woff2"),
+		url("../fonts/Bonny-Bold.woff") format("woff"),
+		url("../fonts/Bonny-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: normal;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 700.0;
+*
+* available axes:
+'wght' (range from 100.0 to 700.0
+*/
+@font-face {
+	font-family: "Bonny-Variable";
+	src:
+		url("../fonts/Bonny-Variable.woff2") format("woff2"),
+		url("../fonts/Bonny-Variable.woff") format("woff"),
+		url("../fonts/Bonny-Variable.ttf") format("truetype");
+	font-weight: 100 700;
+	font-display: swap;
+	font-style: normal;
+}

@@ -1,0 +1,225 @@
+/**
+* @license
+*
+* Font Family: Crimson Pro
+* Designed by: Jacques Le Bailly
+* URL: https://www.fontshare.com/fonts/crimson-pro
+* © 2025 Indian Type Foundry
+*
+* Crimson Pro ExtraLight 
+* Crimson Pro ExtraLightItalic 
+* Crimson Pro Light 
+* Crimson Pro LightItalic 
+* Crimson Pro Regular 
+* Crimson Pro Italic 
+* Crimson Pro Medium 
+* Crimson Pro MediumItalic 
+* Crimson Pro SemiBold 
+* Crimson Pro SemiBoldItalic 
+* Crimson Pro Bold 
+* Crimson Pro BoldItalic 
+* Crimson Pro ExtraBold 
+* Crimson Pro ExtraBoldItalic 
+* Crimson Pro Black 
+* Crimson Pro BlackItalic 
+* Crimson Pro Variable (Variable font)
+* Crimson Pro VariableItalic (Variable font)
+
+*
+*/
+@font-face {
+	font-family: "CrimsonPro-ExtraLight";
+	src:
+		url("../fonts/CrimsonPro-ExtraLight.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-ExtraLight.woff") format("woff"),
+		url("../fonts/CrimsonPro-ExtraLight.ttf") format("truetype");
+	font-weight: 200;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "CrimsonPro-ExtraLightItalic";
+	src:
+		url("../fonts/CrimsonPro-ExtraLightItalic.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-ExtraLightItalic.woff") format("woff"),
+		url("../fonts/CrimsonPro-ExtraLightItalic.ttf") format("truetype");
+	font-weight: 200;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "CrimsonPro-Light";
+	src:
+		url("../fonts/CrimsonPro-Light.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-Light.woff") format("woff"),
+		url("../fonts/CrimsonPro-Light.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "CrimsonPro-LightItalic";
+	src:
+		url("../fonts/CrimsonPro-LightItalic.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-LightItalic.woff") format("woff"),
+		url("../fonts/CrimsonPro-LightItalic.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "CrimsonPro-Regular";
+	src:
+		url("../fonts/CrimsonPro-Regular.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-Regular.woff") format("woff"),
+		url("../fonts/CrimsonPro-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "CrimsonPro-Italic";
+	src:
+		url("../fonts/CrimsonPro-Italic.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-Italic.woff") format("woff"),
+		url("../fonts/CrimsonPro-Italic.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "CrimsonPro-Medium";
+	src:
+		url("../fonts/CrimsonPro-Medium.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-Medium.woff") format("woff"),
+		url("../fonts/CrimsonPro-Medium.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "CrimsonPro-MediumItalic";
+	src:
+		url("../fonts/CrimsonPro-MediumItalic.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-MediumItalic.woff") format("woff"),
+		url("../fonts/CrimsonPro-MediumItalic.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "CrimsonPro-SemiBold";
+	src:
+		url("../fonts/CrimsonPro-SemiBold.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-SemiBold.woff") format("woff"),
+		url("../fonts/CrimsonPro-SemiBold.ttf") format("truetype");
+	font-weight: 600;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "CrimsonPro-SemiBoldItalic";
+	src:
+		url("../fonts/CrimsonPro-SemiBoldItalic.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-SemiBoldItalic.woff") format("woff"),
+		url("../fonts/CrimsonPro-SemiBoldItalic.ttf") format("truetype");
+	font-weight: 600;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "CrimsonPro-Bold";
+	src:
+		url("../fonts/CrimsonPro-Bold.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-Bold.woff") format("woff"),
+		url("../fonts/CrimsonPro-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "CrimsonPro-BoldItalic";
+	src:
+		url("../fonts/CrimsonPro-BoldItalic.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-BoldItalic.woff") format("woff"),
+		url("../fonts/CrimsonPro-BoldItalic.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "CrimsonPro-ExtraBold";
+	src:
+		url("../fonts/CrimsonPro-ExtraBold.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-ExtraBold.woff") format("woff"),
+		url("../fonts/CrimsonPro-ExtraBold.ttf") format("truetype");
+	font-weight: 800;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "CrimsonPro-ExtraBoldItalic";
+	src:
+		url("../fonts/CrimsonPro-ExtraBoldItalic.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-ExtraBoldItalic.woff") format("woff"),
+		url("../fonts/CrimsonPro-ExtraBoldItalic.ttf") format("truetype");
+	font-weight: 800;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "CrimsonPro-Black";
+	src:
+		url("../fonts/CrimsonPro-Black.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-Black.woff") format("woff"),
+		url("../fonts/CrimsonPro-Black.ttf") format("truetype");
+	font-weight: 900;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "CrimsonPro-BlackItalic";
+	src:
+		url("../fonts/CrimsonPro-BlackItalic.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-BlackItalic.woff") format("woff"),
+		url("../fonts/CrimsonPro-BlackItalic.ttf") format("truetype");
+	font-weight: 900;
+	font-display: swap;
+	font-style: italic;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 400.0;
+*
+* available axes:
+'wght' (range from 200.0 to 900.0
+*/
+@font-face {
+	font-family: "CrimsonPro-Variable";
+	src:
+		url("../fonts/CrimsonPro-Variable.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-Variable.woff") format("woff"),
+		url("../fonts/CrimsonPro-Variable.ttf") format("truetype");
+	font-weight: 200 900;
+	font-display: swap;
+	font-style: normal;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 400.0;
+*
+* available axes:
+'wght' (range from 200.0 to 900.0
+*/
+@font-face {
+	font-family: "CrimsonPro-VariableItalic";
+	src:
+		url("../fonts/CrimsonPro-VariableItalic.woff2") format("woff2"),
+		url("../fonts/CrimsonPro-VariableItalic.woff") format("woff"),
+		url("../fonts/CrimsonPro-VariableItalic.ttf") format("truetype");
+	font-weight: 200 900;
+	font-display: swap;
+	font-style: italic;
+}

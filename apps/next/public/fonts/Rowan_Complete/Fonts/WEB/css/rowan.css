@@ -1,0 +1,159 @@
+/**
+* @license
+*
+* Font Family: Rowan
+* Designed by: Inga Plönnigs
+* URL: https://www.fontshare.com/fonts/rowan
+* © 2025 Indian Type Foundry
+*
+* Rowan Light 
+* Rowan LightItalic 
+* Rowan Regular 
+* Rowan Italic 
+* Rowan Medium 
+* Rowan MediumItalic 
+* Rowan Semibold 
+* Rowan SemiboldItalic 
+* Rowan Bold 
+* Rowan BoldItalic 
+* Rowan Variable (Variable font)
+* Rowan VariableItalic (Variable font)
+
+*
+*/
+@font-face {
+	font-family: "Rowan-Light";
+	src:
+		url("../fonts/Rowan-Light.woff2") format("woff2"),
+		url("../fonts/Rowan-Light.woff") format("woff"),
+		url("../fonts/Rowan-Light.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Rowan-LightItalic";
+	src:
+		url("../fonts/Rowan-LightItalic.woff2") format("woff2"),
+		url("../fonts/Rowan-LightItalic.woff") format("woff"),
+		url("../fonts/Rowan-LightItalic.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Rowan-Regular";
+	src:
+		url("../fonts/Rowan-Regular.woff2") format("woff2"),
+		url("../fonts/Rowan-Regular.woff") format("woff"),
+		url("../fonts/Rowan-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Rowan-Italic";
+	src:
+		url("../fonts/Rowan-Italic.woff2") format("woff2"),
+		url("../fonts/Rowan-Italic.woff") format("woff"),
+		url("../fonts/Rowan-Italic.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Rowan-Medium";
+	src:
+		url("../fonts/Rowan-Medium.woff2") format("woff2"),
+		url("../fonts/Rowan-Medium.woff") format("woff"),
+		url("../fonts/Rowan-Medium.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Rowan-MediumItalic";
+	src:
+		url("../fonts/Rowan-MediumItalic.woff2") format("woff2"),
+		url("../fonts/Rowan-MediumItalic.woff") format("woff"),
+		url("../fonts/Rowan-MediumItalic.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Rowan-Semibold";
+	src:
+		url("../fonts/Rowan-Semibold.woff2") format("woff2"),
+		url("../fonts/Rowan-Semibold.woff") format("woff"),
+		url("../fonts/Rowan-Semibold.ttf") format("truetype");
+	font-weight: 600;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Rowan-SemiboldItalic";
+	src:
+		url("../fonts/Rowan-SemiboldItalic.woff2") format("woff2"),
+		url("../fonts/Rowan-SemiboldItalic.woff") format("woff"),
+		url("../fonts/Rowan-SemiboldItalic.ttf") format("truetype");
+	font-weight: 600;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Rowan-Bold";
+	src:
+		url("../fonts/Rowan-Bold.woff2") format("woff2"),
+		url("../fonts/Rowan-Bold.woff") format("woff"),
+		url("../fonts/Rowan-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Rowan-BoldItalic";
+	src:
+		url("../fonts/Rowan-BoldItalic.woff2") format("woff2"),
+		url("../fonts/Rowan-BoldItalic.woff") format("woff"),
+		url("../fonts/Rowan-BoldItalic.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: italic;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 700.0;
+*
+* available axes:
+'wght' (range from 300.0 to 700.0
+*/
+@font-face {
+	font-family: "Rowan-Variable";
+	src:
+		url("../fonts/Rowan-Variable.woff2") format("woff2"),
+		url("../fonts/Rowan-Variable.woff") format("woff"),
+		url("../fonts/Rowan-Variable.ttf") format("truetype");
+	font-weight: 300 700;
+	font-display: swap;
+	font-style: normal;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 700.0;
+*
+* available axes:
+'wght' (range from 300.0 to 700.0
+*/
+@font-face {
+	font-family: "Rowan-VariableItalic";
+	src:
+		url("../fonts/Rowan-VariableItalic.woff2") format("woff2"),
+		url("../fonts/Rowan-VariableItalic.woff") format("woff"),
+		url("../fonts/Rowan-VariableItalic.ttf") format("truetype");
+	font-weight: 300 700;
+	font-display: swap;
+	font-style: italic;
+}
