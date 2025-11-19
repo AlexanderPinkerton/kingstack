@@ -1,0 +1,159 @@
+/**
+* @license
+*
+* Font Family: Tabular
+* Designed by: Jérémie Hornus, Julie Soudanne
+* URL: https://www.fontshare.com/fonts/tabular
+* © 2025 Indian Type Foundry
+*
+* Tabular Light 
+* Tabular LightItalic 
+* Tabular Regular 
+* Tabular Italic 
+* Tabular Medium 
+* Tabular MediumItalic 
+* Tabular Semibold 
+* Tabular SemiboldItalic 
+* Tabular Bold 
+* Tabular BoldItalic 
+* Tabular Variable (Variable font)
+* Tabular VariableItalic (Variable font)
+
+*
+*/
+@font-face {
+	font-family: "Tabular-Light";
+	src:
+		url("../fonts/Tabular-Light.woff2") format("woff2"),
+		url("../fonts/Tabular-Light.woff") format("woff"),
+		url("../fonts/Tabular-Light.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Tabular-LightItalic";
+	src:
+		url("../fonts/Tabular-LightItalic.woff2") format("woff2"),
+		url("../fonts/Tabular-LightItalic.woff") format("woff"),
+		url("../fonts/Tabular-LightItalic.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Tabular-Regular";
+	src:
+		url("../fonts/Tabular-Regular.woff2") format("woff2"),
+		url("../fonts/Tabular-Regular.woff") format("woff"),
+		url("../fonts/Tabular-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Tabular-Italic";
+	src:
+		url("../fonts/Tabular-Italic.woff2") format("woff2"),
+		url("../fonts/Tabular-Italic.woff") format("woff"),
+		url("../fonts/Tabular-Italic.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Tabular-Medium";
+	src:
+		url("../fonts/Tabular-Medium.woff2") format("woff2"),
+		url("../fonts/Tabular-Medium.woff") format("woff"),
+		url("../fonts/Tabular-Medium.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Tabular-MediumItalic";
+	src:
+		url("../fonts/Tabular-MediumItalic.woff2") format("woff2"),
+		url("../fonts/Tabular-MediumItalic.woff") format("woff"),
+		url("../fonts/Tabular-MediumItalic.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Tabular-Semibold";
+	src:
+		url("../fonts/Tabular-Semibold.woff2") format("woff2"),
+		url("../fonts/Tabular-Semibold.woff") format("woff"),
+		url("../fonts/Tabular-Semibold.ttf") format("truetype");
+	font-weight: 600;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Tabular-SemiboldItalic";
+	src:
+		url("../fonts/Tabular-SemiboldItalic.woff2") format("woff2"),
+		url("../fonts/Tabular-SemiboldItalic.woff") format("woff"),
+		url("../fonts/Tabular-SemiboldItalic.ttf") format("truetype");
+	font-weight: 600;
+	font-display: swap;
+	font-style: italic;
+}
+@font-face {
+	font-family: "Tabular-Bold";
+	src:
+		url("../fonts/Tabular-Bold.woff2") format("woff2"),
+		url("../fonts/Tabular-Bold.woff") format("woff"),
+		url("../fonts/Tabular-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Tabular-BoldItalic";
+	src:
+		url("../fonts/Tabular-BoldItalic.woff2") format("woff2"),
+		url("../fonts/Tabular-BoldItalic.woff") format("woff"),
+		url("../fonts/Tabular-BoldItalic.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: italic;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 700.0;
+*
+* available axes:
+'wght' (range from 300.0 to 700.0
+*/
+@font-face {
+	font-family: "Tabular-Variable";
+	src:
+		url("../fonts/Tabular-Variable.woff2") format("woff2"),
+		url("../fonts/Tabular-Variable.woff") format("woff"),
+		url("../fonts/Tabular-Variable.ttf") format("truetype");
+	font-weight: 300 700;
+	font-display: swap;
+	font-style: normal;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 700.0;
+*
+* available axes:
+'wght' (range from 300.0 to 700.0
+*/
+@font-face {
+	font-family: "Tabular-VariableItalic";
+	src:
+		url("../fonts/Tabular-VariableItalic.woff2") format("woff2"),
+		url("../fonts/Tabular-VariableItalic.woff") format("woff"),
+		url("../fonts/Tabular-VariableItalic.ttf") format("truetype");
+	font-weight: 300 700;
+	font-display: swap;
+	font-style: italic;
+}

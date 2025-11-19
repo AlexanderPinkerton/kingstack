@@ -1,0 +1,22 @@
+/**
+* @license
+*
+* Font Family: Anton
+* Designed by: Vernon Adams
+* URL: https://www.fontshare.com/fonts/anton
+* © 2025 Indian Type Foundry
+*
+* Anton Regular 
+
+*
+*/
+@font-face {
+	font-family: "Anton-Regular";
+	src:
+		url("../fonts/Anton-Regular.woff2") format("woff2"),
+		url("../fonts/Anton-Regular.woff") format("woff"),
+		url("../fonts/Anton-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+}

@@ -11,18 +11,22 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "local": "yarn env:local && supabase start",
     "docker:build-nest": "docker build -f apps/nest/Dockerfile -t kingstack-nest .",
     "docker:run-nest": "docker run --rm -p 3000:3000 --name kingstack-nest --env-file apps/nest/.env -d kingstack-nest",
     "docker:compose": "docker-compose up --build",
     "docker:compose:down": "docker-compose down",
     "prisma:generate": "yarn workspace @kingstack/prisma prisma generate",
     "prisma:migrate": "yarn workspace @kingstack/prisma prisma migrate dev",
+    "env:local": "bun scripts/swap-env.ts local",
     "env:development": "bun scripts/swap-env.ts development",
     "env:production": "bun scripts/swap-env.ts production",
     "env:playground": "bun scripts/setup-playground.ts",
     "env:current": "bun scripts/swap-env.ts --current",
     "shadow:start": "supabase start -x realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
-    "shadow:stop": "supabase stop"
+    "shadow:stop": "supabase stop",
+    "vercel": "cd apps/next && vercel",
+    "vercel:prod": "cd apps/next && vercel --prod"
   },
   "packageManager": "yarn@4.10.2",
   "dependencies": {

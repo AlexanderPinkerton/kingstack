@@ -1,0 +1,96 @@
+/**
+* @license
+*
+* Font Family: Synonym
+* Designed by: Hugo Dumont
+* URL: https://www.fontshare.com/fonts/synonym
+* © 2025 Indian Type Foundry
+*
+* Synonym Extralight 
+* Synonym Light 
+* Synonym Regular 
+* Synonym Medium 
+* Synonym Semibold 
+* Synonym Bold 
+* Synonym Variable (Variable font)
+
+*
+*/
+@font-face {
+	font-family: "Synonym-Extralight";
+	src:
+		url("../fonts/Synonym-Extralight.woff2") format("woff2"),
+		url("../fonts/Synonym-Extralight.woff") format("woff"),
+		url("../fonts/Synonym-Extralight.ttf") format("truetype");
+	font-weight: 200;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Synonym-Light";
+	src:
+		url("../fonts/Synonym-Light.woff2") format("woff2"),
+		url("../fonts/Synonym-Light.woff") format("woff"),
+		url("../fonts/Synonym-Light.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Synonym-Regular";
+	src:
+		url("../fonts/Synonym-Regular.woff2") format("woff2"),
+		url("../fonts/Synonym-Regular.woff") format("woff"),
+		url("../fonts/Synonym-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Synonym-Medium";
+	src:
+		url("../fonts/Synonym-Medium.woff2") format("woff2"),
+		url("../fonts/Synonym-Medium.woff") format("woff"),
+		url("../fonts/Synonym-Medium.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Synonym-Semibold";
+	src:
+		url("../fonts/Synonym-Semibold.woff2") format("woff2"),
+		url("../fonts/Synonym-Semibold.woff") format("woff"),
+		url("../fonts/Synonym-Semibold.ttf") format("truetype");
+	font-weight: 600;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "Synonym-Bold";
+	src:
+		url("../fonts/Synonym-Bold.woff2") format("woff2"),
+		url("../fonts/Synonym-Bold.woff") format("woff"),
+		url("../fonts/Synonym-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: normal;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 700.0;
+*
+* available axes:
+'wght' (range from 200.0 to 700.0
+*/
+@font-face {
+	font-family: "Synonym-Variable";
+	src:
+		url("../fonts/Synonym-Variable.woff2") format("woff2"),
+		url("../fonts/Synonym-Variable.woff") format("woff"),
+		url("../fonts/Synonym-Variable.ttf") format("truetype");
+	font-weight: 200 700;
+	font-display: swap;
+	font-style: normal;
+}

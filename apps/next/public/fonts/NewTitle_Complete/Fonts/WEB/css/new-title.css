@@ -1,0 +1,85 @@
+/**
+* @license
+*
+* Font Family: New Title
+* Designed by: Julie Soudanne, Jérémie Hornus
+* URL: https://www.fontshare.com/fonts/new-title
+* © 2025 Indian Type Foundry
+*
+* New Title Extralight 
+* New Title Light 
+* New Title Regular 
+* New Title Medium 
+* New Title Bold 
+* New Title Variable (Variable font)
+
+*
+*/
+@font-face {
+	font-family: "NewTitle-Extralight";
+	src:
+		url("../fonts/NewTitle-Extralight.woff2") format("woff2"),
+		url("../fonts/NewTitle-Extralight.woff") format("woff"),
+		url("../fonts/NewTitle-Extralight.ttf") format("truetype");
+	font-weight: 200;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "NewTitle-Light";
+	src:
+		url("../fonts/NewTitle-Light.woff2") format("woff2"),
+		url("../fonts/NewTitle-Light.woff") format("woff"),
+		url("../fonts/NewTitle-Light.ttf") format("truetype");
+	font-weight: 300;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "NewTitle-Regular";
+	src:
+		url("../fonts/NewTitle-Regular.woff2") format("woff2"),
+		url("../fonts/NewTitle-Regular.woff") format("woff"),
+		url("../fonts/NewTitle-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "NewTitle-Medium";
+	src:
+		url("../fonts/NewTitle-Medium.woff2") format("woff2"),
+		url("../fonts/NewTitle-Medium.woff") format("woff"),
+		url("../fonts/NewTitle-Medium.ttf") format("truetype");
+	font-weight: 500;
+	font-display: swap;
+	font-style: normal;
+}
+@font-face {
+	font-family: "NewTitle-Bold";
+	src:
+		url("../fonts/NewTitle-Bold.woff2") format("woff2"),
+		url("../fonts/NewTitle-Bold.woff") format("woff"),
+		url("../fonts/NewTitle-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-display: swap;
+	font-style: normal;
+}
+/**
+* This is a variable font
+* You can control variable axes as shown below:
+* font-variation-settings: wght 200.0;
+*
+* available axes:
+'wght' (range from 200.0 to 700.0
+*/
+@font-face {
+	font-family: "NewTitle-Variable";
+	src:
+		url("../fonts/NewTitle-Variable.woff2") format("woff2"),
+		url("../fonts/NewTitle-Variable.woff") format("woff"),
+		url("../fonts/NewTitle-Variable.ttf") format("truetype");
+	font-weight: 200 700;
+	font-display: swap;
+	font-style: normal;
+}
