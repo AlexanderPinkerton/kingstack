@@ -32,7 +32,7 @@ export default function RootLayout({
       >
         <AppProviders>
           {children}
-          <Toaster richColors duration={4000} />
+          <Toaster duration={4000} />
           <PlaygroundIndicator />
         </AppProviders>
       </body>
