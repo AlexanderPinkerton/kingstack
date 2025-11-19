@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent,
 } from "react";
 import {
   Activity,
@@ -79,6 +80,14 @@ import {
   SidebarSeparator,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 const hexPattern = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
@@ -158,6 +167,12 @@ const stats = [
   { label: "In-flight Projects", value: "124", change: "+18% MoM" },
   { label: "Open Approvals", value: "9", change: "3 urgent" },
 ];
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 
 const transactions = [
   {
@@ -251,6 +266,11 @@ const EXTRA_COLOR_TOKENS = [
 ] as const;
 
 type ColorVariable = (typeof COLOR_VARIABLES)[number];
+type SurfaceTarget = {
+  id: string;
+  label: string;
+  defaultColor: string;
+};
 
 const SURFACE_SHADE_PRESETS = [
   {
@@ -694,6 +714,8 @@ export default function ThemePage() {
   const [radius, setRadius] = useState(DEFAULT_RADIUS);
   const [fontPreset, setFontPreset] = useState(FONT_OPTIONS[0].id);
   const [shadowPreset, setShadowPreset] = useState(DEFAULT_SHADOW_ID);
+  const [surfaceOverrides, setSurfaceOverrides] = useState<Record<string, string>>({});
+  const [activeSurface, setActiveSurface] = useState<SurfaceTarget | null>(null);
   const previewRef = useRef<HTMLElement | null>(null);
   const inProgress = transactions
     .filter((item) => item.status === "In review")
@@ -718,6 +740,92 @@ export default function ThemePage() {
       setFontPreset(nextFont.id);
     },
     [fontPreset],
+  );
+
+  const surfacePaletteOptions = useMemo(
+    () =>
+      [
+        {
+          label: "Surface",
+          value: paletteValues["--color-surface"],
+        },
+        {
+          label: "Surface elevated",
+          value: paletteValues["--color-surface-elevated"],
+        },
+        {
+          label: "Primary",
+          value: paletteValues["--color-primary"],
+        },
+        {
+          label: "Secondary",
+          value: paletteValues["--color-secondary"],
+        },
+        {
+          label: "Tertiary",
+          value: paletteValues["--color-tertiary"],
+        },
+      ].filter(
+        (option): option is { label: string; value: string } => Boolean(option.value),
+      ),
+    [paletteValues],
+  );
+  const resolvedSurfaceColor = useMemo(() => {
+    if (!activeSurface) {
+      return surfacePaletteOptions[0]?.value ?? "#f8f9fb";
+    }
+    return surfaceOverrides[activeSurface.id] ?? activeSurface.defaultColor;
+  }, [activeSurface, surfaceOverrides, surfacePaletteOptions]);
+  const resolvedSurfaceHex = useMemo(
+    () => colorToHex(resolvedSurfaceColor),
+    [resolvedSurfaceColor],
+  );
+  const applySurfaceColor = useCallback(
+    (value: string) => {
+      if (!activeSurface) return;
+      setSurfaceOverrides((prev) => ({
+        ...prev,
+        [activeSurface.id]: value,
+      }));
+    },
+    [activeSurface],
+  );
+  const resetSurfaceColor = useCallback(() => {
+    if (!activeSurface) return;
+    setSurfaceOverrides((prev) => {
+      if (!(activeSurface.id in prev)) return prev;
+      const next = { ...prev };
+      delete next[activeSurface.id];
+      return next;
+    });
+  }, [activeSurface]);
+  const getSurfaceStyle = useCallback(
+    (id: string): CSSProperties | undefined => {
+      const value = surfaceOverrides[id];
+      return value ? { backgroundColor: value } : undefined;
+    },
+    [surfaceOverrides],
+  );
+  const handleSurfaceContextMenu = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      if (typeof window === "undefined") return;
+      const target = event.target as HTMLElement | null;
+      const surfaceElement =
+        target?.closest<HTMLElement>("[data-surface-id]") ??
+        (event.currentTarget as HTMLElement | null);
+      if (!surfaceElement) return;
+      const id = surfaceElement.dataset.surfaceId;
+      if (!id) return;
+      const label = surfaceElement.dataset.surfaceLabel ?? "Surface";
+      const defaultColor =
+        window.getComputedStyle(surfaceElement).backgroundColor || "transparent";
+      setActiveSurface({
+        id,
+        label,
+        defaultColor,
+      });
+    },
+    [],
   );
 
   useEffect(() => {
@@ -1193,7 +1301,22 @@ export default function ThemePage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-border bg-background/80 p-6 shadow-lg backdrop-blur md:p-8">
+        <ContextMenu
+          modal={false}
+          onOpenChange={(open) => {
+            if (!open) {
+              setActiveSurface(null);
+            }
+          }}
+        >
+          <ContextMenuTrigger asChild>
+            <section
+              className="rounded-3xl border border-border bg-background/80 p-6 shadow-lg backdrop-blur md:p-8"
+              data-surface-id="surface-workspace-shell"
+              data-surface-label="Workspace shell"
+              onContextMenuCapture={handleSurfaceContextMenu}
+              style={getSurfaceStyle("surface-workspace-shell")}
+            >
           <div className="flex flex-wrap items-center gap-4 border-b border-dashed border-border pb-6">
             <div className="flex flex-col gap-2">
               <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -1220,23 +1343,36 @@ export default function ThemePage() {
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.8fr_1fr]">
             <div className="space-y-6">
-              <Card>
+              <Card
+                data-surface-id="surface-card-momentum"
+                data-surface-label="Momentum snapshot"
+                style={getSurfaceStyle("surface-card-momentum")}
+              >
                 <CardHeader className="flex flex-col gap-1">
                   <CardTitle>Momentum snapshot</CardTitle>
                   <CardDescription>How the team is trending this week</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-5 md:grid-cols-3">
-                    {stats.map((stat) => (
-                      <div key={stat.label} className="rounded-2xl border border-border/70 p-4">
+                    {stats.map((stat) => {
+                      const statSurfaceId = `surface-stat-${slugify(stat.label)}`;
+                      return (
+                        <div
+                          key={stat.label}
+                          data-surface-id={statSurfaceId}
+                          data-surface-label={stat.label}
+                          style={getSurfaceStyle(statSurfaceId)}
+                          className="rounded-2xl border border-border/70 p-4"
+                        >
                         <p className="text-sm text-muted-foreground">{stat.label}</p>
                         <p className="mt-3 text-3xl font-semibold">{stat.value}</p>
                         <p className="text-sm text-primary mt-2 font-medium">{stat.change}</p>
                         <div className="mt-4 h-1.5 rounded-full bg-muted">
                           <div className="h-full rounded-full bg-primary" />
                         </div>
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="mt-6 flex flex-wrap gap-3">
                     <Button size="sm">Primary action</Button>
@@ -1256,7 +1392,11 @@ export default function ThemePage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card
+                data-surface-id="surface-card-engagement"
+                data-surface-label="Engagement radar"
+                style={getSurfaceStyle("surface-card-engagement")}
+              >
                 <CardHeader className="flex flex-row items-center justify-between gap-4">
                   <div>
                     <CardTitle>Engagement radar</CardTitle>
@@ -1275,7 +1415,12 @@ export default function ThemePage() {
                       <TabsTrigger value="shipping">Shipping</TabsTrigger>
                     </TabsList>
                     <TabsContent value="revenue">
-                      <div className="mt-5 rounded-2xl border border-dashed border-border bg-gradient-to-tr from-primary/15 via-primary/5 to-transparent p-5">
+                      <div
+                        className="mt-5 rounded-2xl border border-dashed border-border bg-gradient-to-tr from-primary/15 via-primary/5 to-transparent p-5"
+                        data-surface-id="surface-engagement-revenue"
+                        data-surface-label="Revenue forecast"
+                        style={getSurfaceStyle("surface-engagement-revenue")}
+                      >
                         <p className="text-sm text-muted-foreground">Forecast</p>
                         <p className="text-4xl font-semibold">$184k</p>
                         <p className="text-sm text-primary mt-2">+24.8% vs last sprint</p>
@@ -1283,7 +1428,12 @@ export default function ThemePage() {
                       </div>
                     </TabsContent>
                     <TabsContent value="retention">
-                      <div className="mt-5 rounded-2xl border border-dashed border-border bg-gradient-to-tr from-secondary/20 via-secondary/5 to-transparent p-5">
+                      <div
+                        className="mt-5 rounded-2xl border border-dashed border-border bg-gradient-to-tr from-secondary/20 via-secondary/5 to-transparent p-5"
+                        data-surface-id="surface-engagement-retention"
+                        data-surface-label="Retention snapshot"
+                        style={getSurfaceStyle("surface-engagement-retention")}
+                      >
                         <p className="text-sm text-muted-foreground">Daily active</p>
                         <p className="text-4xl font-semibold">86%</p>
                         <p className="text-sm text-secondary-foreground mt-2">Holding steady</p>
@@ -1303,7 +1453,12 @@ export default function ThemePage() {
                       </div>
                     </TabsContent>
                     <TabsContent value="shipping">
-                      <div className="mt-5 rounded-2xl border border-dashed border-border bg-gradient-to-tr from-accent/30 via-accent/10 to-transparent p-5">
+                      <div
+                        className="mt-5 rounded-2xl border border-dashed border-border bg-gradient-to-tr from-accent/30 via-accent/10 to-transparent p-5"
+                        data-surface-id="surface-engagement-shipping"
+                        data-surface-label="Shipping velocity"
+                        style={getSurfaceStyle("surface-engagement-shipping")}
+                      >
                         <p className="text-sm text-muted-foreground">Velocity</p>
                         <p className="text-4xl font-semibold">32 merges</p>
                         <p className="text-sm text-accent-foreground mt-2">+4 urgent fixes</p>
@@ -1324,7 +1479,11 @@ export default function ThemePage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card
+                data-surface-id="surface-card-ledger"
+                data-surface-label="Workflow ledger"
+                style={getSurfaceStyle("surface-card-ledger")}
+              >
                 <CardHeader className="flex flex-row items-center justify-between gap-4">
                   <div>
                     <CardTitle>Workflow ledger</CardTitle>
@@ -1380,7 +1539,11 @@ export default function ThemePage() {
             </div>
 
             <div className="space-y-6">
-              <Card>
+              <Card
+                data-surface-id="surface-card-quick-create"
+                data-surface-label="Quick create"
+                style={getSurfaceStyle("surface-card-quick-create")}
+              >
                 <CardHeader>
                   <CardTitle>Quick create</CardTitle>
                   <CardDescription>Generate a themed project on the fly.</CardDescription>
@@ -1420,7 +1583,11 @@ export default function ThemePage() {
                 </CardFooter>
               </Card>
 
-              <Card>
+              <Card
+                data-surface-id="surface-card-signals"
+                data-surface-label="Signals"
+                style={getSurfaceStyle("surface-card-signals")}
+              >
                 <CardHeader>
                   <CardTitle>Signals</CardTitle>
                   <CardDescription>System generated alerts and nudges.</CardDescription>
@@ -1429,6 +1596,9 @@ export default function ThemePage() {
                   {notifications.map((note) => (
                     <div
                       key={note.title}
+                      data-surface-id={`surface-signal-${slugify(note.title)}`}
+                      data-surface-label={note.title}
+                      style={getSurfaceStyle(`surface-signal-${slugify(note.title)}`)}
                       className="flex items-start gap-3 rounded-[calc(var(--lab-radius,18px)*0.7)] border border-border/70 p-3"
                     >
                       {note.tone === "warning" && (
@@ -1460,7 +1630,11 @@ export default function ThemePage() {
                 </CardFooter>
               </Card>
 
-              <Card>
+              <Card
+                data-surface-id="surface-card-team"
+                data-surface-label="Team on deck"
+                style={getSurfaceStyle("surface-card-team")}
+              >
                 <CardHeader>
                   <CardTitle>Team on deck</CardTitle>
                   <CardDescription>Showing ownership and availability.</CardDescription>
@@ -1489,7 +1663,64 @@ export default function ThemePage() {
               </Card>
             </div>
           </div>
-        </section>
+            </section>
+          </ContextMenuTrigger>
+          <ContextMenuContent className="w-72 space-y-2">
+            {activeSurface ? (
+              <>
+                <ContextMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {activeSurface.label}
+                </ContextMenuLabel>
+                {surfacePaletteOptions.map((option) => {
+                  const isActive = resolvedSurfaceColor === option.value;
+                  return (
+                    <ContextMenuItem
+                      key={option.label}
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        applySurfaceColor(option.value);
+                      }}
+                      className="flex items-center gap-3"
+                    >
+                      <span
+                        className="inline-flex size-4 rounded-full border border-border"
+                        style={{ backgroundColor: option.value }}
+                      />
+                      <span className="text-sm">{option.label}</span>
+                      {isActive && (
+                        <span className="text-xs text-muted-foreground">(active)</span>
+                      )}
+                    </ContextMenuItem>
+                  );
+                })}
+                <div className="flex items-center justify-between gap-2 rounded-sm border border-border/60 px-2 py-1.5">
+                  <span className="text-xs text-muted-foreground">Custom color</span>
+                  <input
+                    type="color"
+                    value={resolvedSurfaceHex}
+                    onChange={(event) => applySurfaceColor(event.target.value)}
+                    className="size-8 cursor-pointer rounded-md border border-border bg-transparent p-0"
+                  />
+                </div>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  variant="destructive"
+                  disabled={!surfaceOverrides[activeSurface.id]}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    resetSurfaceColor();
+                  }}
+                >
+                  Reset {activeSurface.label}
+                </ContextMenuItem>
+              </>
+            ) : (
+              <ContextMenuLabel className="text-sm text-muted-foreground">
+                Right-click any surface to customize its fill.
+              </ContextMenuLabel>
+            )}
+          </ContextMenuContent>
+        </ContextMenu>
       </div>
 
       <style jsx global>{`
