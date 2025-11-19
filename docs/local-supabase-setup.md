@@ -52,7 +52,7 @@ cd /path/to/other/project
 supabase stop
 
 # Return to this project
-cd /path/to/minium-agent
+cd /path/to/kingstack
 ```
 
 ### Step 3: Initialize Supabase in This Project
@@ -288,7 +288,7 @@ cd /path/to/other/project
 supabase start
 
 # When returning to this project
-cd /path/to/minium-agent
+cd /path/to/kingstack
 supabase start
 ```
 
