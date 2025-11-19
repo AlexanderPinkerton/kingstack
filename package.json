@@ -22,7 +22,9 @@
     "env:playground": "bun scripts/setup-playground.ts",
     "env:current": "bun scripts/swap-env.ts --current",
     "shadow:start": "supabase start -x realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
-    "shadow:stop": "supabase stop"
+    "shadow:stop": "supabase stop",
+    "vercel": "cd apps/next && vercel",
+    "vercel:prod": "cd apps/next && vercel --prod"
   },
   "packageManager": "yarn@4.10.2",
   "dependencies": {
