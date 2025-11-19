@@ -2005,6 +2005,7 @@ __metadata:
     "@eslint/eslintrc": "npm:^3"
     "@kingstack/advanced-optimistic-store": "workspace:*"
     "@kingstack/shared": "workspace:*"
+    "@paper-design/shaders-react": "npm:^0.0.63"
     "@radix-ui/react-avatar": "npm:^1.1.4"
     "@radix-ui/react-checkbox": "npm:^1.1.5"
     "@radix-ui/react-dialog": "npm:^1.1.14"
@@ -2671,6 +2672,28 @@ __metadata:
   version: 1.9.0
   resolution: "@opentelemetry/api@npm:1.9.0"
   checksum: 10c0/9aae2fe6e8a3a3eeb6c1fdef78e1939cf05a0f37f8a4fae4d6bf2e09eb1e06f966ece85805626e01ba5fab48072b94f19b835449e58b6d26720ee19a58298add
+  languageName: node
+  linkType: hard
+
+"@paper-design/shaders-react@npm:^0.0.63":
+  version: 0.0.63
+  resolution: "@paper-design/shaders-react@npm:0.0.63"
+  dependencies:
+    "@paper-design/shaders": "npm:0.0.63"
+  peerDependencies:
+    "@types/react": ^18 || ^19
+    react: ^18 || ^19
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+  checksum: 10c0/09195313a3af34951ed2eb3bb97ee8d443aaa12ae6e544116e363622bd63038058b00819b9918b99d4b9c33f1c4cd8e74b7e2569287a7374a0a3977a1d520b00
+  languageName: node
+  linkType: hard
+
+"@paper-design/shaders@npm:0.0.63":
+  version: 0.0.63
+  resolution: "@paper-design/shaders@npm:0.0.63"
+  checksum: 10c0/8f6c00bc1fdd7a4bc92f0efef181c4bbe82aacbe793419b7e564defae3f4f8c2b6fffe07857b1b35fff53c118124e196d136def188f3fae887718deec2a61185
   languageName: node
   linkType: hard
 
