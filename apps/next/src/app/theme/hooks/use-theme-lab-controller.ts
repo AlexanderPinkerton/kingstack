@@ -5,7 +5,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type MouseEvent,
   type MutableRefObject,
 } from "react";
 
@@ -34,7 +33,6 @@ import {
   SURFACE_SHADE_PRESETS,
   type SurfaceShadePreset,
 } from "../data/surface-presets";
-import type { SurfaceTarget } from "../types";
 import {
   colorToHex,
   getReadableTextColor,
@@ -102,19 +100,11 @@ export type ThemeLabController = {
   notifications: typeof notifications;
   team: typeof team;
   inProgress: string[];
-  surfacePaletteOptions: { label: string; value: string }[];
-  resolvedSurfaceColor: string;
-  resolvedSurfaceHex: string;
-  applySurfaceColor: (value: string) => void;
-  resetSurfaceColor: () => void;
   setSurfaceColor: (value: string) => void;
   setSurfaceElevatedColor: (value: string) => void;
   resetSurfaceTones: () => void;
   surfaceOverrides: Record<string, string>;
   getSurfaceStyle: (id: string) => CSSProperties | undefined;
-  handleSurfaceContextMenu: (event: MouseEvent<HTMLElement>) => void;
-  activeSurface: SurfaceTarget | null;
-  setActiveSurface: (surface: SurfaceTarget | null) => void;
   surfaceShadePresets: SurfaceShadePreset[];
   resolvedSurfaceOptions: { label: string; value: string }[];
   resolvedSurfacePaletteColor: string;
@@ -146,8 +136,6 @@ export function useThemeLabController(
   const [surfaceOverrides, setSurfaceOverrides] = useState<
     Record<string, string>
   >({});
-  const [activeSurface, setActiveSurface] =
-    useState<SurfaceTarget | null>(null);
   const previewRef = useRef<HTMLElement | null>(null);
 
   const styleDefinition =
@@ -190,101 +178,12 @@ export function useThemeLabController(
     [],
   );
 
-  const surfacePaletteOptions = useMemo(
-    () =>
-      [
-        {
-          label: "Surface",
-          value: paletteValues["--color-surface"],
-        },
-        {
-          label: "Surface elevated",
-          value: paletteValues["--color-surface-elevated"],
-        },
-        {
-          label: "Primary",
-          value: paletteValues["--color-primary"],
-        },
-        {
-          label: "Secondary",
-          value: paletteValues["--color-secondary"],
-        },
-        {
-          label: "Tertiary",
-          value: paletteValues["--color-tertiary"],
-        },
-      ].filter(
-        (option): option is { label: string; value: string } =>
-          Boolean(option.value),
-      ),
-    [paletteValues],
-  );
-
-  const resolvedSurfaceColor = useMemo(() => {
-    if (!activeSurface) {
-      return surfacePaletteOptions[0]?.value ?? "#f8f9fb";
-    }
-    return (
-      surfaceOverrides[activeSurface.id] ?? activeSurface.defaultColor
-    );
-  }, [activeSurface, surfaceOverrides, surfacePaletteOptions]);
-
-  const resolvedSurfaceHex = useMemo(
-    () => colorToHex(resolvedSurfaceColor),
-    [resolvedSurfaceColor],
-  );
-
-  const applySurfaceColor = useCallback(
-    (value: string) => {
-      if (!activeSurface) return;
-      setSurfaceOverrides((prev) => ({
-        ...prev,
-        [activeSurface.id]: value,
-      }));
-    },
-    [activeSurface],
-  );
-
-  const resetSurfaceColor = useCallback(() => {
-    if (!activeSurface) return;
-    setSurfaceOverrides((prev) => {
-      if (!(activeSurface.id in prev)) return prev;
-      const next = { ...prev };
-      delete next[activeSurface.id];
-      return next;
-    });
-  }, [activeSurface]);
-
   const getSurfaceStyle = useCallback(
     (id: string): CSSProperties | undefined => {
       const value = surfaceOverrides[id];
       return value ? { backgroundColor: value } : undefined;
     },
     [surfaceOverrides],
-  );
-
-  const handleSurfaceContextMenu = useCallback(
-    (event: MouseEvent<HTMLElement>) => {
-      if (typeof window === "undefined") return;
-      const target = event.target as HTMLElement | null;
-      const surfaceElement =
-        target?.closest<HTMLElement>("[data-surface-id]") ??
-        (event.currentTarget as HTMLElement | null);
-      if (!surfaceElement) return;
-      const id = surfaceElement.dataset.surfaceId;
-      if (!id) return;
-      const label =
-        surfaceElement.dataset.surfaceLabel ?? "Surface";
-      const defaultColor =
-        window.getComputedStyle(surfaceElement).backgroundColor ||
-        "transparent";
-      setActiveSurface({
-        id,
-        label,
-        defaultColor,
-      });
-    },
-    [],
   );
 
   useEffect(() => {
@@ -514,23 +413,12 @@ export function useThemeLabController(
     notifications,
     team,
     inProgress,
-    surfacePaletteOptions,
-    resolvedSurfaceColor,
-    resolvedSurfaceHex,
-    applySurfaceColor,
-    resetSurfaceColor,
     setSurfaceColor,
     setSurfaceElevatedColor,
     resetSurfaceTones,
     surfaceOverrides,
     getSurfaceStyle,
-    handleSurfaceContextMenu,
-    activeSurface,
-    setActiveSurface,
     surfaceShadePresets: SURFACE_SHADE_PRESETS,
-    resolvedSurfaceOptions: surfacePaletteOptions,
-    resolvedSurfacePaletteColor: resolvedSurfaceColor,
-    resolvedSurfacePaletteHex: resolvedSurfaceHex,
     resolvedPrimaryColor: primaryColor,
     resolvedPrimaryOnColor: primaryOnColor,
     resolvedSecondaryColor: secondaryColor,
