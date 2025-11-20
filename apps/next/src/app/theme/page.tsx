@@ -80,17 +80,11 @@ import {
   SidebarSeparator,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuLabel,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import { DesignControlsSheet } from "./components/design-controls-sheet";
 import { ThemeOverridesSheet } from "./components/theme-overrides-sheet";
 import { SurfaceTonesSheet } from "./components/surface-tones-sheet";
+import { JuiceButtonShowcase } from "./components/juice-button-showcase";
+import { JuiceProvider } from "@/components/ui/juice-button";
 
 type ThemeStylePageProps = {
   variant?: ThemeStyleVariant;
@@ -144,19 +138,11 @@ export function ThemeStylePage({ variant = "box" }: ThemeStylePageProps) {
     notifications,
     team,
     inProgress,
-    surfacePaletteOptions,
-    resolvedSurfaceColor,
-    resolvedSurfaceHex,
-    applySurfaceColor,
-    resetSurfaceColor,
     setSurfaceColor,
     setSurfaceElevatedColor,
     resetSurfaceTones,
     surfaceOverrides,
     getSurfaceStyle,
-    handleSurfaceContextMenu,
-    activeSurface,
-    setActiveSurface,
     surfaceShadePresets,
     resolvedPrimaryColor,
     resolvedPrimaryOnColor,
@@ -330,6 +316,25 @@ export function ThemeStylePage({ variant = "box" }: ThemeStylePageProps) {
                     <Link href="/theme/glassmorphism">
                       <Droplet />
                       <span>Glassmorphism</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarSeparator />
+          <SidebarGroup>
+            <SidebarGroupLabel>Interactive</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip="Juice Buttons demo"
+                  >
+                    <Link href="/theme/juice">
+                      <Sparkles />
+                      <span>Juice Buttons</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -659,21 +664,9 @@ export function ThemeStylePage({ variant = "box" }: ThemeStylePageProps) {
           </div>
         </section>
 
-        <ContextMenu
-          modal={false}
-          onOpenChange={(open) => {
-            if (!open) {
-              setActiveSurface(null);
-            }
-          }}
-        >
-          <ContextMenuTrigger asChild>
-            <section
-              className={workspaceSectionClass}
-              data-surface-id="surface-workspace-shell"
-              data-surface-label="Workspace shell"
-              onContextMenuCapture={handleSurfaceContextMenu}
-              style={{
+        <section
+          className={workspaceSectionClass}
+          style={{
                 ...getSurfaceStyle("surface-workspace-shell"),
                 ...(isGlass && showGlassBackground
                   ? {
@@ -1082,64 +1075,12 @@ export function ThemeStylePage({ variant = "box" }: ThemeStylePageProps) {
               </Card>
             </div>
           </div>
-            </section>
-          </ContextMenuTrigger>
-          <ContextMenuContent className="w-72 space-y-2">
-            {activeSurface ? (
-              <>
-                <ContextMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {activeSurface.label}
-                </ContextMenuLabel>
-                {surfacePaletteOptions.map((option) => {
-                  const isActive = resolvedSurfaceColor === option.value;
-                  return (
-                    <ContextMenuItem
-                      key={option.label}
-                      onSelect={(event) => {
-                        event.preventDefault();
-                        applySurfaceColor(option.value);
-                      }}
-                      className="flex items-center gap-3"
-                    >
-                      <span
-                        className="inline-flex size-4 rounded-full border border-border"
-                        style={{ backgroundColor: option.value }}
-                      />
-                      <span className="text-sm">{option.label}</span>
-                      {isActive && (
-                        <span className="text-xs text-muted-foreground">(active)</span>
-                      )}
-                    </ContextMenuItem>
-                  );
-                })}
-                <div className="flex items-center justify-between gap-2 rounded-sm border border-border/60 px-2 py-1.5">
-                  <span className="text-xs text-muted-foreground">Custom color</span>
-                  <input
-                    type="color"
-                    value={resolvedSurfaceHex}
-                    onChange={(event) => applySurfaceColor(event.target.value)}
-                    className="size-8 cursor-pointer rounded-md border border-border bg-transparent p-0"
-                  />
-                </div>
-                <ContextMenuSeparator />
-                <ContextMenuItem
-                  variant="destructive"
-                  disabled={!surfaceOverrides[activeSurface.id]}
-                  onSelect={(event) => {
-                    event.preventDefault();
-                    resetSurfaceColor();
-                  }}
-                >
-                  Reset {activeSurface.label}
-                </ContextMenuItem>
-              </>
-            ) : (
-              <ContextMenuLabel className="text-sm text-muted-foreground">
-                Right-click any surface to customize its fill.
-              </ContextMenuLabel>
-            )}
-          </ContextMenuContent>
-        </ContextMenu>
+
+          {/* Juice Button Showcase */}
+          <JuiceProvider>
+            <JuiceButtonShowcase themeStyle={styleVariant} panelClass={panelClass} />
+          </JuiceProvider>
+        </section>
       </div>
 
       <style jsx global>{`
