@@ -16,12 +16,15 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Layers,
   SlidersHorizontal,
   Moon,
   Palette,
   Sparkles,
+  Square,
   Sun,
 } from "lucide-react";
+import Link from "next/link";
 
 import "./themes/adonis_rose_yellow.css";
 import "./themes/apocalyptic_orange.css";
@@ -30,7 +33,16 @@ import "./themes/british_phone_booth.css";
 import "./themes/island_light.css";
 import "./themes/jade_glass.css";
 import "./themes/crystal_green.css";
+import "./themes/cyan_sky.css";
 import "./themes/fountain.css";
+import "./themes/koopa_green_shell.css";
+import "./themes/thuja_green.css";
+import "./themes/celtic_queen.css";
+import "./themes/pinkman.css";
+import "./themes/if_i_could_fly.css";
+import "./themes/crop_circle.css";
+import "./themes/apricot_sorbet.css";
+import "./themes/mesa_sunrise.css";
 import "./themes/james_blonde.css";
 import "./themes/maya_blue.css";
 import "./themes/miami_coral.css";
@@ -695,6 +707,69 @@ const THEME_FILES = [
     description: "Glassy verdant hues with deep forest anchors and luminous surfaces.",
   },
   {
+    id: "cyan-sky",
+    className: "theme-cyan-sky",
+    label: "Cyan Sky",
+    fileName: "cyan_sky.css",
+    description: "Electric cyan primaries with warm amber neutrals inspired by tropical sunrises.",
+  },
+  {
+    id: "koopa-green-shell",
+    className: "theme-koopa-green-shell",
+    label: "Koopa Green Shell",
+    fileName: "koopa_green_shell.css",
+    description: "Playful mint primaries with warm coral support inspired by retro game palettes.",
+  },
+  {
+    id: "thuja-green",
+    className: "theme-thuja-green",
+    label: "Thuja Green",
+    fileName: "thuja_green.css",
+    description: "Deep evergreen primaries paired with terracotta accents and lavender lights.",
+  },
+  {
+    id: "celtic-queen",
+    className: "theme-celtic-queen",
+    label: "Celtic Queen",
+    fileName: "celtic_queen.css",
+    description: "Emerald primaries with sea-glass blues and moody teals for regal dashboards.",
+  },
+  {
+    id: "pinkman",
+    className: "theme-pinkman",
+    label: "Pinkman",
+    fileName: "pinkman.css",
+    description: "High-energy magenta primaries with golden highlights and teal supports.",
+  },
+  {
+    id: "if-i-could-fly",
+    className: "theme-if-i-could-fly",
+    label: "If I Could Fly",
+    fileName: "if_i_could_fly.css",
+    description: "Violet primaries with blush highlights and eucalyptus greens for dreamy apps.",
+  },
+  {
+    id: "crop-circle",
+    className: "theme-crop-circle",
+    label: "Crop Circle",
+    fileName: "crop_circle.css",
+    description: "Golden primaries with teal shadows for organic editorial layouts.",
+  },
+  {
+    id: "apricot-sorbet",
+    className: "theme-apricot-sorbet",
+    label: "Apricot Sorbet",
+    fileName: "apricot_sorbet.css",
+    description: "Sun-baked apricot gradients with deep amber accents and cocoa neutrals.",
+  },
+  {
+    id: "mesa-sunrise",
+    className: "theme-mesa-sunrise",
+    label: "Mesa Sunrise",
+    fileName: "mesa_sunrise.css",
+    description: "Earthy canyon primaries with smoldering reds for desert-inspired dashboards.",
+  },
+  {
     id: "fountain",
     className: "theme-fountain",
     label: "Fountain",
@@ -703,7 +778,13 @@ const THEME_FILES = [
   },
 ];
 
-export default function ThemePage() {
+type ThemeStyleVariant = "box" | "neo-brutalist" | "neomorphism";
+
+type ThemeStylePageProps = {
+  variant?: ThemeStyleVariant;
+};
+
+export function ThemeStylePage({ variant = "box" }: ThemeStylePageProps) {
   const [mode, setMode] = useState<"light" | "dark">("light");
   const [themeClass, setThemeClass] = useState(THEME_FILES[0].className);
   const [variableOverrides, setVariableOverrides] =
@@ -717,6 +798,13 @@ export default function ThemePage() {
   const [surfaceOverrides, setSurfaceOverrides] = useState<Record<string, string>>({});
   const [activeSurface, setActiveSurface] = useState<SurfaceTarget | null>(null);
   const previewRef = useRef<HTMLElement | null>(null);
+  const styleVariant = variant ?? "box";
+  const styleLabel =
+    styleVariant === "neo-brutalist"
+      ? "Neo-Brutalist"
+      : styleVariant === "neomorphism"
+        ? "Neomorphism"
+        : "Box";
   const inProgress = transactions
     .filter((item) => item.status === "In review")
     .map((item) => item.name);
@@ -879,21 +967,40 @@ export default function ThemePage() {
     return style as CSSProperties;
   }, [variableOverrides]);
 
+  const brutalistFontFamily = '"JetBrainsMono", var(--font-geist-sans)';
+  const appliedFontFamily =
+    styleVariant === "neo-brutalist"
+      ? brutalistFontFamily
+      : styleVariant === "neomorphism"
+        ? fontOption.fontFamily
+        : fontOption.fontFamily;
+  const variantColorOverrides = useMemo<CSSProperties>(() => {
+    if (styleVariant === "neomorphism") {
+      return {
+        ["--color-surface" as keyof CSSProperties]: "#f4f6fa",
+        ["--color-surface-elevated" as keyof CSSProperties]: "#f7f8fb",
+        ["--color-surface-dim" as keyof CSSProperties]: "#eceff3",
+        ["--color-surface-bright" as keyof CSSProperties]: "#fff",
+      };
+    }
+    return {};
+  }, [styleVariant]);
   const layoutStyle = useMemo<CSSProperties>(
     () => ({
       ["--lab-radius" as keyof CSSProperties]: `${radius}px`,
-      ["--lab-font" as keyof CSSProperties]: fontOption.fontFamily,
+      ["--lab-font" as keyof CSSProperties]: appliedFontFamily,
       ["--lab-shadow" as keyof CSSProperties]: shadowOption.value,
     }),
-    [radius, fontOption.fontFamily, shadowOption],
+    [radius, appliedFontFamily, shadowOption],
   );
 
   const previewStyle = useMemo<CSSProperties>(
     () => ({
       ...layoutStyle,
       ...colorStyle,
+      ...variantColorOverrides,
     }),
-    [layoutStyle, colorStyle],
+    [layoutStyle, colorStyle, variantColorOverrides],
   );
 
   const assignVariable = (target: ColorVariable, source: ColorVariable) => {
@@ -978,6 +1085,322 @@ export default function ThemePage() {
     resetVariable("--color-surface" as ColorVariable);
     resetVariable("--color-surface-elevated" as ColorVariable);
   };
+  const heroWrapperClass =
+    styleVariant === "neo-brutalist"
+      ? "brutalist-hero"
+      : styleVariant === "neomorphism"
+        ? "neomorph-hero"
+        : "";
+  const headerBandClass =
+    styleVariant === "neo-brutalist"
+      ? "brutalist-banner"
+      : styleVariant === "neomorphism"
+        ? "neomorph-banner"
+        : "";
+  const panelClass =
+    styleVariant === "neo-brutalist"
+      ? "brutalist-panel"
+      : styleVariant === "neomorphism"
+        ? "neomorph-panel"
+        : "";
+  const primaryColor = paletteValues["--color-primary"] || "hsl(var(--primary))";
+  const primaryOnColor =
+    paletteValues["--color-on-primary"] || "hsl(var(--primary-foreground))";
+  const secondaryColor =
+    paletteValues["--color-secondary"] || "hsl(var(--secondary))";
+  const secondaryOnColor =
+    paletteValues["--color-on-secondary"] ||
+    "hsl(var(--secondary-foreground))";
+  const designControlsSheet = (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button
+          className={cn(
+            "gap-2 rounded-full bg-background/90 px-5 shadow-lg shadow-primary/20",
+            styleVariant === "neomorphism" && "neomorph-dock-button",
+          )}
+        >
+          <SlidersHorizontal className="size-4" />
+          Design controls
+        </Button>
+      </SheetTrigger>
+      <SheetContent
+        side="right"
+        className="flex h-full flex-col overflow-y-auto border-l border-border/70 sm:max-w-md"
+      >
+        <SheetHeader>
+          <SheetTitle>Design surface controls</SheetTitle>
+          <SheetDescription>
+            Adjust shared radius, font family, and elevation shadows across the preview.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="flex flex-col gap-6 px-4 pb-6">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Border radius</Label>
+              <span className="text-sm font-mono text-muted-foreground">{radius}px</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={36}
+              value={radius}
+              onChange={(event) => setRadius(Number(event.target.value))}
+              className="w-full"
+              style={{ accentColor: "hsl(var(--primary))" }}
+            />
+            <p className="text-muted-foreground text-xs">
+              Applies to cards, buttons, inputs, and major surface containers.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-semibold">Font family</p>
+            <div className="grid max-h-[400px] gap-3 overflow-y-auto pr-1">
+              {FONT_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setFontPreset(option.id)}
+                  className={cn(
+                    "rounded-2xl border p-4 text-left transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring",
+                    fontPreset === option.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-muted/30",
+                  )}
+                >
+                  <p className="text-sm font-semibold">{option.label}</p>
+                  <p
+                    className="text-muted-foreground text-xs"
+                    style={{ fontFamily: option.fontFamily }}
+                  >
+                    {option.label} — the quick brown fox tests curves and ligatures.
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-semibold">Shadow preset</p>
+            <div className="space-y-2">
+              {SHADOW_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => setShadowPreset(preset.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring",
+                    shadowPreset === preset.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-muted/30",
+                  )}
+                >
+                  <span>{preset.label}</span>
+                  <span className="text-xs font-mono text-muted-foreground">preset</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <SheetFooter>
+          <Button variant="secondary" onClick={resetLayoutControls} disabled={isLayoutDefault}>
+            Reset layout styling
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+  const themeOverridesSheet = (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button
+          className={cn(
+            "gap-2 rounded-full bg-primary text-primary-foreground px-5 shadow-lg shadow-primary/30",
+            styleVariant === "neomorphism" && "neomorph-dock-button",
+          )}
+        >
+          <Palette className="size-4" />
+          Theme overrides
+        </Button>
+      </SheetTrigger>
+      <SheetContent
+        side="right"
+        className="flex h-full flex-col overflow-y-auto border-l border-border/70 sm:max-w-md"
+      >
+        <SheetHeader>
+          <SheetTitle>Variable overrides</SheetTitle>
+          <SheetDescription>
+            Reassign CSS variables to any palette color to stress-test extreme combinations.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex flex-col gap-4 px-4 pb-6">
+          <div className="rounded-2xl border border-border/70 bg-muted/10 p-4">
+            <p className="text-sm font-semibold">Variables</p>
+            <p className="text-muted-foreground text-xs">
+              Use the color picker to override any token or pull from an existing theme value.
+            </p>
+          </div>
+          <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+            {paletteList.map(({ variable, value, isOverride }) => {
+              const effectiveValue = variableOverrides[variable] ?? value ?? "";
+              const hexValue = colorToHex(effectiveValue);
+              return (
+                <div
+                  key={`override-${variable}`}
+                  className="rounded-2xl border border-border/70 bg-background/60 p-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-xs">{variable}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {isOverride ? "Override applied" : "Theme default"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {variableOverrides[variable] && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs"
+                          onClick={() => resetVariable(variable)}
+                        >
+                          Reset
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-3 text-xs font-medium">
+                      <span className="text-muted-foreground">Color</span>
+                      <input
+                        type="color"
+                        value={hexValue}
+                        onChange={(event) => setColorOverride(variable, event.target.value)}
+                        className="size-10 cursor-pointer rounded-md border border-border bg-transparent p-0"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPalettePickerTarget(
+                          palettePickerTarget === variable ? null : variable,
+                        )
+                      }
+                      className="rounded-full border border-border px-3 py-1 text-xs font-medium transition hover:border-primary"
+                    >
+                      Pick from theme
+                    </button>
+                  </div>
+                  {palettePickerTarget === variable && (
+                    <div className="mt-3 grid max-h-48 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border/70 p-2">
+                      {paletteList.map((option) => (
+                        <button
+                          key={`${variable}-${option.variable}`}
+                          type="button"
+                          onClick={() => assignVariable(variable, option.variable)}
+                          className="flex items-center gap-2 rounded-lg border border-border/70 bg-muted/30 px-2 py-1 text-left text-[11px] font-mono hover:border-primary"
+                        >
+                          <span
+                            className="inline-block size-6 rounded-md border border-border/70"
+                            style={{ backgroundColor: option.value || "transparent" }}
+                          />
+                          <span className="truncate">{option.variable}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <SheetFooter>
+          <Button
+            variant="secondary"
+            onClick={resetAllOverrides}
+            disabled={!Object.keys(variableOverrides).length}
+          >
+            Reset all overrides
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+  const surfaceTonesSheet = (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button
+          className={cn(
+            "gap-2 rounded-full bg-background/95 px-5 shadow-lg shadow-primary/20",
+            styleVariant === "neomorphism" && "neomorph-dock-button",
+          )}
+        >
+          Surface tones
+        </Button>
+      </SheetTrigger>
+      <SheetContent
+        side="bottom"
+        className="flex h-auto flex-col gap-6 border-t border-border/70 bg-background/95 sm:max-h-[70vh]"
+      >
+        <SheetHeader>
+          <SheetTitle>Surface tones</SheetTitle>
+          <SheetDescription>
+            Quickly apply near-white tints of the current theme colors to background and elevated
+            layers.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="grid gap-6 text-xs font-medium text-muted-foreground sm:grid-cols-2">
+          {[
+            { label: "Surface", setter: setSurfaceColor },
+            { label: "Elevated", setter: setSurfaceElevatedColor },
+          ].map((section) => (
+            <div
+              key={section.label}
+              className="space-y-3 rounded-2xl border border-border/60 bg-background/80 p-4"
+            >
+              <p className="text-[11px] uppercase tracking-wider text-foreground">
+                {section.label} tones
+              </p>
+              <div className="space-y-2">
+                {SURFACE_SHADE_PRESETS.map((preset) => (
+                  <div
+                    key={`${section.label}-${preset.key}`}
+                    className="flex items-center gap-3 text-[11px]"
+                  >
+                    <span className="w-16 shrink-0 uppercase tracking-wide text-muted-foreground">
+                      {preset.label}
+                    </span>
+                    <div className="flex gap-2">
+                      {preset.values.map((shade, index) => (
+                        <button
+                          key={`${preset.key}-${section.label}-${index}`}
+                          type="button"
+                          onClick={() => section.setter(shade)}
+                          className="size-8 rounded-full border border-border/70 shadow-inner transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+                          style={{ backgroundColor: shade }}
+                          aria-label={`Set ${section.label.toLowerCase()} ${preset.label} shade ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <SheetFooter>
+          <Button variant="secondary" onClick={resetSurfaceTones}>
+            Reset surface colors
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
 
   return (
     <div
@@ -988,6 +1411,7 @@ export default function ThemePage() {
       )}
       data-mode={mode}
       data-theme-lab="true"
+      data-style={styleVariant}
       ref={previewRef}
       style={previewStyle}
     >
@@ -1034,7 +1458,51 @@ export default function ThemePage() {
             </div>
           </div>
         </SidebarHeader>
-        <SidebarContent className="px-3 py-4">
+        <SidebarContent className="px-3 py-4 space-y-4">
+          <SidebarGroup>
+            <SidebarGroupLabel>Styles</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={styleVariant === "box"}
+                    tooltip="Box layout"
+                  >
+                    <Link href="/theme">
+                      <Square />
+                      <span>Box</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={styleVariant === "neo-brutalist"}
+                    tooltip="Neo Brutalist layout"
+                  >
+                    <Link href="/theme/neo-brutalist">
+                      <Layers />
+                      <span>Neo Brutalist</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={styleVariant === "neomorphism"}
+                    tooltip="Neomorphism layout"
+                  >
+                    <Link href="/theme/neomorphism">
+                      <SlidersHorizontal />
+                      <span>Neomorphism</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarSeparator />
           <SidebarGroup>
             <SidebarGroupLabel>Main</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -1095,11 +1563,14 @@ export default function ThemePage() {
       <SidebarInset className="bg-background">
         <main className="min-h-screen px-4 py-12 text-foreground transition-colors md:px-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-10">
-        <header className="flex flex-wrap items-center justify-between gap-6">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
+        <header className={cn("flex flex-wrap items-center justify-between gap-6", heroWrapperClass)}>
+          <div className="space-y-3">
+            <div className={cn("flex flex-wrap items-center gap-2", headerBandClass)}>
               <Badge variant="secondary" className="uppercase tracking-widest">
                 Theme Lab
+              </Badge>
+              <Badge variant="outline" className="uppercase tracking-widest">
+                {styleLabel} style
               </Badge>
               {activeTheme && (
                 <Badge variant="outline" className="font-mono text-xs">
@@ -1107,8 +1578,20 @@ export default function ThemePage() {
                 </Badge>
               )}
             </div>
-            <h1 className="mt-3 text-4xl font-semibold">Visual Theme Preview</h1>
-            <p className="text-muted-foreground mt-2 max-w-2xl text-base">
+            <h1
+              className={cn(
+                "mt-3 text-4xl font-semibold",
+                styleVariant === "neo-brutalist" && "text-5xl font-black uppercase tracking-tight"
+              )}
+            >
+              Visual Theme Preview
+            </h1>
+            <p
+              className={cn(
+                "text-muted-foreground mt-2 max-w-2xl text-base",
+                styleVariant === "neo-brutalist" && "font-semibold text-lg"
+              )}
+            >
               Compare every component against alternative CSS token sets. Currently
               showing{" "}
               <span className="font-medium text-foreground">
@@ -1122,29 +1605,55 @@ export default function ThemePage() {
           <div className="flex flex-wrap items-center gap-3">
             <SidebarTrigger className="size-9 rounded-full border border-border bg-background/80" />
             <div className="flex flex-wrap items-center gap-3 rounded-[calc(var(--lab-radius,18px))] border border-border bg-background/90 p-1 shadow-sm">
-            <Button
-              variant={mode === "light" ? "default" : "ghost"}
-              size="sm"
-              className="gap-1.5 rounded-full"
-              onClick={() => setMode("light")}
-            >
-              <Sun className="size-4" />
-              Light
-            </Button>
-            <Button
-              variant={mode === "dark" ? "default" : "ghost"}
-              size="sm"
-              className="gap-1.5 rounded-full"
-              onClick={() => setMode("dark")}
-            >
-              <Moon className="size-4" />
-              Dark
-            </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 rounded-full border-none px-4"
+                onClick={() => setMode("light")}
+                style={
+                  mode === "light"
+                    ? {
+                        backgroundColor: primaryColor,
+                        color: primaryOnColor,
+                      }
+                    : {
+                        backgroundColor: "#f4f4f4",
+                        color:
+                          paletteValues["--color-on-surface"] ||
+                          "var(--foreground)",
+                      }
+                }
+              >
+                <Sun className="size-4" />
+                Light
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 rounded-full border-none px-4"
+                onClick={() => setMode("dark")}
+                style={
+                  mode === "dark"
+                    ? {
+                        backgroundColor: secondaryColor,
+                        color: secondaryOnColor,
+                      }
+                    : {
+                        backgroundColor: "#f4f4f4",
+                        color:
+                          paletteValues["--color-on-surface"] ||
+                          "var(--foreground)",
+                      }
+                }
+              >
+                <Moon className="size-4" />
+                Dark
+              </Button>
             </div>
           </div>
         </header>
 
-        <section className="rounded-3xl border border-dashed border-border bg-background/70 p-6 shadow-sm md:p-8">
+        <section className={cn("rounded-3xl border border-dashed border-border bg-background/70 p-6 shadow-sm md:p-8", panelClass)}>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold">Theme files</h2>
@@ -1311,7 +1820,11 @@ export default function ThemePage() {
         >
           <ContextMenuTrigger asChild>
             <section
-              className="rounded-3xl border border-border bg-background/80 p-6 shadow-lg backdrop-blur md:p-8"
+              className={cn(
+                "rounded-3xl border border-border bg-background/80 p-6 shadow-lg backdrop-blur md:p-8",
+                panelClass,
+                styleVariant === "neomorphism" && "neomorph-panel--flat",
+              )}
               data-surface-id="surface-workspace-shell"
               data-surface-label="Workspace shell"
               onContextMenuCapture={handleSurfaceContextMenu}
@@ -1333,17 +1846,34 @@ export default function ThemePage() {
               </p>
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-3">
-              <Button className="gap-2">
+              <Button
+                className="gap-2 px-5 font-semibold text-sm"
+                style={{
+                  backgroundColor: "var(--color-primary)",
+                  color: "var(--color-on-primary)",
+                  border: "none",
+                }}
+              >
                 Launch report
                 <ArrowUpRight className="size-4" />
               </Button>
-              <Button variant="outline">Share feedback</Button>
+              <Button
+                variant="outline"
+                className="border-none px-5 text-sm font-semibold"
+                style={{
+                  backgroundColor: "var(--color-secondary)",
+                  color: "var(--color-on-secondary)",
+                }}
+              >
+                Share feedback
+              </Button>
             </div>
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.8fr_1fr]">
             <div className="space-y-6">
               <Card
+                className={cn(panelClass)}
                 data-surface-id="surface-card-momentum"
                 data-surface-label="Momentum snapshot"
                 style={getSurfaceStyle("surface-card-momentum")}
@@ -1354,8 +1884,14 @@ export default function ThemePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-5 md:grid-cols-3">
-                    {stats.map((stat) => {
+                    {stats.map((stat, statIndex) => {
                       const statSurfaceId = `surface-stat-${slugify(stat.label)}`;
+                      const dotColor =
+                        statIndex === 0
+                          ? paletteValues["--color-primary"] || "var(--color-primary)"
+                          : statIndex === 1
+                            ? paletteValues["--color-secondary"] || "var(--color-secondary)"
+                            : paletteValues["--color-tertiary"] || "var(--color-tertiary)";
                       return (
                         <div
                           key={stat.label}
@@ -1364,7 +1900,15 @@ export default function ThemePage() {
                           style={getSurfaceStyle(statSurfaceId)}
                           className="rounded-2xl border border-border/70 p-4"
                         >
-                        <p className="text-sm text-muted-foreground">{stat.label}</p>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                            {stat.label}
+                          </p>
+                          <span
+                            className="inline-flex size-2.5 rounded-full"
+                            style={{ backgroundColor: dotColor }}
+                          />
+                        </div>
                         <p className="mt-3 text-3xl font-semibold">{stat.value}</p>
                         <p className="text-sm text-primary mt-2 font-medium">{stat.change}</p>
                         <div className="mt-4 h-1.5 rounded-full bg-muted">
@@ -1393,6 +1937,7 @@ export default function ThemePage() {
               </Card>
 
               <Card
+                className={cn(panelClass)}
                 data-surface-id="surface-card-engagement"
                 data-surface-label="Engagement radar"
                 style={getSurfaceStyle("surface-card-engagement")}
@@ -1480,6 +2025,7 @@ export default function ThemePage() {
               </Card>
 
               <Card
+                className={cn(panelClass)}
                 data-surface-id="surface-card-ledger"
                 data-surface-label="Workflow ledger"
                 style={getSurfaceStyle("surface-card-ledger")}
@@ -1540,6 +2086,7 @@ export default function ThemePage() {
 
             <div className="space-y-6">
               <Card
+                className={cn(panelClass)}
                 data-surface-id="surface-card-quick-create"
                 data-surface-label="Quick create"
                 style={getSurfaceStyle("surface-card-quick-create")}
@@ -1576,14 +2123,31 @@ export default function ThemePage() {
                   </div>
                 </CardContent>
                 <CardFooter className="flex gap-3">
-                  <Button className="flex-1">Create workspace</Button>
-                  <Button className="flex-1" variant="outline">
+                  <Button
+                    className="flex-1 font-semibold"
+                    style={{
+                      backgroundColor: "var(--color-tertiary)",
+                      color: "var(--color-on-tertiary)",
+                      border: "none",
+                    }}
+                  >
+                    Create workspace
+                  </Button>
+                  <Button
+                    className="flex-1 font-semibold"
+                    style={{
+                      backgroundColor: "var(--color-secondary)",
+                      color: "var(--color-on-secondary)",
+                      border: "none",
+                    }}
+                  >
                     Save draft
                   </Button>
                 </CardFooter>
               </Card>
 
               <Card
+                className={cn(panelClass)}
                 data-surface-id="surface-card-signals"
                 data-surface-label="Signals"
                 style={getSurfaceStyle("surface-card-signals")}
@@ -1631,6 +2195,7 @@ export default function ThemePage() {
               </Card>
 
               <Card
+                className={cn(panelClass)}
                 data-surface-id="surface-card-team"
                 data-surface-label="Team on deck"
                 style={getSurfaceStyle("surface-card-team")}
@@ -1730,12 +2295,12 @@ export default function ThemePage() {
         [data-theme-lab="true"] [data-slot="card"],
         [data-theme-lab="true"] section.rounded-3xl {
           border-radius: var(--lab-radius, 18px);
-          box-shadow: var(--lab-shadow, 0 35px 60px -30px rgba(15, 23, 42, 0.4));
+          box-shadow: var(--lab-shadow, 0 12px 24px -18px rgba(15, 23, 42, 0.2));
         }
         [data-theme-lab="true"] [data-slot="button"],
         [data-theme-lab="true"] button[data-slot="button"] {
           border-radius: calc(var(--lab-radius, 18px) * 0.45);
-          box-shadow: var(--lab-shadow, 0 25px 45px -25px rgba(15, 23, 42, 0.4));
+          box-shadow: var(--lab-shadow, 0 10px 18px -14px rgba(15, 23, 42, 0.2));
         }
         [data-theme-lab="true"] [data-slot="input"],
         [data-theme-lab="true"] [data-slot="badge"],
@@ -1743,287 +2308,292 @@ export default function ThemePage() {
         [data-theme-lab="true"] textarea {
           border-radius: calc(var(--lab-radius, 18px) * 0.4);
         }
+        [data-style="neo-brutalist"] {
+          position: relative;
+          isolation: isolate;
+          background-image: linear-gradient(
+            180deg,
+            rgba(0, 0, 0, 0.03),
+            rgba(0, 0, 0, 0.08)
+          );
+        }
+        [data-style="neo-brutalist"]::before {
+          content: "";
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          opacity: 0.12;
+          background-image:
+            radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.35) 1px, transparent 0),
+            repeating-linear-gradient(
+              45deg,
+              rgba(255, 255, 255, 0.08),
+              rgba(255, 255, 255, 0.08) 6px,
+              transparent 6px,
+              transparent 12px
+            );
+          background-size: 120px 120px, 140px 140px;
+          mix-blend-mode: multiply;
+          z-index: -1;
+        }
+        [data-theme-lab="true"][data-style="neo-brutalist"] [data-slot="card"],
+        [data-theme-lab="true"][data-style="neo-brutalist"] section.rounded-3xl {
+          border-radius: max(calc(var(--lab-radius, 18px) * 0.12), 4px);
+          border: 4px solid var(--color-outline, rgba(0, 0, 0, 0.75));
+          box-shadow:
+            var(--lab-shadow, 6px 6px 0 rgba(0, 0, 0, 0.3)),
+            inset 0 0 0 2px var(--color-outline-variant, rgba(0, 0, 0, 0.18));
+        }
+        [data-theme-lab="true"][data-style="neo-brutalist"] [data-slot="button"],
+        [data-theme-lab="true"][data-style="neo-brutalist"] button[data-slot="button"] {
+          border-radius: max(calc(var(--lab-radius, 18px) * 0.08), 2px);
+          border-width: 2px;
+          border-color: var(--color-outline, rgba(0, 0, 0, 0.85));
+          box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+          transform: translate(-2px, -2px);
+          transition: transform 120ms ease, box-shadow 120ms ease,
+            border-color 120ms ease;
+        }
+        [data-theme-lab="true"][data-style="neo-brutalist"] [data-slot="input"],
+        [data-theme-lab="true"][data-style="neo-brutalist"] [data-slot="badge"],
+        [data-theme-lab="true"][data-style="neo-brutalist"] select,
+        [data-theme-lab="true"][data-style="neo-brutalist"] textarea {
+          border-radius: max(calc(var(--lab-radius, 18px) * 0.08), 2px);
+          border-width: 3px;
+          border-color: var(--color-outline, rgba(0, 0, 0, 0.65));
+          box-shadow: none;
+        }
+        [data-theme-lab="true"][data-style="neo-brutalist"] [data-slot="button"]:hover,
+        [data-style="neo-brutalist"] button[data-slot="button"]:hover {
+          transform: translate(-3px, -3px);
+          box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35);
+          border-color: var(--color-outline-variant, rgba(0, 0, 0, 0.9));
+        }
+        [data-theme-lab="true"][data-style="neo-brutalist"] [data-slot="button"]:active,
+        [data-style="neo-brutalist"] button[data-slot="button"]:active {
+          transform: translate(0, 0);
+          box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+        }
+        [data-style="neomorphism"] {
+          background: linear-gradient(180deg, #f9fafc, #edf1f7 60%, #e3e8f0);
+        }
+        [data-style="neomorphism"]::before {
+          content: "";
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.35), transparent 45%);
+          opacity: 0.6;
+          z-index: -1;
+        }
+        [data-style="neomorphism"] [data-slot="card"],
+        [data-style="neomorphism"] section.rounded-3xl {
+          border-radius: calc(var(--lab-radius, 18px) + 20px);
+          border: 1px solid rgba(255, 255, 255, 0.4);
+          background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(210, 210, 210, 0.2));
+          box-shadow:
+            -6px -6px 16px rgba(255, 255, 255, 0.75),
+            6px 6px 16px rgba(0, 0, 0, 0.08);
+        }
+        .neomorph-panel--flat {
+          box-shadow: none !important;
+          border: 1px solid rgba(255, 255, 255, 0.6) !important;
+        }
+        .neomorph-panel--flat {
+          box-shadow: none !important;
+          border: 1px solid rgba(255, 255, 255, 0.65);
+        }
+        [data-style="neomorphism"] [data-slot="button"],
+        [data-style="neomorphism"] button[data-slot="button"] {
+          border-radius: 4px;
+          border: none;
+          background: #f4f4f4;
+          color: var(--foreground);
+          box-shadow:
+            inset 0.5px 0.5px 1px rgba(255, 255, 255, 0.9),
+            inset -0.5px -0.5px 1px rgba(0, 0, 0, 0.12),
+            0.45px 0.45px 0.63px rgba(0, 0, 0, 0.18),
+            2px 2px 6px rgba(0, 0, 0, 0.12),
+            -1px -1px 4px rgba(255, 255, 255, 0.6);
+          transition: box-shadow 200ms var(--default-transition-timing-function),
+            transform 200ms var(--default-transition-timing-function);
+        }
+        [data-style="neomorphism"] [data-slot="button"].bg-primary,
+        [data-style="neomorphism"] button[data-slot="button"].bg-primary {
+          background: hsl(var(--primary));
+          color: hsl(var(--primary-foreground));
+          box-shadow:
+            inset 0.5px 0.5px 1px rgba(255, 255, 255, 0.6),
+            inset -0.5px -0.5px 1px rgba(0, 0, 0, 0.12),
+            0.45px 0.45px 0.63px rgba(0, 0, 0, 0.18),
+            2px 2px 6px rgba(0, 0, 0, 0.12),
+            -1px -1px 4px rgba(255, 255, 255, 0.5);
+        }
+        [data-style="neomorphism"] [data-slot="button"]:hover,
+        [data-style="neomorphism"] button[data-slot="button"]:hover {
+          box-shadow:
+            inset 1px 1px 1px rgba(255, 255, 255, 0.9),
+            inset -1px -1px 1px rgba(0, 0, 0, 0.15),
+            1px 1px 2px rgba(0, 0, 0, 0.2),
+            4px 4px 8px rgba(0, 0, 0, 0.18),
+            -2px -2px 6px rgba(255, 255, 255, 0.8);
+          transform: translateY(-1px);
+        }
+        [data-style="neomorphism"] [data-slot="button"]:active,
+        [data-style="neomorphism"] button[data-slot="button"]:active {
+          box-shadow:
+            inset 3px 3px 6px rgba(0, 0, 0, 0.2),
+            inset -2px -2px 6px rgba(255, 255, 255, 0.8);
+          transform: translateY(0);
+        }
+        [data-style="neomorphism"] [data-slot="input"],
+        [data-style="neomorphism"] [data-slot="badge"],
+        [data-style="neomorphism"] select,
+        [data-style="neomorphism"] textarea {
+          border-radius: 12px;
+          border: none;
+          background: #f4f4f4;
+          padding: 1rem;
+          box-shadow:
+            inset 0.5px 0.5px 1px rgba(255, 255, 255, 0.9),
+            inset -0.5px -0.5px 1px rgba(0, 0, 0, 0.12),
+            inset 0 1px 1.5px rgba(0, 0, 0, 0.1);
+          font-size: 14px;
+        }
+        .brutalist-hero {
+          border: 5px solid var(--color-outline, rgba(0, 0, 0, 0.8));
+          padding: 1.5rem;
+          box-shadow: 12px 12px 0 rgba(0, 0, 0, 0.55);
+          background: linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.12),
+              transparent 60%
+            ),
+            var(--color-surface, #fff);
+        }
+        .brutalist-banner {
+          background: linear-gradient(
+            90deg,
+            var(--color-primary),
+            var(--color-secondary)
+          );
+          padding: 0.25rem 0.5rem;
+          border: 2px solid var(--color-outline, rgba(0, 0, 0, 0.8));
+          box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+        }
+        .brutalist-panel {
+          background: linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.1),
+              transparent 45%
+            ),
+            var(--color-surface, #fff);
+          position: relative;
+          overflow: hidden;
+        }
+        .brutalist-panel::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background-image: repeating-linear-gradient(
+            135deg,
+            rgba(0, 0, 0, 0.04),
+            rgba(0, 0, 0, 0.04) 8px,
+            transparent 8px,
+            transparent 16px
+          );
+          opacity: 0.4;
+          pointer-events: none;
+        }
+        .neomorph-hero {
+          border-radius: calc(var(--lab-radius, 18px) + 30px);
+          padding: 2rem;
+          background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.9), rgba(200, 200, 200, 0.3));
+          box-shadow:
+            -25px -25px 45px rgba(255, 255, 255, 0.9),
+            25px 25px 45px rgba(0, 0, 0, 0.15);
+        }
+        .neomorph-banner {
+          border-radius: calc(var(--lab-radius, 18px) + 16px);
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(200, 200, 200, 0.4));
+          padding: 0.4rem 0.8rem;
+          box-shadow:
+            -6px -6px 14px rgba(255, 255, 255, 0.8),
+            6px 6px 14px rgba(0, 0, 0, 0.1);
+        }
+        .neomorph-panel {
+          border-radius: calc(var(--lab-radius, 18px) + 24px);
+          background: linear-gradient(160deg, rgba(255, 255, 255, 0.97), rgba(226, 230, 236, 0.5));
+          box-shadow:
+            -15px -15px 35px rgba(255, 255, 255, 0.8),
+            15px 15px 35px rgba(0, 0, 0, 0.12);
+        }
+        .neomorph-dock {
+          position: fixed;
+          bottom: 2.5rem;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          gap: 1rem;
+          padding: 0.75rem 1.75rem;
+          border-radius: 999px;
+          background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(230, 230, 230, 0.4));
+          box-shadow:
+            -18px -18px 40px rgba(255, 255, 255, 0.9),
+            18px 18px 40px rgba(0, 0, 0, 0.18);
+          z-index: 45;
+        }
+        .neomorph-dock-button {
+          border-radius: 4px;
+          border: none !important;
+          box-shadow:
+            -6px -6px 14px rgba(255, 255, 255, 0.7),
+            6px 6px 14px rgba(0, 0, 0, 0.12);
+          background: #f8f9fb;
+          color: var(--foreground);
+        }
+        .neomorph-dock-button:hover {
+          transform: translateY(-1px);
+          box-shadow:
+            -4px -4px 12px rgba(255, 255, 255, 0.8),
+            4px 4px 12px rgba(0, 0, 0, 0.18);
+        }
+        .neomorph-dock-button:active {
+          transform: translateY(0);
+          box-shadow:
+            inset 2px 2px 6px rgba(0, 0, 0, 0.15),
+            inset -2px -2px 6px rgba(255, 255, 255, 0.8);
+        }
         [data-theme-lab="true"] [data-sidebar="menu-button"],
         [data-theme-lab="true"] [data-sidebar="menu-sub-button"] {
           border-radius: calc(var(--lab-radius, 18px) * 0.5);
         }
       `}</style>
 
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button className="gap-2 rounded-full bg-background/90 px-5 shadow-lg shadow-primary/20">
-              <SlidersHorizontal className="size-4" />
-              Design controls
-            </Button>
-          </SheetTrigger>
-          <SheetContent
-            side="right"
-            className="flex h-full flex-col overflow-y-auto border-l border-border/70 sm:max-w-md"
-          >
-            <SheetHeader>
-              <SheetTitle>Design surface controls</SheetTitle>
-              <SheetDescription>
-                Adjust shared radius, font family, and elevation shadows across the preview.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="flex flex-col gap-6 px-4 pb-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Border radius</Label>
-                  <span className="text-sm font-mono text-muted-foreground">{radius}px</span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={36}
-                  value={radius}
-                  onChange={(event) => setRadius(Number(event.target.value))}
-                  className="w-full"
-                  style={{ accentColor: "hsl(var(--primary))" }}
-                />
-                <p className="text-muted-foreground text-xs">
-                  Applies to cards, buttons, inputs, and major surface containers.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-semibold">Font family</p>
-                <div className="grid max-h-[400px] gap-3 overflow-y-auto pr-1">
-                  {FONT_OPTIONS.map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => setFontPreset(option.id)}
-                      className={cn(
-                        "rounded-2xl border p-4 text-left transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring",
-                        fontPreset === option.id
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-muted/30",
-                      )}
-                    >
-                      <p className="text-sm font-semibold">{option.label}</p>
-                      <p
-                        className="text-muted-foreground text-xs"
-                        style={{ fontFamily: option.fontFamily }}
-                      >
-                        {option.label} — the quick brown fox tests curves and ligatures.
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-semibold">Shadow preset</p>
-                <div className="space-y-2">
-                  {SHADOW_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => setShadowPreset(preset.id)}
-                      className={cn(
-                        "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring",
-                        shadowPreset === preset.id
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-muted/30",
-                      )}
-                    >
-                      <span>{preset.label}</span>
-                      <span className="text-xs font-mono text-muted-foreground">preset</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <SheetFooter>
-              <Button variant="secondary" onClick={resetLayoutControls} disabled={isLayoutDefault}>
-                Reset layout styling
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-          </Sheet>
-          <Sheet>
-          <SheetTrigger asChild>
-            <Button className="gap-2 rounded-full bg-primary text-primary-foreground px-5 shadow-lg shadow-primary/30">
-              <Palette className="size-4" />
-              Theme overrides
-            </Button>
-          </SheetTrigger>
-          <SheetContent
-            side="right"
-            className="flex h-full flex-col overflow-y-auto border-l border-border/70 sm:max-w-md"
-          >
-            <SheetHeader>
-              <SheetTitle>Variable overrides</SheetTitle>
-              <SheetDescription>
-                Reassign CSS variables to any palette color to stress-test extreme
-                combinations.
-              </SheetDescription>
-            </SheetHeader>
-
-            <div className="flex flex-col gap-4 px-4 pb-6">
-              <div className="rounded-2xl border border-border/70 bg-muted/10 p-4">
-                <p className="text-sm font-semibold">Variables</p>
-                <p className="text-muted-foreground text-xs">
-                  Use the color picker to override any token or pull from an existing theme value.
-                </p>
-              </div>
-              <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
-                {paletteList.map(({ variable, value, isOverride }) => {
-                  const effectiveValue = variableOverrides[variable] ?? value ?? "";
-                  const hexValue = colorToHex(effectiveValue);
-                  return (
-                    <div
-                      key={`override-${variable}`}
-                      className="rounded-2xl border border-border/70 bg-background/60 p-3"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="font-mono text-xs">{variable}</p>
-                          <p className="text-muted-foreground text-xs">
-                            {isOverride ? "Override applied" : "Theme default"}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {variableOverrides[variable] && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-xs"
-                              onClick={() => resetVariable(variable)}
-                            >
-                              Reset
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-3">
-                        <label className="flex items-center gap-3 text-xs font-medium">
-                          <span className="text-muted-foreground">Color</span>
-                          <input
-                            type="color"
-                            value={hexValue}
-                            onChange={(event) => setColorOverride(variable, event.target.value)}
-                            className="size-10 cursor-pointer rounded-md border border-border bg-transparent p-0"
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPalettePickerTarget(
-                              palettePickerTarget === variable ? null : variable,
-                            )
-                          }
-                          className="rounded-full border border-border px-3 py-1 text-xs font-medium transition hover:border-primary"
-                        >
-                          Pick from theme
-                        </button>
-                      </div>
-                      {palettePickerTarget === variable && (
-                        <div className="mt-3 grid max-h-48 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border/70 p-2">
-                          {paletteList.map((option) => (
-                            <button
-                              key={`${variable}-${option.variable}`}
-                              type="button"
-                              onClick={() => assignVariable(variable, option.variable)}
-                              className="flex items-center gap-2 rounded-lg border border-border/70 bg-muted/30 px-2 py-1 text-left text-[11px] font-mono hover:border-primary"
-                            >
-                              <span
-                                className="inline-block size-6 rounded-md border border-border/70"
-                                style={{ backgroundColor: option.value || "transparent" }}
-                              />
-                              <span className="truncate">{option.variable}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <SheetFooter>
-              <Button
-                variant="secondary"
-                onClick={resetAllOverrides}
-                disabled={!Object.keys(variableOverrides).length}
-              >
-                Reset all overrides
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-      </div>
-
-      <div className="fixed bottom-4 left-1/2 z-30 -translate-x-1/2">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button className="gap-2 rounded-full bg-background/95 px-5 shadow-lg shadow-primary/20">
-              Surface tones
-            </Button>
-          </SheetTrigger>
-          <SheetContent
-            side="bottom"
-            className="flex h-auto flex-col gap-6 border-t border-border/70 bg-background/95 sm:max-h-[70vh]"
-          >
-            <SheetHeader>
-              <SheetTitle>Surface tones</SheetTitle>
-              <SheetDescription>
-                Quickly apply near-white tints of the current theme colors to background and
-                elevated layers.
-              </SheetDescription>
-            </SheetHeader>
-
-            <div className="grid gap-6 text-xs font-medium text-muted-foreground sm:grid-cols-2">
-              {[
-                { label: "Surface", setter: setSurfaceColor },
-                { label: "Elevated", setter: setSurfaceElevatedColor },
-              ].map((section) => (
-                <div key={section.label} className="space-y-3 rounded-2xl border border-border/60 bg-background/80 p-4">
-                  <p className="text-[11px] uppercase tracking-wider text-foreground">
-                    {section.label} tones
-                  </p>
-                  <div className="space-y-2">
-                    {SURFACE_SHADE_PRESETS.map((preset) => (
-                      <div
-                        key={`${section.label}-${preset.key}`}
-                        className="flex items-center gap-3 text-[11px]"
-                      >
-                        <span className="w-16 shrink-0 uppercase tracking-wide text-muted-foreground">
-                          {preset.label}
-                        </span>
-                        <div className="flex gap-2">
-                          {preset.values.map((shade, index) => (
-                            <button
-                              key={`${preset.key}-${section.label}-${index}`}
-                              type="button"
-                              onClick={() => section.setter(shade)}
-                              className="size-8 rounded-full border border-border/70 shadow-inner transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
-                              style={{ backgroundColor: shade }}
-                              aria-label={`Set ${section.label.toLowerCase()} ${preset.label} shade ${index + 1}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <SheetFooter>
-              <Button variant="secondary" onClick={resetSurfaceTones}>
-                Reset surface colors
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-      </div>
+      {styleVariant === "neomorphism" ? (
+        <div className="neomorph-dock">
+          {designControlsSheet}
+          {themeOverridesSheet}
+          {surfaceTonesSheet}
+        </div>
+      ) : (
+        <>
+          <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+            {designControlsSheet}
+            {themeOverridesSheet}
+          </div>
+          <div className="fixed bottom-4 left-1/2 z-30 -translate-x-1/2">
+            {surfaceTonesSheet}
+          </div>
+        </>
+      )}
         </main>
       </SidebarInset>
     </SidebarProvider>
     </div>
   );
+}
+
+export default function ThemePage() {
+  return <ThemeStylePage variant="box" />;
 }
