@@ -68,8 +68,12 @@ This creates a `supabase/` directory with configuration files.
 ### Step 4: Start Local Supabase
 
 ```bash
+yarn supabase:start
+# Or directly:
 supabase start
 ```
+
+**Note:** The Supabase CLI automatically uses `supabase/config.toml` when run from the project root. No special configuration needed!
 
 This command will:
 - Pull necessary Docker images (first time only)
@@ -193,6 +197,8 @@ This is safe for local development and ensures a clean slate.
 ### 1. Check Supabase Status
 
 ```bash
+yarn supabase:status
+# Or directly:
 supabase status
 ```
 
@@ -239,7 +245,7 @@ You can:
 
 ```bash
 # 1. Start Supabase
-supabase start
+yarn supabase:start
 
 # 2. Switch to local environment (if not already)
 yarn env:local
@@ -254,7 +260,7 @@ yarn dev
 # Stop your app (Ctrl+C)
 
 # Stop Supabase (keeps data)
-supabase stop
+yarn supabase:stop
 
 # Or stop and remove all data (fresh start next time)
 supabase stop --no-backup
@@ -279,17 +285,33 @@ supabase stop --no-backup
 
 If you need to work on multiple projects with local Supabase:
 
+**Option 1: One at a time (default)**
 ```bash
 # Stop current project
-supabase stop
+yarn supabase:stop
 
 # Switch to other project
 cd /path/to/other/project
-supabase start
+yarn supabase:start
 
 # When returning to this project
 cd /path/to/kingstack
-supabase start
+yarn supabase:start
+```
+
+**Option 2: Run multiple projects simultaneously**
+
+Configure different ports in each project's `supabase/config.toml` to run multiple instances at once.
+
+📖 **[Multi-Project Setup Guide →](./supabase/multi-project-setup.md)**
+
+**Helper commands:**
+```bash
+# List all running Supabase instances
+yarn supabase:list
+
+# Check your project's configuration
+yarn supabase:check
 ```
 
 ## Troubleshooting
