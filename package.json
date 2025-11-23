@@ -11,7 +11,7 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "local": "yarn env:local && supabase start",
+    "local": "yarn env:local && yarn supabase:start",
     "docker:build-nest": "docker build -f apps/nest/Dockerfile -t kingstack-nest .",
     "docker:run-nest": "docker run --rm -p 3000:3000 --name kingstack-nest --env-file apps/nest/.env -d kingstack-nest",
     "docker:compose": "docker-compose up --build",
@@ -23,6 +23,12 @@
     "env:production": "bun scripts/swap-env.ts production",
     "env:playground": "bun scripts/setup-playground.ts",
     "env:current": "bun scripts/swap-env.ts --current",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "bun scripts/supabase-status.ts",
+    "supabase:list": "bun scripts/supabase-list-instances.ts",
+    "supabase:check": "bun scripts/supabase-check-config.ts",
+    "supabase:reset": "supabase db reset",
     "shadow:start": "supabase start -x realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
     "shadow:stop": "supabase stop",
     "vercel": "cd apps/next && vercel",
@@ -35,7 +41,7 @@
     "turbo": "^2.6.1"
   },
   "devDependencies": {
-    "supabase": "2.40.7",
+    "supabase": "2.58.5",
     "vercel": "^44.4.0"
   }
 }
