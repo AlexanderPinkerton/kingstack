@@ -22,4 +22,3 @@ export default function RealtimeLayout({
 }) {
   return <>{children}</>;
 }
-
