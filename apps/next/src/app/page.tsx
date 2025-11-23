@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { HeroSection } from "@/components/core/hero-section";
 import { FeaturesSection } from "@/components/core/features-section";
 import { AuthSection } from "@/components/core/auth-section";
@@ -6,6 +7,22 @@ import { Footer } from "@/components/core/footer";
 import { AppNavbar } from "@/components/navbar/presets/app";
 import { RealtimeCheckboxes } from "@/components/examples/RealtimeCheckboxes";
 import { PublicTodos } from "@/components/examples/PublicTodos";
+import { createMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = createMetadata({
+  title: "Kingstack",
+  description:
+    "A modern full-stack TypeScript monorepo with Next.js, NestJS, Supabase, and powerful state management. Explore realtime features, optimistic updates, and more.",
+  keywords: [
+    "full-stack development",
+    "typescript monorepo",
+    "nextjs",
+    "nestjs",
+    "realtime",
+    "optimistic updates",
+  ],
+  canonical: "/",
+});
 
 export default function Home() {
   return (
