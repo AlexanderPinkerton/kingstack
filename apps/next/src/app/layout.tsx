@@ -3,10 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/QueryClientProvider";
 import { PlaygroundIndicator } from "@/components/PlaygroundIndicator";
-import {
-  defaultMetadata,
-  defaultViewport,
-} from "@/lib/metadata";
+import { defaultMetadata, defaultViewport } from "@/lib/metadata";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

@@ -223,4 +223,3 @@ export function generateManifest(): MetadataRoute.Manifest {
     dir: siteConfig.manifest.dir,
   };
 }
-
