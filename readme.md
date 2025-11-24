@@ -80,6 +80,11 @@ Automated PR checks and deployments linked to explicit branch names (`developmen
 
 📖 **[Deployment Guide →](./docs/deployment/README.md)**
 
+#### 📋 Centralized Metadata & SEO
+All metadata, SEO, and PWA configuration in one place. No more scattered meta tags or duplicate configuration.
+
+📖 **[Metadata & SEO Guide →](./docs/metadata/README.md)**
+
 ---
 
 ## 📁 Folder Structure
@@ -100,6 +105,7 @@ kingstack/
 ├── docs/                       # Documentation
 │   ├── auth/                   # Authentication architecture
 │   ├── deployment/            # CI/CD and deployment guides
+│   ├── metadata/               # Metadata, SEO & PWA configuration
 │   ├── secrets/                # Secrets management guide
 │   ├── scripts/                # Scripts and automation guide
 │   └── state-management/       # State management architecture
@@ -247,11 +253,19 @@ yarn docker:compose         # Start all services via docker-compose
 yarn docker:compose:down    # Stop docker-compose services
 ```
 
-### Supabase Shadow Database
+### Supabase Management
 ```bash
-yarn shadow:start    # Start Supabase shadow DB (minimal services)
-yarn shadow:stop     # Stop shadow DB
+yarn supabase:start      # Start local Supabase instance
+yarn supabase:stop       # Stop local Supabase instance
+yarn supabase:status     # Check Supabase status and connection info
+yarn supabase:list       # List all running Supabase instances (all projects)
+yarn supabase:check      # Verify Supabase configuration
+yarn supabase:reset      # Reset database (drops data, re-runs migrations)
+yarn shadow:start        # Start Supabase shadow DB (minimal services)
+yarn shadow:stop         # Stop shadow DB
 ```
+
+📖 **[Multi-Project Setup Guide →](./docs/supabase/multi-project-setup.md)**
 
 ---
 
