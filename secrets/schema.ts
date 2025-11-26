@@ -13,6 +13,26 @@ export const schema = defineSchema({
     // Core Secrets (The Inputs)
     // ============================================================================
     core: {
+        // Application URLs
+        NEXT_HOST: {
+            default: "http://localhost",
+            description: "Next.js frontend hostname",
+        },
+        NEST_HOST: {
+            default: "http://localhost",
+            description: "NestJS backend hostname",
+        },
+
+        // Application Ports
+        NEST_PORT: {
+            required: true,
+            description: "NestJS backend port",
+        },
+        NEXT_PORT: {
+            required: true,
+            description: "Next.js frontend port",
+        },
+
         // Supabase Configuration
         SUPABASE_URL: {
             required: true,
@@ -45,15 +65,7 @@ export const schema = defineSchema({
             description: "Database password",
         },
 
-        // Application URLs
-        NEXT_URL: {
-            default: "http://localhost:3069",
-            description: "Next.js frontend URL",
-        },
-        NEST_URL: {
-            default: "http://localhost:3000",
-            description: "NestJS backend URL",
-        },
+
 
         // Optional: OAuth
         GOOGLE_CLIENT_ID: {
@@ -108,8 +120,11 @@ export const schema = defineSchema({
         // Public-facing URLs for Next.js
         NEXT_PUBLIC_SUPABASE_URL: core.SUPABASE_URL,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: core.SUPABASE_ANON_KEY,
-        NEXT_PUBLIC_NEST_URL: core.NEST_URL,
-        NEXT_PUBLIC_API_URL: core.NEXT_URL,
+        NEXT_PUBLIC_NEST_URL: `${core.NEST_HOST}:${core.NEST_PORT}`,
+        NEXT_PUBLIC_API_URL: `${core.NEXT_HOST}:${core.NEXT_PORT}`,
+
+        // NestJS config
+        NEXT_URL: `${core.NEXT_HOST}:${core.NEXT_PORT}`,
     }),
 
     // ============================================================================
@@ -144,6 +159,10 @@ export const schema = defineSchema({
                 "ANTHROPIC_API_KEY",
                 "GEMINI_API_KEY",
             ],
+            aliases: {
+                // Map NEXT_PORT to PORT for this project
+                NEXT_PORT: "PORT",
+            },
         },
 
         nest: {
@@ -164,6 +183,10 @@ export const schema = defineSchema({
                 "SUPABASE_DB_PASSWORD",
                 "SUPA_JWT_SECRET",
             ],
+            aliases: {
+                // Map NEST_PORT to PORT for this project
+                NEST_PORT: "PORT",
+            },
         },
 
         prisma: {

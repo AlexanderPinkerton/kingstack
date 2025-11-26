@@ -13,6 +13,14 @@ import { defineValues } from "./utils";
  */
 export const values = defineValues({
     // ============================================================================
+    // Application Configuration
+    // ============================================================================
+    NEXT_HOST: "http://localhost",
+    NEST_HOST: "http://localhost",
+    NEXT_PORT: "3069",
+    NEST_PORT: "3000",
+
+    // ============================================================================
     // Supabase Configuration
     // ============================================================================
     SUPABASE_URL: "https://REPLACEME.supabase.co",
@@ -26,12 +34,6 @@ export const values = defineValues({
     SUPABASE_POOLER_HOST: "aws-1-us-east-2.pooler.supabase.com",
     SUPABASE_POOLER_USER: "postgres.REPLACEME",
     SUPABASE_DB_PASSWORD: "REPLACEME",
-
-    // ============================================================================
-    // Application URLs (defaults are usually fine for local development)
-    // ============================================================================
-    NEXT_URL: "http://localhost:3069",
-    NEST_URL: "http://localhost:3000",
 
     // ============================================================================
     // Optional: OAuth (leave empty if not using)

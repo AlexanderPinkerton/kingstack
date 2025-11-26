@@ -7,6 +7,14 @@ import { defineValues } from "./utils";
  */
 export const values = defineValues({
     // ============================================================================
+    // Application Configuration
+    // ============================================================================
+    NEXT_HOST: "http://localhost",
+    NEST_HOST: "http://localhost",
+    NEXT_PORT: "3069",
+    NEST_PORT: "3000",
+
+    // ============================================================================
     // Supabase Configuration (Mock)
     // ============================================================================
     SUPABASE_URL: "https://playground.supabase.co",
@@ -20,12 +28,6 @@ export const values = defineValues({
     SUPABASE_POOLER_HOST: "localhost",
     SUPABASE_POOLER_USER: "postgres.playground",
     SUPABASE_DB_PASSWORD: "playground",
-
-    // ============================================================================
-    // Application URLs
-    // ============================================================================
-    NEXT_URL: "http://localhost:3069",
-    NEST_URL: "http://localhost:3000",
 
     // ============================================================================
     // Optional: OAuth (Empty for playground)
