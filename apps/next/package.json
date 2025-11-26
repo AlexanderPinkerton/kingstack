@@ -11,9 +11,9 @@
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 3069",
+    "dev": "bun scripts/dev-command.ts",
     "build": "next build",
-    "start": "next start -p 3069",
+    "start": "bun scripts/start-command.ts",
     "lint": "eslint . --fix",
     "test": "vitest run --silent passed-only",
     "test:ui": "vitest --ui",
