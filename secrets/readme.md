@@ -1,202 +1,250 @@
-# Secrets Management
+# Secrets Management v2
 
-This directory contains environment-specific configuration files for the KingStack project. Instead of relying on dotenv's environment detection, this repo uses a centralized approach where all secrets are stored in this directory and swapped in as needed.
+KingStack uses a **TypeScript-based secrets management system** that provides type safety, computed values, and centralized configuration.
 
-## Directory Structure
+## 🎯 Quick Start
+
+### 1. Create Your Environment File
+
+```bash
+cp secrets/example.ts secrets/local.ts
+```
+
+Edit `secrets/local.ts` and replace all `REPLACEME` values with your actual secrets.
+
+### 2. Generate .env Files
+
+```bash
+yarn env:local          # Generate from secrets/local.ts
+# or
+yarn env:development    # Generate from secrets/development.ts
+yarn env:production     # Generate from secrets/production.ts
+yarn env:playground     # Generate from secrets/playground.ts (mock data)
+```
+
+### 3. Start Development
+
+```bash
+yarn dev
+```
+
+## 📁 Directory Structure
 
 ```
 secrets/
-├── README.md                    # This file
-├── _example/                    # Template files for new developers
-│   ├── .env.next           # Next app environment variables
-│   ├── .env.nest            # Nest app environment variables
-│   └── .env.prisma             # Database connection variables
-├── local/                       # Local Supabase environment (supabase start)
-│   ├── .env.next
-│   ├── .env.nest
-│   └── .env.prisma
-├── development/                 # Development environment secrets
-│   ├── .env.next
-│   ├── .env.nest
-│   └── .env.prisma
-├── production/                  # Production environment secrets
-│   ├── .env.next
-│   ├── .env.nest
-│   └── .env.prisma
-└── playground/                  # Playground environment (no backend DB)
-    ├── .env.next
-    ├── .env.nest
-    └── .env.prisma
+├── schema.ts          # Schema definition (checked in)
+├── utils.ts           # Type definitions and validation (checked in)
+├── example.ts         # Example values template (checked in)
+├── playground.ts      # Mock values for playground mode (checked in)
+├── local.ts           # Your local environment values (gitignored)
+├── development.ts     # Development environment values (gitignored)
+├── production.ts      # Production environment values (gitignored)
+└── _example/          # Legacy .env files (for backward compatibility)
 ```
 
-## How It Works
+## 🔧 How It Works
 
-The system uses a custom `swap-env.ts` script that:
+### 1. Schema Definition (`schema.ts`)
 
-1. **Copies** environment-specific `.env.*` files from `secrets/[environment]/` to their target locations
-2. **Backs up** any existing `.env` files as `.env.previous` before overwriting
-3. **Detects** the currently active environment by comparing file contents
+The schema defines three things:
 
-### Target Locations
+**Core Secrets** - The input values you provide:
+```typescript
+core: {
+  SUPABASE_URL: { required: true },
+  SUPABASE_POOLER_USER: { required: true },
+  SUPABASE_DB_PASSWORD: { required: true },
+  PORT: { default: "3000" },  // Optional with default
+}
+```
 
-The script maps files to these destinations:
+**Computed Secrets** - Values automatically derived from core secrets:
+```typescript
+computed: (core) => ({
+  // Automatically build database connection strings
+  SUPABASE_DB_POOL_URL: `postgresql://${core.SUPABASE_POOLER_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_POOLER_HOST}:6543/postgres?pgbouncer=true`,
+  SUPABASE_DB_DIRECT_URL: `postgresql://${core.SUPABASE_POOLER_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_POOLER_HOST}:5432/postgres`,
+  
+  // Mirror values for frontend
+  NEXT_PUBLIC_SUPABASE_URL: core.SUPABASE_URL,
+})
+```
 
-| Source File | Target Location |
-|-------------|----------------|
-| `.env.next` | `apps/next/.env` |
-| `.env.nest` | `apps/nest/.env` |
-| `.env.prisma` | `packages/prisma/.env` |
+**Project Mappings** - Which secrets go to which `.env` files:
+```typescript
+projects: {
+  next: { path: "apps/next/.env", keys: ["NEXT_PUBLIC_SUPABASE_URL", ...] },
+  nest: { path: "apps/nest/.env", keys: ["SUPABASE_DB_POOL_URL", ...] },
+  prisma: { path: "packages/prisma/.env", keys: ["SUPABASE_DB_POOL_URL", ...] }
+}
+```
 
-## Usage
+### 2. Environment Values (`[env].ts`)
 
-### Check Current Environment
+Each environment has its own values file:
+
+```typescript
+// secrets/local.ts
+import { defineValues } from "./utils";
+
+export const values = defineValues({
+  SUPABASE_URL: "https://your-project.supabase.co",
+  SUPABASE_POOLER_USER: "postgres.xxxxx",
+  SUPABASE_DB_PASSWORD: "your-password",
+  // ... other values
+  
+  // No need to define computed values - they're automatic!
+});
+```
+
+### 3. Generation Script
+
+When you run `yarn env:local`, the script:
+1. ✅ Loads `secrets/local.ts`
+2. ✅ Validates all required secrets are present
+3. ✅ Applies default values
+4. ✅ Computes derived values (database URLs, etc.)
+5. ✅ Generates `.env` files for each project
+6. ✅ Backs up previous `.env` files as `.env.previous`
+
+## ✨ Key Benefits
+
+### DRY Principle
+Define database credentials **once**, connection strings are computed automatically:
+```typescript
+// You define:
+SUPABASE_POOLER_USER: "postgres.abc123"
+SUPABASE_DB_PASSWORD: "mypassword"
+SUPABASE_POOLER_HOST: "aws-1-us-east-2.pooler.supabase.com"
+
+// System computes:
+SUPABASE_DB_POOL_URL: "postgresql://postgres.abc123:mypassword@aws-1-us-east-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
+SUPABASE_DB_DIRECT_URL: "postgresql://postgres.abc123:mypassword@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
+```
+
+### Type Safety
+TypeScript validates your configuration at compile time.
+
+### Validation
+Missing required secrets are caught before runtime:
+```
+❌ Validation errors:
+  - SUPABASE_URL: Required secret "SUPABASE_URL" is missing
+```
+
+### Centralized
+All secrets for an environment in one file, not scattered across multiple `.env` files.
+
+## 📝 Common Tasks
+
+### Add a New Secret
+
+1. **Add to schema** (`secrets/schema.ts`):
+```typescript
+core: {
+  MY_NEW_SECRET: { required: true, description: "My new secret" },
+}
+```
+
+2. **Add to environment files**:
+```typescript
+// secrets/local.ts
+export const values = defineValues({
+  MY_NEW_SECRET: "my-value",
+  // ...
+});
+```
+
+3. **Add to project mapping** (if needed):
+```typescript
+projects: {
+  next: {
+    keys: ["MY_NEW_SECRET", ...],
+  }
+}
+```
+
+4. **Regenerate**:
 ```bash
-bun scripts/swap-env.ts --current
-# or
-bun scripts/swap-env.ts status
+yarn env:local
 ```
 
-### Switch to Local (Supabase Local)
+### Add a Computed Value
+
+Just add to the `computed` section in `secrets/schema.ts`:
+
+```typescript
+computed: (core) => ({
+  MY_API_ENDPOINT: `${core.BASE_URL}/api/v${core.API_VERSION}`,
+})
+```
+
+No need to define it in environment files - it's automatically computed!
+
+### Add a Default Value
+
+```typescript
+core: {
+  MY_SETTING: { default: "default-value", description: "..." },
+}
+```
+
+If not provided in the environment file, the default will be used.
+
+## 🌍 Available Environments
+
+- **local**: For local Supabase instance (`supabase start`)
+- **development**: For remote development Supabase project
+- **production**: For production Supabase project
+- **playground**: Mock data for UI development (no backend needed)
+
+## 🔒 Security
+
+- ✅ Environment-specific files (`local.ts`, `development.ts`, `production.ts`) are **gitignored**
+- ✅ Schema and example files are **checked in** (safe, no secrets)
+- ✅ Playground file is **checked in** (only mock data)
+- ❌ **Never commit** actual secrets to version control
+
+## 🧪 Testing
+
+Run the test suite to verify the secrets system:
+
 ```bash
-bun scripts/swap-env.ts local
+bun scripts/test-secrets.ts
 ```
 
-### Switch to Development
+## 🔄 Migration from v1 (Legacy System)
+
+The old system (`.env.*` files in `secrets/[env]/` directories) still works for backward compatibility.
+
+To migrate:
+1. Create `secrets/local.ts` from `secrets/example.ts`
+2. Copy values from `secrets/local/.env.*` files into the TypeScript file
+3. Run `yarn env:local` to generate new `.env` files
+4. Verify apps start correctly with `yarn dev`
+5. (Optional) Remove old `secrets/local/` directory
+
+## 🐛 Troubleshooting
+
+### "Required secret is missing"
+You forgot to define a required value in your environment file. Check the error message for which key is missing.
+
+### "Project references unknown key"
+You referenced a key in a project mapping that doesn't exist in either `core` or `computed`. Check for typos in `schema.ts`.
+
+### TypeScript import errors
+Make sure you're using Bun to run the scripts:
 ```bash
-bun scripts/swap-env.ts development
+bun scripts/generate-env.ts local
 ```
 
-### Switch to Production
+### Need to see what's generated?
+Check the backup files:
 ```bash
-bun scripts/swap-env.ts production
+cat apps/next/.env.previous
+cat apps/nest/.env.previous
 ```
 
-### Switch to Playground
-```bash
-bun scripts/swap-env.ts playground
-```
+## 📚 Full Documentation
 
-## Environment Variables
-
-### NextJS App (.env.next)
-- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
-- `NEXT_PUBLIC_NEST_URL` - Nest API URL for frontend to use
-- `NEXT_PUBLIC_API_URL` - Public API URL
-- `GOOGLE_CLIENT_SECRET` - Google OAuth client secret (optional)
-- `GOOGLE_CLIENT_ID` - Google OAuth client ID (optional)
-- `SUPABASE_DB_POOL_URL` - Database connection pool URL
-- `SUPABASE_DB_DIRECT_URL` - Direct database connection URL
-- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
-
-### NestJS App (.env.nest)
-- `NEXT_URL` - Frontend URL for CORS
-- `SUPABASE_POOLER_HOST` - Supabase pooler hostname
-- `SUPABASE_POOLER_USER` - Database pooler username
-- `SUPABASE_URL` - Supabase project URL
-- `SUPABASE_ANON_KEY` - Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
-- `SUPABASE_DB_POOL_URL` - Database connection pool URL
-- `SUPABASE_DB_DIRECT_URL` - Direct database connection URL
-- `SUPABASE_DB_USER` - Database username
-- `SUPABASE_DB_PASSWORD` - Database password
-- `SUPA_JWT_SECRET` - JWT secret for authentication
-
-### Prisma (.env.prisma)
-- `SUPABASE_DB_POOL_URL` - Database connection pool URL for Prisma
-- `SUPABASE_DB_DIRECT_URL` - Direct database connection URL for migrations
-
-## Getting Started
-
-### For New Developers
-
-1. **Copy the example files:**
-   ```bash
-   cp -r secrets/_example/* secrets/development/
-   ```
-
-2. **Fill in your values:**
-   - Replace all `REPLACEME` placeholders with actual values
-   - Get Supabase credentials from your Supabase dashboard
-   - Configure Google OAuth if needed
-
-3. **Switch to development environment:**
-   ```bash
-   bun scripts/swap-env.ts development
-   ```
-
-### For Production Deployment
-
-1. **Create production secrets:**
-   ```bash
-   cp -r secrets/_example/* secrets/production/
-   ```
-
-2. **Update with production values:**
-   - Use production Supabase project credentials
-   - Set production URLs and domains
-   - Use secure, production-ready secrets
-
-3. **Deploy with production environment:**
-   ```bash
-   bun scripts/swap-env.ts production
-   ```
-
-### For Local Development with Supabase
-
-The `local` environment is pre-configured for use with Supabase CLI's local development:
-
-1. **Start Supabase locally:**
-   ```bash
-   supabase start
-   ```
-
-2. **Switch to local environment:**
-   ```bash
-   bun scripts/swap-env.ts local
-   ```
-
-3. **Run your app:**
-   Your app will now connect to the local Supabase instance running at:
-   - API: http://localhost:54321
-   - Database: postgresql://postgres:postgres@localhost:54322/postgres
-   - Studio: http://localhost:54323
-
-**Note:** The `local` environment uses default Supabase local credentials. No configuration needed!
-
-## Environments Overview
-
-- **local**: Uses local Supabase instance (`supabase start`) - perfect for offline development
-- **development**: Points to a remote development Supabase project - for team collaboration
-- **production**: Points to the production Supabase project - for live deployments
-- **playground**: No backend DB - allows users to play without database connection
-
-## Security Notes
-
-- **Never commit actual secrets** to version control
-- The `secrets/` directory (except `_example/`) is gitignored
-- Always use the `_example/` files as templates
-- Rotate secrets regularly in production
-- Use different Supabase projects for development and production
-
-## Troubleshooting
-
-### Environment Detection Issues
-If the current environment shows as "unknown":
-- Check that all required `.env.*` files exist in the target environment directory
-- Verify that the files in `secrets/[env]/` match the files in the target locations
-- Run the swap script to ensure files are properly synchronized
-
-### Missing Files
-If you get "does not exist" errors:
-- Ensure you've copied the example files to your target environment directory
-- Check that all three files (`.env.next`, `.env.nest`, `.env.prisma`) exist
-- Verify the file names match exactly (case-sensitive)
-
-### Backup Files
-Previous `.env` files are automatically backed up as `.env.previous` when swapping environments. You can restore them manually if needed:
-```bash
-mv apps/next/.env.previous apps/next/.env
-mv apps/nest/.env.previous apps/nest/.env
-mv packages/prisma/.env.previous packages/prisma/.env
-```
+For more details, see [docs/secrets/README.md](../docs/secrets/README.md)

@@ -38,6 +38,8 @@ export interface ProjectConfig {
   path: string;
   /** List of keys (from core or computed) to include in this file */
   keys: string[];
+  /** Optional key aliases - map source key to output key name */
+  aliases?: Record<string, string>;
 }
 
 /**
@@ -151,12 +153,25 @@ export function validateProjectKeys(
   const errors: ValidationError[] = [];
 
   for (const [projectName, config] of Object.entries(schema.projects)) {
+    // Validate direct keys
     for (const key of config.keys) {
       if (!allKeys.has(key)) {
         errors.push({
           key: `${projectName}.${key}`,
           message: `Project "${projectName}" references unknown key "${key}"`,
         });
+      }
+    }
+
+    // Validate aliased keys (source keys must exist)
+    if (config.aliases) {
+      for (const [sourceKey, _targetKey] of Object.entries(config.aliases)) {
+        if (!allKeys.has(sourceKey)) {
+          errors.push({
+            key: `${projectName}.aliases.${sourceKey}`,
+            message: `Project "${projectName}" alias references unknown source key "${sourceKey}"`,
+          });
+        }
       }
     }
   }

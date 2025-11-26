@@ -16,7 +16,7 @@ async function bootstrap() {
 
   // Configure CORS for the NextJS app to use this API
   app.enableCors({
-    origin: process.env.NEXT_URL || "http://localhost:3069",
+    origin: process.env.NEXT_URL,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],

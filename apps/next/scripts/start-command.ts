@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 
-const PORT = process.env.PORT || "3069";
+const PORT = process.env.PORT || "6666";
 
 console.log(`Starting Next.js Production Server on port ${PORT}...`);
 
