@@ -25,7 +25,17 @@ node_modules/
 
 **/.env.*
 
-secrets/.env.*
+# Secrets: ignore environment-specific value files
+secrets/local.ts
+secrets/development.ts
+secrets/production.ts
+
+# Keep these checked in:
+# - secrets/schema.ts (schema definition)
+# - secrets/utils.ts (utility functions)
+# - secrets/example.ts (example values)
+# - secrets/playground.ts (safe mock data)
+# - secrets/_example/ (legacy example files)
 
 !secrets/_example/**
 

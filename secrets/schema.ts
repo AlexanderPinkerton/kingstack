@@ -1,0 +1,181 @@
+import { defineSchema } from "./utils";
+
+/**
+ * Secrets schema for KingStack.
+ * 
+ * This defines:
+ * 1. Core secrets (inputs that must be provided)
+ * 2. Computed secrets (derived from core secrets)
+ * 3. Project mappings (which secrets go to which .env files)
+ */
+export const schema = defineSchema({
+    // ============================================================================
+    // Core Secrets (The Inputs)
+    // ============================================================================
+    core: {
+        // Supabase Configuration
+        SUPABASE_URL: {
+            required: true,
+            description: "Supabase project URL",
+        },
+        SUPABASE_ANON_KEY: {
+            required: true,
+            description: "Supabase anonymous key for client-side auth",
+        },
+        SUPABASE_SERVICE_ROLE_KEY: {
+            required: true,
+            description: "Supabase service role key for server-side operations",
+        },
+        SUPA_JWT_SECRET: {
+            required: true,
+            description: "JWT secret from Supabase dashboard for token validation",
+        },
+
+        // Database Configuration
+        SUPABASE_POOLER_HOST: {
+            required: true,
+            description: "Supabase database pooler hostname",
+        },
+        SUPABASE_POOLER_USER: {
+            required: true,
+            description: "Database pooler username (e.g., postgres.xxxxx)",
+        },
+        SUPABASE_DB_PASSWORD: {
+            required: true,
+            description: "Database password",
+        },
+
+        // Application URLs
+        NEXT_URL: {
+            default: "http://localhost:3069",
+            description: "Next.js frontend URL",
+        },
+        NEST_URL: {
+            default: "http://localhost:3000",
+            description: "NestJS backend URL",
+        },
+
+        // Optional: OAuth
+        GOOGLE_CLIENT_ID: {
+            default: "",
+            description: "Google OAuth client ID (optional)",
+        },
+        GOOGLE_CLIENT_SECRET: {
+            default: "",
+            description: "Google OAuth client secret (optional)",
+        },
+
+        // Optional: Deployment
+        VERCEL_TOKEN: {
+            default: "",
+            description: "Vercel deployment token",
+        },
+        VERCEL_ORG_ID: {
+            default: "",
+            description: "Vercel organization ID",
+        },
+        VERCEL_PROJECT_ID: {
+            default: "",
+            description: "Vercel project ID",
+        },
+
+        // Optional: AI Providers
+        OPENAI_API_KEY: {
+            default: "",
+            description: "OpenAI API key",
+        },
+        ANTHROPIC_API_KEY: {
+            default: "",
+            description: "Anthropic API key",
+        },
+        GEMINI_API_KEY: {
+            default: "",
+            description: "Google Gemini API key",
+        },
+    },
+
+    // ============================================================================
+    // Computed Secrets (Derived Values)
+    // ============================================================================
+    computed: (core) => ({
+        // Database connection strings
+        SUPABASE_DB_POOL_URL: `postgresql://${core.SUPABASE_POOLER_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_POOLER_HOST}:6543/postgres?pgbouncer=true`,
+        SUPABASE_DB_DIRECT_URL: `postgresql://${core.SUPABASE_POOLER_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_POOLER_HOST}:5432/postgres`,
+
+        // Derived database user (same as pooler user)
+        SUPABASE_DB_USER: core.SUPABASE_POOLER_USER,
+
+        // Public-facing URLs for Next.js
+        NEXT_PUBLIC_SUPABASE_URL: core.SUPABASE_URL,
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: core.SUPABASE_ANON_KEY,
+        NEXT_PUBLIC_NEST_URL: core.NEST_URL,
+        NEXT_PUBLIC_API_URL: core.NEXT_URL,
+    }),
+
+    // ============================================================================
+    // Project Mappings (Where Secrets Go)
+    // ============================================================================
+    projects: {
+        next: {
+            path: "apps/next/.env",
+            keys: [
+                // Public Supabase config
+                "NEXT_PUBLIC_SUPABASE_URL",
+                "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+                "NEXT_PUBLIC_NEST_URL",
+                "NEXT_PUBLIC_API_URL",
+
+                // Server-side Supabase config
+                "SUPABASE_SERVICE_ROLE_KEY",
+                "SUPABASE_DB_POOL_URL",
+                "SUPABASE_DB_DIRECT_URL",
+
+                // OAuth
+                "GOOGLE_CLIENT_ID",
+                "GOOGLE_CLIENT_SECRET",
+
+                // Deployment
+                "VERCEL_TOKEN",
+                "VERCEL_ORG_ID",
+                "VERCEL_PROJECT_ID",
+
+                // AI Providers
+                "OPENAI_API_KEY",
+                "ANTHROPIC_API_KEY",
+                "GEMINI_API_KEY",
+            ],
+        },
+
+        nest: {
+            path: "apps/nest/.env",
+            keys: [
+                // Frontend URL for CORS
+                "NEXT_URL",
+
+                // Supabase config
+                "SUPABASE_POOLER_HOST",
+                "SUPABASE_POOLER_USER",
+                "SUPABASE_URL",
+                "SUPABASE_ANON_KEY",
+                "SUPABASE_SERVICE_ROLE_KEY",
+                "SUPABASE_DB_POOL_URL",
+                "SUPABASE_DB_DIRECT_URL",
+                "SUPABASE_DB_USER",
+                "SUPABASE_DB_PASSWORD",
+                "SUPA_JWT_SECRET",
+            ],
+        },
+
+        prisma: {
+            path: "packages/prisma/.env",
+            keys: [
+                "SUPABASE_DB_POOL_URL",
+                "SUPABASE_DB_DIRECT_URL",
+            ],
+        },
+    },
+});
+
+export type SecretValues = {
+    [K in keyof typeof schema.core]?: string;
+};
