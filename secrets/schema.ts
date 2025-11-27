@@ -60,16 +60,34 @@ export const schema = defineSchema({
             required: true,
             description: "Database password",
         },
+        // TODO: Sync all ports supabase/config.toml
+        SUPABASE_DB_SHADOW_PORT: {
+            required: false,
+            default: "54320",
+            description: "Shadow database port"
+        },
+        SUPABASE_API_PORT: {
+            required: false,
+            default: "54321",
+            description: "The port for the supabase api server"
+        },
         SUPABASE_DB_DIRECT_PORT: {
             required: false,
-            default: "5432",
+            default: "54322",
             description: "Database direct port",
         },
         SUPABASE_DB_POOLER_PORT: {
             required: false,
-            default: "6543",
+            default: "54329",
             description: "Database pooler port",
         },
+        SUPABASE_STUDIO_PORT: {
+            required: false,
+            default: "54323",
+            description: "Database studio port",
+        },
+
+
 
 
 
