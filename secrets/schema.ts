@@ -146,8 +146,8 @@ export const schema = defineSchema({
     // ============================================================================
     computed: (core) => ({
 
-        // Main supabase URL
-        SUPABASE_URL: `http://${core.SUPABASE_HOST}`,
+        // Supabase API url
+        SUPABASE_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
 
         // Used by scripts
         SUPABASE_POOLER_HOST: core.SUPABASE_HOST,
