@@ -15,6 +15,5 @@ export class PostsService {
 
     await this.prisma.post.deleteMany({});
     this.logger.debug("Deleted all posts from the database");
-    this.prisma.$disconnect();
   }
 }
