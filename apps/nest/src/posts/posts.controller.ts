@@ -12,16 +12,12 @@ import {
 import { UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt.auth.guard";
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Controller("posts")
 @UseGuards(JwtAuthGuard)
 export class PostsController {
-  private prisma: PrismaClient;
-  constructor() {
-    // Initialize the Prisma client here if needed
-    this.prisma = new PrismaClient();
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   // Get posts from db with author info
   @Get()

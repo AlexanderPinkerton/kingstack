@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PrismaClient } from "@prisma/client";
+import { PrismaService } from "../prisma/prisma.service";
 
 export interface Checkbox {
   id: string;
@@ -12,11 +12,8 @@ export interface Checkbox {
 @Injectable()
 export class CheckboxesService {
   private readonly logger = new Logger(CheckboxesService.name);
-  private prisma: PrismaClient;
 
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(): Promise<Checkbox[]> {
     try {
