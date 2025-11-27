@@ -2,7 +2,7 @@
 // Usage:
 //   bun swap-env.ts [development|production]   # Swap to environment
 //   bun swap-env.ts --current                  # Detect currently active environment
-// Copies the specified secrets/[env]/.env.* files to their destinations, backs up previous, and prints the currently active environment with --current.
+// Copies the specified config/[env]/.env.* files to their destinations, backs up previous, and prints the currently active environment with --current.
 
 import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync } from "fs";
 import { dirname, join } from "path";
@@ -40,7 +40,7 @@ async function main() {
     printUsageAndExit();
   }
 
-  const envDir = join("secrets", envArg);
+  const envDir = join("config", envArg);
   for (const { src, dest } of FILE_MAP) {
     const srcPath = join(envDir, src);
     if (!existsSync(srcPath)) {
@@ -68,7 +68,7 @@ function printUsageAndExit() {
 function detectCurrentEnv() {
   let found = false;
   for (const env of ENVIRONMENTS) {
-    const envDir = join("secrets", env);
+    const envDir = join("config", env);
     let allMatch = true;
     for (const { src, dest } of FILE_MAP) {
       const srcPath = join(envDir, src);

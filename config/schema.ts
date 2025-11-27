@@ -1,16 +1,17 @@
 import { defineSchema } from "./utils";
 
 /**
- * Secrets schema for KingStack.
+ * Configuration schema for KingStack.
  * 
  * This defines:
- * 1. Core secrets (inputs that must be provided)
- * 2. Computed secrets (derived from core secrets)
- * 3. Project mappings (which secrets go to which .env files)
+ * 1. Core configuration values (inputs that must be provided)
+ * 2. Computed values (derived from core configuration)
+ * 3. Environment file mappings (which values go to which .env files)
+ * 4. Config file mappings (which values update which config files)
  */
 export const schema = defineSchema({
     // ============================================================================
-    // Core Secrets (The Inputs)
+    // Core Configuration (The Inputs)
     // ============================================================================
     core: {
         // Application URLs
@@ -60,7 +61,6 @@ export const schema = defineSchema({
             required: true,
             description: "Database password",
         },
-        // TODO: Sync all ports supabase/config.toml
         SUPABASE_DB_SHADOW_PORT: {
             required: false,
             default: "54320",
@@ -138,7 +138,7 @@ export const schema = defineSchema({
     },
 
     // ============================================================================
-    // Computed Secrets (Derived Values)
+    // Computed Values (Derived from Core Configuration)
     // ============================================================================
     computed: (core) => ({
 
@@ -164,9 +164,9 @@ export const schema = defineSchema({
     }),
 
     // ============================================================================
-    // Project Mappings (Where Secrets Go)
+    // Environment File Mappings (Which Values Go to Which .env Files)
     // ============================================================================
-    projects: {
+    envfiles: {
         next: {
             path: "apps/next/.env",
             keys: [
@@ -233,8 +233,27 @@ export const schema = defineSchema({
             ],
         },
     },
+
+    // ============================================================================
+    // Config File Mappings (Which Values Update Which Config Files)
+    // ============================================================================
+    configs: {
+        supabase: {
+            path: "supabase/config.toml",
+            format: "toml" as const,
+            mappings: {
+                "api.port": "SUPABASE_API_PORT",
+                "db.port": "SUPABASE_DB_DIRECT_PORT",
+                "db.shadow_port": "SUPABASE_DB_SHADOW_PORT",
+                "db.pooler.port": "SUPABASE_DB_POOLER_PORT",
+                "studio.port": "SUPABASE_STUDIO_PORT",
+                "inbucket.port": "SUPABASE_EMAIL_PORT",
+                "analytics.port": "SUPABASE_ANALYTICS_PORT",
+            },
+        },
+    },
 });
 
-export type SecretValues = {
+export type ConfigValues = {
     [K in keyof typeof schema.core]?: string;
 };

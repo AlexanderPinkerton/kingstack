@@ -1,13 +1,13 @@
 /**
- * test-secrets.ts
+ * test-config.ts
  * 
- * Tests the secrets system to ensure validation and computed values work correctly.
+ * Tests the configuration system to ensure validation and computed values work correctly.
  * 
  * Usage:
- *   bun scripts/test-secrets.ts
+ *   bun scripts/test-config.ts
  */
 
-import { defineSchema, resolveSecrets, validateProjectKeys } from "../secrets/utils";
+import { defineSchema, resolveConfig, validateEnvFileKeys } from "../config/utils";
 
 // Create a minimal test schema
 const testSchema = defineSchema({
@@ -20,7 +20,7 @@ const testSchema = defineSchema({
         FULL_URL: `${core.BASE_URL}:${core.PORT}`,
         PUBLIC_URL: core.BASE_URL,
     }),
-    projects: {
+    envfiles: {
         app: {
             path: "test/.env",
             keys: ["FULL_URL", "PUBLIC_URL", "API_KEY"],
@@ -29,7 +29,7 @@ const testSchema = defineSchema({
 });
 
 function runTests() {
-    console.log("🧪 Running secrets system tests...\n");
+    console.log("🧪 Running configuration system tests...\n");
 
     let passed = 0;
     let failed = 0;
@@ -41,11 +41,11 @@ function runTests() {
             BASE_URL: "http://localhost",
             API_KEY: "test-key",
         };
-        const { secrets, errors } = resolveSecrets(testSchema, values);
+        const { config, errors } = resolveConfig(testSchema, values);
 
         if (errors.length === 0 &&
-            secrets.core.PORT === "3000" &&
-            secrets.computed.FULL_URL === "http://localhost:3000") {
+            config.core.PORT === "3000" &&
+            config.computed.FULL_URL === "http://localhost:3000") {
             console.log("  ✅ PASSED\n");
             passed++;
         } else {
@@ -60,7 +60,7 @@ function runTests() {
         const values = {
             BASE_URL: "http://localhost",
         };
-        const { errors } = resolveSecrets(testSchema, values);
+        const { errors } = resolveConfig(testSchema, values);
 
         if (errors.length > 0 && errors[0].key === "API_KEY") {
             console.log("  ✅ PASSED\n");
@@ -79,24 +79,24 @@ function runTests() {
             PORT: "8080",
             API_KEY: "secret",
         };
-        const { secrets, errors } = resolveSecrets(testSchema, values);
+        const { config, errors } = resolveConfig(testSchema, values);
 
         if (errors.length === 0 &&
-            secrets.computed.FULL_URL === "https://example.com:8080" &&
-            secrets.computed.PUBLIC_URL === "https://example.com") {
+            config.computed.FULL_URL === "https://example.com:8080" &&
+            config.computed.PUBLIC_URL === "https://example.com") {
             console.log("  ✅ PASSED\n");
             passed++;
         } else {
-            console.log("  ❌ FAILED:", secrets.computed);
+            console.log("  ❌ FAILED:", config.computed);
             failed++;
         }
     }
 
-    // Test 4: Project key validation
-    console.log("Test 4: Project key validation");
+    // Test 4: Environment file key validation
+    console.log("Test 4: Environment file key validation");
     {
         const allKeys = new Set(["FULL_URL", "PUBLIC_URL", "API_KEY", "BASE_URL", "PORT"]);
-        const errors = validateProjectKeys(testSchema, allKeys);
+        const errors = validateEnvFileKeys(testSchema, allKeys);
 
         if (errors.length === 0) {
             console.log("  ✅ PASSED\n");
@@ -107,12 +107,12 @@ function runTests() {
         }
     }
 
-    // Test 5: Invalid project key
-    console.log("Test 5: Invalid project key detection");
+    // Test 5: Invalid envfile key
+    console.log("Test 5: Invalid envfile key detection");
     {
         const invalidSchema = defineSchema({
             ...testSchema,
-            projects: {
+            envfiles: {
                 app: {
                     path: "test/.env",
                     keys: ["NONEXISTENT_KEY"],
@@ -120,7 +120,7 @@ function runTests() {
             },
         });
         const allKeys = new Set(["FULL_URL", "PUBLIC_URL"]);
-        const errors = validateProjectKeys(invalidSchema, allKeys);
+        const errors = validateEnvFileKeys(invalidSchema, allKeys);
 
         if (errors.length > 0) {
             console.log("  ✅ PASSED\n");
