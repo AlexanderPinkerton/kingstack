@@ -28,13 +28,12 @@ interface UserSocketMap {
   },
 })
 export class RealtimeGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   private logger = new Logger("RealtimeGateway");
   private userSockets: Map<string, UserSocketMap> = new Map();
   private supabase: SupabaseClient;
   private subscriptionChannel: any = null;
-  private readonly supabaseUrl = process.env.SUPABASE_URL!;
+  private readonly supabaseUrl = process.env.SUPABASE_API_URL!;
   private readonly supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   private readonly authSecret = process.env.SUPA_JWT_SECRET!;
 

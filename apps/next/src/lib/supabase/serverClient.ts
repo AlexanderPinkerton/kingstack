@@ -4,7 +4,7 @@ import { isPlaygroundMode } from "@kingstack/shared";
 import { createPlaygroundClient } from "./playgroundClient";
 
 export async function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_API_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   // Check if we're in playground mode or missing environment variables

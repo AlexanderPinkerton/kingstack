@@ -147,7 +147,7 @@ export const schema = defineSchema({
     computed: (core) => ({
 
         // Supabase API url
-        SUPABASE_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
+        SUPABASE_API_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
 
         // Used by scripts
         SUPABASE_POOLER_HOST: core.SUPABASE_HOST,
@@ -161,7 +161,7 @@ export const schema = defineSchema({
         SUPABASE_DB_USER: core.SUPABASE_DB_USER,
 
         // Public-facing URLs for Next.js
-        NEXT_PUBLIC_SUPABASE_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
+        NEXT_PUBLIC_SUPABASE_API_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: core.SUPABASE_ANON_KEY,
         NEXT_PUBLIC_NEST_URL: `http://${core.NEST_HOST}:${core.NEST_PORT}`,
         NEXT_PUBLIC_API_URL: `http://${core.NEXT_HOST}:${core.NEXT_PORT}`,
@@ -178,7 +178,7 @@ export const schema = defineSchema({
             path: "apps/next/.env",
             keys: [
                 // Public Supabase config
-                "NEXT_PUBLIC_SUPABASE_URL",
+                "NEXT_PUBLIC_SUPABASE_API_URL",
                 "NEXT_PUBLIC_SUPABASE_ANON_KEY",
                 "NEXT_PUBLIC_NEST_URL",
                 "NEXT_PUBLIC_API_URL",
@@ -217,7 +217,7 @@ export const schema = defineSchema({
                 // Supabase config
                 "SUPABASE_POOLER_HOST",
                 "SUPABASE_POOLER_USER",
-                "SUPABASE_URL",
+                "SUPABASE_API_URL",
                 "SUPABASE_ANON_KEY",
                 "SUPABASE_SERVICE_ROLE_KEY",
                 "SUPABASE_DB_POOL_URL",
