@@ -66,14 +66,14 @@ computed: (core) => ({
   SUPABASE_DB_DIRECT_URL: `postgresql://${core.SUPABASE_POOLER_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_POOLER_HOST}:5432/postgres`,
   
   // Mirror values for frontend
-  NEXT_PUBLIC_SUPABASE_URL: core.SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_API_URL: core.SUPABASE_API_URL,
 })
 ```
 
 **Project Mappings** - Which secrets go to which `.env` files:
 ```typescript
 projects: {
-  next: { path: "apps/next/.env", keys: ["NEXT_PUBLIC_SUPABASE_URL", ...] },
+  next: { path: "apps/next/.env", keys: ["NEXT_PUBLIC_SUPABASE_API_URL", ...] },
   nest: { path: "apps/nest/.env", keys: ["SUPABASE_DB_POOL_URL", ...] },
   prisma: { path: "packages/prisma/.env", keys: ["SUPABASE_DB_POOL_URL", ...] }
 }

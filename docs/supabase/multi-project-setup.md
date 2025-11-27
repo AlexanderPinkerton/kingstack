@@ -85,7 +85,7 @@ For each project, you need to update these environment variables:
 
 ```env
 # API URL
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54325  # Use your custom API port
+NEXT_PUBLIC_SUPABASE_API_URL=http://127.0.0.1:54325  # Use your custom API port
 SUPABASE_URL=http://127.0.0.1:54325
 
 # Database URLs

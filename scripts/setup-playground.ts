@@ -10,7 +10,7 @@ const NEXT_PLAYGROUND_ENV = `# NextJS Playground Mode - No Supabase Required
 # without requiring authentication or database setup
 
 # Disable Supabase integration
-NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_API_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 # Backend URL (will use mock data in playground mode)
