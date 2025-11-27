@@ -13,17 +13,21 @@ import { defineValues } from "./utils";
  */
 export const values = defineValues({
     // ============================================================================
-    // Application Configuration
+    // Application URLs (defaults are usually fine for local development)
     // ============================================================================
-    NEXT_HOST: "localhost",
-    NEST_HOST: "localhost",
-    NEXT_PORT: "3069",
-    NEST_PORT: "3000",
+    NEXT_URL: "REPLACEME",
+    NEST_URL: "REPLACEME",
+
+    // ============================================================================
+    // Application Ports Configuration
+    // ============================================================================
+    NEXT_PORT: "3000",
+    NEST_PORT: "3001",
 
     // ============================================================================
     // Supabase Configuration
     // ============================================================================
-    SUPABASE_URL: "https://REPLACEME.supabase.co",
+    SUPABASE_HOST: "REPLACEME",
     SUPABASE_ANON_KEY: "REPLACEME",
     SUPABASE_SERVICE_ROLE_KEY: "REPLACEME",
     SUPA_JWT_SECRET: "REPLACEME",
@@ -31,8 +35,9 @@ export const values = defineValues({
     // ============================================================================
     // Database Configuration
     // ============================================================================
-    SUPABASE_POOLER_HOST: "aws-1-us-east-2.pooler.supabase.com",
-    SUPABASE_POOLER_USER: "postgres.REPLACEME",
+    SUPABASE_DB_POOLER_PORT: "REPLACEME",
+    SUPABASE_DB_DIRECT_PORT: "REPLACEME",
+    SUPABASE_DB_USER: "REPLACEME",
     SUPABASE_DB_PASSWORD: "REPLACEME",
 
     // ============================================================================
