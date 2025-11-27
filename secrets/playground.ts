@@ -9,8 +9,8 @@ export const values = defineValues({
     // ============================================================================
     // Application Configuration
     // ============================================================================
-    NEXT_HOST: "http://localhost",
-    NEST_HOST: "http://localhost",
+    NEXT_HOST: "localhost",
+    NEST_HOST: "localhost",
     NEXT_PORT: "3069",
     NEST_PORT: "3000",
 

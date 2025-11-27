@@ -15,11 +15,11 @@ export const schema = defineSchema({
     core: {
         // Application URLs
         NEXT_HOST: {
-            default: "http://localhost",
+            default: "localhost",
             description: "Next.js frontend hostname",
         },
         NEST_HOST: {
-            default: "http://localhost",
+            default: "localhost",
             description: "NestJS backend hostname",
         },
 
@@ -34,10 +34,6 @@ export const schema = defineSchema({
         },
 
         // Supabase Configuration
-        SUPABASE_URL: {
-            required: true,
-            description: "Supabase project URL",
-        },
         SUPABASE_ANON_KEY: {
             required: true,
             description: "Supabase anonymous key for client-side auth",
@@ -52,17 +48,27 @@ export const schema = defineSchema({
         },
 
         // Database Configuration
-        SUPABASE_POOLER_HOST: {
+        SUPABASE_HOST: {
             required: true,
-            description: "Supabase database pooler hostname",
+            description: "Supabase project hostname",
         },
-        SUPABASE_POOLER_USER: {
+        SUPABASE_DB_USER: {
             required: true,
-            description: "Database pooler username (e.g., postgres.xxxxx)",
+            description: "Database username",
         },
         SUPABASE_DB_PASSWORD: {
             required: true,
             description: "Database password",
+        },
+        SUPABASE_DB_DIRECT_PORT: {
+            required: false,
+            default: "5432",
+            description: "Database direct port",
+        },
+        SUPABASE_DB_POOLER_PORT: {
+            required: false,
+            default: "6543",
+            description: "Database pooler port",
         },
 
 
@@ -110,21 +116,29 @@ export const schema = defineSchema({
     // Computed Secrets (Derived Values)
     // ============================================================================
     computed: (core) => ({
+
+        // Main supabase URL
+        SUPABASE_URL: `https://${core.SUPABASE_HOST}`,
+
+        // Used by scripts
+        SUPABASE_POOLER_HOST: core.SUPABASE_HOST,
+        SUPABASE_POOLER_USER: core.SUPABASE_DB_USER,
+
         // Database connection strings
-        SUPABASE_DB_POOL_URL: `postgresql://${core.SUPABASE_POOLER_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_POOLER_HOST}:6543/postgres?pgbouncer=true`,
-        SUPABASE_DB_DIRECT_URL: `postgresql://${core.SUPABASE_POOLER_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_POOLER_HOST}:5432/postgres`,
+        SUPABASE_DB_POOL_URL: `postgresql://${core.SUPABASE_DB_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_HOST}:${core.SUPABASE_DB_POOLER_PORT}/postgres?pgbouncer=true`,
+        SUPABASE_DB_DIRECT_URL: `postgresql://${core.SUPABASE_DB_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_HOST}:${core.SUPABASE_DB_DIRECT_PORT}/postgres`,
 
         // Derived database user (same as pooler user)
-        SUPABASE_DB_USER: core.SUPABASE_POOLER_USER,
+        SUPABASE_DB_USER: core.SUPABASE_DB_USER,
 
         // Public-facing URLs for Next.js
-        NEXT_PUBLIC_SUPABASE_URL: core.SUPABASE_URL,
+        NEXT_PUBLIC_SUPABASE_URL: `https://${core.SUPABASE_HOST}`,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: core.SUPABASE_ANON_KEY,
-        NEXT_PUBLIC_NEST_URL: `${core.NEST_HOST}:${core.NEST_PORT}`,
-        NEXT_PUBLIC_API_URL: `${core.NEXT_HOST}:${core.NEXT_PORT}`,
+        NEXT_PUBLIC_NEST_URL: `http://${core.NEST_HOST}:${core.NEST_PORT}`,
+        NEXT_PUBLIC_API_URL: `http://${core.NEXT_HOST}:${core.NEXT_PORT}`,
 
         // NestJS config
-        NEXT_URL: `${core.NEXT_HOST}:${core.NEXT_PORT}`,
+        NEXT_URL: `http://${core.NEXT_HOST}:${core.NEXT_PORT}`,
     }),
 
     // ============================================================================
