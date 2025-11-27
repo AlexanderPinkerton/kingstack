@@ -1,5 +1,5 @@
 /**
- * Utility types and functions for the secrets configuration system.
+ * Utility types and functions for the configuration system.
  */
 
 // ============================================================================
@@ -7,33 +7,21 @@
 // ============================================================================
 
 /**
- * Definition of a single secret value in the schema.
+ * Definition of a single configuration value in the schema.
  */
-export interface SecretDefinition {
-  /** Whether this secret is required (no default) */
+export interface ConfigDefinition {
+  /** Whether this value is required (no default) */
   required?: boolean;
   /** Default value if not provided */
   default?: string;
-  /** Description of what this secret is for */
+  /** Description of what this value is for */
   description?: string;
 }
 
 /**
- * Schema definition for all secrets.
+ * Configuration for a single environment file.
  */
-export interface SecretsSchema {
-  /** Core secret definitions (the inputs) */
-  core: Record<string, SecretDefinition>;
-  /** Computed values derived from core secrets */
-  computed: (core: Record<string, string>) => Record<string, string>;
-  /** Mapping of projects to their env files and required keys */
-  projects: Record<string, ProjectConfig>;
-}
-
-/**
- * Configuration for a single project's environment file.
- */
-export interface ProjectConfig {
+export interface EnvFileConfig {
   /** Path to the .env file (relative to repo root) */
   path: string;
   /** List of keys (from core or computed) to include in this file */
@@ -43,14 +31,42 @@ export interface ProjectConfig {
 }
 
 /**
- * Values for core secrets (user-provided).
+ * Configuration for a config file (TOML, JSON, YAML, etc.)
  */
-export type SecretValues = Record<string, string>;
+export interface ConfigFileMapping {
+  /** Path to the config file (relative to repo root) */
+  path: string;
+  /** Format of the config file */
+  format: "toml" | "json" | "yaml";
+  /** Mapping of config file paths to configuration keys */
+  mappings: Record<string, string>;
+}
 
 /**
- * Resolved secrets (core + computed).
+ * Schema definition for all configuration.
  */
-export interface ResolvedSecrets {
+export interface ConfigSchema {
+  /** Core configuration definitions (the inputs) */
+  core: Record<string, ConfigDefinition>;
+  /** Computed values derived from core configuration */
+  computed: (core: Record<string, string>) => Record<string, string>;
+  /** Mapping of environment files and their required keys */
+  envfiles: Record<string, EnvFileConfig>;
+  /** Mapping of config files to update */
+  configs?: Record<string, ConfigFileMapping>;
+}
+
+
+
+/**
+ * Values for core configuration (user-provided).
+ */
+export type ConfigValues = Record<string, string>;
+
+/**
+ * Resolved configuration (core + computed).
+ */
+export interface ResolvedConfig {
   core: Record<string, string>;
   computed: Record<string, string>;
   all: Record<string, string>;
@@ -61,16 +77,16 @@ export interface ResolvedSecrets {
 // ============================================================================
 
 /**
- * Helper function to define a secrets schema with type safety.
+ * Helper function to define a configuration schema with type safety.
  */
-export function defineSchema(schema: SecretsSchema): SecretsSchema {
+export function defineSchema(schema: ConfigSchema): ConfigSchema {
   return schema;
 }
 
 /**
- * Helper function to define secret values with type safety.
+ * Helper function to define configuration values with type safety.
  */
-export function defineValues(values: SecretValues): SecretValues {
+export function defineValues(values: ConfigValues): ConfigValues {
   return values;
 }
 
@@ -84,11 +100,11 @@ export interface ValidationError {
 }
 
 /**
- * Validates that all required secrets are present and applies defaults.
+ * Validates that all required configuration values are present and applies defaults.
  */
 export function validateAndResolve(
-  schema: SecretsSchema,
-  values: SecretValues
+  schema: ConfigSchema,
+  values: ConfigValues
 ): { resolved: Record<string, string>; errors: ValidationError[] } {
   const errors: ValidationError[] = [];
   const resolved: Record<string, string> = {};
@@ -107,7 +123,7 @@ export function validateAndResolve(
       // Missing required value
       errors.push({
         key,
-        message: `Required secret "${key}" is missing`,
+        message: `Required configuration value "${key}" is missing`,
       });
     }
   }
@@ -116,17 +132,17 @@ export function validateAndResolve(
 }
 
 /**
- * Resolves all secrets (core + computed).
+ * Resolves all configuration (core + computed).
  */
-export function resolveSecrets(
-  schema: SecretsSchema,
-  values: SecretValues
-): { secrets: ResolvedSecrets; errors: ValidationError[] } {
+export function resolveConfig(
+  schema: ConfigSchema,
+  values: ConfigValues
+): { config: ResolvedConfig; errors: ValidationError[] } {
   const { resolved: core, errors } = validateAndResolve(schema, values);
 
   if (errors.length > 0) {
     return {
-      secrets: { core: {}, computed: {}, all: {} },
+      config: { core: {}, computed: {}, all: {} },
       errors,
     };
   }
@@ -138,27 +154,27 @@ export function resolveSecrets(
   const all = { ...core, ...computed };
 
   return {
-    secrets: { core, computed, all },
+    config: { core, computed, all },
     errors: [],
   };
 }
 
 /**
- * Validates that all keys referenced in project configs exist.
+ * Validates that all keys referenced in envfile configs exist.
  */
-export function validateProjectKeys(
-  schema: SecretsSchema,
+export function validateEnvFileKeys(
+  schema: ConfigSchema,
   allKeys: Set<string>
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
-  for (const [projectName, config] of Object.entries(schema.projects)) {
+  for (const [envfileName, config] of Object.entries(schema.envfiles)) {
     // Validate direct keys
     for (const key of config.keys) {
       if (!allKeys.has(key)) {
         errors.push({
-          key: `${projectName}.${key}`,
-          message: `Project "${projectName}" references unknown key "${key}"`,
+          key: `${envfileName}.${key}`,
+          message: `Environment file "${envfileName}" references unknown key "${key}"`,
         });
       }
     }
@@ -168,8 +184,8 @@ export function validateProjectKeys(
       for (const [sourceKey, _targetKey] of Object.entries(config.aliases)) {
         if (!allKeys.has(sourceKey)) {
           errors.push({
-            key: `${projectName}.aliases.${sourceKey}`,
-            message: `Project "${projectName}" alias references unknown source key "${sourceKey}"`,
+            key: `${envfileName}.aliases.${sourceKey}`,
+            message: `Environment file "${envfileName}" alias references unknown source key "${sourceKey}"`,
           });
         }
       }

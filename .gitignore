@@ -25,19 +25,24 @@ node_modules/
 
 **/.env.*
 
-# Secrets: ignore environment-specific value files
-secrets/local.ts
-secrets/development.ts
-secrets/production.ts
+# Configuration: ignore environment-specific value files
+config/local.ts
+config/development.ts
+config/production.ts
 
 # Keep these checked in:
-# - secrets/schema.ts (schema definition)
-# - secrets/utils.ts (utility functions)
-# - secrets/example.ts (example values)
-# - secrets/playground.ts (safe mock data)
-# - secrets/_example/ (legacy example files)
+# - config/schema.ts (schema definition)
+# - config/utils.ts (utility functions)
+# - config/example.ts (example values)
+# - config/playground.ts (safe mock data)
+# - config/_example/ (legacy example files)
 
-!secrets/_example/**
+!config/_example/**
+
+# Config file backups
+*.toml.previous
+*.json.previous
+*.yaml.previous
 
 # Turbo
 .turbo/
