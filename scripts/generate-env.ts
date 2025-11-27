@@ -157,13 +157,16 @@ async function main() {
                 for (const [tomlPath, configKey] of Object.entries(configDef.mappings)) {
                     const value = config.all[configKey];
                     if (value !== undefined) {
-                        setNestedValue(parsed, tomlPath, parseInt(value, 10));
+                        // Determine if this should be a number or string based on the TOML path
+                        const shouldBeNumber = tomlPath.includes("port") || tomlPath.includes("Port");
+                        const finalValue = shouldBeNumber ? Number(value) : value;
+                        setNestedValue(parsed, tomlPath, finalValue);
                         updatedCount++;
                     }
                 }
 
-                // Write back
-                const updatedToml = TOML.stringify(parsed);
+                // Write back with custom stringification to avoid underscores in numbers
+                const updatedToml = stringifyTomlWithoutUnderscores(parsed);
                 writeFileSync(configPath, updatedToml);
                 console.log(`✅ Updated ${configPath} (${updatedCount} values)`);
             } else {
@@ -192,6 +195,16 @@ function setNestedValue(obj: any, path: string, value: any): void {
     }
 
     current[keys[keys.length - 1]] = value;
+}
+
+/**
+ * Stringify TOML without underscores in numbers.
+ * The @iarna/toml library adds underscores to large numbers, which we don't want.
+ */
+function stringifyTomlWithoutUnderscores(obj: any): string {
+    const tomlString = TOML.stringify(obj);
+    // Remove underscores from numbers (e.g., 54_321 -> 54321, 1_000 -> 1000)
+    return tomlString.replace(/(\d)_(\d)/g, '$1$2');
 }
 
 function printUsageAndExit() {

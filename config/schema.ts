@@ -48,6 +48,12 @@ export const schema = defineSchema({
             description: "JWT secret from Supabase dashboard for token validation",
         },
 
+        // Supabase Project
+        SUPABASE_PROJECT_ID: {
+            default: "kingstack",
+            description: "Supabase project ID",
+        },
+
         // Database Configuration
         SUPABASE_HOST: {
             required: true,
@@ -242,6 +248,7 @@ export const schema = defineSchema({
             path: "supabase/config.toml",
             format: "toml" as const,
             mappings: {
+                "project_id": "SUPABASE_PROJECT_ID",
                 "api.port": "SUPABASE_API_PORT",
                 "db.port": "SUPABASE_DB_DIRECT_PORT",
                 "db.shadow_port": "SUPABASE_DB_SHADOW_PORT",
