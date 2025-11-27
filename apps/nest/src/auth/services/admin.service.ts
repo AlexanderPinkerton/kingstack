@@ -1,13 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { PrismaClient } from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class AdminService {
-  private prisma: PrismaClient;
-
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Check if a user email is an admin

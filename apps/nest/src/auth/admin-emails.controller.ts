@@ -11,7 +11,7 @@ import {
 } from "@nestjs/common";
 import { AdminGuard } from "./guards/admin.guard";
 import { AdminService } from "./services/admin.service";
-import { PrismaClient } from "@prisma/client";
+import { PrismaService } from "../prisma/prisma.service";
 
 export interface CreateAdminEmailDto {
   email: string;
@@ -24,11 +24,10 @@ export interface UpdateAdminEmailDto {
 @Controller("admin/emails")
 @UseGuards(AdminGuard) // Only admins can manage admin emails
 export class AdminEmailsController {
-  private prisma: PrismaClient;
-
-  constructor(private readonly adminService: AdminService) {
-    this.prisma = new PrismaClient();
-  }
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   /**
    * Get all admin emails

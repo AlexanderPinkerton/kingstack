@@ -7,7 +7,7 @@ import {
   Delete,
   Param,
 } from "@nestjs/common";
-import { PrismaClient } from "@prisma/client";
+import { PrismaService } from "../prisma/prisma.service";
 
 export interface CreatePublicTodoDto {
   title: string;
@@ -20,11 +20,7 @@ export interface UpdatePublicTodoDto {
 
 @Controller("public/todos")
 export class PublicTodosController {
-  private prisma: PrismaClient;
-
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   @Get()
   async getTodos() {
