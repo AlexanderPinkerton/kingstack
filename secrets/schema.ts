@@ -98,10 +98,6 @@ export const schema = defineSchema({
         },
 
 
-
-
-
-
         // Optional: OAuth
         GOOGLE_CLIENT_ID: {
             default: "",
@@ -156,9 +152,6 @@ export const schema = defineSchema({
         // Database connection strings
         SUPABASE_DB_POOL_URL: `postgresql://${core.SUPABASE_DB_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_HOST}:${core.SUPABASE_DB_POOLER_PORT}/postgres?pgbouncer=true`,
         SUPABASE_DB_DIRECT_URL: `postgresql://${core.SUPABASE_DB_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_HOST}:${core.SUPABASE_DB_DIRECT_PORT}/postgres`,
-
-        // Derived database user (same as pooler user)
-        SUPABASE_DB_USER: core.SUPABASE_DB_USER,
 
         // Public-facing URLs for Next.js
         NEXT_PUBLIC_SUPABASE_API_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
