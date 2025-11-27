@@ -28,7 +28,8 @@ interface UserSocketMap {
   },
 })
 export class RealtimeGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   private logger = new Logger("RealtimeGateway");
   private userSockets: Map<string, UserSocketMap> = new Map();
   private supabase: SupabaseClient;

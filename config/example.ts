@@ -15,30 +15,36 @@ export const values = defineValues({
     // ============================================================================
     // Application URLs (defaults are usually fine for local development)
     // ============================================================================
-    NEXT_URL: "REPLACEME",
-    NEST_URL: "REPLACEME",
+    NEXT_URL: "localhost",
+    NEST_URL: "localhost",
 
     // ============================================================================
     // Application Ports Configuration
     // ============================================================================
-    NEXT_PORT: "3000",
-    NEST_PORT: "3001",
+    NEXT_PORT: "3069",
+    NEST_PORT: "3420",
+    SUPABASE_DB_SHADOW_PORT: "54320",
+    SUPABASE_API_PORT: "54321",
+    SUPABASE_DB_DIRECT_PORT: "54322",
+    SUPABASE_DB_POOLER_PORT: "54322",  // Using the direct one for now since the pooler one doesn't work for some reason.
+    SUPABASE_STUDIO_PORT: "54323",
+    SUPABASE_ANALYTICS_PORT: "54324",
+    SUPABASE_EMAIL_PORT: "54323",
 
     // ============================================================================
     // Supabase Configuration
     // ============================================================================
-    SUPABASE_HOST: "REPLACEME",
-    SUPABASE_ANON_KEY: "REPLACEME",
-    SUPABASE_SERVICE_ROLE_KEY: "REPLACEME",
-    SUPA_JWT_SECRET: "super-secret-jwt-token-with-at-least-32-characters-long", // This is the default local secret
+    SUPABASE_PROJECT_ID: "kingstack",
+    SUPABASE_HOST: "localhost",
+    SUPABASE_ANON_KEY: "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH",
+    SUPABASE_SERVICE_ROLE_KEY: "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz",
+    SUPA_JWT_SECRET: "super-secret-jwt-token-with-at-least-32-characters-long",
 
     // ============================================================================
     // Database Configuration
     // ============================================================================
-    SUPABASE_DB_POOLER_PORT: "REPLACEME",
-    SUPABASE_DB_DIRECT_PORT: "REPLACEME",
-    SUPABASE_DB_USER: "REPLACEME",
-    SUPABASE_DB_PASSWORD: "REPLACEME",
+    SUPABASE_DB_USER: "postgres",
+    SUPABASE_DB_PASSWORD: "postgres",
 
     // ============================================================================
     // Optional: OAuth (leave empty if not using)

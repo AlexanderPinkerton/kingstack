@@ -22,7 +22,6 @@
     "env:development": "bun scripts/generate-env.ts development",
     "env:production": "bun scripts/generate-env.ts production",
     "env:playground": "bun scripts/generate-env.ts playground",
-    "env:current": "bun scripts/swap-env.ts --current",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:status": "bun scripts/supabase-status.ts",

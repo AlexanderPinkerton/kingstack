@@ -2,22 +2,22 @@ project_id = "kingstack"
 
 [api]
 enabled = true
-port = 54_321
+port = 54321
 schemas = [ "public", "graphql_public" ]
 extra_search_path = [ "public", "extensions" ]
-max_rows = 1_000
+max_rows = 1000
 
   [api.tls]
   enabled = false
 
 [db]
-port = 54_322
-shadow_port = 54_320
+port = 54322
+shadow_port = 54320
 major_version = 17
 
   [db.pooler]
   enabled = false
-  port = 54_322
+  port = 54322
   pool_mode = "transaction"
   default_pool_size = 20
   max_client_conn = 100
@@ -40,13 +40,13 @@ enabled = true
 
 [studio]
 enabled = true
-port = 54_323
+port = 54323
 api_url = "http://127.0.0.1"
 openai_api_key = "env(OPENAI_API_KEY)"
 
 [inbucket]
 enabled = true
-port = 54_323
+port = 54323
 
 [storage]
 enabled = true
@@ -56,7 +56,7 @@ file_size_limit = "50MiB"
 enabled = true
 site_url = "http://127.0.0.1:3000"
 additional_redirect_urls = [ "https://127.0.0.1:3000" ]
-jwt_expiry = 3_600
+jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 enable_signup = true
@@ -81,7 +81,7 @@ password_requirements = ""
   secure_password_change = false
   max_frequency = "1s"
   otp_length = 6
-  otp_expiry = 3_600
+  otp_expiry = 3600
 
   [auth.sms]
   enable_signup = false
@@ -135,12 +135,12 @@ enabled = false
 [edge_runtime]
 enabled = true
 policy = "per_worker"
-inspector_port = 8_083
+inspector_port = 8083
 deno_version = 2
 
 [analytics]
 enabled = true
-port = 54_324
+port = 54324
 backend = "postgres"
 
 [experimental]
