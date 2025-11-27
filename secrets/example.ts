@@ -30,7 +30,7 @@ export const values = defineValues({
     SUPABASE_HOST: "REPLACEME",
     SUPABASE_ANON_KEY: "REPLACEME",
     SUPABASE_SERVICE_ROLE_KEY: "REPLACEME",
-    SUPA_JWT_SECRET: "REPLACEME",
+    SUPA_JWT_SECRET: "super-secret-jwt-token-with-at-least-32-characters-long", // This is the default local secret
 
     // ============================================================================
     // Database Configuration
