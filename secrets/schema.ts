@@ -86,6 +86,17 @@ export const schema = defineSchema({
             default: "54323",
             description: "Database studio port",
         },
+        SUPABASE_ANALYTICS_PORT: {
+            required: false,
+            default: "54324",
+            description: "Database studio port",
+        },
+        SUPABASE_EMAIL_PORT: {
+            required: false,
+            default: "54323",
+            description: "Database studio port",
+        },
+
 
 
 
