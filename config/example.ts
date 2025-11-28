@@ -12,6 +12,7 @@ import { defineValues } from "./utils";
  * Replace all "REPLACEME" values with your actual secrets.
  */
 export const values = defineValues({
+    SUPABASE_PROJECT_ID: "kingstack",
     // ============================================================================
     // Application URLs (defaults are usually fine for local development)
     // ============================================================================
@@ -27,14 +28,13 @@ export const values = defineValues({
     SUPABASE_API_PORT: "54321",
     SUPABASE_DB_DIRECT_PORT: "54322",
     SUPABASE_DB_POOLER_PORT: "54322",  // Using the direct one for now since the pooler one doesn't work for some reason.
-    SUPABASE_STUDIO_PORT: "54323",
-    SUPABASE_ANALYTICS_PORT: "54324",
-    SUPABASE_EMAIL_PORT: "54323",
+    SUPABASE_STUDIO_PORT: "54324",
+    SUPABASE_ANALYTICS_PORT: "54325",
+    SUPABASE_EMAIL_PORT: "54326",
 
     // ============================================================================
     // Supabase Configuration
     // ============================================================================
-    SUPABASE_PROJECT_ID: "kingstack",
     SUPABASE_HOST: "localhost",
     SUPABASE_ANON_KEY: "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH",
     SUPABASE_SERVICE_ROLE_KEY: "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz",
