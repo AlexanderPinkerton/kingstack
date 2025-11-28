@@ -60,10 +60,10 @@ KingStack excels at making common tasks **easy**:
 
 KingStack takes an **explicit approach** to avoid hidden pitfalls:
 
-#### 🔐 Explicit Secrets Management
-No more guessing which `.env` file is active or dealing with dotenv detection issues. All secrets are organized in `secrets/` with simple swap commands.
+#### 🔐 Explicit Configuration Management
+No more guessing which `.env` file is active or dealing with dotenv detection issues. All configuration is organized in `config/` with TypeScript-based generation of both `.env` files and config files.
 
-📖 **[Secrets Management Guide →](./docs/secrets/README.md)**
+📖 **[Configuration Management Guide →](./config/readme.md)**
 
 #### 🎫 Explicit JWT Authentication
 No cookie/localStorage magic. Tokens are explicitly passed and validated, making auth predictable and debuggable.
@@ -100,14 +100,12 @@ kingstack/
 │   ├── prisma/                     # Schema + generated client
 │   ├── shared/                     # Shared TS code (@kingstack/shared)
 │   └── ts-config/                  # Shared TypeScript configuration
-├── scripts/                    # TypeScript scripts (env swapping, setup)
-├── secrets/                    # Environment configs (development/production)
+├── scripts/                    # TypeScript scripts (config generation, setup)
+├── config/                     # Configuration management (development/production)
 ├── docs/                       # Documentation
 │   ├── auth/                   # Authentication architecture
 │   ├── deployment/            # CI/CD and deployment guides
 │   ├── metadata/               # Metadata, SEO & PWA configuration
-│   ├── secrets/                # Secrets management guide
-│   ├── scripts/                # Scripts and automation guide
 │   └── state-management/       # State management architecture
 ├── .yarn/                      # Yarn plugins, version, patches, etc.
 ├── .turbo/                     # Turborepo local task cache (gitignored)
@@ -141,6 +139,79 @@ kingstack/
   yarn lint      # Lints everything
   yarn test      # Runs tests across all workspaces
   ```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js 20+** - For running the applications
+- **Yarn 4** - Package manager (comes with the repo)
+- **Bun** - For running TypeScript scripts
+- **Supabase CLI** (optional) - For local Supabase development
+
+### Quick Start
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/kingstack.git
+   cd kingstack
+   ```
+
+2. **Install dependencies**
+   ```bash
+   yarn install
+   ```
+
+3. **Set up configuration**
+   ```bash
+   # Copy the example configuration
+   cp config/example.ts config/local.ts
+   
+   # Edit config/local.ts with your values
+   # (For local development, the defaults usually work fine)
+   ```
+
+4. **Generate environment files**
+   ```bash
+   yarn env:local
+   ```
+   
+   This generates:
+   - `.env` files for Next.js, NestJS, and Prisma
+   - Updates `supabase/config.toml` with your port configuration
+
+5. **Start Supabase (optional)**
+   ```bash
+   yarn supabase:start
+   ```
+   
+   Or skip this step and use playground mode:
+   ```bash
+   yarn env:playground
+   ```
+
+6. **Generate Prisma client**
+   ```bash
+   yarn prisma:generate
+   ```
+
+7. **Start development servers**
+   ```bash
+   yarn dev
+   ```
+   
+   This starts:
+   - Next.js on `http://localhost:3069`
+   - NestJS API on `http://localhost:3420`
+
+### Next Steps
+
+- 📖 Read the [Configuration Guide](./config/readme.md) to understand the config system
+- 🎨 Explore the [State Management Architecture](./docs/state-management/README.md)
+- 🔐 Learn about [Authentication](./docs/auth/README.md)
+- 🚀 Check out [Deployment](./docs/deployment/README.md)
 
 ---
 
@@ -179,7 +250,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 SUPA_JWT_SECRET=your-jwt-secret
 ```
 
-📖 **[Secrets Management Guide →](./docs/secrets/README.md)**
+📖 **[Configuration Management Guide →](./config/readme.md)**
 
 ### Prisma Usage
 
@@ -233,11 +304,15 @@ This runs KingStack with mock data - perfect for UI development and demos!
 
 ### Environment Management
 ```bash
-yarn env:development    # Switch to development environment
-yarn env:production     # Switch to production environment
-yarn env:playground     # Setup playground mode
-yarn env:current        # Show current environment
+yarn env:local          # Generate config for local environment
+yarn env:development    # Generate config for development environment
+yarn env:production     # Generate config for production environment
+yarn env:playground     # Setup playground mode (mock data)
 ```
+
+Each command generates:
+- `.env` files for all projects
+- Updates `supabase/config.toml` with ports and project_id
 
 ### Run Individual App
 ```bash
