@@ -42,7 +42,10 @@ config/
 ├── playground.ts      # Mock values for playground mode (checked in)
 ├── local.ts           # Your local environment values (gitignored)
 ├── development.ts     # Development environment values (gitignored)
-└── production.ts      # Production environment values (gitignored)
+├── production.ts      # Production environment values (gitignored)
+└── scripts/           # Configuration management scripts
+    ├── generate-env.ts              # Generate .env files and update configs
+    └── sync-deployment-secrets.ts   # Sync secrets to GitHub and Vercel
 ```
 
 ## 🔧 How It Works
@@ -95,6 +98,20 @@ configs: {
       "db.shadow_port": "SUPABASE_DB_SHADOW_PORT",
       // ... more port mappings
     }
+  }
+}
+```
+
+**Service Mappings** - Which values sync to external services:
+```typescript
+services: {
+  github: {
+    description: "GitHub environment secrets for CI/CD workflows",
+    keys: ["SUPABASE_DB_DIRECT_URL", "VERCEL_TOKEN", ...]
+  },
+  vercel: {
+    description: "Vercel environment variables for runtime",
+    keys: ["NEXT_PUBLIC_SUPABASE_API_URL", "SUPABASE_SERVICE_ROLE_KEY", ...]
   }
 }
 ```

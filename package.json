@@ -31,7 +31,12 @@
     "shadow:start": "supabase start -x realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
     "shadow:stop": "supabase stop",
     "vercel": "cd apps/next && vercel",
-    "vercel:prod": "cd apps/next && vercel --prod"
+    "vercel:prod": "cd apps/next && vercel --prod",
+    "deploy:check-tools": "gh --version && npx vercel --version && gh auth status && npx vercel whoami",
+    "deploy:sync-secrets": "bun config/scripts/sync-deployment-secrets.ts",
+    "deploy:sync-secrets:dev": "bun config/scripts/sync-deployment-secrets.ts --env development",
+    "deploy:sync-secrets:prod": "bun config/scripts/sync-deployment-secrets.ts --env production",
+    "deploy:sync-secrets:dry-run": "bun config/scripts/sync-deployment-secrets.ts --dry-run"
   },
   "packageManager": "yarn@4.10.2",
   "dependencies": {
