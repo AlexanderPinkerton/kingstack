@@ -12,7 +12,8 @@ import { defineValues } from "./utils";
  * Replace all "REPLACEME" values with your actual secrets.
  */
 export const values = defineValues({
-    SUPABASE_PROJECT_ID: "kingstack",
+    SUPABASE_PROJECT_ID: "kingstack-example",
+
     // ============================================================================
     // Application URLs (defaults are usually fine for local development)
     // ============================================================================
@@ -35,16 +36,18 @@ export const values = defineValues({
     // ============================================================================
     // Supabase Configuration
     // ============================================================================
-    SUPABASE_HOST: "localhost",
+    // For remote Supabase (production/development):
+    SUPABASE_PROJECT_REF: "iytsajmbfqriqylrmruy",  // Your project ref from Supabase dashboard
+    SUPABASE_REGION: "aws-1-us-east-1",             // Your region from Supabase dashboard
+
+    // For local Supabase:
+    // SUPABASE_PROJECT_REF: "local",
+    // SUPABASE_REGION: "local",
+
     SUPABASE_ANON_KEY: "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH",
     SUPABASE_SERVICE_ROLE_KEY: "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz",
     SUPA_JWT_SECRET: "super-secret-jwt-token-with-at-least-32-characters-long",
-
-    // ============================================================================
-    // Database Configuration
-    // ============================================================================
-    SUPABASE_DB_USER: "postgres",
-    SUPABASE_DB_PASSWORD: "postgres",
+    SUPABASE_DB_PASSWORD: "your-database-password",
 
     // ============================================================================
     // Optional: OAuth (leave empty if not using)
@@ -65,4 +68,28 @@ export const values = defineValues({
     OPENAI_API_KEY: "",
     ANTHROPIC_API_KEY: "",
     GEMINI_API_KEY: "",
+
+    // ============================================================================
+    // Stripe
+    // ============================================================================
+    STRIPE_PUBLIC_KEY: "pk_test_REPLACEME",
+    STRIPE_SECRET_KEY: "sk_test_REPLACEME",
+    STRIPE_WEBHOOK_SECRET: "whsec_REPLACEME",
+
+    // ============================================================================
+    // Resend (Email)
+    // ============================================================================
+    RESEND_API_KEY: "re_REPLACEME",
+
+    // ============================================================================
+    // Ecommerce: Inventory
+    // ============================================================================
+    NEXT_PUBLIC_INVENTORY_POOL_ID: "REPLACEME",
+
+    // ============================================================================
+    // Environment Type
+    // ============================================================================
+    // Set to "local" for http://localhost:PORT URLs
+    // Set to "remote" for https://DOMAIN URLs (no ports)
+    ENVIRONMENT_TYPE: "local",
 });

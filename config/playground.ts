@@ -17,7 +17,7 @@ export const values = defineValues({
     // ============================================================================
     // Supabase Configuration (Mock)
     // ============================================================================
-    SUPABASE_URL: "https://playground.supabase.co",
+    SUPABASE_API_URL: "https://playground.supabase.co",
     SUPABASE_ANON_KEY: "mock-anon-key-for-playground",
     SUPABASE_SERVICE_ROLE_KEY: "mock-service-role-key-for-playground",
     SUPA_JWT_SECRET: "mock-jwt-secret-for-playground",
