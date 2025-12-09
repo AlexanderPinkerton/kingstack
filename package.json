@@ -42,7 +42,7 @@
   "dependencies": {
     "@types/pg": "^8.15.4",
     "pg": "^8.16.3",
-    "turbo": "^2.6.1"
+    "turbo": "^2.6.3"
   },
   "devDependencies": {
     "@iarna/toml": "^2.2.5",
