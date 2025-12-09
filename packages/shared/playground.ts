@@ -13,7 +13,7 @@ export interface PlaygroundConfig {
 
 export const PLAYGROUND_CONFIG: PlaygroundConfig = {
   enabled: (process.env.NEXT_PUBLIC_PLAYGROUND_MODE === 'true' ||
-    !process.env.NEXT_PUBLIC_SUPABASE_API_URL),
+    !process.env.NEXT_PUBLIC_SUPABASE_URL),
 
   mockData: {
     todos: [

@@ -42,7 +42,10 @@ config/
 ├── playground.ts      # Mock values for playground mode (checked in)
 ├── local.ts           # Your local environment values (gitignored)
 ├── development.ts     # Development environment values (gitignored)
-└── production.ts      # Production environment values (gitignored)
+├── production.ts      # Production environment values (gitignored)
+└── scripts/           # Configuration management scripts
+    ├── generate-env.ts              # Generate .env files and update configs
+    └── sync-deployment-secrets.ts   # Sync secrets to GitHub and Vercel
 ```
 
 ## 🔧 How It Works
@@ -69,14 +72,14 @@ computed: (core) => ({
   SUPABASE_DB_DIRECT_URL: `postgresql://${core.SUPABASE_DB_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_HOST}:${core.SUPABASE_DB_DIRECT_PORT}/postgres`,
   
   // Mirror values for frontend
-  NEXT_PUBLIC_SUPABASE_API_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
+  NEXT_PUBLIC_SUPABASE_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
 })
 ```
 
 **Environment File Mappings** - Which values go to which `.env` files:
 ```typescript
 envfiles: {
-  next: { path: "apps/next/.env", keys: ["NEXT_PUBLIC_SUPABASE_API_URL", ...] },
+  next: { path: "apps/next/.env", keys: ["NEXT_PUBLIC_SUPABASE_URL", ...] },
   nest: { path: "apps/nest/.env", keys: ["SUPABASE_DB_POOL_URL", ...] },
   prisma: { path: "packages/prisma/.env", keys: ["SUPABASE_DB_POOL_URL", ...] }
 }
@@ -95,6 +98,20 @@ configs: {
       "db.shadow_port": "SUPABASE_DB_SHADOW_PORT",
       // ... more port mappings
     }
+  }
+}
+```
+
+**Service Mappings** - Which values sync to external services:
+```typescript
+services: {
+  github: {
+    description: "GitHub environment secrets for CI/CD workflows",
+    keys: ["SUPABASE_DB_DIRECT_URL", "VERCEL_TOKEN", ...]
+  },
+  vercel: {
+    description: "Vercel environment variables for runtime",
+    keys: ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", ...]
   }
 }
 ```

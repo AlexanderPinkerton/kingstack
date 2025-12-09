@@ -43,6 +43,16 @@ export interface ConfigFileMapping {
 }
 
 /**
+ * Configuration for external service secret syncing.
+ */
+export interface ServiceConfig {
+  /** Description of what this service is for */
+  description: string;
+  /** List of keys (from core or computed) to sync to this service */
+  keys: string[];
+}
+
+/**
  * Schema definition for all configuration.
  */
 export interface ConfigSchema {
@@ -54,6 +64,8 @@ export interface ConfigSchema {
   envfiles: Record<string, EnvFileConfig>;
   /** Mapping of config files to update */
   configs?: Record<string, ConfigFileMapping>;
+  /** Mapping of external services to sync secrets to */
+  services?: Record<string, ServiceConfig>;
 }
 
 

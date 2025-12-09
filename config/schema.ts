@@ -35,6 +35,14 @@ export const schema = defineSchema({
         },
 
         // Supabase Configuration
+        SUPABASE_PROJECT_REF: {
+            required: true,
+            description: "Supabase project reference ID (e.g., 'iktsajmbfqriqylrmruy'). Find in project settings.",
+        },
+        SUPABASE_REGION: {
+            required: true,
+            description: "Supabase region (e.g., 'aws-1-us-east-2'). Find in project settings.",
+        },
         SUPABASE_ANON_KEY: {
             required: true,
             description: "Supabase anonymous key for client-side auth",
@@ -47,84 +55,22 @@ export const schema = defineSchema({
             required: true,
             description: "JWT secret from Supabase dashboard for token validation",
         },
-
-        // Supabase Project
-        SUPABASE_PROJECT_ID: {
-            default: "kingstack",
-            description: "Supabase project ID",
-        },
-
-        // Database Configuration
-        SUPABASE_HOST: {
-            required: true,
-            description: "Supabase project hostname",
-        },
-        SUPABASE_DB_USER: {
-            required: true,
-            description: "Database username",
-        },
         SUPABASE_DB_PASSWORD: {
             required: true,
             description: "Database password",
         },
-        SUPABASE_DB_SHADOW_PORT: {
-            required: false,
-            default: "54320",
-            description: "Shadow database port"
-        },
-        SUPABASE_API_PORT: {
-            required: false,
-            default: "54321",
-            description: "The port for the supabase api server"
-        },
-        SUPABASE_DB_DIRECT_PORT: {
-            required: false,
-            default: "54322",
-            description: "Database direct port",
-        },
-        SUPABASE_DB_POOLER_PORT: {
-            required: false,
-            default: "54329",
-            description: "Database pooler port",
-        },
-        SUPABASE_STUDIO_PORT: {
-            required: false,
-            default: "54323",
-            description: "Database studio port",
-        },
-        SUPABASE_ANALYTICS_PORT: {
-            required: false,
-            default: "54324",
-            description: "Database studio port",
-        },
-        SUPABASE_EMAIL_PORT: {
-            required: false,
-            default: "54323",
-            description: "Database studio port",
-        },
-
-
-        // Optional: OAuth
-        GOOGLE_CLIENT_ID: {
-            default: "",
-            description: "Google OAuth client ID (optional)",
-        },
-        GOOGLE_CLIENT_SECRET: {
-            default: "",
-            description: "Google OAuth client secret (optional)",
-        },
 
         // Optional: Deployment
         VERCEL_TOKEN: {
-            default: "",
+            required: true,
             description: "Vercel deployment token",
         },
         VERCEL_ORG_ID: {
-            default: "",
+            required: true,
             description: "Vercel organization ID",
         },
         VERCEL_PROJECT_ID: {
-            default: "",
+            required: true,
             description: "Vercel project ID",
         },
 
@@ -141,33 +87,78 @@ export const schema = defineSchema({
             default: "",
             description: "Google Gemini API key",
         },
+
+        // Environment Type (determines URL format)
+        ENVIRONMENT_TYPE: {
+            default: "local",
+            description: "Environment type: 'local' (http://localhost:PORT) or 'remote' (https://DOMAIN)",
+        },
     },
 
     // ============================================================================
     // Computed Values (Derived from Core Configuration)
     // ============================================================================
-    computed: (core) => ({
+    computed: (core) => {
+        // Determine if this is a local environment
+        const isLocal = core.ENVIRONMENT_TYPE === "local";
 
-        // Supabase API url
-        SUPABASE_API_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
+        // Supabase URLs (different patterns for local vs remote)
+        const supabaseApiUrl = isLocal
+            ? `http://localhost:${core.SUPABASE_API_PORT || "54321"}`
+            : `https://${core.SUPABASE_PROJECT_REF}.supabase.co`;
 
-        // Used by scripts
-        SUPABASE_POOLER_HOST: core.SUPABASE_HOST,
-        SUPABASE_POOLER_USER: core.SUPABASE_DB_USER,
+        // Database hosts (different for local vs remote)
+        const dbPoolerHost = isLocal
+            ? "localhost"
+            : `${core.SUPABASE_REGION}.pooler.supabase.com`;
 
-        // Database connection strings
-        SUPABASE_DB_POOL_URL: `postgresql://${core.SUPABASE_DB_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_HOST}:${core.SUPABASE_DB_POOLER_PORT}/postgres?pgbouncer=true`,
-        SUPABASE_DB_DIRECT_URL: `postgresql://${core.SUPABASE_DB_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_HOST}:${core.SUPABASE_DB_DIRECT_PORT}/postgres`,
+        const dbDirectHost = isLocal
+            ? "localhost"
+            : `db.${core.SUPABASE_PROJECT_REF}.supabase.co`;
 
-        // Public-facing URLs for Next.js
-        NEXT_PUBLIC_SUPABASE_API_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: core.SUPABASE_ANON_KEY,
-        NEXT_PUBLIC_NEST_URL: `http://${core.NEST_HOST}:${core.NEST_PORT}`,
-        NEXT_PUBLIC_API_URL: `http://${core.NEXT_HOST}:${core.NEXT_PORT}`,
+        // Database username (remote uses postgres.{PROJECT_REF} format)
+        const dbUser = isLocal
+            ? "postgres"
+            : `postgres.${core.SUPABASE_PROJECT_REF}`;
 
-        // NestJS config
-        NEXT_URL: `http://${core.NEXT_HOST}:${core.NEXT_PORT}`,
-    }),
+        // Database ports
+        const dbPoolerPort = isLocal ? (core.SUPABASE_DB_POOLER_PORT || "54322") : "6543";
+        const dbDirectPort = isLocal ? (core.SUPABASE_DB_DIRECT_PORT || "54322") : "5432";
+
+        // Application URLs
+        const nestUrl = isLocal
+            ? `http://${core.NEST_HOST}:${core.NEST_PORT}`
+            : `https://${core.NEST_HOST}`;
+
+        const nextUrl = isLocal
+            ? `http://${core.NEXT_HOST}:${core.NEXT_PORT}`
+            : `https://${core.NEXT_HOST}`;
+
+        return {
+            // Supabase API URL (for auth, storage, etc.)
+            SUPABASE_API_URL: supabaseApiUrl,
+
+            // Used by scripts
+            SUPABASE_POOLER_HOST: dbPoolerHost,
+            SUPABASE_POOLER_USER: dbUser,
+
+            // Database connection strings
+            // Pooler connection (for connection pooling via PgBouncer)
+            SUPABASE_DB_POOL_URL: `postgresql://${dbUser}:${core.SUPABASE_DB_PASSWORD}@${dbPoolerHost}:${dbPoolerPort}/postgres?pgbouncer=true`,
+
+            // Direct connection (for migrations)
+            SUPABASE_DB_DIRECT_URL: `postgresql://${dbUser}:${core.SUPABASE_DB_PASSWORD}@${dbPoolerHost}:${dbDirectPort}/postgres`,
+
+            // Public-facing URLs for Next.js
+            NEXT_PUBLIC_SUPABASE_URL: supabaseApiUrl,
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: core.SUPABASE_ANON_KEY,
+            NEXT_PUBLIC_NEST_BACKEND_URL: nestUrl,
+            NEXT_PUBLIC_API_URL: nextUrl,
+
+            // NestJS config
+            NEXT_URL: nextUrl,
+        };
+    },
 
     // ============================================================================
     // Environment File Mappings (Which Values Go to Which .env Files)
@@ -176,20 +167,19 @@ export const schema = defineSchema({
         next: {
             path: "apps/next/.env",
             keys: [
+
+                // NestJS config
+                "NEXT_PUBLIC_NEST_BACKEND_URL",
+
                 // Public Supabase config
-                "NEXT_PUBLIC_SUPABASE_API_URL",
+                "NEXT_PUBLIC_SUPABASE_URL",
                 "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-                "NEXT_PUBLIC_NEST_URL",
                 "NEXT_PUBLIC_API_URL",
 
                 // Server-side Supabase config
                 "SUPABASE_SERVICE_ROLE_KEY",
                 "SUPABASE_DB_POOL_URL",
                 "SUPABASE_DB_DIRECT_URL",
-
-                // OAuth
-                "GOOGLE_CLIENT_ID",
-                "GOOGLE_CLIENT_SECRET",
 
                 // Deployment
                 "VERCEL_TOKEN",
@@ -221,9 +211,8 @@ export const schema = defineSchema({
                 "SUPABASE_SERVICE_ROLE_KEY",
                 "SUPABASE_DB_POOL_URL",
                 "SUPABASE_DB_DIRECT_URL",
-                "SUPABASE_DB_USER",
                 "SUPABASE_DB_PASSWORD",
-                "SUPA_JWT_SECRET",
+                "SUPA_JWT_SECRET"
             ],
             aliases: {
                 // Map NEST_PORT to PORT for this project
@@ -248,7 +237,7 @@ export const schema = defineSchema({
             path: "supabase/config.toml",
             format: "toml" as const,
             mappings: {
-                "project_id": "SUPABASE_PROJECT_ID",
+                "project_id": "SUPABASE_PROJECT_REF",
                 "api.port": "SUPABASE_API_PORT",
                 "db.port": "SUPABASE_DB_DIRECT_PORT",
                 "db.shadow_port": "SUPABASE_DB_SHADOW_PORT",
@@ -257,6 +246,36 @@ export const schema = defineSchema({
                 "inbucket.port": "SUPABASE_EMAIL_PORT",
                 "analytics.port": "SUPABASE_ANALYTICS_PORT",
             },
+        },
+    },
+
+    // ============================================================================
+    // Service Mappings (Which Values Sync to External Services)
+    // ============================================================================
+    services: {
+        github: {
+            description: "GitHub environment secrets for CI/CD workflows",
+            keys: [
+                "SUPABASE_DB_DIRECT_URL",
+                "SUPABASE_DB_POOL_URL",
+                "NEXT_PUBLIC_SUPABASE_URL",
+                "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+                "VERCEL_TOKEN",
+                "VERCEL_ORG_ID",
+                "VERCEL_PROJECT_ID",
+            ],
+        },
+        vercel: {
+            description: "Vercel environment variables for runtime",
+            keys: [
+                "NEXT_PUBLIC_SUPABASE_URL",
+                "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+                "NEXT_PUBLIC_NEST_BACKEND_URL",
+                "NEXT_PUBLIC_API_URL",
+                "SUPABASE_SERVICE_ROLE_KEY",
+                "SUPABASE_DB_POOL_URL",
+                "SUPABASE_DB_DIRECT_URL",
+            ],
         },
     },
 });

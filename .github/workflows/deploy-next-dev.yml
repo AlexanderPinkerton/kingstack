@@ -1,13 +1,12 @@
-name: Deploy Production
+name: Deploy Vercel Development
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [development]
 
 jobs:
   run-migrations:
-    environment: production
+    environment: development
     env:
       SUPABASE_DB_DIRECT_URL: ${{ secrets.SUPABASE_DB_DIRECT_URL }}
       SUPABASE_DB_POOL_URL: ${{ secrets.SUPABASE_DB_POOL_URL }}
@@ -36,9 +35,9 @@ jobs:
         run: npx prisma migrate deploy --schema=packages/prisma/schema.prisma
 
   deploy:
-    environment: production
+    environment: development
     env:
-      NEXT_PUBLIC_SUPABASE_API_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_API_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -65,7 +64,7 @@ jobs:
             ${{ runner.os }}-yarn-
       - name: Install dependencies
         run: yarn install --immutable
-      - name: Pull Vercel Environment Information
-        run: npx vercel pull --yes --environment=production --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID
+      - name: Link Vercel Project
+        run: npx vercel link --yes --cwd apps/next --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID
       - name: Deploy to Vercel
         run: npx vercel deploy --prod --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID --yes
