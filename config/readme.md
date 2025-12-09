@@ -72,14 +72,14 @@ computed: (core) => ({
   SUPABASE_DB_DIRECT_URL: `postgresql://${core.SUPABASE_DB_USER}:${core.SUPABASE_DB_PASSWORD}@${core.SUPABASE_HOST}:${core.SUPABASE_DB_DIRECT_PORT}/postgres`,
   
   // Mirror values for frontend
-  NEXT_PUBLIC_SUPABASE_API_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
+  NEXT_PUBLIC_SUPABASE_URL: `http://${core.SUPABASE_HOST}:${core.SUPABASE_API_PORT}`,
 })
 ```
 
 **Environment File Mappings** - Which values go to which `.env` files:
 ```typescript
 envfiles: {
-  next: { path: "apps/next/.env", keys: ["NEXT_PUBLIC_SUPABASE_API_URL", ...] },
+  next: { path: "apps/next/.env", keys: ["NEXT_PUBLIC_SUPABASE_URL", ...] },
   nest: { path: "apps/nest/.env", keys: ["SUPABASE_DB_POOL_URL", ...] },
   prisma: { path: "packages/prisma/.env", keys: ["SUPABASE_DB_POOL_URL", ...] }
 }
@@ -111,7 +111,7 @@ services: {
   },
   vercel: {
     description: "Vercel environment variables for runtime",
-    keys: ["NEXT_PUBLIC_SUPABASE_API_URL", "SUPABASE_SERVICE_ROLE_KEY", ...]
+    keys: ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", ...]
   }
 }
 ```

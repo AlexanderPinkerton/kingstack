@@ -36,4 +36,4 @@ jobs:
       - name: Test
         run: yarn test 
       - name: Build
-        run: yarn turbo build --filter=@pinkerton-digital/frontend
+        run: yarn turbo build --filter=@kingstack/frontend

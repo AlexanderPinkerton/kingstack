@@ -1,4 +1,4 @@
-project_id = "pinkerton-digital-site-local"
+project_id = "kingstack"
 
 [api]
 enabled = true

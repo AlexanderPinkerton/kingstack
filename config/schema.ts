@@ -150,7 +150,7 @@ export const schema = defineSchema({
             SUPABASE_DB_DIRECT_URL: `postgresql://${dbUser}:${core.SUPABASE_DB_PASSWORD}@${dbPoolerHost}:${dbDirectPort}/postgres`,
 
             // Public-facing URLs for Next.js
-            NEXT_PUBLIC_SUPABASE_API_URL: supabaseApiUrl,
+            NEXT_PUBLIC_SUPABASE_URL: supabaseApiUrl,
             NEXT_PUBLIC_SUPABASE_ANON_KEY: core.SUPABASE_ANON_KEY,
             NEXT_PUBLIC_NEST_BACKEND_URL: nestUrl,
             NEXT_PUBLIC_API_URL: nextUrl,
@@ -165,14 +165,14 @@ export const schema = defineSchema({
     // ============================================================================
     envfiles: {
         next: {
-            path: "apps/frontend/.env",
+            path: "apps/next/.env",
             keys: [
 
                 // NestJS config
                 "NEXT_PUBLIC_NEST_BACKEND_URL",
 
                 // Public Supabase config
-                "NEXT_PUBLIC_SUPABASE_API_URL",
+                "NEXT_PUBLIC_SUPABASE_URL",
                 "NEXT_PUBLIC_SUPABASE_ANON_KEY",
                 "NEXT_PUBLIC_API_URL",
 
@@ -198,7 +198,7 @@ export const schema = defineSchema({
         },
 
         nest: {
-            path: "apps/backend/.env",
+            path: "apps/nest/.env",
             keys: [
                 // Frontend URL for CORS
                 "NEXT_URL",
@@ -258,7 +258,7 @@ export const schema = defineSchema({
             keys: [
                 "SUPABASE_DB_DIRECT_URL",
                 "SUPABASE_DB_POOL_URL",
-                "NEXT_PUBLIC_SUPABASE_API_URL",
+                "NEXT_PUBLIC_SUPABASE_URL",
                 "NEXT_PUBLIC_SUPABASE_ANON_KEY",
                 "VERCEL_TOKEN",
                 "VERCEL_ORG_ID",
@@ -268,7 +268,7 @@ export const schema = defineSchema({
         vercel: {
             description: "Vercel environment variables for runtime",
             keys: [
-                "NEXT_PUBLIC_SUPABASE_API_URL",
+                "NEXT_PUBLIC_SUPABASE_URL",
                 "NEXT_PUBLIC_SUPABASE_ANON_KEY",
                 "NEXT_PUBLIC_NEST_BACKEND_URL",
                 "NEXT_PUBLIC_API_URL",
