@@ -26,15 +26,15 @@
     "supabase:reset": "supabase db reset",
     "vercel": "cd apps/next && vercel",
     "vercel:prod": "cd apps/next && vercel --prod",
-    "env:local": "bun config/scripts/generate-env.ts local",
-    "env:development": "bun config/scripts/generate-env.ts development",
-    "env:production": "bun config/scripts/generate-env.ts production",
-    "env:playground": "bun config/scripts/generate-env.ts playground",
+    "env:local": "bun king-config generate local",
+    "env:development": "bun king-config generate development",
+    "env:production": "bun king-config generate production",
+    "env:playground": "bun king-config generate playground",
     "deploy:check-tools": "gh --version && npx vercel --version && gh auth status && npx vercel whoami",
-    "deploy:sync-secrets": "bun config/scripts/sync-deployment-secrets.ts",
-    "deploy:sync-secrets:dev": "bun config/scripts/sync-deployment-secrets.ts --env development",
-    "deploy:sync-secrets:prod": "bun config/scripts/sync-deployment-secrets.ts --env production",
-    "deploy:sync-secrets:dry-run": "bun config/scripts/sync-deployment-secrets.ts --dry-run"
+    "deploy:sync-secrets": "bun king-config sync",
+    "deploy:sync-secrets:dev": "bun king-config sync --env development",
+    "deploy:sync-secrets:prod": "bun king-config sync --env production",
+    "deploy:sync-secrets:dry-run": "bun king-config sync --dry-run"
   },
   "packageManager": "yarn@4.10.2",
   "dependencies": {
@@ -43,7 +43,9 @@
     "turbo": "^2.6.3"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.8",
     "@iarna/toml": "^2.2.5",
+    "@kingstack/config": "workspace:*",
     "@types/node": "^24.10.1",
     "supabase": "2.58.5",
     "vercel": "^49.1.0"

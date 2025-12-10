@@ -1,4 +1,4 @@
-import { defineSchema } from "./utils";
+import { defineSchema } from "@kingstack/config";
 
 /**
  * Configuration schema for KingStack.
@@ -59,6 +59,41 @@ export const schema = defineSchema({
             required: true,
             description: "Database password",
         },
+        SUPABASE_DB_SHADOW_PORT: {
+            required: false,
+            default: "54320",
+            description: "Supabase shadow port",
+        },
+        SUPABASE_API_PORT: {
+            required: false,
+            default: "54321",
+            description: "Supabase API port",
+        },
+        SUPABASE_DB_DIRECT_PORT: {
+            required: false,
+            default: "54322",
+            description: "Supabase database direct port",
+        },
+        SUPABASE_DB_POOLER_PORT: {
+            required: false,
+            default: "54322",  // Using the direct one for now since the pooler one doesn't work for some reason.
+            description: "Supabase database pooler port",
+        },
+        SUPABASE_STUDIO_PORT: {
+            required: false,
+            default: "54324",
+            description: "Supabase studio port",
+        },
+        SUPABASE_ANALYTICS_PORT: {
+            required: false,
+            default: "54325",
+            description: "Supabase analytics port",
+        },
+        SUPABASE_EMAIL_PORT: {
+            required: false,
+            default: "54326",
+            description: "Supabase email port",
+        },
 
         // Optional: Deployment
         VERCEL_TOKEN: {
@@ -92,6 +127,12 @@ export const schema = defineSchema({
         ENVIRONMENT_TYPE: {
             default: "local",
             description: "Environment type: 'local' (http://localhost:PORT) or 'remote' (https://DOMAIN)",
+        },
+
+        NPM_TOKEN: {
+            required: false,
+            default: "xxx",
+            description: "NPM token for publishing packages",
         },
     },
 
@@ -148,6 +189,9 @@ export const schema = defineSchema({
 
             // Direct connection (for migrations)
             SUPABASE_DB_DIRECT_URL: `postgresql://${dbUser}:${core.SUPABASE_DB_PASSWORD}@${dbPoolerHost}:${dbDirectPort}/postgres`,
+
+            // Shadow DB connection (for migrations)
+            SUPABASE_DB_SHADOW_URL: `postgresql://${dbUser}:${core.SUPABASE_DB_PASSWORD}@${dbPoolerHost}:${dbDirectPort}/shadow_db`,
 
             // Public-facing URLs for Next.js
             NEXT_PUBLIC_SUPABASE_URL: supabaseApiUrl,
@@ -225,6 +269,7 @@ export const schema = defineSchema({
             keys: [
                 "SUPABASE_DB_POOL_URL",
                 "SUPABASE_DB_DIRECT_URL",
+                "SUPABASE_DB_SHADOW_URL",
             ],
         },
     },
@@ -263,6 +308,7 @@ export const schema = defineSchema({
                 "VERCEL_TOKEN",
                 "VERCEL_ORG_ID",
                 "VERCEL_PROJECT_ID",
+                "NPM_TOKEN"
             ],
         },
         vercel: {
