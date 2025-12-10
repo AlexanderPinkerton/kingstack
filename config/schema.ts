@@ -59,6 +59,41 @@ export const schema = defineSchema({
             required: true,
             description: "Database password",
         },
+        SUPABASE_DB_SHADOW_PORT: {
+            required: false,
+            default: "54320",
+            description: "Supabase shadow port",
+        },
+        SUPABASE_API_PORT: {
+            required: false,
+            default: "54321",
+            description: "Supabase API port",
+        },
+        SUPABASE_DB_DIRECT_PORT: {
+            required: false,
+            default: "54322",
+            description: "Supabase database direct port",
+        },
+        SUPABASE_DB_POOLER_PORT: {
+            required: false,
+            default: "54322",  // Using the direct one for now since the pooler one doesn't work for some reason.
+            description: "Supabase database pooler port",
+        },
+        SUPABASE_STUDIO_PORT: {
+            required: false,
+            default: "54324",
+            description: "Supabase studio port",
+        },
+        SUPABASE_ANALYTICS_PORT: {
+            required: false,
+            default: "54325",
+            description: "Supabase analytics port",
+        },
+        SUPABASE_EMAIL_PORT: {
+            required: false,
+            default: "54326",
+            description: "Supabase email port",
+        },
 
         // Optional: Deployment
         VERCEL_TOKEN: {
