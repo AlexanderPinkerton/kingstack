@@ -93,6 +93,12 @@ export const schema = defineSchema({
             default: "local",
             description: "Environment type: 'local' (http://localhost:PORT) or 'remote' (https://DOMAIN)",
         },
+
+        NPM_TOKEN: {
+            required: false,
+            default: "xxx",
+            description: "NPM token for publishing packages",
+        },
     },
 
     // ============================================================================
@@ -263,6 +269,7 @@ export const schema = defineSchema({
                 "VERCEL_TOKEN",
                 "VERCEL_ORG_ID",
                 "VERCEL_PROJECT_ID",
+                "NPM_TOKEN"
             ],
         },
         vercel: {
