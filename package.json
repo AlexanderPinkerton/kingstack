@@ -26,15 +26,15 @@
     "supabase:reset": "supabase db reset",
     "vercel": "cd apps/next && vercel",
     "vercel:prod": "cd apps/next && vercel --prod",
-    "env:local": "king-config generate local",
-    "env:development": "king-config generate development",
-    "env:production": "king-config generate production",
-    "env:playground": "king-config generate playground",
+    "env:local": "bun king-config generate local",
+    "env:development": "bun king-config generate development",
+    "env:production": "bun king-config generate production",
+    "env:playground": "bun king-config generate playground",
     "deploy:check-tools": "gh --version && npx vercel --version && gh auth status && npx vercel whoami",
-    "deploy:sync-secrets": "king-config sync",
-    "deploy:sync-secrets:dev": "king-config sync --env development",
-    "deploy:sync-secrets:prod": "king-config sync --env production",
-    "deploy:sync-secrets:dry-run": "king-config sync --dry-run"
+    "deploy:sync-secrets": "bun king-config sync",
+    "deploy:sync-secrets:dev": "bun king-config sync --env development",
+    "deploy:sync-secrets:prod": "bun king-config sync --env production",
+    "deploy:sync-secrets:dry-run": "bun king-config sync --dry-run"
   },
   "packageManager": "yarn@4.10.2",
   "dependencies": {
