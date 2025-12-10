@@ -190,6 +190,9 @@ export const schema = defineSchema({
             // Direct connection (for migrations)
             SUPABASE_DB_DIRECT_URL: `postgresql://${dbUser}:${core.SUPABASE_DB_PASSWORD}@${dbPoolerHost}:${dbDirectPort}/postgres`,
 
+            // Shadow DB connection (for migrations)
+            SUPABASE_DB_SHADOW_URL: `postgresql://${dbUser}:${core.SUPABASE_DB_PASSWORD}@${dbPoolerHost}:${dbDirectPort}/shadow_db`,
+
             // Public-facing URLs for Next.js
             NEXT_PUBLIC_SUPABASE_URL: supabaseApiUrl,
             NEXT_PUBLIC_SUPABASE_ANON_KEY: core.SUPABASE_ANON_KEY,
@@ -266,6 +269,7 @@ export const schema = defineSchema({
             keys: [
                 "SUPABASE_DB_POOL_URL",
                 "SUPABASE_DB_DIRECT_URL",
+                "SUPABASE_DB_SHADOW_URL",
             ],
         },
     },
