@@ -7,7 +7,7 @@ datasource db {
     provider          = "postgresql"
     url               = env("SUPABASE_DB_POOL_URL")
     directUrl         = env("SUPABASE_DB_DIRECT_URL")
-    shadowDatabaseUrl = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+    shadowDatabaseUrl = env("SUPABASE_DB_SHADOW_URL")
 }
 
 // 🔥 Golden Rules:
@@ -51,6 +51,8 @@ model todo {
 model test {
     id         String   @id @default(cuid())
     name       String
+    donkey     String?
+    apple      String?
     created_at DateTime @default(now())
 }
 
