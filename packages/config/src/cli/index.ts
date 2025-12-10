@@ -3,12 +3,14 @@ import { Command } from "commander";
 import { generateCommand } from "./generate";
 import { syncCommand } from "./sync";
 
+import { version } from "../../package.json";
+
 const program = new Command();
 
 program
     .name("king-config")
     .description("Configuration management CLI for KingStack")
-    .version("0.0.0");
+    .version(version);
 
 program.command("generate")
     .description("Generate .env files and update configs")
