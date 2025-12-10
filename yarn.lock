@@ -2576,7 +2576,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@kingstack/config@workspace:packages/config":
+"@kingstack/config@workspace:*, @kingstack/config@workspace:packages/config":
   version: 0.0.0-use.local
   resolution: "@kingstack/config@workspace:packages/config"
   dependencies:
@@ -12384,6 +12384,7 @@ __metadata:
   dependencies:
     "@changesets/cli": "npm:^2.29.8"
     "@iarna/toml": "npm:^2.2.5"
+    "@kingstack/config": "workspace:*"
     "@types/node": "npm:^24.10.1"
     "@types/pg": "npm:^8.15.4"
     pg: "npm:^8.16.3"
