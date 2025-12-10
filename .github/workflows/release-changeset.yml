@@ -1,4 +1,4 @@
-name: Release
+name: Release Packages
 
 on:
   push:
@@ -36,7 +36,7 @@ jobs:
         run: yarn install
 
       - name: Build Packages
-        run: yarn build
+        run: yarn build:release-packages
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets

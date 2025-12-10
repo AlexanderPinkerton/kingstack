@@ -1,6 +1,7 @@
 {
     "name": "@kingstack/config",
     "version": "0.1.0",
+    "license": "MIT",
     "description": "Configuration management system for KingStack",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
