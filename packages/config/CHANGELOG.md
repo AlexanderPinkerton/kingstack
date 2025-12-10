@@ -1,5 +1,11 @@
 # @kingstack/config
 
+## 0.1.2
+
+### Patch Changes
+
+- 180d0e1: added mit license to package.json
+
 ## 0.1.1
 
 ### Patch Changes
