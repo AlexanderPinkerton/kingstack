@@ -1,26 +1,15 @@
 #!/usr/bin/env bun
 import { execSync } from 'child_process';
+import { resolve } from 'path';
+import { existsSync } from 'fs';
+import { defineValues, resolveConfig } from '@kingstack/config';
 
 /**
- * setup-shadow-db.ts
- * 
  * Automates the creation of a shadow database for Prisma local development with Supabase.
- * 
- * Problem:
- * Prisma requires a separate "shadow database" to detect invalid schema changes.
- * When using local Supabase, the default "postgres" database usually becomes the dev DB.
- * However, if we point the shadow DB to an empty database, migrations fail because they
- * rely on system schemas (like `auth`, `storage`) capable of having triggers installed on them.
- * 
- * Solution:
- * This script:
- * 1. Finds the local Supabase DB container.
- * 2. Drops/Creates a dedicated `shadow_db`.
- * 3. Clones the schema (including system schemas) from the main `postgres` DB.
- * 4. Wipes the `public` schema in `shadow_db` so it starts clean for Prisma.
+ * Usage: bun scripts/setup-shadow-db.ts [env]
  */
 
-function run(command: string) {
+async function run(command: string) {
     try {
         return execSync(command, { encoding: 'utf8', stdio: 'pipe' }).trim();
     } catch (error: any) {
@@ -32,22 +21,71 @@ function run(command: string) {
     }
 }
 
-function main() {
-    console.log('👻 Application: Shadow Database Setup');
+async function loadConfigForEnv(env: string) {
+    const cwd = process.cwd();
+
+    // Load schema
+    const schemaPath = resolve(cwd, "config/schema.ts");
+    if (!existsSync(schemaPath)) throw new Error(`Schema not found: ${schemaPath}`);
+    const { schema } = await import(schemaPath);
+
+    // Load values
+    const valuesPath = resolve(cwd, `config/${env}.ts`);
+    if (!existsSync(valuesPath)) throw new Error(`Config values not found: ${valuesPath}`);
+    const { values } = await import(valuesPath);
+
+    return resolveConfig(schema, values);
+}
+
+async function main() {
+    const env = process.argv[2] || "local";
+    console.log(`👻 Application: Shadow Database Setup (${env})`);
     console.log('-------------------------------------');
 
-    // 1. Find the Supabase DB container
+    // 1. Load Config
+    console.log(`📖 Loading configuration for '${env}'...`);
+    let projectId;
+    try {
+        const { config, errors } = await loadConfigForEnv(env);
+        if (errors.length > 0) {
+            console.error('❌ Configuration errors:', errors);
+            process.exit(1);
+        }
+        projectId = config.all.SUPABASE_PROJECT_REF; // In local mode, REF usually acts as ID/Name suffix
+
+        // If it's a "remote" ref (like 'iytsajmbf...') but we are in local environment type,
+        // we might be looking for the local container name which usually follows the project_id in config.toml
+        // But the user defines SUPABASE_PROJECT_ID in their schema for this.
+        // Let's check SUPABASE_PROJECT_ID if available, else REF.
+
+        // In the user's schema, SUPABASE_PROJECT_REF is the key. 
+        // In local.ts, the user likely sets this to "kingstack-local" for the local instance
+        // or the docker container name suffix.
+    } catch (e: any) {
+        console.error(`❌ Failed to load config: ${e.message}`);
+        process.exit(1);
+    }
+
+    if (!projectId) {
+        console.error("❌ Could not determine SUPABASE_PROJECT_REF from config.");
+        process.exit(1);
+    }
+
+    console.log(`🎯 Target Project ID: ${projectId}`);
+
+    // 2. Find the Supabase DB container
     console.log('🔍 Finding Supabase DB container...');
     let containerId = '';
     try {
-        // Look for a container name containing "supabase_db_" and assuming it's the one we want.
-        // Adjust this filter if you have multiple supabase projects running.
-        const containers = run('docker ps --format "{{.Names}}"').split('\n');
-        containerId = containers.find(name => name.includes('supabase_db_')) || '';
+        const containerNameTarget = `supabase_db_${projectId}`;
+        const containers = (await run('docker ps --format "{{.Names}}"')).split('\n');
+
+        // Exact match preferred, or contains strict suffix
+        containerId = containers.find(name => name === containerNameTarget) || '';
 
         if (!containerId) {
-            console.error('❌ Could not find a running Supabase DB container.');
-            console.error('   Make sure `supabase start` is running.');
+            console.error(`❌ Could not find container named '${containerNameTarget}'`);
+            console.error('   Running containers:', containers.join(', '));
             process.exit(1);
         }
         console.log(`✅ Found container: ${containerId}`);
@@ -56,10 +94,9 @@ function main() {
         process.exit(1);
     }
 
-    // 2. Drop and Create `shadow_db`
+    // 3. Drop and Create `shadow_db`
     console.log('\n🗑️  Recreating shadow_db...');
     try {
-        // Force drop if exists
         run(`docker exec ${containerId} psql -U postgres -c "DROP DATABASE IF EXISTS shadow_db WITH (FORCE);"`);
         run(`docker exec ${containerId} psql -U postgres -c "CREATE DATABASE shadow_db;"`);
         console.log('✅ shadow_db created.');
@@ -68,21 +105,12 @@ function main() {
         process.exit(1);
     }
 
-    // 3. Clone Schema (System Schemas + Public)
+    // 4. Clone Schema (System Schemas + Public)
     console.log('\n🧬 Cloning system schemas from `postgres`...');
     try {
-        // We pipe pg_dump from the container back into psql in the container
-        // Note: We use `bash -c` to handle the pipe inside the exec if we want, or do it from host.
-        // Doing it from host is safer for signal handling.
-        // Command: docker exec <id> pg_dump ... | docker exec <id> psql ...
-
         const dumpCmd = `docker exec ${containerId} pg_dump -U postgres --schema-only postgres`;
         const restoreCmd = `docker exec -i ${containerId} psql -U postgres shadow_db`;
-
-        // We can't easily pipe two execSyncs directly in node without using a shell, 
-        // so let's just run the shell command.
-        execSync(`${dumpCmd} | ${restoreCmd}`, { stdio: 'ignore' }); // ignore output to avoid noise
-
+        execSync(`${dumpCmd} | ${restoreCmd}`, { stdio: 'ignore' });
         console.log('✅ Schema cloned.');
     } catch (e) {
         console.error('❌ Failed to clone schema.');
@@ -90,7 +118,7 @@ function main() {
         process.exit(1);
     }
 
-    // 4. Reset Public Schema
+    // 5. Reset Public Schema
     console.log('\n🧹 Resetting `public` schema in shadow_db...');
     const resetSql = `
     DROP SCHEMA public CASCADE; 
@@ -106,8 +134,7 @@ function main() {
         run(`docker exec ${containerId} psql -U postgres -d shadow_db -c "${resetSql.replace(/\n/g, ' ')}"`);
         console.log('✅ Public schema reset.');
     } catch (e) {
-        // Ignore permission errors that often happen with system roles in local supabase
-        console.warn('⚠️  Some permission grants may have warned (expected in local dev), but schema is reset.');
+        console.warn('⚠️  Some permission grants may have warned, but schema is reset.');
     }
 
     console.log('\n✨ Shadow DB setup complete! You can now run `prisma migrate dev`.');

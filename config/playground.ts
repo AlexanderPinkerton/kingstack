@@ -1,4 +1,4 @@
-import { defineValues } from "./utils";
+import { defineValues } from "@kingstack/config";
 
 /**
  * Playground mode values - safe mock data for development without a backend.

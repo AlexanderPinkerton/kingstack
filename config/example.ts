@@ -1,4 +1,4 @@
-import { defineValues } from "./utils";
+import { defineValues } from "@kingstack/config";
 
 /**
  * Example secret values for KingStack.

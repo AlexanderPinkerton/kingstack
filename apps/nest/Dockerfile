@@ -21,6 +21,7 @@ COPY packages/prisma/package.json packages/prisma/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
 COPY packages/ts-config/package.json packages/ts-config/package.json
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/config/package.json packages/config/package.json
 COPY packages/advanced-optimistic-store/package.json packages/advanced-optimistic-store/package.json
 # └─ if you have more workspaces, repeat: COPY packages/foo/package.json packages/foo/package.json
 
