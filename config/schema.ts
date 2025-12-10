@@ -1,4 +1,4 @@
-import { defineSchema } from "./utils";
+import { defineSchema } from "@kingstack/config";
 
 /**
  * Configuration schema for KingStack.
