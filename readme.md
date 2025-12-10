@@ -63,7 +63,7 @@ KingStack takes an **explicit approach** to avoid hidden pitfalls:
 #### 🔐 Explicit Configuration Management
 No more guessing which `.env` file is active or dealing with dotenv detection issues. All configuration is organized in `config/` with TypeScript-based generation of both `.env` files and config files.
 
-📖 **[Configuration Management Guide →](./config/readme.md)**
+📖 **[Configuration Management Guide →](./config/readme.md)** (Powered by `@kingstack/config`)
 
 #### 🎫 Explicit JWT Authentication
 No cookie/localStorage magic. Tokens are explicitly passed and validated, making auth predictable and debuggable.
