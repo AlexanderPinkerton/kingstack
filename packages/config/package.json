@@ -4,6 +4,11 @@
     "version": "0.1.3",
     "license": "MIT",
     "description": "Configuration management system for KingStack",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/AlexanderPinkerton/kingstack.git",
+        "directory": "packages/config"
+    },
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "bin": {
