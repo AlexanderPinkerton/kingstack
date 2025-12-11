@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
+      
+      - name: Update npm # Ensure npm 11.5.1 or later is installed to support OIDC authentication
+        run: npm install -g npm@latest
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
