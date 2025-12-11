@@ -1,5 +1,6 @@
 {
     "name": "@kingstack/config",
+    "author": "Alexander Pinkerton <alexanderpinkerton.business@gmail.com>",
     "version": "0.1.2",
     "license": "MIT",
     "description": "Configuration management system for KingStack",
