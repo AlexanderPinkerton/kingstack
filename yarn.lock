@@ -2587,7 +2587,7 @@ __metadata:
     vitest: "npm:^1.2.0"
     zod: "npm:^3.22.4"
   bin:
-    king-config: ./dist/cli/index.js
+    king-config: dist/cli/index.js
   languageName: unknown
   linkType: soft
 
