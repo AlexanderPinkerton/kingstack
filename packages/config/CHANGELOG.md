@@ -1,5 +1,11 @@
 # @kingstack/config
 
+## 0.1.4
+
+### Patch Changes
+
+- 9be7b6e: Added repository key
+
 ## 0.1.3
 
 ### Patch Changes
