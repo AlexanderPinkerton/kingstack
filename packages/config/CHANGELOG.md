@@ -1,5 +1,11 @@
 # @kingstack/config
 
+## 0.1.3
+
+### Patch Changes
+
+- 35630a8: add author
+
 ## 0.1.2
 
 ### Patch Changes
