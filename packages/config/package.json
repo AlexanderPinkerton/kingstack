@@ -7,7 +7,7 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "bin": {
-        "king-config": "./dist/cli/index.js"
+        "king-config": "dist/cli/index.js"
     },
     "scripts": {
         "build": "tsc",
