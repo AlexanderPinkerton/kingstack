@@ -47,7 +47,7 @@ export const values = defineValues({
     SUPABASE_ANON_KEY: "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH",
     SUPABASE_SERVICE_ROLE_KEY: "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz",
     SUPA_JWT_SECRET: "super-secret-jwt-token-with-at-least-32-characters-long",
-    SUPABASE_DB_PASSWORD: "your-database-password",
+    SUPABASE_DB_PASSWORD: "postgres",
 
     // ============================================================================
     // Optional: OAuth (leave empty if not using)
