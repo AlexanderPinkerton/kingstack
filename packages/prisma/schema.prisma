@@ -51,8 +51,6 @@ model todo {
 model test {
     id         String   @id @default(cuid())
     name       String
-    donkey     String?
-    apple      String?
     created_at DateTime @default(now())
 }
 
