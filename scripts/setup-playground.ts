@@ -14,7 +14,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 # Backend URL (will use mock data in playground mode)
-NEXT_PUBLIC_NEST_URL=http://localhost:3001
+NEXT_PUBLIC_NEST_BACKEND_URL=http://localhost:3001
 NEXT_PUBLIC_API_URL=http://localhost:3001
 
 # Playground mode flag
