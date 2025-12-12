@@ -35,7 +35,7 @@ export class RealtimeManager {
     this.stores = stores;
     this.browserId = browserId || getBrowserId();
     this.serverUrl =
-      serverUrl || process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
+      serverUrl || process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
   }
 
   /**

@@ -685,7 +685,7 @@ export class AdvancedMyEntityStore {
 
   private apiQueryFn = async (): Promise<MyEntityApiData[]> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/my-entities`).then((res) => res.json());
   };
 

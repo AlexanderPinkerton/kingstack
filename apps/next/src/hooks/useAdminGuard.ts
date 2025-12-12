@@ -65,7 +65,7 @@ export default function useAdminGuard(options?: UseAdminGuardOptions) {
         // Determine the API endpoint based on backend choice
         const apiUrl =
           backend === "nest"
-            ? `${process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000"}/admin/check`
+            ? `${process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000"}/admin/check`
             : "/api/admin/check";
 
         const response = await fetchWithAuth(sessionToken, apiUrl);

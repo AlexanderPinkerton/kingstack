@@ -28,7 +28,7 @@ export interface PublicTodoUiData extends Entity {
 // ---------- API Functions ----------
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
 
 async function fetchPublicTodos(): Promise<PublicTodoApiData[]> {
   const response = await fetch(`${API_BASE_URL}/public/todos`);

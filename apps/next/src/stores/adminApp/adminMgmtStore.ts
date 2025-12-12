@@ -158,7 +158,7 @@ export class AdminMgmtStore {
   // API Implementations
   private apiQueryFn = async (): Promise<AdminEmailApiData[]> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/admin/emails`).then((res) =>
       res.json(),
     );
@@ -168,7 +168,7 @@ export class AdminMgmtStore {
     email: string;
   }): Promise<AdminEmailApiData> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/admin/emails`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -183,7 +183,7 @@ export class AdminMgmtStore {
     data: { email: string };
   }): Promise<AdminEmailApiData> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/admin/emails/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -192,7 +192,7 @@ export class AdminMgmtStore {
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     const response = await fetchWithAuth(
       token,
       `${baseUrl}/admin/emails/${id}`,
