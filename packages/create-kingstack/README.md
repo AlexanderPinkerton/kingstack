@@ -49,9 +49,19 @@ When you run the CLI, you'll be asked to choose a mode:
 # Specify project name
 npx create-kingstack my-project
 
-# Specify project name and directory
-npx create-kingstack my-project ./custom-dir
+# Specify a different base directory (instead of cwd)
+npx create-kingstack my-project --dir ~/Projects
+
+# Just specify base directory, prompt for project name
+npx create-kingstack --dir /tmp
 ```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-d, --dir <path>` | Base directory for the new project (default: current directory) |
+| `-h, --help` | Show help message |
 
 ## Requirements
 
