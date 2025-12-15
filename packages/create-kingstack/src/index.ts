@@ -42,6 +42,88 @@ const PROCESS_EXTENSIONS = [
 ];
 
 // ============================================================================
+// Argument Parsing
+// ============================================================================
+
+interface ParsedArgs {
+    projectName?: string;
+    baseDir: string;
+    help: boolean;
+}
+
+function parseArgs(): ParsedArgs {
+    const rawArgs = process.argv.slice(2);
+    const result: ParsedArgs = {
+        projectName: undefined,
+        baseDir: process.cwd(),
+        help: false,
+    };
+
+    // Separate flags from positional arguments
+    const positionalArgs: string[] = [];
+    
+    let i = 0;
+    while (i < rawArgs.length) {
+        const arg = rawArgs[i];
+
+        if (arg === "--help" || arg === "-h") {
+            result.help = true;
+            i++;
+        } else if (arg === "--dir" || arg === "-d") {
+            // --dir requires a value
+            const nextArg = rawArgs[i + 1];
+            if (!nextArg || nextArg.startsWith("-")) {
+                console.error(`Error: ${arg} requires a path argument`);
+                process.exit(1);
+            }
+            // Handle ~ expansion manually since shell might not do it
+            const expandedPath = nextArg.startsWith("~") 
+                ? nextArg.replace("~", process.env.HOME || "")
+                : nextArg;
+            result.baseDir = resolve(expandedPath);
+            i += 2; // Skip both flag and value
+        } else if (arg.startsWith("-")) {
+            // Unknown flag - skip it
+            console.warn(`Warning: Unknown flag ${arg}`);
+            i++;
+        } else {
+            // Positional argument
+            positionalArgs.push(arg);
+            i++;
+        }
+    }
+
+    // First positional argument is the project name
+    if (positionalArgs.length > 0) {
+        result.projectName = positionalArgs[0];
+    }
+
+    return result;
+}
+
+function printHelp() {
+    console.log(`
+  ${pc.yellow("👑 create-kingstack")} - Create a new KingStack project
+
+  ${pc.bold("Usage:")}
+    npx create-kingstack [project-name] [options]
+
+  ${pc.bold("Options:")}
+    -d, --dir <path>   Base directory for the new project (default: current directory)
+    -h, --help         Show this help message
+
+  ${pc.bold("Examples:")}
+    npx create-kingstack my-app
+    npx create-kingstack my-app --dir ~/Projects
+    npx create-kingstack --dir ~/Projects
+    bun src/index.ts test-app --dir ~/Desktop
+
+  ${pc.bold("Interactive mode:")}
+    npx create-kingstack
+`);
+}
+
+// ============================================================================
 // Utilities
 // ============================================================================
 
@@ -318,26 +400,32 @@ function initGit(targetDir: string): boolean {
 // ============================================================================
 
 async function main() {
+    const args = parseArgs();
+
+    if (args.help) {
+        printHelp();
+        process.exit(0);
+    }
+
     banner();
 
+    // Show base directory if not cwd
+    if (args.baseDir !== process.cwd()) {
+        info(`Base directory: ${pc.dim(args.baseDir)}`);
+        console.log();
+    }
+
     // Get project name from args or prompt
-    let projectName = process.argv[2];
-    let targetDir = process.argv[3];
+    let projectName = args.projectName;
 
     const response = await prompts(
         [
             {
                 type: projectName ? null : "text",
                 name: "projectName",
-                message: "Project name:",
+                message: "Project name (also used as directory name):",
                 initial: "my-app",
                 validate: validateProjectName,
-            },
-            {
-                type: targetDir ? null : "text",
-                name: "targetDir",
-                message: "Target directory:",
-                initial: (prev: string) => prev || projectName || "my-app",
             },
             {
                 type: "select",
@@ -395,8 +483,13 @@ async function main() {
 
     // Merge CLI args with prompts
     projectName = projectName || response.projectName;
-    targetDir = targetDir || response.targetDir;
     const mode = response.mode as "playground" | "full";
+
+    // Validate we have a project name
+    if (!projectName) {
+        error("Project name is required");
+        process.exit(1);
+    }
 
     // Calculate ports
     const ports = { ...DEFAULT_PORTS };
@@ -413,7 +506,8 @@ async function main() {
         ports.supabaseDbShadowPort = basePort - 1;
     }
 
-    const fullTargetDir = resolve(process.cwd(), targetDir);
+    // Use project name as directory name (like create-react-app)
+    const fullTargetDir = resolve(args.baseDir, projectName);
     const totalSteps = mode === "playground" ? 6 : 9;
 
     // Check if directory exists and not empty
@@ -423,7 +517,7 @@ async function main() {
             const { overwrite } = await prompts({
                 type: "confirm",
                 name: "overwrite",
-                message: `Directory ${targetDir} is not empty. Continue anyway?`,
+                message: `Directory ${projectName} is not empty. Continue anyway?`,
                 initial: false,
             });
             if (!overwrite) {
@@ -506,7 +600,7 @@ async function main() {
             console.log(pc.bold("  To complete setup manually:"));
             console.log();
             console.log(pc.dim("  1.") + " Start Docker");
-            console.log(pc.dim("  2.") + ` cd ${targetDir}`);
+            console.log(pc.dim("  2.") + ` cd ${projectName}`);
             console.log(pc.dim("  3.") + " yarn supabase:start");
             console.log(pc.dim("  4.") + " bun scripts/setup-shadow-db.ts");
             console.log(pc.dim("  5.") + " yarn prisma:migrate");
