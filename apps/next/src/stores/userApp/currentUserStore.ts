@@ -122,7 +122,8 @@ export class CurrentUserStore {
     data: any,
   ): Promise<CurrentUserApiData> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/api/user`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -137,7 +138,8 @@ export class CurrentUserStore {
     data: any;
   }): Promise<CurrentUserApiData> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/api/user`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -146,7 +148,8 @@ export class CurrentUserStore {
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     const response = await fetchWithAuth(token, `${baseUrl}/api/user`, {
       method: "DELETE",
     });
