@@ -2665,7 +2665,7 @@ __metadata:
     passport-jwt: "npm:^4.0.1"
     postgres: "npm:^3.4.5"
     prettier: "npm:^3.4.2"
-    prisma: "npm:^6.6.0"
+    prisma: "npm:6.6.0"
     reflect-metadata: "npm:^0.2.2"
     rxjs: "npm:^7.8.1"
     socket.io: "npm:^4.8.1"
@@ -2752,7 +2752,7 @@ __metadata:
   resolution: "@kingstack/prisma@workspace:packages/prisma"
   dependencies:
     "@prisma/client": "npm:6.6.0"
-    prisma: "npm:^6.6.0"
+    prisma: "npm:6.6.0"
   languageName: unknown
   linkType: soft
 
@@ -14346,7 +14346,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prisma@npm:^6.6.0":
+"prisma@npm:6.6.0":
   version: 6.6.0
   resolution: "prisma@npm:6.6.0"
   dependencies:
