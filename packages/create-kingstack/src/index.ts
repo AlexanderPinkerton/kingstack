@@ -9,7 +9,7 @@ import { existsSync, readdirSync } from "fs";
 
 // Module imports
 import { parseArgs, printHelp, promptForConfig } from "./cli";
-import { banner, info, success, warn, error, step, runCommand, startDevServer } from "./utils";
+import { banner, info, success, warn, error, step, runCommand, startDevServer, startSupabase } from "./utils";
 import {
     checkRequiredTools,
     checkDockerRunning,
@@ -209,25 +209,25 @@ async function main() {
         success("Environment files generated");
 
         step(10, totalSteps, "Starting Supabase...");
-        info("This requires Docker to be running...");
         info("First-time startup may take 5-10 minutes while Docker images download.");
         console.log();
-        if (!runCommand("yarn supabase:start", targetDir)) {
+        // Start Supabase in background and poll for container health
+        const supabaseStarted = await startSupabase(targetDir);
+        if (!supabaseStarted) {
             console.log();
-            warn("Supabase failed to start. Make sure Docker is running.");
+            warn("Supabase failed to start within the timeout period.");
             console.log();
             console.log(pc.bold("  To complete setup manually:"));
             console.log();
-            console.log(pc.dim("  1.") + " Start Docker");
-            console.log(pc.dim("  2.") + ` cd ${projectName}`);
-            console.log(pc.dim("  3.") + " yarn supabase:start");
-            console.log(pc.dim("  4.") + " bun scripts/setup-shadow-db.ts");
-            console.log(pc.dim("  5.") + " yarn prisma:migrate");
-            console.log(pc.dim("  6.") + " yarn dev");
+            console.log(pc.dim("  1.") + ` cd ${projectName}`);
+            console.log(pc.dim("  2.") + " yarn supabase:start");
+            console.log(pc.dim("  3.") + " bun scripts/setup-shadow-db.ts");
+            console.log(pc.dim("  4.") + " yarn prisma:migrate");
+            console.log(pc.dim("  5.") + " yarn dev");
             console.log();
             process.exit(1);
         }
-        success("Supabase started");
+        success("Supabase containers running");
 
         step(11, totalSteps, "Setting up database...");
         info("Creating shadow database...");
