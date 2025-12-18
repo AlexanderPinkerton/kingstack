@@ -1,6 +1,6 @@
 {
     "name": "@kingstack/create-kingstack",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "author": "Alexander Pinkerton <alexanderpinkerton.business@gmail.com>",
     "license": "MIT",
     "description": "CLI to create a new project from the KingStack template",
