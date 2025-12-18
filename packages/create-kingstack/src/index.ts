@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import prompts from "prompts";
 import pc from "picocolors";
-import { execSync, spawn } from "child_process";
+import { execSync, spawn, spawnSync } from "child_process";
 import { existsSync, readFileSync, writeFileSync, rmSync, readdirSync, statSync } from "fs";
 import { resolve, join } from "path";
 
@@ -13,15 +13,15 @@ const REPO_URL = "github:AlexanderPinkerton/kingstack"; // For degit
 const REPO_GIT_URL = "https://github.com/AlexanderPinkerton/kingstack.git"; // For git clone fallback
 
 const DEFAULT_PORTS = {
-    next: 3069,
-    nest: 3420,
-    supabaseApiPort: 54321,
-    supabaseDbDirectPort: 54322,
-    supabaseDbPoolerPort: 54322,
-    supabaseStudioPort: 54324,
-    supabaseAnalyticsPort: 54325,
-    supabaseEmailPort: 54326,
-    supabaseDbShadowPort: 54320,
+    next: 3098,
+    nest: 3099,
+    supabaseApiPort: 4001,
+    supabaseDbDirectPort: 4002,
+    supabaseDbPoolerPort: 4002,
+    supabaseStudioPort: 4003,
+    supabaseAnalyticsPort: 4004,
+    supabaseEmailPort: 4005,
+    supabaseDbShadowPort: 4000,
 };
 
 // Files/directories to skip during namespace replacement
@@ -188,11 +188,13 @@ function commandExists(cmd: string): boolean {
 
 function runCommand(cmd: string, cwd: string, silent = false): boolean {
     try {
-        execSync(cmd, {
+        // Use spawnSync with shell for better real-time output
+        const result = spawnSync(cmd, {
             cwd,
             stdio: silent ? "ignore" : "inherit",
+            shell: true,
         });
-        return true;
+        return result.status === 0;
     } catch {
         return false;
     }
@@ -511,10 +513,10 @@ export const values = defineValues({
     GOOGLE_CLIENT_ID: "",
     GOOGLE_CLIENT_SECRET: "",
 
-    // Optional: Deployment
-    VERCEL_TOKEN: "",
-    VERCEL_ORG_ID: "",
-    VERCEL_PROJECT_ID: "",
+    // Optional: Deployment (placeholders for local - schema requires non-empty)
+    VERCEL_TOKEN: "local-not-configured",
+    VERCEL_ORG_ID: "local-not-configured",
+    VERCEL_PROJECT_ID: "local-not-configured",
 
     // Optional: AI Providers
     OPENAI_API_KEY: "",
@@ -776,6 +778,8 @@ async function main() {
 
         step(10, totalSteps, "Starting Supabase...");
         info("This requires Docker to be running...");
+        info("First-time startup may take 5-10 minutes while Docker images download.");
+        console.log();
         if (!runCommand("yarn supabase:start", fullTargetDir)) {
             console.log();
             warn("Supabase failed to start. Make sure Docker is running.");
