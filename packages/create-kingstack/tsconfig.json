@@ -1,0 +1,22 @@
+{
+    "extends": "../../packages/ts-config/base.json",
+    "compilerOptions": {
+        "outDir": "dist",
+        "rootDir": "src",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "target": "ES2020",
+        "declaration": true,
+        "sourceMap": true,
+        "composite": false,
+        "esModuleInterop": true,
+        "noEmit": false
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}

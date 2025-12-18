@@ -1,0 +1,49 @@
+{
+    "name": "@kingstack/create-kingstack",
+    "version": "0.1.0",
+    "author": "Alexander Pinkerton <alexanderpinkerton.business@gmail.com>",
+    "license": "MIT",
+    "description": "CLI to create a new project from the KingStack template",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/AlexanderPinkerton/kingstack.git",
+        "directory": "packages/create-kingstack"
+    },
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "bin": "dist/index.js",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "dev": "bun src/index.ts",
+        "test": "vitest run",
+        "test:watch": "vitest"
+    },
+    "keywords": [
+        "kingstack",
+        "create",
+        "cli",
+        "template",
+        "typescript",
+        "nextjs",
+        "nestjs",
+        "supabase",
+        "monorepo"
+    ],
+    "dependencies": {
+        "degit": "^2.8.4",
+        "picocolors": "^1.1.1",
+        "prompts": "^2.4.2"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.0",
+        "@types/prompts": "^2.4.9",
+        "typescript": "^5.3.3",
+        "vitest": "^3.0.0"
+    },
+    "publishConfig": {
+        "access": "public"
+    }
+}
