@@ -2634,7 +2634,7 @@ __metadata:
     "@nestjs/schematics": "npm:^11.0.0"
     "@nestjs/testing": "npm:^11.0.1"
     "@nestjs/websockets": "npm:^11.1.2"
-    "@prisma/client": "npm:^6.6.0"
+    "@prisma/client": "npm:6.6.0"
     "@supabase/supabase-js": "npm:^2.49.8"
     "@swc/cli": "npm:^0.6.0"
     "@swc/core": "npm:^1.10.7"
@@ -2650,7 +2650,7 @@ __metadata:
     passport-jwt: "npm:^4.0.1"
     postgres: "npm:^3.4.5"
     prettier: "npm:^3.4.2"
-    prisma: "npm:^6.6.0"
+    prisma: "npm:6.6.0"
     reflect-metadata: "npm:^0.2.2"
     rxjs: "npm:^7.8.1"
     socket.io: "npm:^4.8.1"
@@ -2736,8 +2736,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@kingstack/prisma@workspace:packages/prisma"
   dependencies:
-    "@prisma/client": "npm:^6.6.0"
-    prisma: "npm:^6.6.0"
+    "@prisma/client": "npm:6.6.0"
+    prisma: "npm:6.6.0"
   languageName: unknown
   linkType: soft
 
@@ -3445,9 +3445,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@prisma/client@npm:^6.6.0":
-  version: 6.19.1
-  resolution: "@prisma/client@npm:6.19.1"
+"@prisma/client@npm:6.6.0":
+  version: 6.6.0
+  resolution: "@prisma/client@npm:6.6.0"
   peerDependencies:
     prisma: "*"
     typescript: ">=5.1.0"
@@ -3456,7 +3456,7 @@ __metadata:
       optional: true
     typescript:
       optional: true
-  checksum: 10c0/192632c0a4bcd1185d70f98d840f1cc42ce60b8356476b1f29e369d6ed9cd327d169fe6bb31ff3d7dfff672c93cedd070a5f8b4eeb2f3d2925aa588c8d586731
+  checksum: 10c0/174e4f445ae671dc16af272743b33312f36be34d8d5c0ab92eba8c81d74dc86967fa316bd4db082f1aa0970abf31899a8305e09a6717cb285bdc700aa9273f70
   languageName: node
   linkType: hard
 
@@ -14305,7 +14305,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prisma@npm:^6.6.0":
+"prisma@npm:6.6.0":
   version: 6.6.0
   resolution: "prisma@npm:6.6.0"
   dependencies:
