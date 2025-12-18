@@ -1,0 +1,265 @@
+// ============================================================================
+// Utility functions for create-kingstack CLI
+// ============================================================================
+
+import pc from "picocolors";
+import { execSync, spawn, spawnSync } from "child_process";
+
+// ============================================================================
+// Logging Helpers
+// ============================================================================
+
+export function banner(): void {
+    console.log();
+    console.log(pc.yellow("  👑 create-kingstack"));
+    console.log(pc.dim("  ─────────────────────────────────"));
+    console.log();
+}
+
+export function success(msg: string): void {
+    console.log(pc.green("  ✓ ") + msg);
+}
+
+export function info(msg: string): void {
+    console.log(pc.blue("  ℹ ") + msg);
+}
+
+export function warn(msg: string): void {
+    console.log(pc.yellow("  ⚠ ") + msg);
+}
+
+export function error(msg: string): void {
+    console.log(pc.red("  ✗ ") + msg);
+}
+
+export function step(num: number, total: number, msg: string): void {
+    console.log();
+    console.log(pc.cyan(`  [${num}/${total}] `) + pc.bold(msg));
+}
+
+// ============================================================================
+// Command Execution
+// ============================================================================
+
+/**
+ * Check if a command exists on the system
+ */
+export function commandExists(cmd: string): boolean {
+    try {
+        execSync(`which ${cmd}`, { stdio: "ignore" });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Options for running commands
+ */
+export interface RunCommandOptions {
+    silent?: boolean;
+    timeout?: number;  // Timeout in milliseconds
+}
+
+/**
+ * Run a shell command and return success/failure
+ * Uses spawnSync for better real-time output streaming
+ */
+export function runCommand(cmd: string, cwd: string, options: RunCommandOptions | boolean = {}): boolean {
+    // Handle legacy boolean parameter for backwards compatibility
+    const opts: RunCommandOptions = typeof options === "boolean"
+        ? { silent: options }
+        : options;
+
+    const { silent = false, timeout } = opts;
+
+    try {
+        const result = spawnSync(cmd, {
+            cwd,
+            stdio: silent ? "ignore" : "inherit",
+            shell: true,
+            timeout,
+        });
+
+        // If timed out, result.signal will be 'SIGTERM'
+        if (result.signal === "SIGTERM" && timeout) {
+            warn(`Command timed out after ${timeout / 1000}s (this may be okay)`);
+            return true; // Treat timeout as success for long-running services
+        }
+
+        return result.status === 0;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Run a command with retry logic for network operations
+ */
+export function runCommandWithRetry(
+    cmd: string,
+    cwd: string,
+    options: { retries?: number; silent?: boolean } = {}
+): boolean {
+    const { retries = 3, silent = false } = options;
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        if (runCommand(cmd, cwd, silent)) {
+            return true;
+        }
+
+        if (attempt < retries) {
+            warn(`Attempt ${attempt} failed, retrying...`);
+        }
+    }
+
+    return false;
+}
+
+// ============================================================================
+// Browser & Dev Server
+// ============================================================================
+
+/**
+ * Open a URL in the default browser
+ */
+export function openBrowser(url: string): void {
+    const platform = process.platform;
+    const cmd = platform === "darwin" ? "open" :
+        platform === "win32" ? "start" : "xdg-open";
+    try {
+        execSync(`${cmd} ${url}`, { stdio: "ignore" });
+    } catch {
+        // Browser open is best-effort
+    }
+}
+
+/**
+ * Start the development server (takes over the terminal)
+ */
+export function startDevServer(cwd: string, port: number): void {
+    console.log();
+    console.log(pc.dim("  ─────────────────────────────────"));
+    console.log();
+    console.log(pc.bold("  🚀 Starting development server..."));
+    console.log();
+    console.log(`  ${pc.green("➜")} ${pc.bold("Local:")}   ${pc.cyan(`http://localhost:${port}`)}`);
+    console.log();
+    console.log(pc.dim("  Press Ctrl+C to stop"));
+    console.log();
+
+    // Open browser after a short delay to let server start
+    setTimeout(() => openBrowser(`http://localhost:${port}`), 3000);
+
+    // Start dev server in foreground (takes over the terminal)
+    const child = spawn("yarn", ["dev"], {
+        cwd,
+        stdio: "inherit",
+        shell: true,
+    });
+
+    child.on("error", (err) => {
+        error(`Failed to start dev server: ${err.message}`);
+        process.exit(1);
+    });
+
+    // Forward signals to child process
+    process.on("SIGINT", () => child.kill("SIGINT"));
+    process.on("SIGTERM", () => child.kill("SIGTERM"));
+}
+
+// ============================================================================
+// Supabase Start with Polling
+// ============================================================================
+
+/**
+ * Check if Supabase containers are running
+ */
+function checkSupabaseContainers(): boolean {
+    try {
+        const result = spawnSync("docker", ["ps", "--format", "{{.Names}}"], {
+            shell: true,
+            encoding: "utf-8",
+        });
+        const output = result.stdout || "";
+        // Check for key Supabase containers
+        const hasDb = output.includes("supabase_db_");
+        const hasAuth = output.includes("supabase_auth_");
+        const hasApi = output.includes("supabase_kong_") || output.includes("supabase_rest_");
+        return hasDb && hasAuth && hasApi;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Start Supabase in background and poll for health
+ * Returns true when Supabase is running, false on timeout
+ */
+export async function startSupabase(cwd: string): Promise<boolean> {
+    // Start supabase in background
+    const child = spawn("yarn", ["supabase:start"], {
+        cwd,
+        stdio: "pipe", // Capture output instead of inheriting
+        shell: true,
+        detached: false,
+    });
+
+    let output = "";
+    child.stdout?.on("data", (data) => {
+        output += data.toString();
+    });
+    child.stderr?.on("data", (data) => {
+        output += data.toString();
+    });
+
+    // Poll for containers to be running
+    const maxWaitMs = 10 * 60 * 1000; // 10 minutes max
+    const pollIntervalMs = 5000; // Check every 5 seconds
+    const startTime = Date.now();
+    let lastMessage = "";
+    let dots = 0;
+
+    info("Starting Supabase containers...");
+
+    return new Promise((resolve) => {
+        const pollInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const elapsedSec = Math.floor(elapsed / 1000);
+            dots = (dots + 1) % 4;
+            const dotsStr = ".".repeat(dots + 1);
+
+            // Check if containers are up
+            if (checkSupabaseContainers()) {
+                clearInterval(pollInterval);
+                child.kill(); // Stop the hanging process
+                console.log(); // New line after progress
+                resolve(true);
+                return;
+            }
+
+            // Check for timeout
+            if (elapsed > maxWaitMs) {
+                clearInterval(pollInterval);
+                child.kill();
+                console.log();
+                resolve(false);
+                return;
+            }
+
+            // Show progress update
+            const progressMsg = `  ⏳ Waiting for Supabase${dotsStr} (${elapsedSec}s)`;
+            // Clear line and rewrite
+            process.stdout.write(`\r${progressMsg}    `);
+        }, pollIntervalMs);
+
+        // Also resolve if the child process exits successfully
+        child.on("exit", (code) => {
+            if (code === 0) {
+                clearInterval(pollInterval);
+                console.log();
+                resolve(true);
+            }
+        });
+    });
+}

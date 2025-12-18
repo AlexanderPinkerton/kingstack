@@ -341,13 +341,15 @@ export class AdvancedPostStore {
   // API Implementations
   private apiQueryFn = async (): Promise<PostApiData[]> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts`).then((res) => res.json());
   };
 
   private apiCreateMutation = async (data: any): Promise<PostApiData> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -362,7 +364,8 @@ export class AdvancedPostStore {
     data: any;
   }): Promise<PostApiData> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -371,7 +374,8 @@ export class AdvancedPostStore {
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
     const token = this.authToken || "";
-    const baseUrl = process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
       method: "DELETE",
     }).then(() => ({ id }));
