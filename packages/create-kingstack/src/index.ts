@@ -35,9 +35,21 @@ const SKIP_PATTERNS = [
     ".turbo",
 ];
 
+// Published npm packages that should NOT be renamed
+// These will use their npm versions instead of workspace:*
+const PUBLISHED_PACKAGES: Record<string, string> = {
+    "@kingstack/config": "^0.1.4",
+};
+
+// Packages/folders to completely remove from the template
+const PACKAGES_TO_REMOVE = [
+    "packages/config",           // Published to npm
+    "packages/create-kingstack", // This CLI itself
+];
+
 // File extensions to process for namespace replacement
 const PROCESS_EXTENSIONS = [
-    ".ts", ".tsx", ".js", ".jsx", ".json", ".md",
+    ".ts", ".tsx", ".js", ".jsx", ".json", ".jsonc", ".md",
     ".mjs", ".cjs", ".yml", ".yaml", ".toml",
 ];
 
@@ -61,7 +73,7 @@ function parseArgs(): ParsedArgs {
 
     // Separate flags from positional arguments
     const positionalArgs: string[] = [];
-    
+
     let i = 0;
     while (i < rawArgs.length) {
         const arg = rawArgs[i];
@@ -77,7 +89,7 @@ function parseArgs(): ParsedArgs {
                 process.exit(1);
             }
             // Handle ~ expansion manually since shell might not do it
-            const expandedPath = nextArg.startsWith("~") 
+            const expandedPath = nextArg.startsWith("~")
                 ? nextArg.replace("~", process.env.HOME || "")
                 : nextArg;
             result.baseDir = resolve(expandedPath);
@@ -189,7 +201,7 @@ function runCommand(cmd: string, cwd: string, silent = false): boolean {
 function openBrowser(url: string) {
     const platform = process.platform;
     const cmd = platform === "darwin" ? "open" :
-                platform === "win32" ? "start" : "xdg-open";
+        platform === "win32" ? "start" : "xdg-open";
     try {
         execSync(`${cmd} ${url}`, { stdio: "ignore" });
     } catch {
@@ -287,14 +299,45 @@ function getAllFiles(dir: string, files: string[] = []): string[] {
     return files;
 }
 
+function getAllPackageJsonFiles(dir: string, files: string[] = []): string[] {
+    const entries = readdirSync(dir);
+
+    for (const entry of entries) {
+        if (SKIP_PATTERNS.some((pattern) => entry === pattern)) {
+            continue;
+        }
+
+        const fullPath = join(dir, entry);
+        const stat = statSync(fullPath);
+
+        if (stat.isDirectory()) {
+            getAllPackageJsonFiles(fullPath, files);
+        } else if (entry === "package.json") {
+            files.push(fullPath);
+        }
+    }
+
+    return files;
+}
+
 function replaceNamespace(targetDir: string, projectName: string): number {
     const files = getAllFiles(targetDir);
     let modifiedCount = 0;
 
+    // Get list of published package names (without @kingstack/ prefix)
+    const publishedNames = Object.keys(PUBLISHED_PACKAGES).map((p) => p.replace("@kingstack/", ""));
+
+    // Build regex that matches @kingstack/ followed by anything except published package names
+    // Uses negative lookahead to exclude published packages
+    const privatePackagePattern = new RegExp(
+        `@kingstack/(?!(?:${publishedNames.join("|")})(?:[/"'\\s\\]]))`,
+        "g"
+    );
+
     for (const filePath of files) {
         try {
             const content = readFileSync(filePath, "utf-8");
-            const newContent = content.replace(/@kingstack\//g, `@${projectName}/`);
+            const newContent = content.replace(privatePackagePattern, `@${projectName}/`);
 
             if (content !== newContent) {
                 writeFileSync(filePath, newContent, "utf-8");
@@ -308,6 +351,120 @@ function replaceNamespace(targetDir: string, projectName: string): number {
     return modifiedCount;
 }
 
+function replaceWorkspaceVersions(targetDir: string): number {
+    const packageJsonFiles = getAllPackageJsonFiles(targetDir);
+    let modifiedCount = 0;
+
+    for (const filePath of packageJsonFiles) {
+        try {
+            const content = readFileSync(filePath, "utf-8");
+            const pkg = JSON.parse(content);
+            let modified = false;
+
+            // Check dependencies and devDependencies
+            for (const depType of ["dependencies", "devDependencies"] as const) {
+                if (pkg[depType]) {
+                    for (const [name, version] of Object.entries(pkg[depType])) {
+                        if (
+                            PUBLISHED_PACKAGES[name] &&
+                            (version === "workspace:*" || version === "workspace:^")
+                        ) {
+                            pkg[depType][name] = PUBLISHED_PACKAGES[name];
+                            modified = true;
+                        }
+                    }
+                }
+            }
+
+            if (modified) {
+                writeFileSync(filePath, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
+                modifiedCount++;
+            }
+        } catch {
+            // Skip files that can't be processed
+        }
+    }
+
+    return modifiedCount;
+}
+
+function removePublishedPackages(targetDir: string): number {
+    let removedCount = 0;
+
+    for (const packagePath of PACKAGES_TO_REMOVE) {
+        const fullPath = join(targetDir, packagePath);
+        if (existsSync(fullPath)) {
+            rmSync(fullPath, { recursive: true, force: true });
+            removedCount++;
+        }
+    }
+
+    return removedCount;
+}
+
+function updatePlaygroundConfig(targetDir: string, projectName: string): void {
+    // Update the playground.ts config with valid placeholder values
+    // The schema requires certain fields that playground.ts has as empty strings
+    const playgroundConfigContent = `import { defineValues } from "@kingstack/config";
+
+/**
+ * Playground mode values - safe mock data for development without a backend.
+ * Generated by create-kingstack for ${projectName}
+ * 
+ * This file can be checked into version control since it contains no real secrets.
+ */
+export const values = defineValues({
+    // ============================================================================
+    // Application Configuration
+    // ============================================================================
+    NEXT_HOST: "localhost",
+    NEST_HOST: "localhost",
+    NEXT_PORT: "3069",
+    NEST_PORT: "3000",
+
+    // ============================================================================
+    // Supabase Configuration (Playground placeholders)
+    // ============================================================================
+    SUPABASE_PROJECT_REF: "${projectName}-playground",
+    SUPABASE_REGION: "local",
+    SUPABASE_API_URL: "https://playground.supabase.co",
+    SUPABASE_ANON_KEY: "mock-anon-key-for-playground",
+    SUPABASE_SERVICE_ROLE_KEY: "mock-service-role-key-for-playground",
+    SUPA_JWT_SECRET: "mock-jwt-secret-for-playground-environment",
+    SUPABASE_DB_PASSWORD: "playground",
+
+    // ============================================================================
+    // Database Configuration (Mock)
+    // ============================================================================
+    SUPABASE_POOLER_HOST: "localhost",
+    SUPABASE_POOLER_USER: "postgres.playground",
+
+    // ============================================================================
+    // Optional: OAuth (Empty for playground)
+    // ============================================================================
+    GOOGLE_CLIENT_ID: "",
+    GOOGLE_CLIENT_SECRET: "",
+
+    // ============================================================================
+    // Deployment (Placeholders for playground)
+    // ============================================================================
+    VERCEL_TOKEN: "playground-not-configured",
+    VERCEL_ORG_ID: "playground-not-configured",
+    VERCEL_PROJECT_ID: "playground-not-configured",
+
+    // ============================================================================
+    // Optional: AI Providers (Empty for playground)
+    // ============================================================================
+    OPENAI_API_KEY: "",
+    ANTHROPIC_API_KEY: "",
+    GEMINI_API_KEY: "",
+
+    // Environment Type
+    ENVIRONMENT_TYPE: "local",
+});
+`;
+    writeFileSync(join(targetDir, "config", "playground.ts"), playgroundConfigContent, "utf-8");
+}
 function updateRootPackageJson(targetDir: string, projectName: string) {
     const pkgPath = join(targetDir, "package.json");
     const content = readFileSync(pkgPath, "utf-8");
@@ -317,7 +474,8 @@ function updateRootPackageJson(targetDir: string, projectName: string) {
 }
 
 function generateLocalConfig(targetDir: string, projectName: string, ports: typeof DEFAULT_PORTS) {
-    const configContent = `import { defineValues } from "@${projectName}/config";
+    // Note: Keep @kingstack/config as-is since it's a published npm package
+    const configContent = `import { defineValues } from "@kingstack/config";
 
 /**
  * Local development configuration for ${projectName}
@@ -508,7 +666,7 @@ async function main() {
 
     // Use project name as directory name (like create-react-app)
     const fullTargetDir = resolve(args.baseDir, projectName);
-    const totalSteps = mode === "playground" ? 6 : 9;
+    const totalSteps = mode === "playground" ? 9 : 12;
 
     // Check if directory exists and not empty
     if (existsSync(fullTargetDir)) {
@@ -542,37 +700,62 @@ async function main() {
     }
     success("Template downloaded");
 
-    // Step 2: Replace namespace
-    step(2, totalSteps, `Renaming namespace to @${projectName}...`);
+    // Step 2: Remove published packages from template
+    step(2, totalSteps, "Removing published packages...");
+    const removedCount = removePublishedPackages(fullTargetDir);
+    // Update playground config with valid placeholder values for required schema fields
+    updatePlaygroundConfig(fullTargetDir, projectName);
+    success(`Removed ${removedCount} packages that are published to npm`);
+
+    // Step 3: Replace namespace (excluding published packages)
+    step(3, totalSteps, `Renaming namespace to @${projectName}...`);
     const modifiedFiles = replaceNamespace(fullTargetDir, projectName);
     updateRootPackageJson(fullTargetDir, projectName);
     success(`Updated ${modifiedFiles} files`);
 
-    // Step 3: Generate config
-    step(3, totalSteps, "Generating configuration...");
+    // Step 4: Replace workspace:* with npm versions for published packages
+    step(4, totalSteps, "Updating package versions...");
+    const versionsUpdated = replaceWorkspaceVersions(fullTargetDir);
+    success(`Updated ${versionsUpdated} package.json files with npm versions`);
+
+    // Step 5: Generate config
+    step(5, totalSteps, "Generating configuration...");
     generateLocalConfig(fullTargetDir, projectName, ports);
     success("Created config/local.ts");
 
-    // Step 4: Initialize git
-    step(4, totalSteps, "Initializing git repository...");
+    // Step 6: Initialize git
+    step(6, totalSteps, "Initializing git repository...");
     if (initGit(fullTargetDir)) {
         success("Git repository initialized");
     } else {
         warn("Could not initialize git (git may not be installed)");
     }
 
-    // Step 5: Install dependencies
-    step(5, totalSteps, "Installing dependencies...");
+    // Step 7: Install dependencies
+    step(7, totalSteps, "Installing dependencies...");
     info("This may take a minute...");
+    // Delete yarn.lock to force fresh resolution - the old lock file references workspace packages that no longer exist
+    const lockPath = join(fullTargetDir, "yarn.lock");
+    if (existsSync(lockPath)) {
+        rmSync(lockPath);
+    }
     if (!runCommand("yarn install", fullTargetDir)) {
         error("Failed to install dependencies. Run 'yarn install' manually.");
         process.exit(1);
     }
     success("Dependencies installed");
 
+    // Step 8: Generate Prisma client
+    step(8, totalSteps, "Generating Prisma client...");
+    if (!runCommand("yarn prisma:generate", fullTargetDir, true)) {
+        warn("Prisma client generation failed. Run 'yarn prisma:generate' manually.");
+    } else {
+        success("Prisma client generated");
+    }
+
     if (mode === "playground") {
         // Playground mode: Generate env and start
-        step(6, totalSteps, "Setting up playground environment...");
+        step(9, totalSteps, "Setting up playground environment...");
         if (!runCommand("yarn env:playground", fullTargetDir)) {
             error("Failed to generate environment. Run 'yarn env:playground' manually.");
             process.exit(1);
@@ -584,14 +767,14 @@ async function main() {
 
     } else {
         // Full mode: Supabase setup
-        step(6, totalSteps, "Generating environment files...");
+        step(9, totalSteps, "Generating environment files...");
         if (!runCommand("yarn env:local", fullTargetDir)) {
             error("Failed to generate environment.");
             process.exit(1);
         }
         success("Environment files generated");
 
-        step(7, totalSteps, "Starting Supabase...");
+        step(10, totalSteps, "Starting Supabase...");
         info("This requires Docker to be running...");
         if (!runCommand("yarn supabase:start", fullTargetDir)) {
             console.log();
@@ -610,7 +793,7 @@ async function main() {
         }
         success("Supabase started");
 
-        step(8, totalSteps, "Setting up database...");
+        step(11, totalSteps, "Setting up database...");
         info("Creating shadow database...");
         if (!runCommand("bun scripts/setup-shadow-db.ts", fullTargetDir)) {
             warn("Shadow database setup failed. You may need to run it manually.");
@@ -625,7 +808,7 @@ async function main() {
             success("Database migrated");
         }
 
-        step(9, totalSteps, "Starting development server...");
+        step(12, totalSteps, "Starting development server...");
         startDevServer(fullTargetDir, ports.next);
     }
 }
