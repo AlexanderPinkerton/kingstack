@@ -18,6 +18,8 @@ export const values = defineValues({
     // Supabase Configuration (Mock)
     // ============================================================================
     SUPABASE_API_URL: "https://playground.supabase.co",
+    SUPABASE_REGION: "playground",
+    SUPABASE_PROJECT_REF: "playground",
     SUPABASE_ANON_KEY: "mock-anon-key-for-playground",
     SUPABASE_SERVICE_ROLE_KEY: "mock-service-role-key-for-playground",
     SUPA_JWT_SECRET: "mock-jwt-secret-for-playground",
@@ -38,9 +40,9 @@ export const values = defineValues({
     // ============================================================================
     // Optional: Deployment (Empty for playground)
     // ============================================================================
-    VERCEL_TOKEN: "",
-    VERCEL_ORG_ID: "",
-    VERCEL_PROJECT_ID: "",
+    VERCEL_TOKEN: "x",
+    VERCEL_ORG_ID: "x",
+    VERCEL_PROJECT_ID: "x",
 
     // ============================================================================
     // Optional: AI Providers (Empty for playground)
