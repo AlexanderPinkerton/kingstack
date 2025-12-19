@@ -33,7 +33,6 @@
         "monorepo"
     ],
     "dependencies": {
-        "degit": "^2.8.4",
         "picocolors": "^1.1.1",
         "prompts": "^2.4.2"
     },
