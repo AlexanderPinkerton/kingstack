@@ -169,97 +169,25 @@ export function startDevServer(cwd: string, port: number): void {
 }
 
 // ============================================================================
-// Supabase Start with Polling
+// Supabase Start
 // ============================================================================
 
 /**
- * Check if Supabase containers are running
+ * Start Supabase and wait for it to complete
+ * Shows all output to user - no clearing or hiding
  */
-function checkSupabaseContainers(): boolean {
-    try {
-        const result = spawnSync("docker", ["ps", "--format", "{{.Names}}"], {
-            shell: true,
-            encoding: "utf-8",
-        });
-        const output = result.stdout || "";
-        // Check for key Supabase containers
-        const hasDb = output.includes("supabase_db_");
-        const hasAuth = output.includes("supabase_auth_");
-        const hasApi = output.includes("supabase_kong_") || output.includes("supabase_rest_");
-        return hasDb && hasAuth && hasApi;
-    } catch {
-        return false;
-    }
-}
-
-/**
- * Start Supabase in background and poll for health
- * Returns true when Supabase is running, false on timeout
- */
-export async function startSupabase(cwd: string): Promise<boolean> {
-    // Start supabase in background
-    const child = spawn("yarn", ["supabase:start"], {
-        cwd,
-        stdio: "pipe", // Capture output instead of inheriting
-        shell: true,
-        detached: false,
-    });
-
-    let output = "";
-    child.stdout?.on("data", (data) => {
-        output += data.toString();
-    });
-    child.stderr?.on("data", (data) => {
-        output += data.toString();
-    });
-
-    // Poll for containers to be running
-    const maxWaitMs = 10 * 60 * 1000; // 10 minutes max
-    const pollIntervalMs = 5000; // Check every 5 seconds
-    const startTime = Date.now();
-    let lastMessage = "";
-    let dots = 0;
-
+export function startSupabase(cwd: string): boolean {
     info("Starting Supabase containers...");
+    info("This may take a few minutes on first run.");
+    console.log();
 
-    return new Promise((resolve) => {
-        const pollInterval = setInterval(() => {
-            const elapsed = Date.now() - startTime;
-            const elapsedSec = Math.floor(elapsed / 1000);
-            dots = (dots + 1) % 4;
-            const dotsStr = ".".repeat(dots + 1);
+    // Stop any existing Supabase containers first to ensure clean state
+    // This prevents hangs from conflicting containers
+    info("Cleaning up any existing Supabase containers...");
+    runCommand("yarn supabase:stop", cwd, { silent: true });
+    console.log();
 
-            // Check if containers are up
-            if (checkSupabaseContainers()) {
-                clearInterval(pollInterval);
-                child.kill(); // Stop the hanging process
-                console.log(); // New line after progress
-                resolve(true);
-                return;
-            }
-
-            // Check for timeout
-            if (elapsed > maxWaitMs) {
-                clearInterval(pollInterval);
-                child.kill();
-                console.log();
-                resolve(false);
-                return;
-            }
-
-            // Show progress update
-            const progressMsg = `  ⏳ Waiting for Supabase${dotsStr} (${elapsedSec}s)`;
-            // Clear line and rewrite
-            process.stdout.write(`\r${progressMsg}    `);
-        }, pollIntervalMs);
-
-        // Also resolve if the child process exits successfully
-        child.on("exit", (code) => {
-            if (code === 0) {
-                clearInterval(pollInterval);
-                console.log();
-                resolve(true);
-            }
-        });
-    });
+    // Now start fresh
+    return runCommand("yarn supabase:start", cwd);
 }
+
