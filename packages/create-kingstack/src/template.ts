@@ -3,10 +3,9 @@
 // ============================================================================
 
 import { existsSync, readFileSync, writeFileSync, rmSync, readdirSync, statSync } from "fs";
-import { execSync } from "child_process";
 import { join } from "path";
-import { SKIP_PATTERNS, PROCESS_EXTENSIONS, PUBLISHED_PACKAGES, PACKAGES_TO_REMOVE, REPO_URL, REPO_GIT_URL } from "./constants";
-import { commandExists, warn, error, runCommandWithRetry } from "./utils";
+import { SKIP_PATTERNS, PROCESS_EXTENSIONS, PUBLISHED_PACKAGES, PACKAGES_TO_REMOVE, REPO_GIT_URL } from "./constants";
+import { commandExists, error, runCommandWithRetry } from "./utils";
 
 // ============================================================================
 // Template Cloning
@@ -14,39 +13,33 @@ import { commandExists, warn, error, runCommandWithRetry } from "./utils";
 
 /**
  * Clone the KingStack template to the target directory
- * Tries degit first (faster, no git history), falls back to git clone
+ * Uses shallow git clone for speed (no history, main branch only)
  */
 export async function cloneTemplate(targetDir: string): Promise<boolean> {
-    // Try degit first (faster, no git history)
-    if (commandExists("npx")) {
-        try {
-            execSync(`npx degit ${REPO_URL} "${targetDir}" --force`, {
-                stdio: "inherit",
-            });
-            return true;
-        } catch {
-            warn("degit failed, falling back to git clone...");
-        }
+    if (!commandExists("git")) {
+        error("git is not installed. Please install git and try again.");
+        return false;
     }
 
-    // Fallback to git clone with retry
-    if (commandExists("git")) {
-        const success = runCommandWithRetry(
-            `git clone --depth 1 ${REPO_GIT_URL} "${targetDir}"`,
-            process.cwd(),
-            { retries: 2 }
-        );
-
-        if (success) {
-            rmSync(join(targetDir, ".git"), { recursive: true, force: true });
-            return true;
-        } else {
-            error("git clone failed after retries");
-            return false;
-        }
+    // Clean up any existing directory
+    if (existsSync(targetDir)) {
+        rmSync(targetDir, { recursive: true, force: true });
     }
 
-    error("Neither npx nor git is available. Please install one of them.");
+    // Shallow clone main branch only
+    const success = runCommandWithRetry(
+        `git clone --depth 1 --branch main ${REPO_GIT_URL} "${targetDir}"`,
+        process.cwd(),
+        { retries: 2 }
+    );
+
+    if (success) {
+        // Remove .git folder - user will init their own repo
+        rmSync(join(targetDir, ".git"), { recursive: true, force: true });
+        return true;
+    }
+
+    error("git clone failed after retries");
     return false;
 }
 

@@ -209,13 +209,11 @@ async function main() {
         success("Environment files generated");
 
         step(10, totalSteps, "Starting Supabase...");
-        info("First-time startup may take 5-10 minutes while Docker images download.");
-        console.log();
-        // Start Supabase in background and poll for container health
-        const supabaseStarted = await startSupabase(targetDir);
+        // startSupabase shows its own messages
+        const supabaseStarted = startSupabase(targetDir);
         if (!supabaseStarted) {
             console.log();
-            warn("Supabase failed to start within the timeout period.");
+            warn("Supabase failed to start. Check the error messages above.");
             console.log();
             console.log(pc.bold("  To complete setup manually:"));
             console.log();
@@ -227,7 +225,7 @@ async function main() {
             console.log();
             process.exit(1);
         }
-        success("Supabase containers running");
+        success("Supabase started");
 
         step(11, totalSteps, "Setting up database...");
         info("Creating shadow database...");
