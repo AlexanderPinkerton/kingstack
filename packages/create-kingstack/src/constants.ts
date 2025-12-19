@@ -2,8 +2,7 @@
 // Constants for create-kingstack CLI
 // ============================================================================
 
-export const REPO_URL = "github:AlexanderPinkerton/kingstack"; // For degit
-export const REPO_GIT_URL = "https://github.com/AlexanderPinkerton/kingstack.git"; // For git clone fallback
+export const REPO_GIT_URL = "https://github.com/AlexanderPinkerton/kingstack.git";
 
 export const DEFAULT_PORTS = {
     next: 3098,
