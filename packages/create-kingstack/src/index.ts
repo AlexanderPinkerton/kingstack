@@ -11,7 +11,8 @@ import { existsSync, readdirSync } from "fs";
 import { parseArgs, printHelp, promptForConfig } from "./cli";
 import { banner, info, success, warn, error, step, runCommand, startDevServer, startSupabase } from "./utils";
 import {
-    checkRequiredTools,
+    validateTools,
+    displayToolStatus,
     checkDockerRunning,
     printMissingToolsError,
     printDockerNotRunningError
@@ -44,14 +45,34 @@ async function main() {
 
     banner();
 
+    // ==========================================================================
+    // Upfront Tool Validation
+    // ==========================================================================
+
+    const toolCheck = validateTools();
+    displayToolStatus(toolCheck.status);
+
+    // If missing core tools (git, yarn, bun), cannot proceed at all
+    if (!toolCheck.canRunPlayground) {
+        printMissingToolsError(toolCheck.missing);
+        process.exit(1);
+    }
+
+    // Warn if Docker not available (can still run playground)
+    if (!toolCheck.canRunFull) {
+        warn("Docker not found - 'Full setup' mode will not be available.");
+        info("You can still use 'Playground' mode for frontend development.");
+        console.log();
+    }
+
     // Show base directory if not cwd
     if (args.baseDir !== process.cwd()) {
         info(`Base directory: ${pc.dim(args.baseDir)}`);
         console.log();
     }
 
-    // Get project configuration
-    const config = await promptForConfig(args);
+    // Get project configuration (pass whether full mode is available)
+    const config = await promptForConfig(args, toolCheck.canRunFull);
     if (!config) {
         error("Project name is required");
         process.exit(1);
@@ -59,18 +80,7 @@ async function main() {
 
     const { projectName, mode, ports, targetDir } = config;
 
-    // ==========================================================================
-    // Pre-flight Checks
-    // ==========================================================================
-
-    // Check required tools
-    const toolCheck = checkRequiredTools(mode);
-    if (!toolCheck.success) {
-        printMissingToolsError(toolCheck.missing);
-        process.exit(1);
-    }
-
-    // For full mode, verify Docker is running BEFORE starting
+    // For full mode, verify Docker is running (not just installed)
     if (mode === "full") {
         if (!checkDockerRunning()) {
             printDockerNotRunningError();
