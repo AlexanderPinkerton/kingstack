@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { validateProjectName, checkRequiredTools, checkDockerRunning } from "../validators";
+import { validateProjectName, validateTools, checkDockerRunning } from "../validators";
 import * as utils from "../utils";
 import { spawnSync } from "child_process";
 
@@ -46,7 +46,7 @@ describe("validateProjectName", () => {
     });
 });
 
-describe("checkRequiredTools", () => {
+describe("validateTools", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Mock commandExists to return true by default
@@ -57,36 +57,36 @@ describe("checkRequiredTools", () => {
         vi.restoreAllMocks();
     });
 
-    it("should return success when all tools are available for playground mode", () => {
-        const result = checkRequiredTools("playground");
+    it("should return success when all core tools are available", () => {
+        const result = validateTools();
         expect(result.success).toBe(true);
-        expect(result.missing).toHaveLength(0);
-    });
-
-    it("should return success when all tools are available for full mode", () => {
-        const result = checkRequiredTools("full");
-        expect(result.success).toBe(true);
+        expect(result.canRunPlayground).toBe(true);
+        expect(result.canRunFull).toBe(true);
         expect(result.missing).toHaveLength(0);
     });
 
     it("should report missing git", () => {
         vi.spyOn(utils, "commandExists").mockImplementation((cmd) => cmd !== "git");
-        const result = checkRequiredTools("playground");
+        const result = validateTools();
         expect(result.success).toBe(false);
-        expect(result.missing).toContain("git");
+        expect(result.canRunPlayground).toBe(false);
+        expect(result.missing.some(m => m.includes("git"))).toBe(true);
     });
 
-    it("should report missing docker for full mode", () => {
-        vi.spyOn(utils, "commandExists").mockImplementation((cmd) => cmd !== "docker");
-        const result = checkRequiredTools("full");
+    it("should report missing bun", () => {
+        vi.spyOn(utils, "commandExists").mockImplementation((cmd) => cmd !== "bun");
+        const result = validateTools();
         expect(result.success).toBe(false);
-        expect(result.missing).toContain("docker");
+        expect(result.canRunPlayground).toBe(false);
+        expect(result.missing.some(m => m.includes("bun"))).toBe(true);
     });
 
-    it("should not require docker for playground mode", () => {
+    it("should allow playground but not full when docker is missing", () => {
         vi.spyOn(utils, "commandExists").mockImplementation((cmd) => cmd !== "docker");
-        const result = checkRequiredTools("playground");
+        const result = validateTools();
         expect(result.success).toBe(true);
+        expect(result.canRunPlayground).toBe(true);
+        expect(result.canRunFull).toBe(false);
     });
 });
 

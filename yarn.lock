@@ -2595,6 +2595,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@kingstack/create-kingstack@workspace:packages/create-kingstack"
   dependencies:
+    "@types/bun": "npm:latest"
     "@types/node": "npm:^20.11.0"
     "@types/prompts": "npm:^2.4.9"
     picocolors: "npm:^1.1.1"
@@ -5687,6 +5688,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/bun@npm:latest":
+  version: 1.3.5
+  resolution: "@types/bun@npm:1.3.5"
+  dependencies:
+    bun-types: "npm:1.3.5"
+  checksum: 10c0/ec3b364bcad3faeed6e5033f76c3618d4469719d04c5c4f31659953461c6b36509cf9befb05ad3c455f2584f64eff6ff636bca8a36590ae4184caf146ad86601
+  languageName: node
+  linkType: hard
+
 "@types/chai@npm:^5.2.2":
   version: 5.2.2
   resolution: "@types/chai@npm:5.2.2"
@@ -8095,6 +8105,15 @@ __metadata:
     base64-js: "npm:^1.3.1"
     ieee754: "npm:^1.1.13"
   checksum: 10c0/27cac81cff434ed2876058d72e7c4789d11ff1120ef32c9de48f59eab58179b66710c488987d295ae89a228f835fc66d088652dffeb8e3ba8659f80eb091d55e
+  languageName: node
+  linkType: hard
+
+"bun-types@npm:1.3.5":
+  version: 1.3.5
+  resolution: "bun-types@npm:1.3.5"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/f46aa39af49cb7f06e101e57c10f80a33df3ddd162e3d22aee87f96923b5b5782dd6a2cf52ef475d84148e0a73a326a4e7df82b7457da5c142a52170c76bce92
   languageName: node
   linkType: hard
 

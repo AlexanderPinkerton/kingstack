@@ -27,36 +27,79 @@ export function validateProjectName(name: string): boolean | string {
 // Tool Validation
 // ============================================================================
 
+import pc from "picocolors";
+
+export interface ToolStatus {
+    git: boolean;
+    yarn: boolean;
+    bun: boolean;
+    docker: boolean;
+}
+
 export interface ToolCheckResult {
     success: boolean;
     missing: string[];
+    canRunPlayground: boolean;
+    canRunFull: boolean;
+    status: ToolStatus;
 }
 
 /**
- * Check that required tools are installed
- * @param mode - "playground" or "full" (full requires additional tools)
+ * Check all tools and return their status
  */
-export function checkRequiredTools(mode: "playground" | "full"): ToolCheckResult {
+export function checkAllTools(): ToolStatus {
+    return {
+        git: commandExists("git"),
+        yarn: commandExists("yarn"),
+        bun: commandExists("bun"),
+        docker: commandExists("docker"),
+    };
+}
+
+/**
+ * Display tool status to user upfront
+ */
+export function displayToolStatus(status: ToolStatus): void {
+    console.log();
+    console.log(pc.bold("  Checking required tools..."));
+    console.log();
+
+    const check = (name: string, available: boolean, required: boolean = true) => {
+        const icon = available ? pc.green("✓") : (required ? pc.red("✗") : pc.yellow("○"));
+        const label = available ? pc.dim(name) : (required ? pc.red(name) : pc.yellow(name));
+        const suffix = !available && !required ? pc.dim(" (optional for playground)") : "";
+        console.log(`  ${icon} ${label}${suffix}`);
+    };
+
+    check("git", status.git);
+    check("yarn", status.yarn);
+    check("bun", status.bun);
+    check("docker", status.docker, false); // Docker is optional for playground
+    console.log();
+}
+
+/**
+ * Perform upfront tool validation
+ * Returns what modes are available based on installed tools
+ */
+export function validateTools(): ToolCheckResult {
+    const status = checkAllTools();
     const missing: string[] = [];
 
-    // Always required
-    if (!commandExists("git")) {
-        missing.push("git");
-    }
+    // Core tools always required
+    if (!status.git) missing.push("git - install from https://git-scm.com/");
+    if (!status.yarn) missing.push("yarn - install with: npm install -g yarn");
+    if (!status.bun) missing.push("bun - install from https://bun.sh/");
 
-    // npm/npx needed for degit fallback and initial setup
-    if (!commandExists("npx")) {
-        missing.push("npx (Node.js)");
-    }
-
-    // Full mode requires Docker
-    if (mode === "full" && !commandExists("docker")) {
-        missing.push("docker");
-    }
+    const canRunPlayground = status.git && status.yarn && status.bun;
+    const canRunFull = canRunPlayground && status.docker;
 
     return {
-        success: missing.length === 0,
+        success: canRunPlayground, // Can at least run playground
         missing,
+        canRunPlayground,
+        canRunFull,
+        status,
     };
 }
 
@@ -64,13 +107,12 @@ export function checkRequiredTools(mode: "playground" | "full"): ToolCheckResult
  * Print missing tools error message
  */
 export function printMissingToolsError(missing: string[]): void {
-    error("Missing required tools:");
+    error("Cannot proceed - missing required tools:");
     console.log();
     for (const tool of missing) {
-        console.log(`  • ${tool}`);
+        console.log(`  ${pc.red("•")} ${tool}`);
     }
     console.log();
-    console.log("  Please install the missing tools and try again.");
 }
 
 // ============================================================================

@@ -105,8 +105,25 @@ export function printHelp(): void {
 // Interactive Prompts
 // ============================================================================
 
-export async function promptForConfig(args: ParsedArgs): Promise<ProjectConfig | null> {
+export async function promptForConfig(args: ParsedArgs, canRunFull: boolean = true): Promise<ProjectConfig | null> {
     let projectName = args.projectName;
+
+    // Build mode choices - disable full mode if Docker not available
+    const modeChoices = [
+        {
+            title: "Playground (quick start, no database)",
+            description: "Perfect for UI development and prototyping",
+            value: "playground",
+        },
+    ];
+
+    if (canRunFull) {
+        modeChoices.push({
+            title: "Full setup (with Supabase)",
+            description: "Requires Docker - complete backend with auth & database",
+            value: "full",
+        });
+    }
 
     const response = await prompts(
         [
@@ -121,18 +138,7 @@ export async function promptForConfig(args: ParsedArgs): Promise<ProjectConfig |
                 type: "select",
                 name: "mode",
                 message: "Setup mode:",
-                choices: [
-                    {
-                        title: "Playground (quick start, no database)",
-                        description: "Perfect for UI development and prototyping",
-                        value: "playground",
-                    },
-                    {
-                        title: "Full setup (with Supabase)",
-                        description: "Requires Docker - complete backend with auth & database",
-                        value: "full",
-                    },
-                ],
+                choices: modeChoices,
                 initial: 0,
             },
             {
