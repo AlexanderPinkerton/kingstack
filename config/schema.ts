@@ -284,6 +284,7 @@ export const schema = defineSchema({
                 "studio.port": "SUPABASE_STUDIO_PORT",
                 "inbucket.port": "SUPABASE_EMAIL_PORT",
                 "analytics.port": "SUPABASE_ANALYTICS_PORT",
+                "auth.site_url": "NEXT_URL",
             },
         },
     },
