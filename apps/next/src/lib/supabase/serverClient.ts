@@ -15,7 +15,10 @@ export async function createClient() {
 
   const cookieStore = await cookies();
 
+  const cookieName = process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME;
+
   return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: cookieName ? { name: cookieName } : undefined,
     cookies: {
       getAll() {
         return cookieStore.getAll();

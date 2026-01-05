@@ -2,7 +2,7 @@ project_id = "kingstack-local"
 
 [api]
 enabled = true
-port = 54331
+port = 54351
 schemas = [ "public", "graphql_public" ]
 extra_search_path = [ "public", "extensions" ]
 max_rows = 1000
@@ -11,13 +11,13 @@ max_rows = 1000
   enabled = false
 
 [db]
-port = 54332
-shadow_port = 54330
+port = 54352
+shadow_port = 54350
 major_version = 17
 
   [db.pooler]
   enabled = false
-  port = 54332
+  port = 54352
   pool_mode = "transaction"
   default_pool_size = 20
   max_client_conn = 100
@@ -40,13 +40,13 @@ enabled = true
 
 [studio]
 enabled = true
-port = 54334
+port = 54354
 api_url = "http://127.0.0.1"
 openai_api_key = "env(OPENAI_API_KEY)"
 
 [inbucket]
 enabled = true
-port = 54336
+port = 54356
 
 [storage]
 enabled = true
@@ -54,7 +54,7 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:3074"
 additional_redirect_urls = [ "https://127.0.0.1:3000" ]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
@@ -140,7 +140,7 @@ deno_version = 2
 
 [analytics]
 enabled = true
-port = 54335
+port = 54355
 backend = "postgres"
 
 [experimental]
