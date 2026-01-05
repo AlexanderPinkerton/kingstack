@@ -12,5 +12,9 @@ export function createClient() {
     return createPlaygroundClient();
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+  const cookieName = process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME;
+
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: cookieName ? { name: cookieName } : undefined,
+  });
 }

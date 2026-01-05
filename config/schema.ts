@@ -195,6 +195,9 @@ export const schema = defineSchema({
 
             // NestJS config
             NEXT_URL: nextUrl,
+
+            // Project-specific cookie name for session isolation
+            NEXT_PUBLIC_SUPABASE_COOKIE_NAME: `sb-${core.SUPABASE_PROJECT_REF}-auth-token`,
         };
     },
 
@@ -228,6 +231,9 @@ export const schema = defineSchema({
                 "OPENAI_API_KEY",
                 "ANTHROPIC_API_KEY",
                 "GEMINI_API_KEY",
+
+                // Cookie name for session isolation
+                "NEXT_PUBLIC_SUPABASE_COOKIE_NAME",
             ],
             aliases: {
                 // Map NEXT_PORT to PORT for this project
