@@ -28,3 +28,10 @@ Never use fetch when hitting our internal API routes...always use the "fetchWith
 KEY COMMANDS:
 - Use 'yarn lint' from the root to lint and fix all lint issues in repo
 - User 'yarn build' from the root to build all apps & packages in the repo
+
+
+You can use this to check for typescript build errors more efficiently than next build:
+npx tsc --noEmit --skipLibCheck 2>&1 | head -20
+
+You can use curl to quickly test api endpoints and jq to parse the response to see what they return:
+curl -s "http://URL:PORT/api/ENDPOINT" | jq '.[0] | {field1, field2, field3}' 2>/dev/null | head -300
