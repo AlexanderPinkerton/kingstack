@@ -35,7 +35,9 @@
     "deploy:sync-secrets": "bun king-config sync",
     "deploy:sync-secrets:dev": "bun king-config sync --env development",
     "deploy:sync-secrets:prod": "bun king-config sync --env production",
-    "deploy:sync-secrets:dry-run": "bun king-config sync --dry-run"
+    "deploy:sync-secrets:dry-run": "bun king-config sync --dry-run",
+    "build:nest-image": "bun scripts/build-nest-image.ts",
+    "deploy:nest": "bun scripts/deploy-nest-droplet.ts"
   },
   "packageManager": "yarn@4.10.2",
   "dependencies": {
