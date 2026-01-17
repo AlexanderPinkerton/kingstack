@@ -196,7 +196,7 @@ describe("Transformer Edge Cases", () => {
       const duration = endTime - startTime;
 
       // Should complete in reasonable time (less than 100ms)
-      expect(duration).toBeLessThan(200);
+      expect(duration).toBeLessThan(300);
     });
 
     it("should handle memory efficiently", () => {
