@@ -3,6 +3,14 @@
   "version": "0.2.0",
   "description": "A beautiful, accessible drag-and-drop tree component for React with virtualization support",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlexanderPinkerton/kingstack.git",
+    "directory": "packages/dnd-tree"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
