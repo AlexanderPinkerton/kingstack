@@ -404,7 +404,12 @@ export const DndTreeItem = forwardRef<HTMLDivElement, DndTreeItemProps>(
       listStyle: "none",
       paddingLeft: clone ? undefined : `${indentationWidth * depth}px`,
       ...(clone
-        ? { display: "inline-block", pointerEvents: "none", paddingLeft: "8px", paddingTop: "4px" }
+        ? {
+            display: "inline-block",
+            pointerEvents: "none",
+            paddingLeft: "8px",
+            paddingTop: "4px",
+          }
         : {}),
       ...(ghost && !indicator ? { opacity: 0.4 } : {}),
       ...(ghost && indicator ? { position: "relative", zIndex: 1 } : {}),
