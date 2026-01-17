@@ -1,11 +1,11 @@
 # @kingstack/comment-tree
 
-A virtualized comment tree component for React with Reddit-style depth indicators.
+A virtualized comment tree component for React with depth indicators.
 
 ## Features
 
 - **Virtualization**: Efficiently renders large comment threads using `@tanstack/react-virtual`
-- **Reddit-style depth indicators**: Colored vertical lines that indicate comment depth
+- **Depth indicators**: Colored vertical lines that indicate comment depth
 - **Collapsible threads**: Expand/collapse comment threads with reply counts
 - **Action overflow menu**: Inline actions with smart overflow menu that stays within viewport
 - **Theming support**: Customize with `classNames` prop or go fully `unstyled`
