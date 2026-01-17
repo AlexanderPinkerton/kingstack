@@ -189,7 +189,7 @@ describe("DefaultCommentItem", () => {
         <DefaultCommentItem {...defaultProps} depth={0} />,
       );
 
-      const depthIndicators = container.querySelectorAll(".border-l-2");
+      const depthIndicators = container.querySelectorAll("[data-depth-line]");
       expect(depthIndicators.length).toBe(0);
     });
 
@@ -199,7 +199,7 @@ describe("DefaultCommentItem", () => {
         <DefaultCommentItem {...defaultProps} comment={comment} depth={3} />,
       );
 
-      const depthIndicators = container.querySelectorAll(".border-l-2");
+      const depthIndicators = container.querySelectorAll("[data-depth-line]");
       expect(depthIndicators.length).toBe(3);
     });
 
@@ -209,10 +209,10 @@ describe("DefaultCommentItem", () => {
         <DefaultCommentItem {...defaultProps} comment={comment} depth={2} />,
       );
 
-      const depthIndicators = container.querySelectorAll(".border-l-2");
+      const depthIndicators = container.querySelectorAll("[data-depth-line]");
       // Colors are now applied via inline styles (hex values)
-      expect((depthIndicators[0] as HTMLElement).style.borderColor).toBe("rgb(59, 130, 246)"); // #3b82f6 blue
-      expect((depthIndicators[1] as HTMLElement).style.borderColor).toBe("rgb(249, 115, 22)"); // #f97316 orange
+      expect((depthIndicators[0] as HTMLElement).style.borderLeftColor).toBe("rgb(59, 130, 246)"); // #3b82f6 blue
+      expect((depthIndicators[1] as HTMLElement).style.borderLeftColor).toBe("rgb(249, 115, 22)"); // #f97316 orange
     });
   });
 

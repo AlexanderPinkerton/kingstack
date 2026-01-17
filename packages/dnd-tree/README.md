@@ -1,4 +1,4 @@
-# @celestial/dnd-tree
+# @kingstack/dnd-tree
 
 A beautiful, accessible drag-and-drop tree component for React with virtualization support.
 
@@ -15,17 +15,17 @@ A beautiful, accessible drag-and-drop tree component for React with virtualizati
 ## Installation
 
 ```bash
-npm install @celestial/dnd-tree
+npm install @kingstack/dnd-tree
 # or
-yarn add @celestial/dnd-tree
+yarn add @kingstack/dnd-tree
 # or
-pnpm add @celestial/dnd-tree
+pnpm add @kingstack/dnd-tree
 ```
 
 ## Quick Start
 
 ```tsx
-import { DndTree, TreeItems } from "@celestial/dnd-tree";
+import { DndTree, TreeItems } from "@kingstack/dnd-tree";
 
 const items: TreeItems = [
   { id: "1", children: [
@@ -254,7 +254,7 @@ import {
   getChildCount,  // Count all descendants
   getAncestorIds, // Get all parent IDs
   getDescendantIds, // Get all child IDs
-} from "@celestial/dnd-tree";
+} from "@kingstack/dnd-tree";
 
 // Example: Flatten, modify, rebuild
 const flat = flattenTree(items);

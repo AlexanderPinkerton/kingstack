@@ -18,7 +18,7 @@ import {
   CommentItems,
   CommentAction,
   CommentData,
-} from "@celestial/comment-tree";
+} from "@kingstack/comment-tree";
 
 // ============================================================================
 // Types
@@ -599,7 +599,7 @@ export default function CommentTreeTestPage() {
               Basic Usage
             </h2>
             <pre className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-xs overflow-x-auto h-[400px]">
-              <code className="text-zinc-300">{`import { CommentTree } from "@celestial/comment-tree";
+              <code className="text-zinc-300">{`import { CommentTree } from "@kingstack/comment-tree";
 
 const comments = [
   {

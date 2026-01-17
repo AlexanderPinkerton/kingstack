@@ -1,5 +1,5 @@
 {
-  "extends": "@celestial/ts-config/base.json",
+  "extends": "@kingstack/ts-config/base.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",

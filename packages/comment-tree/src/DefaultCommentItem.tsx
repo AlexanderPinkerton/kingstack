@@ -287,18 +287,20 @@ export function DefaultCommentItem<T extends CommentData = CommentData>({
       onClick={onSelect}
     >
       {/* Depth indicator lines */}
-      <div className="flex shrink-0">
+      <div style={{ display: "flex", flexShrink: 0 }}>
         {Array.from({ length: depth }).map((_, i) => (
           <div
             key={i}
-            className={cn(
-              !unstyled && "border-l-2 hover:border-l-[3px] cursor-pointer transition-all",
-              classNames?.depthLine,
-            )}
+            data-depth-line={i}
+            className={classNames?.depthLine}
             style={{
               width: indentationWidth,
               marginLeft: i === 0 ? 8 : 0,
-              borderColor: getDepthColorForIndex(i, depthColors),
+              borderLeftWidth: 2,
+              borderLeftStyle: "solid",
+              borderLeftColor: getDepthColorForIndex(i, depthColors),
+              cursor: unstyled ? undefined : "pointer",
+              transition: unstyled ? undefined : "border-width 150ms ease",
             }}
           />
         ))}
