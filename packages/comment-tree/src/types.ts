@@ -21,7 +21,8 @@ export interface CommentItem<T extends CommentData = CommentData> {
   collapsed?: boolean;
 }
 
-export type CommentItems<T extends CommentData = CommentData> = CommentItem<T>[];
+export type CommentItems<T extends CommentData = CommentData> =
+  CommentItem<T>[];
 
 /**
  * Flattened comment for rendering

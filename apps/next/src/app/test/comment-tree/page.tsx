@@ -214,7 +214,8 @@ function generateLargeCommentTree(
   function createComment(depth: number): CommentItems<Comment> {
     if (depth >= maxDepth) return [];
 
-    const count = depth === 0 ? threadCount : Math.floor(repliesPerThread / (depth + 1));
+    const count =
+      depth === 0 ? threadCount : Math.floor(repliesPerThread / (depth + 1));
     const items: CommentItems<Comment> = [];
 
     for (let i = 0; i < count; i++) {
@@ -315,7 +316,13 @@ function EventLog({
 // Color Legend Component
 // ============================================================================
 
-function DepthColorLegend({ colors, darkText }: { colors?: string[]; darkText?: boolean }) {
+function DepthColorLegend({
+  colors,
+  darkText,
+}: {
+  colors?: string[];
+  darkText?: boolean;
+}) {
   const defaultColors = [
     { color: "#3b82f6", label: "Level 1" }, // blue
     { color: "#f97316", label: "Level 2" }, // orange
@@ -332,7 +339,12 @@ function DepthColorLegend({ colors, darkText }: { colors?: string[]; darkText?: 
     : defaultColors;
 
   return (
-    <div className={cn("flex flex-wrap gap-x-4 gap-y-1 text-[10px]", darkText ? "text-zinc-600" : "text-zinc-500")}>
+    <div
+      className={cn(
+        "flex flex-wrap gap-x-4 gap-y-1 text-[10px]",
+        darkText ? "text-zinc-600" : "text-zinc-500",
+      )}
+    >
       {legendItems.map(({ color, label }, i) => (
         <div key={i} className="flex items-center gap-1.5">
           <div
@@ -342,7 +354,9 @@ function DepthColorLegend({ colors, darkText }: { colors?: string[]; darkText?: 
           <span>{label}</span>
         </div>
       ))}
-      <span className={darkText ? "text-zinc-500" : "text-zinc-600"}>...cycles every {colors?.length || 10} levels</span>
+      <span className={darkText ? "text-zinc-500" : "text-zinc-600"}>
+        ...cycles every {colors?.length || 10} levels
+      </span>
     </div>
   );
 }
@@ -392,11 +406,10 @@ export default function CommentTreeTestPage() {
 
   // Event handlers with logging
   const handleSelect = useCallback(
-    (setter: (id: string | null) => void, treeName: string) =>
-      (id: string) => {
-        setter(id);
-        addLog("select", `${treeName}: ${id}`, "text-cyan-400");
-      },
+    (setter: (id: string | null) => void, treeName: string) => (id: string) => {
+      setter(id);
+      addLog("select", `${treeName}: ${id}`, "text-cyan-400");
+    },
     [addLog],
   );
 
@@ -437,10 +450,7 @@ export default function CommentTreeTestPage() {
 
   // Count total items
   const countItems = (items: CommentItems<Comment>): number => {
-    return items.reduce(
-      (acc, item) => acc + 1 + countItems(item.children),
-      0,
-    );
+    return items.reduce((acc, item) => acc + 1 + countItems(item.children), 0);
   };
 
   return (
@@ -564,10 +574,13 @@ export default function CommentTreeTestPage() {
                   timestamp: "!text-zinc-500",
                   text: "!text-zinc-700",
                   actions: "mt-2",
-                  actionButton: "!text-zinc-500 hover:!text-zinc-900 hover:!bg-zinc-100",
+                  actionButton:
+                    "!text-zinc-500 hover:!text-zinc-900 hover:!bg-zinc-100",
                   actionButtonDestructive: "!text-red-600 hover:!bg-red-50",
-                  collapseButton: "!text-zinc-400 hover:!text-zinc-700 hover:!bg-zinc-100",
-                  overflowButton: "!text-zinc-400 hover:!text-zinc-700 hover:!bg-zinc-100",
+                  collapseButton:
+                    "!text-zinc-400 hover:!text-zinc-700 hover:!bg-zinc-100",
+                  overflowButton:
+                    "!text-zinc-400 hover:!text-zinc-700 hover:!bg-zinc-100",
                   overflowMenu: "!bg-white !border-zinc-200 !shadow-lg",
                   overflowMenuItem: "!text-zinc-700 hover:!bg-zinc-100",
                   replyCount: "!text-zinc-500",

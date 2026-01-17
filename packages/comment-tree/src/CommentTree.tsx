@@ -165,7 +165,9 @@ export function CommentTree<T extends CommentData = CommentData>({
         replyCount,
         isSelected,
         onCollapse:
-          collapsible && hasReplies ? () => handleCollapse(commentId) : undefined,
+          collapsible && hasReplies
+            ? () => handleCollapse(commentId)
+            : undefined,
         onSelect: () => handleSelect(commentId),
         actions: actionsResolved,
         onAction: onAction
@@ -211,7 +213,11 @@ export function CommentTree<T extends CommentData = CommentData>({
   if (effectiveItems.length === 0 && emptyState) {
     return (
       <div
-        className={cn(!unstyled && "py-8 text-center", className, classNames?.container)}
+        className={cn(
+          !unstyled && "py-8 text-center",
+          className,
+          classNames?.container,
+        )}
         style={containerStyle}
       >
         {emptyState}
@@ -224,7 +230,11 @@ export function CommentTree<T extends CommentData = CommentData>({
       <div
         id={id}
         ref={scrollContainerRef}
-        className={cn(!unstyled && "overflow-auto", className, classNames?.container)}
+        className={cn(
+          !unstyled && "overflow-auto",
+          className,
+          classNames?.container,
+        )}
         style={{
           ...containerStyle,
           height,

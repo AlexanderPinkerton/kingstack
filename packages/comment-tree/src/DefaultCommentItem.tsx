@@ -89,12 +89,7 @@ function ChevronIcon({
  */
 function MoreIcon({ size = 14 }: { size?: number }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="currentColor"
-    >
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
       <circle cx="5" cy="12" r="2" />
       <circle cx="12" cy="12" r="2" />
       <circle cx="19" cy="12" r="2" />
@@ -161,7 +156,8 @@ function OverflowMenu({
       const spaceAbove = buttonRect.top;
 
       // Decide vertical placement
-      const shouldPlaceAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+      const shouldPlaceAbove =
+        spaceBelow < menuHeight && spaceAbove > spaceBelow;
       setPlacement(shouldPlaceAbove ? "above" : "below");
 
       // Calculate horizontal position (keep menu within viewport)
@@ -216,8 +212,12 @@ function OverflowMenu({
           className={cn(
             !unstyled &&
               "w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors",
-            !unstyled && !action.destructive && "text-zinc-300 hover:bg-zinc-700",
-            !unstyled && action.destructive && "text-red-400 hover:bg-red-500/10",
+            !unstyled &&
+              !action.destructive &&
+              "text-zinc-300 hover:bg-zinc-700",
+            !unstyled &&
+              action.destructive &&
+              "text-red-400 hover:bg-red-500/10",
             !unstyled && action.disabled && "opacity-50 cursor-not-allowed",
             classNames?.overflowMenuItem,
             action.destructive
@@ -342,14 +342,20 @@ export function DefaultCommentItem<T extends CommentData = CommentData>({
           )}
           {data.createdAt && (
             <span
-              className={cn(!unstyled && "text-zinc-500", classNames?.timestamp)}
+              className={cn(
+                !unstyled && "text-zinc-500",
+                classNames?.timestamp,
+              )}
             >
               {formatRelativeTime(data.createdAt)}
             </span>
           )}
           {isCollapsed && replyCount > 0 && (
             <span
-              className={cn(!unstyled && "text-zinc-500", classNames?.replyCount)}
+              className={cn(
+                !unstyled && "text-zinc-500",
+                classNames?.replyCount,
+              )}
             >
               ({replyCount} {replyCount === 1 ? "reply" : "replies"})
             </span>
@@ -394,7 +400,9 @@ export function DefaultCommentItem<T extends CommentData = CommentData>({
                   !unstyled &&
                     action.destructive &&
                     "text-red-400 hover:bg-red-500/10",
-                  !unstyled && action.disabled && "opacity-50 cursor-not-allowed",
+                  !unstyled &&
+                    action.disabled &&
+                    "opacity-50 cursor-not-allowed",
                   action.destructive
                     ? classNames?.actionButtonDestructive
                     : classNames?.actionButton,
