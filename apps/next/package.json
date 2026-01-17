@@ -29,6 +29,8 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@kingstack/advanced-optimistic-store": "workspace:*",
+    "@kingstack/comment-tree": "workspace:*",
+    "@kingstack/dnd-tree": "workspace:*",
     "@kingstack/shared": "workspace:*",
     "@paper-design/shaders-react": "^0.0.63",
     "@radix-ui/react-avatar": "^1.1.4",

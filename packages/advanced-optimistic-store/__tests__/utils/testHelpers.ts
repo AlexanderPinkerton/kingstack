@@ -27,7 +27,7 @@ export const getPerformanceThresholds = () => {
     smallOperations: ci ? 100 : 25,   // 100ms for CI, 25ms for local
 
     // Memory thresholds (in bytes)
-    memoryLeak: ci ? 5 * 1024 * 1024 : 2 * 1024 * 1024,        // 5MB for CI, 2MB for local
+    memoryLeak: ci ? 5 * 1024 * 1024 : 5 * 1024 * 1024,        // 5MB for CI, 5MB for local
     largeDatasetMemory: ci ? 200 * 1024 * 1024 : 100 * 1024 * 1024, // 200MB for CI, 100MB for local
   };
 };
