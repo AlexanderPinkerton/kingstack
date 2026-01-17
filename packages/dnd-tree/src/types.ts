@@ -266,6 +266,8 @@ export interface DndTreeProps<T extends ItemData = ItemData> {
 export interface TreeClassNames {
   /** Container element */
   container?: string;
+  /** Li wrapper element for each item */
+  wrapper?: string;
   /** Individual tree item wrapper */
   item?: string;
   /** Item when selected */
@@ -280,10 +282,14 @@ export interface TreeClassNames {
   label?: string;
   /** Drop indicator line */
   indicator?: string;
+  /** Actions container */
+  actions?: string;
   /** Action menu container */
   actionMenu?: string;
   /** Action menu item */
   actionMenuItem?: string;
+  /** Remove button */
+  removeButton?: string;
 }
 
 /**

@@ -132,8 +132,9 @@ describe("DndTreeItem", () => {
         <DndTreeItem {...defaultProps} isSelected={true} />
       );
 
-      const item = container.querySelector("div");
-      expect(item?.className).toContain("cyan");
+      const item = container.querySelector("div") as HTMLElement;
+      // Check for selected background color (cyan tint) via inline styles
+      expect(item?.style.backgroundColor).toContain("6, 182, 212");
     });
 
     it("calls onSelect when item is clicked", () => {
