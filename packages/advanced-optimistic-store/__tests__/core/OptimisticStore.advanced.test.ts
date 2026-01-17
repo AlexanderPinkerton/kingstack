@@ -804,10 +804,10 @@ describe("OptimisticStore Advanced Scenarios", () => {
       optimisticDefaults: {
         createOptimisticUiData: (userInput: any, context?: any): PostUiData => {
           const content = userInput.content || "";
-          const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+          const wordCount = content.split(/\s+/).filter((word: string) => word.length > 0).length;
           const readingTime = Math.ceil(wordCount / 200);
           const excerpt = content.length > 100 ? content.substring(0, 100) + "..." : content;
-          const tags = content.match(/#\w+/g)?.map(tag => tag.substring(1)) || [];
+          const tags = content.match(/#\w+/g)?.map((tag: string) => tag.substring(1)) || [];
 
           return {
             id: userInput.id || `temp-${Date.now()}`,
