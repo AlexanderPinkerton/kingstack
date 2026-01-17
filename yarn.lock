@@ -2653,7 +2653,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@kingstack/comment-tree@workspace:packages/comment-tree":
+"@kingstack/comment-tree@workspace:*, @kingstack/comment-tree@workspace:packages/comment-tree":
   version: 0.0.0-use.local
   resolution: "@kingstack/comment-tree@workspace:packages/comment-tree"
   dependencies:
@@ -2713,7 +2713,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@kingstack/dnd-tree@workspace:packages/dnd-tree":
+"@kingstack/dnd-tree@workspace:*, @kingstack/dnd-tree@workspace:packages/dnd-tree":
   version: 0.0.0-use.local
   resolution: "@kingstack/dnd-tree@workspace:packages/dnd-tree"
   dependencies:
@@ -2832,6 +2832,8 @@ __metadata:
     "@dnd-kit/utilities": "npm:^3.2.2"
     "@eslint/eslintrc": "npm:^3"
     "@kingstack/advanced-optimistic-store": "workspace:*"
+    "@kingstack/comment-tree": "workspace:*"
+    "@kingstack/dnd-tree": "workspace:*"
     "@kingstack/shared": "workspace:*"
     "@paper-design/shaders-react": "npm:^0.0.63"
     "@radix-ui/react-avatar": "npm:^1.1.4"
