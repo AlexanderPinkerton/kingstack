@@ -28,7 +28,7 @@ import {
   TreeItems,
   TreeTypeConfig,
   TreeItemAction,
-} from "@celestial/dnd-tree";
+} from "@kingstack/dnd-tree";
 
 // ============================================================================
 // Types

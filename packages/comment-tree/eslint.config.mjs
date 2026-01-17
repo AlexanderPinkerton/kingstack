@@ -1,6 +1,6 @@
 // Frontend config: extends shared base + adds React hooks rules
 
-import baseConfig from "@celestial/eslint-config";
+import baseConfig from "@kingstack/eslint-config";
 import path from "path";
 import { fileURLToPath } from "url";
 

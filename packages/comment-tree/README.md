@@ -1,4 +1,4 @@
-# @celestial/comment-tree
+# @kingstack/comment-tree
 
 A virtualized comment tree component for React with Reddit-style depth indicators.
 
@@ -17,11 +17,11 @@ A virtualized comment tree component for React with Reddit-style depth indicator
 ## Installation
 
 ```bash
-npm install @celestial/comment-tree
+npm install @kingstack/comment-tree
 # or
-yarn add @celestial/comment-tree
+yarn add @kingstack/comment-tree
 # or
-pnpm add @celestial/comment-tree
+pnpm add @kingstack/comment-tree
 ```
 
 ### Peer Dependencies
@@ -39,7 +39,7 @@ This package requires the following peer dependencies:
 
 ```tsx
 import { useState } from "react";
-import { CommentTree, CommentItems, CommentData } from "@celestial/comment-tree";
+import { CommentTree, CommentItems, CommentData } from "@kingstack/comment-tree";
 
 interface MyComment extends CommentData {
   content: string;
@@ -312,7 +312,7 @@ import {
   getReplyCount,
   getDepthColor,
   DEFAULT_DEPTH_COLORS,
-} from "@celestial/comment-tree";
+} from "@kingstack/comment-tree";
 
 // Flatten nested comments for rendering
 const flat = flattenComments(comments);
