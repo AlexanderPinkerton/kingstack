@@ -112,17 +112,176 @@ export interface DndTreeItemProps
   unstyled?: boolean;
 }
 
+// Inline style definitions
+const inlineStyles = {
+  menuButton: {
+    padding: "2px",
+    color: "#71717a",
+    borderRadius: "4px",
+    borderWidth: 0,
+    borderStyle: "none",
+    backgroundColor: "transparent",
+    cursor: "pointer",
+    transition: "color 150ms ease, background-color 150ms ease",
+  } as CSSProperties,
+  menuButtonHover: {
+    color: "#d4d4d8",
+    backgroundColor: "rgba(63, 63, 70, 0.5)",
+  } as CSSProperties,
+  menuDropdown: {
+    position: "absolute",
+    right: 0,
+    top: "100%",
+    marginTop: "4px",
+    zIndex: 50,
+    minWidth: "144px",
+    backgroundColor: "#18181b",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#27272a",
+    borderRadius: "8px",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.6)",
+    padding: "4px 0",
+  } as CSSProperties,
+  menuItem: {
+    width: "100%",
+    padding: "6px 12px",
+    textAlign: "left" as const,
+    fontSize: "12px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    color: "#d4d4d8",
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderStyle: "none",
+    cursor: "pointer",
+    transition: "background-color 150ms ease, color 150ms ease",
+  } as CSSProperties,
+  menuItemDestructive: {
+    color: "#f87171",
+  } as CSSProperties,
+  menuItemDisabled: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  } as CSSProperties,
+  item: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "6px 8px",
+    margin: "2px 0",
+    borderRadius: "4px",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    fontSize: "14px",
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    outline: "none",
+    transition: "background-color 150ms ease, border-color 150ms ease",
+  } as CSSProperties,
+  itemSelected: {
+    backgroundColor: "rgba(6, 182, 212, 0.1)",
+    borderColor: "rgba(6, 182, 212, 0.3)",
+  } as CSSProperties,
+  itemDragging: {
+    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  } as CSSProperties,
+  handle: {
+    flexShrink: 0,
+    color: "rgba(255, 255, 255, 0.3)",
+    cursor: "grab",
+  } as CSSProperties,
+  collapseButton: {
+    flexShrink: 0,
+    color: "rgba(255, 255, 255, 0.4)",
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderStyle: "none",
+    padding: 0,
+    cursor: "pointer",
+  } as CSSProperties,
+  label: {
+    flex: 1,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
+  } as CSSProperties,
+  labelSelected: {
+    color: "#67e8f9",
+  } as CSSProperties,
+  labelDefault: {
+    color: "rgba(255, 255, 255, 0.8)",
+  } as CSSProperties,
+  indicator: {
+    height: "2px",
+    margin: "2px 0",
+    borderRadius: "9999px",
+    backgroundColor: "#06b6d4",
+    position: "relative" as const,
+  } as CSSProperties,
+  indicatorDot: {
+    position: "absolute" as const,
+    left: "-4px",
+    top: "-3px",
+    width: "8px",
+    height: "8px",
+    borderRadius: "9999px",
+    borderWidth: "2px",
+    borderStyle: "solid",
+    borderColor: "#06b6d4",
+    backgroundColor: "#0a0a0f",
+  } as CSSProperties,
+  childCountBadge: {
+    position: "absolute" as const,
+    top: "-6px",
+    right: "-6px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "16px",
+    height: "16px",
+    borderRadius: "9999px",
+    backgroundColor: "#06b6d4",
+    fontSize: "9px",
+    fontWeight: "bold",
+    color: "white",
+  } as CSSProperties,
+  actionsContainer: {
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    gap: "2px",
+    opacity: 0,
+    transition: "opacity 150ms ease",
+  } as CSSProperties,
+  removeButton: {
+    color: "#71717a",
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderStyle: "none",
+    cursor: "pointer",
+    padding: "2px",
+  } as CSSProperties,
+};
+
 /**
  * Default action menu renderer - a simple dropdown
  */
 function DefaultActionMenu({
   actions,
   onAction,
+  unstyled,
 }: {
   actions: TreeItemAction[];
   onAction: (key: string) => void;
+  unstyled?: boolean;
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [hoveredButton, setHoveredButton] = React.useState(false);
+  const [hoveredItem, setHoveredItem] = React.useState<string | null>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   // Close on click outside
@@ -139,18 +298,27 @@ function DefaultActionMenu({
   }, [isOpen]);
 
   return (
-    <div ref={menuRef} className="relative">
+    <div ref={menuRef} style={{ position: "relative" }}>
       <button
         onClick={(e) => {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="p-0.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700/50 rounded transition-colors"
+        onMouseEnter={() => setHoveredButton(true)}
+        onMouseLeave={() => setHoveredButton(false)}
+        style={
+          unstyled
+            ? undefined
+            : {
+                ...inlineStyles.menuButton,
+                ...(hoveredButton ? inlineStyles.menuButtonHover : {}),
+              }
+        }
       >
         <DotsVerticalIcon />
       </button>
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-36 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl shadow-black/60 py-1 backdrop-blur-sm">
+        <div style={unstyled ? undefined : inlineStyles.menuDropdown}>
           {actions.map((action) => (
             <button
               key={action.key}
@@ -160,13 +328,27 @@ function DefaultActionMenu({
                 setIsOpen(false);
               }}
               disabled={action.disabled}
-              className={cn(
-                "w-full px-3 py-1.5 text-left text-xs flex items-center gap-2",
-                "text-zinc-300 hover:bg-zinc-800/80 hover:text-zinc-100 transition-colors",
-                action.disabled && "opacity-50 cursor-not-allowed",
-                action.destructive &&
-                  "text-red-400 hover:text-red-400 hover:bg-red-500/10",
-              )}
+              onMouseEnter={() => setHoveredItem(action.key)}
+              onMouseLeave={() => setHoveredItem(null)}
+              style={
+                unstyled
+                  ? undefined
+                  : {
+                      ...inlineStyles.menuItem,
+                      ...(action.destructive
+                        ? inlineStyles.menuItemDestructive
+                        : {}),
+                      ...(action.disabled ? inlineStyles.menuItemDisabled : {}),
+                      ...(hoveredItem === action.key && !action.disabled
+                        ? {
+                            backgroundColor: action.destructive
+                              ? "rgba(239, 68, 68, 0.1)"
+                              : "rgba(39, 39, 42, 0.8)",
+                            color: action.destructive ? "#f87171" : "#f4f4f5",
+                          }
+                        : {}),
+                    }
+              }
             >
               {action.icon}
               {action.label}
@@ -212,65 +394,66 @@ export const DndTreeItem = forwardRef<HTMLDivElement, DndTreeItemProps>(
     },
     ref,
   ) => {
+    const [isHovered, setIsHovered] = React.useState(false);
     const showCollapseButton = onCollapse && hasChildren;
     const isGhostIndicator = ghost && indicator;
     const hasItemActions = itemActions && itemActions.length > 0;
 
-    // Default styles (can be disabled with unstyled prop)
-    const defaultStyles = {
-      item: "group flex items-center gap-1.5 py-1.5 px-2 my-0.5 rounded border text-sm bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20 outline-none",
-      itemSelected: "bg-cyan-500/10 border-cyan-500/30",
-      itemDragging:
-        "shadow-lg shadow-black/40 bg-white/[0.08] border-white/30 ring-1 ring-cyan-500/50",
-      handle: "flex-shrink-0 text-white/30 hover:text-white/60 cursor-grab",
-      collapseButton: "flex-shrink-0 text-white/40 hover:text-white/70",
-      label: "flex-1 truncate",
-      labelSelected: "text-cyan-300",
-      labelDefault: "text-white/80",
-      indicator: "h-0.5 my-0.5 rounded-full bg-cyan-500 relative",
-      indicatorDot:
-        "absolute -left-1 -top-[3px] w-2 h-2 rounded-full border-2 border-cyan-500 bg-[#0a0a0f]",
+    // Compute li wrapper styles
+    const liStyle: CSSProperties = {
+      listStyle: "none",
+      paddingLeft: clone ? undefined : `${indentationWidth * depth}px`,
+      ...(clone
+        ? { display: "inline-block", pointerEvents: "none", paddingLeft: "8px", paddingTop: "4px" }
+        : {}),
+      ...(ghost && !indicator ? { opacity: 0.4 } : {}),
+      ...(ghost && indicator ? { position: "relative", zIndex: 1 } : {}),
+      ...(disableSelection ? { userSelect: "none" } : {}),
+      ...(disableInteraction ? { pointerEvents: "none" } : {}),
+    };
+
+    // Compute item styles
+    const itemStyle: CSSProperties = {
+      ...style,
+      ...(unstyled ? {} : inlineStyles.item),
+      ...(unstyled ? {} : isSelected ? inlineStyles.itemSelected : {}),
+      ...(unstyled ? {} : clone ? inlineStyles.itemDragging : {}),
+      ...(onSelect && !clone ? { cursor: "pointer" } : {}),
+      ...(isHovered && !unstyled && !clone
+        ? {
+            backgroundColor: isSelected
+              ? "rgba(6, 182, 212, 0.15)"
+              : "rgba(255, 255, 255, 0.06)",
+            borderColor: isSelected
+              ? "rgba(6, 182, 212, 0.4)"
+              : "rgba(255, 255, 255, 0.2)",
+          }
+        : {}),
     };
 
     return (
       <li
-        className={cn(
-          "list-none",
-          clone && "inline-block pointer-events-none pl-2 pt-1",
-          ghost && !indicator && "opacity-40",
-          ghost && indicator && "relative z-[1]",
-          disableSelection && "select-none",
-          disableInteraction && "pointer-events-none",
-        )}
+        className={cn(classNames?.wrapper)}
         ref={wrapperRef}
-        style={
-          {
-            paddingLeft: clone ? undefined : `${indentationWidth * depth}px`,
-          } as CSSProperties
-        }
+        style={liStyle}
         {...props}
       >
         {isGhostIndicator ? (
           <div
             ref={ref}
-            style={style}
-            className={cn(
-              !unstyled && defaultStyles.indicator,
-              classNames?.indicator,
-            )}
+            style={{ ...style, ...(unstyled ? {} : inlineStyles.indicator) }}
+            className={classNames?.indicator}
           >
-            <div className={cn(!unstyled && defaultStyles.indicatorDot)} />
+            <div style={unstyled ? undefined : inlineStyles.indicatorDot} />
           </div>
         ) : (
           <div
             ref={ref}
-            style={style}
+            style={itemStyle}
             onClick={onSelect}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             className={cn(
-              !unstyled && defaultStyles.item,
-              !unstyled && isSelected && defaultStyles.itemSelected,
-              !unstyled && clone && defaultStyles.itemDragging,
-              onSelect && !clone && "cursor-pointer",
               classNames?.item,
               isSelected && classNames?.itemSelected,
               clone && classNames?.itemDragging,
@@ -279,10 +462,8 @@ export const DndTreeItem = forwardRef<HTMLDivElement, DndTreeItemProps>(
           >
             {showHandle && (
               <span
-                className={cn(
-                  !unstyled && defaultStyles.handle,
-                  classNames?.handle,
-                )}
+                style={unstyled ? undefined : inlineStyles.handle}
+                className={classNames?.handle}
                 {...handleProps}
               >
                 <GripVerticalIcon />
@@ -295,48 +476,48 @@ export const DndTreeItem = forwardRef<HTMLDivElement, DndTreeItemProps>(
                   e.stopPropagation();
                   onCollapse?.();
                 }}
-                className={cn(
-                  !unstyled && defaultStyles.collapseButton,
-                  classNames?.collapseButton,
-                )}
+                style={unstyled ? undefined : inlineStyles.collapseButton}
+                className={classNames?.collapseButton}
               >
                 <ChevronRightIcon
-                  className="transition-transform duration-150"
                   style={{
+                    transition: "transform 150ms ease",
                     transform: collapsed ? "rotate(0deg)" : "rotate(90deg)",
                   }}
                 />
               </button>
             )}
 
-            {icon && <span className="flex-shrink-0">{icon}</span>}
+            {icon && <span style={{ flexShrink: 0 }}>{icon}</span>}
 
             <span
-              className={cn(
-                !unstyled && defaultStyles.label,
-                !unstyled &&
-                  (isSelected
-                    ? defaultStyles.labelSelected
-                    : defaultStyles.labelDefault),
-                classNames?.label,
-              )}
+              style={{
+                ...(unstyled ? {} : inlineStyles.label),
+                ...(unstyled
+                  ? {}
+                  : isSelected
+                    ? inlineStyles.labelSelected
+                    : inlineStyles.labelDefault),
+              }}
+              className={classNames?.label}
               title={typeof value === "string" ? value : undefined}
             >
               {value}
             </span>
 
             {clone && childCount && childCount > 1 && (
-              <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 rounded-full bg-cyan-500 text-[9px] font-bold text-white">
+              <span style={unstyled ? undefined : inlineStyles.childCountBadge}>
                 {childCount}
               </span>
             )}
 
             {!clone && (actions || onRemove || hasItemActions) && (
               <div
-                className={cn(
-                  "flex-shrink-0 flex items-center gap-0.5",
-                  !unstyled && "opacity-0 group-hover:opacity-100",
-                )}
+                style={{
+                  ...(unstyled ? {} : inlineStyles.actionsContainer),
+                  ...(isHovered && !unstyled ? { opacity: 1 } : {}),
+                }}
+                className={classNames?.actions}
               >
                 {actions}
                 {hasItemActions &&
@@ -347,6 +528,7 @@ export const DndTreeItem = forwardRef<HTMLDivElement, DndTreeItemProps>(
                     <DefaultActionMenu
                       actions={itemActions!}
                       onAction={onAction}
+                      unstyled={unstyled}
                     />
                   ))}
                 {onRemove && !hasItemActions && (
@@ -355,7 +537,8 @@ export const DndTreeItem = forwardRef<HTMLDivElement, DndTreeItemProps>(
                       e.stopPropagation();
                       onRemove();
                     }}
-                    className="text-zinc-500 hover:text-red-400"
+                    style={unstyled ? undefined : inlineStyles.removeButton}
+                    className={classNames?.removeButton}
                   >
                     <CloseIcon />
                   </button>

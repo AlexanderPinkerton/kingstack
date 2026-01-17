@@ -690,7 +690,12 @@ export function DndTree<T extends ItemData = ItemData>({
 
   if (items.length === 0 && emptyState) {
     return (
-      <div className={cn("py-8 text-center", className)}>{emptyState}</div>
+      <div
+        className={className}
+        style={{ padding: "32px 0", textAlign: "center" }}
+      >
+        {emptyState}
+      </div>
     );
   }
 
@@ -745,29 +750,36 @@ export function DndTree<T extends ItemData = ItemData>({
             `}</style>
             <div
               ref={scrollContainerRef}
-              className={cn("overflow-auto dnd-tree-scroll", className)}
+              className={cn("dnd-tree-scroll", className)}
               style={{
                 height,
+                overflow: "auto",
                 scrollbarWidth: "thin",
                 scrollbarColor: "#71717a transparent",
               }}
             >
               <ul
-                className="list-none m-0 p-0 relative transition-[height] duration-200 ease-out"
-                style={{ height: virtualizer.getTotalSize() }}
+                style={{
+                  listStyle: "none",
+                  margin: 0,
+                  padding: 0,
+                  position: "relative",
+                  height: virtualizer.getTotalSize(),
+                  transition: "height 200ms ease-out",
+                }}
               >
                 {virtualizer.getVirtualItems().map((virtualRow) => (
                   <div
                     key={virtualRow.key}
                     data-index={virtualRow.index}
                     ref={virtualizer.measureElement}
-                    className="transition-transform duration-150 ease-out"
                     style={{
                       position: "absolute",
                       top: 0,
                       left: 0,
                       width: "100%",
                       transform: `translateY(${virtualRow.start}px)`,
+                      transition: "transform 150ms ease-out",
                     }}
                   >
                     {renderTreeItem(virtualRow.index)}
@@ -778,7 +790,10 @@ export function DndTree<T extends ItemData = ItemData>({
           </>
         ) : (
           // Standard rendering for smaller trees
-          <ul className={cn("list-none m-0 p-0", className)}>
+          <ul
+            className={className}
+            style={{ listStyle: "none", margin: 0, padding: 0 }}
+          >
             {flattenedItems.map((_, index) => renderTreeItem(index))}
           </ul>
         )}
