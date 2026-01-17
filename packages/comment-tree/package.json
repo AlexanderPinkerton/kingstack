@@ -1,7 +1,7 @@
 {
   "name": "@kingstack/comment-tree",
   "version": "0.1.0",
-  "description": "A virtualized comment tree component for React with Reddit-style depth indicators",
+  "description": "A virtualized comment tree component for React with depth indicators",
   "type": "module",
   "private": true,
   "main": "./dist/index.js",
@@ -32,8 +32,7 @@
     "comments",
     "tree",
     "nested",
-    "virtualization",
-    "reddit"
+    "virtualization"
   ],
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
