@@ -232,7 +232,7 @@ describe("OptimisticStore Advanced Scenarios", () => {
   describe("Memory Management & Cleanup", () => {
     it("should not leak memory with repeated create/destroy cycles", async () => {
       const thresholds = getPerformanceThresholds();
-      
+
       const memoryUsage = await measureMemoryUsage(async () => {
         // Create and destroy stores multiple times
         for (let i = 0; i < 100; i++) {
@@ -815,8 +815,8 @@ describe("OptimisticStore Advanced Scenarios", () => {
             content,
             published: userInput.published ?? false,
             author_id: userInput.author_id || "unknown",
-            created_at: userInput.created_at instanceof Date 
-              ? userInput.created_at 
+            created_at: userInput.created_at instanceof Date
+              ? userInput.created_at
               : new Date(userInput.created_at || Date.now()),
             publishStatus: (userInput.published ?? false) ? "published" : "draft",
             excerpt,
@@ -843,7 +843,7 @@ describe("OptimisticStore Advanced Scenarios", () => {
 
     beforeEach(() => {
       vi.clearAllMocks();
-      
+
       // Mock initial data
       mockQueryFn.mockResolvedValue([
         {
@@ -857,8 +857,8 @@ describe("OptimisticStore Advanced Scenarios", () => {
       ]);
 
       // Mock successful mutations with delay to allow optimistic updates to be checked
-      mockUpdateMutation.mockImplementation(({ data }) => 
-        new Promise(resolve => 
+      mockUpdateMutation.mockImplementation(({ data }) =>
+        new Promise(resolve =>
           setTimeout(() => resolve({
             id: "1",
             title: data.title || "Updated Post",
@@ -995,8 +995,8 @@ describe("OptimisticStore Advanced Scenarios", () => {
       const initialPublishStatus = initialPost!.publishStatus;
 
       // Mock mutation to fail after delay
-      mockUpdateMutation.mockImplementationOnce(() => 
-        new Promise((_, reject) => 
+      mockUpdateMutation.mockImplementationOnce(() =>
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error("Update failed")), 50)
         )
       );
@@ -1021,7 +1021,7 @@ describe("OptimisticStore Advanced Scenarios", () => {
         await updatePromise;
       } catch (error) {
         // Expected to fail
-        expect(error.message).toBe("Update failed");
+        expect((error as Error).message).toBe("Update failed");
       }
 
       // Wait a bit for rollback to complete
