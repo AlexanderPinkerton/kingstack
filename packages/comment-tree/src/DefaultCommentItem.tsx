@@ -28,6 +28,14 @@ export interface DefaultCommentItemProps<T extends CommentData = CommentData> {
   maxInlineActions: number;
   classNames?: CommentTreeClassNames;
   unstyled: boolean;
+  /** Callback when a depth line is clicked, receives depth index (0-based) */
+  onDepthLineClick?: (depthIndex: number) => void;
+  /** Ancestor IDs for this comment, ordered from immediate parent to root */
+  ancestors?: string[];
+  /** Currently hovered ancestor ID (shared across all comment items) */
+  hoveredAncestorId?: string | null;
+  /** Callback to set the hovered ancestor ID */
+  onAncestorHover?: (ancestorId: string | null) => void;
 }
 
 /**
@@ -271,6 +279,10 @@ export function DefaultCommentItem<T extends CommentData = CommentData>({
   maxInlineActions,
   classNames,
   unstyled,
+  onDepthLineClick,
+  ancestors = [],
+  hoveredAncestorId,
+  onAncestorHover,
 }: DefaultCommentItemProps<T>) {
   const { data } = comment;
 
@@ -290,22 +302,52 @@ export function DefaultCommentItem<T extends CommentData = CommentData>({
     >
       {/* Depth indicator lines */}
       <div style={{ display: "flex", flexShrink: 0 }}>
-        {Array.from({ length: depth }).map((_, i) => (
-          <div
-            key={i}
-            data-depth-line={i}
-            className={classNames?.depthLine}
-            style={{
-              width: indentationWidth,
-              marginLeft: i === 0 ? 8 : 0,
-              borderLeftWidth: 2,
-              borderLeftStyle: "solid",
-              borderLeftColor: getDepthColorForIndex(i, depthColors),
-              cursor: unstyled ? undefined : "pointer",
-              transition: unstyled ? undefined : "border-width 150ms ease",
-            }}
-          />
-        ))}
+        {Array.from({ length: depth }).map((_, i) => {
+          // ancestors is ordered [parent, grandparent, ..., root]
+          // For bar at index i (representing depth i), we need ancestors[depth - 1 - i]
+          const ancestorIndex = depth - 1 - i;
+          const ancestorId = ancestors[ancestorIndex];
+          const isHovered =
+            ancestorId != null && hoveredAncestorId === ancestorId;
+
+          return (
+            <div
+              key={i}
+              data-depth-line={i}
+              className={cn(
+                !unstyled && "group/depthline",
+                classNames?.depthLine,
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                // Clear hover state when clicking
+                onAncestorHover?.(null);
+                onDepthLineClick?.(i);
+              }}
+              onMouseEnter={() => {
+                if (!unstyled && onAncestorHover && ancestorId) {
+                  onAncestorHover(ancestorId);
+                }
+              }}
+              onMouseLeave={() => {
+                if (!unstyled && onAncestorHover) {
+                  onAncestorHover(null);
+                }
+              }}
+              style={{
+                width: indentationWidth,
+                marginLeft: i === 0 ? 8 : 0,
+                borderLeftWidth: isHovered ? 3 : 2,
+                borderLeftStyle: "solid",
+                borderLeftColor: getDepthColorForIndex(i, depthColors),
+                filter: isHovered ? "brightness(1.3)" : "none",
+                cursor: onDepthLineClick ? "pointer" : undefined,
+                transition: "all 10ms ease",
+              }}
+              title={onDepthLineClick ? "Click to collapse" : undefined}
+            />
+          );
+        })}
       </div>
 
       {/* Comment content */}
@@ -365,68 +407,88 @@ export function DefaultCommentItem<T extends CommentData = CommentData>({
           )}
         </div>
 
-        {/* Content */}
-        {!isCollapsed && (
-          <div
-            className={cn(
-              !unstyled && "mt-1 text-sm text-zinc-300 break-words",
-              classNames?.text,
-            )}
-          >
-            {data.content}
-          </div>
-        )}
+        {/* Collapsible content wrapper with animation */}
+        <div
+          aria-hidden={isCollapsed}
+          style={{
+            display: "grid",
+            gridTemplateRows: isCollapsed ? "0fr" : "1fr",
+            transition: unstyled
+              ? undefined
+              : "grid-template-rows 150ms ease-out",
+          }}
+        >
+          <div style={{ overflow: "hidden" }}>
+            {/* Content */}
+            <div
+              className={cn(
+                !unstyled && "mt-1 text-sm text-zinc-300 break-words",
+                classNames?.text,
+              )}
+              style={{
+                opacity: isCollapsed ? 0 : 1,
+                transition: unstyled ? undefined : "opacity 100ms ease-out",
+              }}
+            >
+              {data.content}
+            </div>
 
-        {/* Actions row */}
-        {!isCollapsed && actions && actions.length > 0 && (
-          <div
-            className={cn(
-              !unstyled && "mt-2 flex items-center gap-1",
-              classNames?.actions,
-            )}
-          >
-            {/* Inline actions */}
-            {inlineActions.map((action) => (
-              <button
-                key={action.key}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAction?.(action.key);
-                }}
-                disabled={action.disabled}
+            {/* Actions row */}
+            {actions && actions.length > 0 && (
+              <div
                 className={cn(
-                  !unstyled &&
-                    "flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors",
-                  !unstyled &&
-                    !action.destructive &&
-                    "text-zinc-500 hover:bg-zinc-700/50 hover:text-zinc-300",
-                  !unstyled &&
-                    action.destructive &&
-                    "text-red-400 hover:bg-red-500/10",
-                  !unstyled &&
-                    action.disabled &&
-                    "opacity-50 cursor-not-allowed",
-                  action.destructive
-                    ? classNames?.actionButtonDestructive
-                    : classNames?.actionButton,
+                  !unstyled && "mt-2 flex items-center gap-1",
+                  classNames?.actions,
                 )}
+                style={{
+                  opacity: isCollapsed ? 0 : 1,
+                  transition: unstyled ? undefined : "opacity 100ms ease-out",
+                }}
               >
-                {action.icon}
-                {action.label}
-              </button>
-            ))}
+                {/* Inline actions */}
+                {inlineActions.map((action) => (
+                  <button
+                    key={action.key}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAction?.(action.key);
+                    }}
+                    disabled={action.disabled}
+                    className={cn(
+                      !unstyled &&
+                        "flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors",
+                      !unstyled &&
+                        !action.destructive &&
+                        "text-zinc-500 hover:bg-zinc-700/50 hover:text-zinc-300",
+                      !unstyled &&
+                        action.destructive &&
+                        "text-red-400 hover:bg-red-500/10",
+                      !unstyled &&
+                        action.disabled &&
+                        "opacity-50 cursor-not-allowed",
+                      action.destructive
+                        ? classNames?.actionButtonDestructive
+                        : classNames?.actionButton,
+                    )}
+                  >
+                    {action.icon}
+                    {action.label}
+                  </button>
+                ))}
 
-            {/* Overflow menu */}
-            {overflowActions.length > 0 && (
-              <OverflowMenu
-                actions={overflowActions}
-                onAction={onAction}
-                classNames={classNames}
-                unstyled={unstyled}
-              />
+                {/* Overflow menu */}
+                {overflowActions.length > 0 && (
+                  <OverflowMenu
+                    actions={overflowActions}
+                    onAction={onAction}
+                    classNames={classNames}
+                    unstyled={unstyled}
+                  />
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

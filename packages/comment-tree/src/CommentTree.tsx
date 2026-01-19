@@ -17,6 +17,7 @@ import {
   setCommentProperty,
   getReplyCount,
   getDepthColor,
+  getAncestorIds,
 } from "./utilities";
 import { DefaultCommentItem } from "./DefaultCommentItem";
 
@@ -46,6 +47,11 @@ export function CommentTree<T extends CommentData = CommentData>({
 }: CommentTreeProps<T>) {
   const isVirtualized = height !== undefined;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Track which ancestor is being hovered (shared across all comments)
+  const [hoveredAncestorId, setHoveredAncestorId] = useState<string | null>(
+    null,
+  );
 
   // Initialize collapsed state
   const [internalItems, setInternalItems] = useState<CommentItems<T>>(() => {
@@ -114,8 +120,47 @@ export function CommentTree<T extends CommentData = CommentData>({
     overscan,
   });
 
+  /**
+   * Get the ancestor ID at a specific depth level for a comment.
+   * If the comment is at depth 3 and we click depth line 0, we want the ancestor at depth 0.
+   */
+  const getAncestorAtDepth = useCallback(
+    (commentId: string, targetDepth: number): string | null => {
+      // Get all flattened items (including collapsed children) to find ancestors
+      const allFlattened = flattenComments(effectiveItems);
+      const ancestors = getAncestorIds(allFlattened, commentId);
+
+      // ancestors is ordered from immediate parent to root
+      // For a comment at depth D, ancestors[0] is at depth D-1, ancestors[1] is at depth D-2, etc.
+      const comment = allFlattened.find((c) => c.id === commentId);
+      if (!comment) return null;
+
+      // Calculate which ancestor index corresponds to targetDepth
+      // If comment is at depth 3 and targetDepth is 0, we need ancestor at index 2 (3-0-1=2)
+      const ancestorIndex = comment.depth - targetDepth - 1;
+      if (ancestorIndex >= 0 && ancestorIndex < ancestors.length) {
+        return ancestors[ancestorIndex];
+      }
+
+      return null;
+    },
+    [effectiveItems],
+  );
+
   const defaultRenderComment = useCallback(
     (props: CommentRenderProps<T>) => {
+      const handleDepthLineClick = (depthIndex: number) => {
+        // Find the ancestor at the clicked depth level and collapse it
+        const ancestorId = getAncestorAtDepth(props.comment.id, depthIndex);
+        if (ancestorId) {
+          handleCollapse(ancestorId);
+        }
+      };
+
+      // Get ancestors for this comment
+      const allFlattened = flattenComments(effectiveItems);
+      const ancestors = getAncestorIds(allFlattened, props.comment.id);
+
       return (
         <DefaultCommentItem
           comment={props.comment}
@@ -134,10 +179,20 @@ export function CommentTree<T extends CommentData = CommentData>({
           maxInlineActions={props.maxInlineActions}
           classNames={props.classNames}
           unstyled={props.unstyled}
+          onDepthLineClick={collapsible ? handleDepthLineClick : undefined}
+          ancestors={ancestors}
+          hoveredAncestorId={hoveredAncestorId}
+          onAncestorHover={setHoveredAncestorId}
         />
       );
     },
-    [collapsible],
+    [
+      collapsible,
+      getAncestorAtDepth,
+      handleCollapse,
+      hoveredAncestorId,
+      effectiveItems,
+    ],
   );
 
   const effectiveRenderComment = renderComment || defaultRenderComment;
