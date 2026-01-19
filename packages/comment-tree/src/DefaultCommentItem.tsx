@@ -28,6 +28,8 @@ export interface DefaultCommentItemProps<T extends CommentData = CommentData> {
   maxInlineActions: number;
   classNames?: CommentTreeClassNames;
   unstyled: boolean;
+  /** Callback when a depth line is clicked, receives depth index (0-based) */
+  onDepthLineClick?: (depthIndex: number) => void;
 }
 
 /**
@@ -271,6 +273,7 @@ export function DefaultCommentItem<T extends CommentData = CommentData>({
   maxInlineActions,
   classNames,
   unstyled,
+  onDepthLineClick,
 }: DefaultCommentItemProps<T>) {
   const { data } = comment;
 
@@ -294,16 +297,36 @@ export function DefaultCommentItem<T extends CommentData = CommentData>({
           <div
             key={i}
             data-depth-line={i}
-            className={classNames?.depthLine}
+            className={cn(
+              !unstyled && "group/depthline",
+              classNames?.depthLine,
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDepthLineClick?.(i);
+            }}
             style={{
               width: indentationWidth,
               marginLeft: i === 0 ? 8 : 0,
               borderLeftWidth: 2,
               borderLeftStyle: "solid",
               borderLeftColor: getDepthColorForIndex(i, depthColors),
-              cursor: unstyled ? undefined : "pointer",
-              transition: unstyled ? undefined : "border-width 150ms ease",
+              cursor: onDepthLineClick ? "pointer" : undefined,
+              transition: "all 150ms ease",
             }}
+            onMouseEnter={(e) => {
+              if (!unstyled && onDepthLineClick) {
+                e.currentTarget.style.borderLeftWidth = "4px";
+                e.currentTarget.style.filter = "brightness(1.3)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!unstyled && onDepthLineClick) {
+                e.currentTarget.style.borderLeftWidth = "2px";
+                e.currentTarget.style.filter = "none";
+              }
+            }}
+            title={onDepthLineClick ? "Click to collapse" : undefined}
           />
         ))}
       </div>
