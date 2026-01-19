@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "./utils";
