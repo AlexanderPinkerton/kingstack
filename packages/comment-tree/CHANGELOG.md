@@ -1,5 +1,11 @@
 # @kingstack/comment-tree
 
+## 0.2.2
+
+### Patch Changes
+
+- 5aba56c: Added bar click to collapse depth
+
 ## 0.2.1
 
 ### Patch Changes
