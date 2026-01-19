@@ -48,6 +48,9 @@ export function CommentTree<T extends CommentData = CommentData>({
   const isVirtualized = height !== undefined;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Track which ancestor is being hovered (shared across all comments)
+  const [hoveredAncestorId, setHoveredAncestorId] = useState<string | null>(null);
+
   // Initialize collapsed state
   const [internalItems, setInternalItems] = useState<CommentItems<T>>(() => {
     if (!initialExpandedIds) return items;
@@ -152,6 +155,10 @@ export function CommentTree<T extends CommentData = CommentData>({
         }
       };
 
+      // Get ancestors for this comment
+      const allFlattened = flattenComments(effectiveItems);
+      const ancestors = getAncestorIds(allFlattened, props.comment.id);
+
       return (
         <DefaultCommentItem
           comment={props.comment}
@@ -171,10 +178,13 @@ export function CommentTree<T extends CommentData = CommentData>({
           classNames={props.classNames}
           unstyled={props.unstyled}
           onDepthLineClick={collapsible ? handleDepthLineClick : undefined}
+          ancestors={ancestors}
+          hoveredAncestorId={hoveredAncestorId}
+          onAncestorHover={setHoveredAncestorId}
         />
       );
     },
-    [collapsible, getAncestorAtDepth, handleCollapse],
+    [collapsible, getAncestorAtDepth, handleCollapse, hoveredAncestorId, effectiveItems],
   );
 
   const effectiveRenderComment = renderComment || defaultRenderComment;
