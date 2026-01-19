@@ -1,5 +1,12 @@
 # @kingstack/next
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [4929b67]
+  - @kingstack/comment-tree@0.2.1
+
 ## 0.0.2
 
 ### Patch Changes
