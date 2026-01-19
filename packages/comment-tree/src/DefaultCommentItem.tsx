@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "./utils";
@@ -346,6 +348,7 @@ export function DefaultCommentItem<T extends CommentData = CommentData>({
                 !unstyled && "text-zinc-500",
                 classNames?.timestamp,
               )}
+              suppressHydrationWarning
             >
               {formatRelativeTime(data.createdAt)}
             </span>
