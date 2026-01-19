@@ -30,6 +30,12 @@ export interface DefaultCommentItemProps<T extends CommentData = CommentData> {
   unstyled: boolean;
   /** Callback when a depth line is clicked, receives depth index (0-based) */
   onDepthLineClick?: (depthIndex: number) => void;
+  /** Ancestor IDs for this comment, ordered from immediate parent to root */
+  ancestors?: string[];
+  /** Currently hovered ancestor ID (shared across all comment items) */
+  hoveredAncestorId?: string | null;
+  /** Callback to set the hovered ancestor ID */
+  onAncestorHover?: (ancestorId: string | null) => void;
 }
 
 /**
@@ -274,6 +280,9 @@ export function DefaultCommentItem<T extends CommentData = CommentData>({
   classNames,
   unstyled,
   onDepthLineClick,
+  ancestors = [],
+  hoveredAncestorId,
+  onAncestorHover,
 }: DefaultCommentItemProps<T>) {
   const { data } = comment;
 
@@ -293,42 +302,51 @@ export function DefaultCommentItem<T extends CommentData = CommentData>({
     >
       {/* Depth indicator lines */}
       <div style={{ display: "flex", flexShrink: 0 }}>
-        {Array.from({ length: depth }).map((_, i) => (
-          <div
-            key={i}
-            data-depth-line={i}
-            className={cn(
-              !unstyled && "group/depthline",
-              classNames?.depthLine,
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDepthLineClick?.(i);
-            }}
-            style={{
-              width: indentationWidth,
-              marginLeft: i === 0 ? 8 : 0,
-              borderLeftWidth: 2,
-              borderLeftStyle: "solid",
-              borderLeftColor: getDepthColorForIndex(i, depthColors),
-              cursor: onDepthLineClick ? "pointer" : undefined,
-              transition: "all 150ms ease",
-            }}
-            onMouseEnter={(e) => {
-              if (!unstyled && onDepthLineClick) {
-                e.currentTarget.style.borderLeftWidth = "4px";
-                e.currentTarget.style.filter = "brightness(1.3)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!unstyled && onDepthLineClick) {
-                e.currentTarget.style.borderLeftWidth = "2px";
-                e.currentTarget.style.filter = "none";
-              }
-            }}
-            title={onDepthLineClick ? "Click to collapse" : undefined}
-          />
-        ))}
+        {Array.from({ length: depth }).map((_, i) => {
+          // ancestors is ordered [parent, grandparent, ..., root]
+          // For bar at index i (representing depth i), we need ancestors[depth - 1 - i]
+          const ancestorIndex = depth - 1 - i;
+          const ancestorId = ancestors[ancestorIndex];
+          const isHovered = ancestorId != null && hoveredAncestorId === ancestorId;
+          
+          return (
+            <div
+              key={i}
+              data-depth-line={i}
+              className={cn(
+                !unstyled && "group/depthline",
+                classNames?.depthLine,
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                // Clear hover state when clicking
+                onAncestorHover?.(null);
+                onDepthLineClick?.(i);
+              }}
+              onMouseEnter={() => {
+                if (!unstyled && onAncestorHover && ancestorId) {
+                  onAncestorHover(ancestorId);
+                }
+              }}
+              onMouseLeave={() => {
+                if (!unstyled && onAncestorHover) {
+                  onAncestorHover(null);
+                }
+              }}
+              style={{
+                width: indentationWidth,
+                marginLeft: i === 0 ? 8 : 0,
+                borderLeftWidth: isHovered ? 3 : 2,
+                borderLeftStyle: "solid",
+                borderLeftColor: getDepthColorForIndex(i, depthColors),
+                filter: isHovered ? "brightness(1.3)" : "none",
+                cursor: onDepthLineClick ? "pointer" : undefined,
+                transition: "all 10ms ease",
+              }}
+              title={onDepthLineClick ? "Click to collapse" : undefined}
+            />
+          );
+        })}
       </div>
 
       {/* Comment content */}
