@@ -13,6 +13,21 @@
 # Standard stuff
 node_modules/
 
+# Font binaries
+apps/next/public/fonts/
+*.dfont
+*.eot
+*.fnt
+*.fon
+*.otc
+*.otf
+*.pfb
+*.pfa
+*.ttc
+*.ttf
+*.woff
+*.woff2
+
 # env files at any level
 .env
 .env.example

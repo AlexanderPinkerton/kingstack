@@ -1,17 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@font-face {
-  font-family: "Gambetta";
-  src:
-    url("/fonts/Gambetta_Complete/Fonts/WEB/fonts/Gambetta-Variable.woff2") format("woff2"),
-    url("/fonts/Gambetta_Complete/Fonts/WEB/fonts/Gambetta-Variable.woff") format("woff"),
-    url("/fonts/Gambetta_Complete/Fonts/WEB/fonts/Gambetta-Variable.ttf") format("truetype");
-  font-weight: 300 700;
-  font-display: swap;
-  font-style: normal;
-}
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -19,7 +8,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-gambetta: "Gambetta", serif;
+  --font-gambetta: Georgia, "Times New Roman", serif;
   --color-cream-100: #FAF9F4;
   --color-cream-200: #F0EEE6;
   --color-cream-300: #E2DACB;
