@@ -1,69 +1,325 @@
-// Factory function to create optimistic stores with TanStack Query integration
-// Provides a clean API with ui (MobX) and api (TanStack Query) namespaces
+// Factory for a MobX UI projection backed by TanStack Query.
 
 import {
-  QueryClient,
   MutationObserver,
+  QueryClient,
   QueryObserver,
-  notifyManager,
+  type QueryKey,
 } from "@tanstack/query-core";
 import { observable, runInAction } from "mobx";
-import { ObservableUIData } from "./ObservableUIData";
-import { createRealtimeExtension } from "../realtime";
-import type { RealtimeExtension } from "../realtime/RealtimeExtension";
-import { createTransformer } from "../transformer/helpers";
-import { getGlobalQueryClient } from "../query/queryClient";
-import type { Entity, OptimisticStoreConfig, OptimisticStore } from "./types";
+import { ObservableUIData } from "./ObservableUIData.js";
+import { createRealtimeExtension } from "../realtime/index.js";
+import type { RealtimeExtension } from "../realtime/RealtimeExtension.js";
+import type { RealtimeSocket } from "../realtime/types.js";
+import { createTransformer } from "../transformer/helpers.js";
+import { getGlobalQueryClient } from "../query/queryClient.js";
+import type {
+  DataTransformer,
+  Entity,
+  OptimisticStore,
+  OptimisticStoreConfig,
+} from "./types.js";
+
+type MutationKind = "create" | "update" | "delete";
+
+interface CreateMutationContext<TUiData extends Entity> {
+  operationSequence: number;
+  optimisticItemId?: string;
+  previousItem?: TUiData;
+  queryKey: QueryKey;
+  applied: boolean;
+}
+
+interface UpdateLayer<TUpdateInput> {
+  operationSequence: number;
+  data: TUpdateInput;
+}
+
+interface UpdateState<TUiData extends Entity, TUpdateInput> {
+  base: TUiData;
+  layers: UpdateLayer<TUpdateInput>[];
+}
+
+interface UpdateMutationContext {
+  operationSequence: number;
+  id: string;
+  queryKey: QueryKey;
+  applied: boolean;
+}
+
+interface RemoveMutationContext<TUiData extends Entity> {
+  operationSequence: number;
+  id: string;
+  previousItem?: TUiData;
+  queryKey: QueryKey;
+  applied: boolean;
+}
 
 /**
- * Creates a fully configured framework-agnostic optimistic store with minimal setup.
- * Just provide your query function and mutation functions - no API wrapper needed!
+ * Creates a framework-agnostic optimistic entity store.
  *
- * Features:
- * - Direct form data → optimistic UI data transformation
- * - Smart transformer for server data reconciliation
- * - Automatic optimistic updates with rollback on errors
- * - Flexible pending field states for server-generated data
- * - Full TypeScript support
- * - Framework agnostic (works with React, Vue, Svelte, etc.)
- *
- * Optimistic Update Flow:
- * 1. User submits form data
- * 2. createOptimisticUiData() transforms form data to complete UI data
- * 3. UI updates immediately with optimistic data
- * 4. Server processes same form data
- * 5. Transformer converts server response to UI data
- * 6. Optimistic data replaced with authoritative server data
+ * The TanStack Query cache contains authoritative API entities. MobX contains
+ * their UI projection plus temporary optimistic layers. Each mutation owns its
+ * own rollback context, so overlapping operations cannot roll back one another.
  */
 export function createOptimisticStore<
   TApiData extends Entity,
   TUiData extends Entity = TApiData,
   TStore extends ObservableUIData<TUiData> = ObservableUIData<TUiData>,
+  TCreateInput = any,
+  TUpdateInput = any,
+  TOptimisticContext = any,
 >(
-  config: OptimisticStoreConfig<TApiData, TUiData>,
+  config: OptimisticStoreConfig<
+    TApiData,
+    TUiData,
+    TCreateInput,
+    TUpdateInput,
+    TOptimisticContext
+  >,
   queryClient?: QueryClient,
-): OptimisticStore<TApiData, TUiData, TStore> {
-  // Store managers are NOT cached - they're cheap to create (~5-10ms)
-  // TanStack Query caches query RESULTS by queryKey (config.name)
-  // That's where the real performance gain is (avoiding 100-500ms network requests)
-
-  // Use provided query client or get the global singleton
-  const qc = queryClient || getGlobalQueryClient();
-
-  // Track enabled state first
-  let enabledState = config.enabled ? config.enabled() : true;
-
-  // Create transformer
+): OptimisticStore<TApiData, TUiData, TStore, TCreateInput, TUpdateInput> {
+  const qc = queryClient ?? getGlobalQueryClient();
   const transformer = createTransformer(config.transformer);
 
-  // Create UI data store instance
-  const StoreClass = (config.storeClass as any) || ObservableUIData<TUiData>;
-  const uiStore = new StoreClass(transformer) as TStore;
+  const uiStore = (
+    config.storeClass
+      ? new config.storeClass(transformer as DataTransformer<TApiData, TUiData>)
+      : new ObservableUIData<TUiData>(transformer)
+  ) as TStore;
 
-  // Create realtime extension if config provided (but don't connect yet)
-  let realtimeExtension: RealtimeExtension<TUiData> | null = null;
+  const resolveQueryKey = (): QueryKey => {
+    if (typeof config.queryKey === "function") {
+      return config.queryKey();
+    }
+    return config.queryKey ?? [config.name];
+  };
+
+  let manuallyEnabled = true;
+  let destroyed = false;
+  let operationSequence = 0;
+
+  const isEnabled = (): boolean =>
+    manuallyEnabled && (config.enabled ? config.enabled() : true);
+
+  const status = observable({
+    isLoading: false,
+    isError: false,
+    error: null as Error | null,
+    isSyncing: false,
+    createPendingCount: 0,
+    updatePendingCount: 0,
+    deletePendingCount: 0,
+    get createPending(): boolean {
+      return this.createPendingCount > 0;
+    },
+    get updatePending(): boolean {
+      return this.updatePendingCount > 0;
+    },
+    get deletePending(): boolean {
+      return this.deletePendingCount > 0;
+    },
+    get hasPendingMutations(): boolean {
+      return (
+        this.createPendingCount +
+          this.updatePendingCount +
+          this.deletePendingCount >
+        0
+      );
+    },
+  });
+
+  const toCleanUiData = (apiData: TApiData): TUiData => {
+    const transformed = transformer
+      ? transformer.toUi(apiData)
+      : (apiData as unknown as TUiData);
+    const clean = { ...transformed } as TUiData & Record<string, unknown>;
+    delete clean._optimistic;
+    delete clean._optimisticTempId;
+    delete clean._optimisticOperationSequence;
+    return clean;
+  };
+
+  const upsertCachedEntity = (queryKey: QueryKey, entity: TApiData): void => {
+    qc.setQueryData<TApiData[]>(queryKey, (current) => {
+      if (!current) return current;
+
+      const index = current.findIndex((item) => item.id === entity.id);
+      if (index === -1) {
+        return [...current, entity];
+      }
+
+      const next = current.slice();
+      next[index] = entity;
+      return next;
+    });
+  };
+
+  const removeCachedEntity = (queryKey: QueryKey, id: string): void => {
+    qc.setQueryData<TApiData[]>(queryKey, (current) => {
+      if (!current) return current;
+      return current.filter((item) => item.id !== id);
+    });
+  };
+
+  let deferredReconciliation: TApiData[] | undefined;
+
+  const reconcile = (data: TApiData[]): void => {
+    if (destroyed) return;
+    runInAction(() => {
+      uiStore.reconcile(data, transformer);
+    });
+  };
+
+  const flushDeferredReconciliation = (): void => {
+    if (!destroyed && !status.hasPendingMutations && deferredReconciliation) {
+      const data = deferredReconciliation;
+      deferredReconciliation = undefined;
+      reconcile(data);
+    }
+  };
+
+  const changePendingCount = (kind: MutationKind, delta: 1 | -1): void => {
+    runInAction(() => {
+      if (kind === "create") {
+        status.createPendingCount = Math.max(
+          0,
+          status.createPendingCount + delta,
+        );
+      } else if (kind === "update") {
+        status.updatePendingCount = Math.max(
+          0,
+          status.updatePendingCount + delta,
+        );
+      } else {
+        status.deletePendingCount = Math.max(
+          0,
+          status.deletePendingCount + delta,
+        );
+      }
+    });
+  };
+
+  const runMutation = <TResult>(
+    kind: MutationKind,
+    mutation: () => Promise<TResult>,
+  ): Promise<TResult> => {
+    if (destroyed) {
+      return Promise.reject(
+        new Error(`Optimistic store "${config.name}" has been destroyed`),
+      );
+    }
+
+    changePendingCount(kind, 1);
+
+    let promise: Promise<TResult>;
+    try {
+      promise = mutation();
+    } catch (error) {
+      changePendingCount(kind, -1);
+      throw error;
+    }
+
+    return promise.finally(() => {
+      changePendingCount(kind, -1);
+      flushDeferredReconciliation();
+    });
+  };
+
+  const queryObserver = new QueryObserver<TApiData[], Error>(qc, {
+    queryKey: resolveQueryKey(),
+    queryFn: config.queryFn,
+    staleTime: config.staleTime ?? 5 * 60 * 1000,
+    enabled: isEnabled(),
+  });
+
+  const unsubscribeQuery = queryObserver.subscribe((result) => {
+    runInAction(() => {
+      status.isLoading = result.isLoading;
+      status.isError = result.isError;
+      status.error = result.error;
+      status.isSyncing = result.isFetching;
+    });
+
+    if (result.data && !result.isStale && !result.isFetching) {
+      if (status.hasPendingMutations) {
+        deferredReconciliation = result.data;
+      } else {
+        reconcile(result.data);
+      }
+    }
+  });
+
+  let triggerTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  const triggerQuery = (): void => {
+    if (!isEnabled() || destroyed) return;
+
+    if (triggerTimeout) {
+      clearTimeout(triggerTimeout);
+    }
+
+    triggerTimeout = setTimeout(() => {
+      if (!destroyed && isEnabled()) {
+        void queryObserver.refetch();
+      }
+      triggerTimeout = null;
+    }, 10);
+  };
+
+  const queryOptions = () => ({
+    queryKey: resolveQueryKey(),
+    queryFn: config.queryFn,
+    staleTime: config.staleTime ?? 5 * 60 * 1000,
+    enabled: isEnabled(),
+  });
+
+  const optimisticCreateOperations = new Map<string, number>();
+  const updateStates = new Map<string, UpdateState<TUiData, TUpdateInput>>();
+  const committedEntitySequence = new Map<string, number>();
+  const activeDeleteSequence = new Map<string, number>();
+
+  const applyUpdateLayers = (
+    base: TUiData,
+    layers: UpdateLayer<TUpdateInput>[],
+  ): TUiData => {
+    let merged = { ...base } as TUiData;
+
+    for (const layer of layers.sort(
+      (a, b) => a.operationSequence - b.operationSequence,
+    )) {
+      if (typeof layer.data === "object" && layer.data !== null) {
+        merged = { ...merged, ...layer.data };
+      }
+    }
+
+    if (!transformer) {
+      return merged;
+    }
+
+    return transformer.toUi(transformer.toApi(merged));
+  };
+
+  const renderUpdateState = (
+    id: string,
+    state: UpdateState<TUiData, TUpdateInput>,
+  ): void => {
+    const activeDelete = activeDeleteSequence.get(id);
+    const newestLayer =
+      state.layers[state.layers.length - 1]?.operationSequence ?? -1;
+
+    if (activeDelete !== undefined && activeDelete > newestLayer) {
+      uiStore.remove(id);
+      return;
+    }
+
+    uiStore.upsert(applyUpdateLayers(state.base, state.layers));
+  };
+
+  let realtimeExtension: RealtimeExtension<TApiData, TUiData> | null = null;
+
   if (config.realtime) {
-    realtimeExtension = createRealtimeExtension<TUiData>(
+    realtimeExtension = createRealtimeExtension<TApiData, TUiData>(
       uiStore,
       config.realtime.eventType,
       {
@@ -71,401 +327,426 @@ export function createOptimisticStore<
         shouldProcessEvent: config.realtime.shouldProcessEvent,
         browserId: config.realtime.browserId,
         customHandlers: config.realtime.customHandlers,
+        onError: config.realtime.onError,
+        onApplied: (operation, data, event) => {
+          if (operation === "DELETE") {
+            removeCachedEntity(resolveQueryKey(), data.id);
+          } else {
+            upsertCachedEntity(resolveQueryKey(), data);
+          }
+          config.realtime?.onApplied?.(operation, data, event);
+        },
       },
     );
-    // Note: Connection will be handled by rootStore when socket is ready
   }
 
-  // Status tracking - make it observable so React components re-render
-  const status = observable({
-    isLoading: false,
-    isError: false,
-    error: null as Error | null,
-    isSyncing: false,
-    createPending: false,
-    updatePending: false,
-    deletePending: false,
-    // Track if any mutation is in flight (for realtime coordination)
-    get hasPendingMutations(): boolean {
-      return this.createPending || this.updatePending || this.deletePending;
-    },
-  });
-
-  // Create query observer for data fetching
-  const queryObserver = new QueryObserver(qc, {
-    queryKey: [config.name],
-    queryFn: config.queryFn,
-    staleTime: config.staleTime ?? 5 * 60 * 1000,
-    enabled: enabledState,
-  });
-
-  // Subscribe to query changes with optimized reconciliation
-  let lastReconciledData: TApiData[] | undefined;
-
-  const unsubscribeQuery = queryObserver.subscribe((result) => {
-    runInAction(() => {
-      status.isLoading = result.isLoading;
-      status.isError = result.isError;
-      status.error = result.error as Error | null;
-      status.isSyncing = result.isFetching;
-    });
-
-    // 🛡️ PROTECTION 3: Skip reconciliation if mutations are in flight
-    // This prevents race conditions where reconciliation wipes out optimistic updates
-    if (status.hasPendingMutations) {
-      console.log(`⏸️ Skipping reconciliation while mutations are pending`);
-      return;
-    }
-
-    // Only reconcile when we have fresh, non-stale data and it's actually different
-    if (result.data && !result.isStale && !result.isFetching) {
-      // More efficient data change detection
-      const dataChanged =
-        !lastReconciledData ||
-        lastReconciledData.length !== result.data.length ||
-        // Quick ID check first (most common case)
-        lastReconciledData.some((item, index) => {
-          const newItem = result.data![index];
-          return !newItem || item.id !== newItem.id;
-        }) ||
-        // Only do deep comparison if IDs match but data might be different
-        (lastReconciledData.length === result.data.length &&
-          lastReconciledData.every((item, index) => {
-            const newItem = result.data![index];
-            return newItem && item.id === newItem.id;
-          }) &&
-          JSON.stringify(lastReconciledData) !== JSON.stringify(result.data));
-
-      if (dataChanged) {
-        lastReconciledData = result.data;
-        runInAction(() => {
-          uiStore.reconcile(result.data!, transformer);
-        });
-      }
-    }
-  });
-
-  // Auto-trigger query when enabled (like React hooks do) with debouncing
-  let triggerTimeout: NodeJS.Timeout | null = null;
-  const triggerQuery = () => {
-    if (config.enabled ? config.enabled() : true) {
-      // Debounce rapid trigger calls to prevent excessive refetches
-      if (triggerTimeout) {
-        clearTimeout(triggerTimeout);
-      }
-      triggerTimeout = setTimeout(() => {
-        queryObserver.refetch();
-        triggerTimeout = null;
-      }, 10); // 10ms debounce
-    }
-  };
-
-  // Check if query is currently enabled
-  const isEnabled = () => {
-    // Always check the current config function if it exists
-    return config.enabled ? config.enabled() : enabledState;
-  };
-
-  // Initial trigger only if enabled
-  if (enabledState) {
-    triggerQuery();
-  }
-
-  // Create mutation observers with optimized batching
-  const createMutationObserver = new MutationObserver(qc, {
+  const createMutationObserver = new MutationObserver<
+    TApiData,
+    Error,
+    TCreateInput,
+    CreateMutationContext<TUiData>
+  >(qc, {
     mutationFn: config.mutations.create,
-    onMutate: async (data: any) => {
-      await qc.cancelQueries({ queryKey: [config.name] });
-      uiStore.pushSnapshot();
+    onMutate: async (data) => {
+      const currentOperation = ++operationSequence;
+      const queryKey = resolveQueryKey();
+      await qc.cancelQueries({ queryKey });
 
-      // Optimistic update - add to store immediately
-      const tempId = `temp-${Date.now()}`;
+      if (destroyed) {
+        return {
+          operationSequence: currentOperation,
+          queryKey,
+          applied: false,
+        };
+      }
 
-      // Create optimistic item with proper structure
-      let optimisticItem: TUiData;
-
-      // Get optimistic defaults from transformer or config
+      const tempId = `temp-${Date.now()}-${currentOperation}`;
       const optimisticDefaults =
-        transformer?.optimisticDefaults || config.optimisticDefaults;
+        transformer?.optimisticDefaults ?? config.optimisticDefaults;
 
+      let candidate: TUiData;
       if (optimisticDefaults?.createOptimisticUiData) {
-        // ✅ Direct UI data creation - the right way to do optimistic updates
-        const context = config.optimisticContext
-          ? config.optimisticContext()
-          : undefined;
-        optimisticItem = optimisticDefaults.createOptimisticUiData(
+        candidate = optimisticDefaults.createOptimisticUiData(
           data,
-          context,
+          config.optimisticContext?.(),
         );
       } else if (transformer) {
-        // Fallback: minimal mock API data when no optimistic defaults provided
-        const mockApiData = {
+        candidate = transformer.toUi({
           id: tempId,
-          ...data,
-        } as TApiData;
-        optimisticItem = transformer.toUi(mockApiData);
+          ...(typeof data === "object" && data !== null ? data : {}),
+        } as TApiData);
       } else {
-        // No transformer or defaults - use form data as-is with temp ID
-        optimisticItem = { id: tempId, ...data } as TUiData;
+        candidate = {
+          id: tempId,
+          ...(typeof data === "object" && data !== null ? data : {}),
+        } as TUiData;
       }
 
-      // Mark as optimistic for proper cleanup during reconciliation
-      (optimisticItem as any)._optimistic = true;
-      (optimisticItem as any)._optimisticTempId = tempId;
+      const optimisticItem = {
+        ...candidate,
+        _optimistic: true,
+        _optimisticTempId: tempId,
+        _optimisticOperationSequence: currentOperation,
+      } as TUiData;
+      const previousItem = uiStore.get(optimisticItem.id);
 
-      // Batch the optimistic update
-      notifyManager.batch(() => {
-        runInAction(() => {
-          uiStore.upsert(optimisticItem);
-        });
+      optimisticCreateOperations.set(optimisticItem.id, currentOperation);
+      runInAction(() => {
+        uiStore.upsert(optimisticItem);
       });
 
-      return { tempId, optimisticItemId: optimisticItem.id };
+      return {
+        operationSequence: currentOperation,
+        optimisticItemId: optimisticItem.id,
+        previousItem,
+        queryKey,
+        applied: true,
+      };
     },
-    onSuccess: (result: TApiData, variables: any, context: any) => {
-      // Batch the success update
-      notifyManager.batch(() => {
-        runInAction(() => {
-          // Remove optimistic item(s) - find by _optimistic flag or tempId
-          // This handles cases where the optimistic ID doesn't match tempId
-          const optimisticItems = uiStore.list.filter(
-            (item: any) =>
-              item._optimistic === true ||
-              item.id === context.tempId ||
-              item.id === context.optimisticItemId,
-          );
+    onSuccess: (result, _variables, context) => {
+      const queryKey = context?.queryKey ?? resolveQueryKey();
+      upsertCachedEntity(queryKey, result);
 
-          optimisticItems.forEach((item) => {
-            uiStore.remove(item.id);
-          });
+      if (destroyed) return;
 
-          // Add real item from server
-          if (transformer) {
-            const uiData = transformer.toUi(result);
-            // Ensure _optimistic flag is removed from server data
-            delete (uiData as any)._optimistic;
-            delete (uiData as any)._optimisticTempId;
-            uiStore.upsert(uiData);
-          } else {
-            const uiData = result as unknown as TUiData;
-            delete (uiData as any)._optimistic;
-            delete (uiData as any)._optimisticTempId;
-            uiStore.upsert(uiData);
+      const uiData = toCleanUiData(result);
+      runInAction(() => {
+        if (context?.applied && context.optimisticItemId) {
+          const current = uiStore.get(context.optimisticItemId) as
+            | (TUiData & {
+                _optimisticOperationSequence?: number;
+              })
+            | undefined;
+
+          if (
+            optimisticCreateOperations.get(context.optimisticItemId) ===
+              context.operationSequence &&
+            current?._optimisticOperationSequence === context.operationSequence
+          ) {
+            uiStore.remove(context.optimisticItemId);
           }
-        });
+          optimisticCreateOperations.delete(context.optimisticItemId);
+        }
+
+        uiStore.upsert(uiData);
       });
     },
-    onError: () => {
-      // Batch the error rollback
-      notifyManager.batch(() => {
-        runInAction(() => {
-          uiStore.rollback();
-        });
+    onError: (_error, _variables, context) => {
+      if (destroyed || !context?.applied || !context.optimisticItemId) {
+        return;
+      }
+
+      const optimisticItemId = context.optimisticItemId;
+      runInAction(() => {
+        const current = uiStore.get(optimisticItemId) as
+          | (TUiData & {
+              _optimisticOperationSequence?: number;
+            })
+          | undefined;
+
+        if (
+          optimisticCreateOperations.get(optimisticItemId) ===
+            context.operationSequence &&
+          current?._optimisticOperationSequence === context.operationSequence
+        ) {
+          if (context.previousItem) {
+            uiStore.upsert(context.previousItem);
+          } else {
+            uiStore.remove(optimisticItemId);
+          }
+        }
+        optimisticCreateOperations.delete(optimisticItemId);
       });
     },
   });
 
-  const updateMutationObserver = new MutationObserver(qc, {
+  const updateMutationObserver = new MutationObserver<
+    TApiData,
+    Error,
+    { id: string; data: TUpdateInput },
+    UpdateMutationContext
+  >(qc, {
     mutationFn: config.mutations.update,
-    onMutate: async ({ id, data }: { id: string; data: any }) => {
-      await qc.cancelQueries({ queryKey: [config.name] });
-      uiStore.pushSnapshot();
+    onMutate: async ({ id, data }) => {
+      const currentOperation = ++operationSequence;
+      const queryKey = resolveQueryKey();
+      await qc.cancelQueries({ queryKey });
 
-      // Optimistic update with proper UI data calculation
-      notifyManager.batch(() => {
-        runInAction(() => {
-          // Get existing item to merge with updates
-          const existingItem = uiStore.get(id);
-          if (existingItem) {
-            // Merge the existing item with the updates
-            const mergedData = { ...existingItem, ...data };
+      const existing = uiStore.get(id);
+      if (destroyed || !existing) {
+        return {
+          operationSequence: currentOperation,
+          id,
+          queryKey,
+          applied: false,
+        };
+      }
 
-            // Use transformer to recalculate computed fields if available
-            if (transformer) {
-              // For updates, convert to API data and back to UI data to recalculate computed fields
-              const apiData = transformer.toApi(mergedData);
-              const uiData = transformer.toUi(apiData);
-              uiStore.upsert(uiData);
-            } else {
-              // No transformer - just merge as before
-              uiStore.upsert(mergedData);
-            }
-          }
-        });
+      const currentState = updateStates.get(id) ?? {
+        base: existing,
+        layers: [],
+      };
+      const nextState = {
+        base: currentState.base,
+        layers: [
+          ...currentState.layers,
+          { operationSequence: currentOperation, data },
+        ],
+      };
+      const rendered = applyUpdateLayers(nextState.base, nextState.layers);
+
+      updateStates.set(id, nextState);
+      runInAction(() => {
+        uiStore.upsert(rendered);
       });
 
-      return { id, data };
+      return {
+        operationSequence: currentOperation,
+        id,
+        queryKey,
+        applied: true,
+      };
     },
-    onSuccess: (result: TApiData) => {
-      notifyManager.batch(() => {
-        runInAction(() => {
-          if (transformer) {
-            const uiData = transformer.toUi(result);
-            uiStore.upsert(uiData);
-          } else {
-            uiStore.upsert(result as unknown as TUiData);
+    onSuccess: (result, _variables, context) => {
+      const id = context?.id ?? result.id;
+      const currentOperation =
+        context?.operationSequence ?? ++operationSequence;
+      const latestCommitted = committedEntitySequence.get(id) ?? -1;
+
+      if (currentOperation <= latestCommitted) {
+        return;
+      }
+
+      committedEntitySequence.set(id, currentOperation);
+      upsertCachedEntity(context?.queryKey ?? resolveQueryKey(), result);
+
+      if (destroyed) return;
+
+      const serverUiData = toCleanUiData(result);
+      const currentState = updateStates.get(id);
+      const nextState = currentState
+        ? {
+            base: serverUiData,
+            layers: currentState.layers.filter(
+              (layer) => layer.operationSequence > currentOperation,
+            ),
           }
-        });
+        : {
+            base: serverUiData,
+            layers: [],
+          };
+
+      const laterDelete =
+        (activeDeleteSequence.get(id) ?? -1) > currentOperation;
+
+      if (nextState.layers.length > 0 || laterDelete) {
+        updateStates.set(id, nextState);
+      } else {
+        updateStates.delete(id);
+      }
+
+      runInAction(() => {
+        renderUpdateState(id, nextState);
       });
     },
-    onError: () => {
-      notifyManager.batch(() => {
-        runInAction(() => {
-          uiStore.rollback();
-        });
+    onError: (_error, _variables, context) => {
+      if (destroyed || !context?.applied) return;
+
+      const latestCommitted = committedEntitySequence.get(context.id) ?? -1;
+      if (context.operationSequence <= latestCommitted) return;
+
+      const currentState = updateStates.get(context.id);
+      if (!currentState) return;
+
+      const nextState = {
+        base: currentState.base,
+        layers: currentState.layers.filter(
+          (layer) => layer.operationSequence !== context.operationSequence,
+        ),
+      };
+      const laterDelete =
+        (activeDeleteSequence.get(context.id) ?? -1) >
+        context.operationSequence;
+
+      if (nextState.layers.length > 0 || laterDelete) {
+        updateStates.set(context.id, nextState);
+      } else {
+        updateStates.delete(context.id);
+      }
+
+      runInAction(() => {
+        renderUpdateState(context.id, nextState);
       });
     },
   });
 
-  const removeMutationObserver = new MutationObserver(qc, {
+  const removeMutationObserver = new MutationObserver<
+    { id: string } | void,
+    Error,
+    string,
+    RemoveMutationContext<TUiData>
+  >(qc, {
     mutationFn: config.mutations.remove,
-    onMutate: async (id: string) => {
-      await qc.cancelQueries({ queryKey: [config.name] });
-      uiStore.pushSnapshot();
+    onMutate: async (id) => {
+      const currentOperation = ++operationSequence;
+      const queryKey = resolveQueryKey();
+      await qc.cancelQueries({ queryKey });
 
-      // Optimistic update
-      notifyManager.batch(() => {
+      const previousItem = uiStore.get(id);
+      if (destroyed) {
+        return {
+          operationSequence: currentOperation,
+          id,
+          queryKey,
+          applied: false,
+        };
+      }
+
+      activeDeleteSequence.set(id, currentOperation);
+      runInAction(() => {
+        uiStore.remove(id);
+      });
+
+      return {
+        operationSequence: currentOperation,
+        id,
+        previousItem,
+        queryKey,
+        applied: true,
+      };
+    },
+    onSuccess: (_result, id, context) => {
+      const currentOperation =
+        context?.operationSequence ?? ++operationSequence;
+      const latestCommitted = committedEntitySequence.get(id) ?? -1;
+
+      if (currentOperation <= latestCommitted) return;
+
+      committedEntitySequence.set(id, currentOperation);
+      removeCachedEntity(context?.queryKey ?? resolveQueryKey(), id);
+
+      const currentState = updateStates.get(id);
+      if (currentState) {
+        const laterLayers = currentState.layers.filter(
+          (layer) => layer.operationSequence > currentOperation,
+        );
+        if (laterLayers.length > 0) {
+          updateStates.set(id, {
+            base: currentState.base,
+            layers: laterLayers,
+          });
+        } else {
+          updateStates.delete(id);
+        }
+      }
+
+      if (activeDeleteSequence.get(id) === currentOperation) {
+        activeDeleteSequence.delete(id);
+      }
+
+      if (!destroyed) {
         runInAction(() => {
           uiStore.remove(id);
         });
-      });
+      }
+    },
+    onError: (_error, id, context) => {
+      if (destroyed || !context?.applied) return;
 
-      return { id };
-    },
-    onSuccess: (result: { id: string } | void, variables: string) => {
-      // Item already removed optimistically
-      // DON'T clear from optimistic deletions yet - wait for server reconciliation
-      // The reconciliation will handle clearing it when the server confirms the deletion
-      console.log(
-        "delete mutation succeeded, keeping in optimistic deletions until server confirms:",
-        variables,
-      );
-      console.log("delete mutation result:", result);
-    },
-    onError: (error: any, variables: string) => {
-      notifyManager.batch(() => {
-        runInAction(() => {
-          uiStore.rollback();
-          console.log(
-            "delete mutation failed, rolled back and cleared from optimistic deletions:",
-            variables,
-          );
-        });
+      if (activeDeleteSequence.get(id) === context.operationSequence) {
+        activeDeleteSequence.delete(id);
+      }
+
+      if (
+        context.operationSequence <= (committedEntitySequence.get(id) ?? -1)
+      ) {
+        return;
+      }
+
+      runInAction(() => {
+        const currentState = updateStates.get(id);
+        if (currentState) {
+          renderUpdateState(id, currentState);
+          if (currentState.layers.length === 0) {
+            updateStates.delete(id);
+          }
+        } else if (context.previousItem) {
+          uiStore.upsert(context.previousItem);
+        }
       });
     },
   });
 
-  // Subscribe to mutation status changes with batching
-  const unsubscribeCreateMutation = createMutationObserver.subscribe(
-    notifyManager.batchCalls((result) => {
-      runInAction(() => {
-        status.createPending = result.isPending;
-      });
-    }),
-  );
-
-  const unsubscribeUpdateMutation = updateMutationObserver.subscribe(
-    notifyManager.batchCalls((result) => {
-      runInAction(() => {
-        status.updatePending = result.isPending;
-      });
-    }),
-  );
-
-  const unsubscribeRemoveMutation = removeMutationObserver.subscribe(
-    notifyManager.batchCalls((result) => {
-      runInAction(() => {
-        status.deletePending = result.isPending;
-      });
-    }),
-  );
-
-  const optimisticStore = {
-    // UI domain - observable MobX state
+  const optimisticStore: OptimisticStore<
+    TApiData,
+    TUiData,
+    TStore,
+    TCreateInput,
+    TUpdateInput
+  > = {
     ui: uiStore,
-
-    // API domain - TanStack Query + mutations
     api: {
-      // Optimistic mutations
-      create: (data: any) => createMutationObserver.mutate(data),
-      update: (id: string, data: any) =>
-        updateMutationObserver.mutate({ id, data }),
-      remove: (id: string) => removeMutationObserver.mutate(id),
-
-      // Query control
+      create: (data) =>
+        runMutation("create", () => createMutationObserver.mutate(data)),
+      update: (id, data) =>
+        runMutation("update", () =>
+          updateMutationObserver.mutate({ id, data }),
+        ),
+      remove: (id) =>
+        runMutation("delete", () => removeMutationObserver.mutate(id)),
       refetch: () => queryObserver.refetch(),
-      invalidate: () => qc.invalidateQueries({ queryKey: [config.name] }),
-      triggerQuery: () => triggerQuery(),
-
-      // Query state
+      invalidate: () => qc.invalidateQueries({ queryKey: resolveQueryKey() }),
+      triggerQuery,
       status,
     },
-
-    // Lifecycle methods
     updateOptions: () => {
-      // Update query options with current enabled state
-      queryObserver.setOptions({
-        queryKey: [config.name],
-        queryFn: config.queryFn,
-        staleTime: config.staleTime ?? 5 * 60 * 1000,
-        enabled: config.enabled ? config.enabled() : true,
-      });
-
-      // Re-trigger query if now enabled (like React hooks do)
+      queryObserver.setOptions(queryOptions());
       triggerQuery();
     },
-    isEnabled: () => isEnabled(),
+    isEnabled,
     enable: () => {
-      enabledState = true;
-      queryObserver.setOptions({
-        queryKey: [config.name],
-        queryFn: config.queryFn,
-        staleTime: config.staleTime ?? 5 * 60 * 1000,
-        enabled: true,
-      });
+      manuallyEnabled = true;
+      queryObserver.setOptions(queryOptions());
       triggerQuery();
     },
     disable: () => {
-      enabledState = false;
-      queryObserver.setOptions({
-        queryKey: [config.name],
-        queryFn: config.queryFn,
-        staleTime: config.staleTime ?? 5 * 60 * 1000,
-        enabled: false,
-      });
+      manuallyEnabled = false;
+      queryObserver.setOptions(queryOptions());
     },
     destroy: () => {
-      // Clear any pending trigger timeout
+      if (destroyed) return;
+      destroyed = true;
+
       if (triggerTimeout) {
         clearTimeout(triggerTimeout);
         triggerTimeout = null;
       }
 
-      // Disconnect realtime if connected
-      if (realtimeExtension) {
-        realtimeExtension.disconnect();
-      }
-
+      realtimeExtension?.disconnect();
       unsubscribeQuery();
-      unsubscribeCreateMutation();
-      unsubscribeUpdateMutation();
-      unsubscribeRemoveMutation();
+      createMutationObserver.reset();
+      updateMutationObserver.reset();
+      removeMutationObserver.reset();
+      deferredReconciliation = undefined;
+      optimisticCreateOperations.clear();
+      updateStates.clear();
+      committedEntitySequence.clear();
+      activeDeleteSequence.clear();
     },
-    // Realtime status (only available when realtime config is provided)
     ...(realtimeExtension && {
       realtime: {
         get isConnected() {
-          return realtimeExtension!.connected;
+          return realtimeExtension.connected;
         },
-        connect: (socket: any) => {
-          realtimeExtension!.connect(socket);
+        connect: (socket: RealtimeSocket) => {
+          realtimeExtension.connect(socket);
         },
         disconnect: () => {
-          realtimeExtension!.disconnect();
+          realtimeExtension.disconnect();
         },
       },
     }),
-  } as const;
+  };
 
   return optimisticStore;
 }

@@ -60,7 +60,7 @@ That means fewer bugs, less glue code, and a more intuitive mental model:
 If your app needs realtime updates, AOS plugs into WebSockets or other event sources without rewriting your state layer:
 
 * Realtime events merge into the same optimistic store
-* Conflict resolution and self-echo prevention are built in
+* Deterministic local mutation ordering and self-echo prevention are built in
 * Local optimistic changes and remote updates stay in sync
 
 You don’t have to choose between “optimistic” and “realtime” — you get both.

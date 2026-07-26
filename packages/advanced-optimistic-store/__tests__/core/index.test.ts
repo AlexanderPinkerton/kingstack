@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { QueryClient } from "@tanstack/query-core";
 import { createOptimisticStore, ObservableUIData } from "../../src/core/index";
 import type { Entity, OptimisticStoreConfig } from "../../src/core/types";
+import { createDefaultTransformer } from "../../src/transformer/index";
 
 // Test data types
 interface TodoApiData extends Entity {
@@ -21,6 +22,8 @@ interface TodoUiData extends Entity {
   created_at: Date;
   user_id: string;
 }
+
+const todoTransformer = createDefaultTransformer<TodoApiData, TodoUiData>();
 
 describe("Core Module Integration", () => {
   let queryClient: QueryClient;
@@ -103,11 +106,12 @@ describe("Core Module Integration", () => {
       expect(typeof createOptimisticStore).toBe("function");
     });
 
-    it("should create optimistic store with default transformer", () => {
+    it("should create an optimistic store with an explicit transformer", () => {
       const config: OptimisticStoreConfig<TodoApiData, TodoUiData> = {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -125,6 +129,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -199,6 +204,7 @@ describe("Core Module Integration", () => {
           ...mockMutations,
           create: vi.fn().mockRejectedValue(new Error("Server error")),
         },
+        transformer: todoTransformer,
         optimisticDefaults: {
           createOptimisticUiData: (userInput: any) => ({
             id: `temp-${Date.now()}`,
@@ -242,6 +248,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
         realtime: {
           eventType: "todo_update",
           browserId: "test-browser",
@@ -281,6 +288,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -354,6 +362,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -374,6 +383,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -403,6 +413,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -427,6 +438,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);

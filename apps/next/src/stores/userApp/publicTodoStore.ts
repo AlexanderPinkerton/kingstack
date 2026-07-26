@@ -123,7 +123,6 @@ const publicTodoTransformer = {
         updated_at: new Date(),
       };
     },
-    pendingFields: [] as (keyof PublicTodoUiData)[],
   },
 };
 

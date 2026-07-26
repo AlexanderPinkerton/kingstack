@@ -8,7 +8,7 @@ import {
   action,
   runInAction,
 } from "mobx";
-import type { Entity, DataTransformer } from "./types";
+import type { Entity, DataTransformer } from "./types.js";
 
 export class ObservableUIData<T extends Entity> {
   /*
@@ -49,6 +49,18 @@ export class ObservableUIData<T extends Entity> {
   // Basic operations (used internally and by manager actions)
   get(id: string): T | undefined {
     return this.entities.get(id);
+  }
+
+  getById(id: string): T | undefined {
+    return this.get(id);
+  }
+
+  hasItem(id: string): boolean {
+    return this.entities.has(id);
+  }
+
+  snapshot(): T[] {
+    return this.list.slice();
   }
 
   upsert(entity: T): void {
@@ -109,64 +121,43 @@ export class ObservableUIData<T extends Entity> {
     const serverDataMap = new Map<string, T>();
 
     for (const apiItem of serverData) {
-      const uiItem = transformer
+      const transformed = transformer
         ? transformer.toUi(apiItem)
         : (apiItem as unknown as T);
+      const uiItem = { ...transformed } as T & Record<string, unknown>;
+      delete uiItem._optimistic;
+      delete uiItem._optimisticTempId;
+      delete uiItem._optimisticOperationSequence;
       serverDataMap.set(uiItem.id, uiItem);
     }
 
-    // Only update if data has actually changed
-    const currentIds = new Set(this.entities.keys());
-    const serverIds = new Set(serverDataMap.keys());
-
-    // Check if we need to do a full reconciliation
-    const needsFullReconcile =
-      currentIds.size !== serverIds.size ||
-      [...currentIds].some((id) => !serverIds.has(id)) ||
-      [...serverIds].some((id) => !currentIds.has(id)) ||
-      [...serverIds].some((id) => {
+    const needsReconcile =
+      this.entities.size !== serverDataMap.size ||
+      [...this.entities.keys()].some((id) => !serverDataMap.has(id)) ||
+      [...serverDataMap].some(([id, server]) => {
         const current = this.entities.get(id);
-        const server = serverDataMap.get(id);
-        return !current || !server || !this.shallowEqual(current, server);
+        return !current || !this.shallowEqual(current, server);
       });
 
-    if (!needsFullReconcile) {
-      console.log("reconciled: no changes detected, skipping update");
-      return;
-    }
+    if (!needsReconcile) return;
 
-    // Clear snapshots only when doing full reconciliation
+    // A server reconciliation establishes a new rollback baseline.
     this.snapshots = [];
 
-    // Update entities efficiently
     runInAction(() => {
-      // Remove entities that are no longer in server data
-      // Also remove any optimistic items that weren't confirmed by server
-      for (const [id, entity] of this.entities) {
+      for (const id of this.entities.keys()) {
         if (!serverDataMap.has(id)) {
-          // Remove if not in server data
-          this.entities.delete(id);
-        } else if ((entity as any)._optimistic === true) {
-          // Remove optimistic items that are being replaced by server data
-          // (they'll be re-added below with server data)
           this.entities.delete(id);
         }
       }
 
-      // Add or update entities from server data
       for (const [id, uiItem] of serverDataMap) {
-        // Ensure _optimistic flag is removed from server data
-        delete (uiItem as any)._optimistic;
-        delete (uiItem as any)._optimisticTempId;
-        this.entities.set(id, uiItem);
+        const current = this.entities.get(id);
+        if (!current || !this.shallowEqual(current, uiItem)) {
+          this.entities.set(id, uiItem);
+        }
       }
     });
-
-    console.log(
-      "reconciled: updated with",
-      this.list.length,
-      "items from server",
-    );
   }
 
   // Optimized shallow equality comparison with early exit and type checking

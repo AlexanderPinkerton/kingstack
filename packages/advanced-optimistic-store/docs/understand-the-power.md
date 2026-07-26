@@ -44,7 +44,7 @@ The transformation layer is what makes the whole system sing. API data often com
 
 This means the UI always works with **ideal, ergonomic, consistent objects**, while the API always receives **clean, standardized data**. And because it’s type-safe, you get compile-time guarantees across the entire pipeline.
 
-## Optional Realtime Synchronization With Conflict Resolution
+## Optional Realtime Synchronization
 
 When realtime events enter the picture—WebSockets, broadcasts, multi-user collaboration—the architecture doesn't break. Instead, it embraces it.
 
@@ -53,7 +53,7 @@ Incoming events can:
 * Update or merge into UI data
 * Respect local optimistic mutations
 * Avoid echoing your own actions back to you
-* Reconcile conflicts intelligently
+* Add domain-specific version checks through event filters or custom handlers
 
 This creates an alignment between **optimistic UI changes**, **server confirmation**, and **realtime external changes**, all without the developer manually stitching them together.
 

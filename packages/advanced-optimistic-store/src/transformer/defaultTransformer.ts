@@ -1,9 +1,14 @@
 // Default transformer for common data type conversions
 
-import type { Entity } from "../core/types";
-import type { DataTransformer } from "../core/types";
+import type { Entity } from "../core/types.js";
+import type { DataTransformer } from "../core/types.js";
 
-// Default transformer for common data type conversions
+/**
+ * Creates the legacy schema-free transformer for common string conversions.
+ *
+ * Prefer an explicit DataTransformer for application data. This helper is
+ * opt-in because heuristic conversion cannot guarantee runtime type safety.
+ */
 export function createDefaultTransformer<
   TApiData extends Entity,
   TUiData extends Entity,

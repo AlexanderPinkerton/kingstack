@@ -31,6 +31,7 @@ export class AdminMgmtStore {
   > | null = null;
   private authToken: string | null = null;
   private isEnabled: boolean = false;
+  private cacheScope = 0;
 
   constructor() {
     // Store is created but not enabled until auth is available
@@ -43,6 +44,7 @@ export class AdminMgmtStore {
       AdminEmailUiData
     >({
       name: "admin-emails",
+      queryKey: () => ["admin-emails", this.cacheScope],
       queryFn: this.getQueryFn(),
       mutations: {
         create: this.getCreateMutation(),
@@ -59,6 +61,9 @@ export class AdminMgmtStore {
 
   // Enable the store with auth token
   enable(authToken: string) {
+    if (this.authToken !== authToken) {
+      this.cacheScope += 1;
+    }
     this.authToken = authToken;
     this.isEnabled = true;
     // Update the store options to enable the query
@@ -69,6 +74,8 @@ export class AdminMgmtStore {
   disable() {
     this.isEnabled = false;
     this.authToken = null;
+    this.cacheScope += 1;
+    this.optimisticStore?.ui.clear();
     // Update the store options to disable the query
     this.optimisticStore?.updateOptions();
   }

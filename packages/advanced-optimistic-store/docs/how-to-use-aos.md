@@ -5,7 +5,7 @@ This example demonstrates how **clean and simple** the advanced optimistic store
 ## The Setup: Just Define Your Types and API
 
 ```typescript
-import { createOptimisticStore, createDefaultTransformer } from "@kingstack/advanced-optimistic-store";
+import { createOptimisticStore } from "@kingstack/advanced-optimistic-store";
 
 // API data shape (what comes from the server)
 interface PostApiData {
@@ -73,7 +73,7 @@ const postStore = createOptimisticStore<PostApiData, PostUiData>({
   },
   
   // Transform API data ↔ UI data with computed properties
-  transformer: createDefaultTransformer<PostApiData, PostUiData>({
+  transformer: {
     // Server data → UI data
     toUi: (apiData) => ({
       ...apiData,
@@ -85,7 +85,11 @@ const postStore = createOptimisticStore<PostApiData, PostUiData>({
     
     // UI data → API data
     toApi: (uiData) => ({
-      ...uiData,
+      id: uiData.id,
+      title: uiData.title,
+      content: uiData.content,
+      author_id: uiData.author_id,
+      published: uiData.published,
       created_at: uiData.created_at.toISOString(),
       updated_at: uiData.updated_at.toISOString(),
     }),
@@ -101,7 +105,7 @@ const postStore = createOptimisticStore<PostApiData, PostUiData>({
         wordCount: formData.content?.split(/\s+/).filter(Boolean).length || 0,
       }),
     },
-  }),
+  },
 });
 ```
 
@@ -277,7 +281,7 @@ const postStore = createOptimisticStore<PostApiData, PostUiData>({
   realtime: {
     eventType: "post_update",
     browserId: "browser-123", // Prevents self-echo
-    dataExtractor: (event) => event.data.post,
+    dataExtractor: (event) => event.data,
     shouldProcessEvent: (event) => event.type === "post_update",
   },
 });
@@ -286,7 +290,7 @@ const postStore = createOptimisticStore<PostApiData, PostUiData>({
 postStore.realtime?.connect(socket);
 ```
 
-Now realtime events automatically merge into your store, respecting optimistic updates and preventing conflicts. **No additional code needed.**
+Realtime events automatically merge into the store and self-originated events can be filtered. Remote events use arrival order; use `shouldProcessEvent` or `customHandlers` for domain-specific version checks.
 
 ## The Result
 
@@ -299,4 +303,3 @@ You get a state layer that:
 - **Stays type-safe** - Full TypeScript support end-to-end
 
 **This is what clean architecture looks like.**
-

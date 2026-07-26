@@ -52,7 +52,7 @@ That means fewer bugs, less glue code, and a more intuitive mental model:
 If your app needs realtime updates, AOS plugs into WebSockets or other event sources without rewriting your state layer:
 
 * Realtime events merge into the same optimistic store
-* Conflict resolution and self-echo prevention are built in
+* Self-echo prevention and deterministic local mutation ordering are built in
 * Local optimistic changes and remote updates stay in sync
 
 You don't have to choose between "optimistic" and "realtime" — you get both.
@@ -87,7 +87,7 @@ This example demonstrates how **clean and simple** the advanced optimistic store
 ### Step 1: Define Your Types
 
 ```typescript
-import { createOptimisticStore, createDefaultTransformer } from "@kingstack/advanced-optimistic-store";
+import { createOptimisticStore } from "@kingstack/advanced-optimistic-store";
 
 // API data shape (what comes from the server)
 interface PostApiData {
@@ -155,7 +155,7 @@ const postStore = createOptimisticStore<PostApiData, PostUiData>({
   },
   
   // Transform API data ↔ UI data with computed properties
-  transformer: createDefaultTransformer<PostApiData, PostUiData>({
+  transformer: {
     // Server data → UI data
     toUi: (apiData) => ({
       ...apiData,
@@ -167,7 +167,11 @@ const postStore = createOptimisticStore<PostApiData, PostUiData>({
     
     // UI data → API data
     toApi: (uiData) => ({
-      ...uiData,
+      id: uiData.id,
+      title: uiData.title,
+      content: uiData.content,
+      author_id: uiData.author_id,
+      published: uiData.published,
       created_at: uiData.created_at.toISOString(),
       updated_at: uiData.updated_at.toISOString(),
     }),
@@ -183,7 +187,7 @@ const postStore = createOptimisticStore<PostApiData, PostUiData>({
         wordCount: formData.content?.split(/\s+/).filter(Boolean).length || 0,
       }),
     },
-  }),
+  },
 });
 ```
 
@@ -359,7 +363,7 @@ const postStore = createOptimisticStore<PostApiData, PostUiData>({
   realtime: {
     eventType: "post_update",
     browserId: "browser-123", // Prevents self-echo
-    dataExtractor: (event) => event.data.post,
+    dataExtractor: (event) => event.data,
     shouldProcessEvent: (event) => event.type === "post_update",
   },
 });
@@ -368,7 +372,7 @@ const postStore = createOptimisticStore<PostApiData, PostUiData>({
 postStore.realtime?.connect(socket);
 ```
 
-Now realtime events automatically merge into your store, respecting optimistic updates and preventing conflicts. **No additional code needed.**
+Realtime events now merge into the UI store and self-originated events can be filtered. Remote events use arrival order; provide `shouldProcessEvent` or a `customHandlers` entry when your domain needs version-aware conflict handling.
 
 
 ## 🔧 API Reference
@@ -381,18 +385,19 @@ Creates an optimistic store with clear separation between UI and API domains.
 
 ```typescript
 interface OptimisticStoreConfig<TApiData, TUiData> {
-  name: string;                    // Unique identifier for query keys
+  name: string;                    // Store name and fallback query key
+  queryKey?: QueryKey | (() => QueryKey); // Include tenant/user/filter context
   queryFn: () => Promise<TApiData[]>;  // Fetch all items
   mutations: {
     create: (data: any) => Promise<TApiData>;
-    update: (id: string, data: any) => Promise<TApiData>;
+    update: (params: { id: string; data: any }) => Promise<TApiData>;
     remove: (id: string) => Promise<{ id: string } | void>;
   };
   transformer?: DataTransformer<TApiData, TUiData> | false;
   optimisticDefaults?: OptimisticDefaults<TUiData>;
-  staleTime?: number;              // Cache time in ms (default: 5 minutes)
+  staleTime?: number;              // Freshness window in ms (default: 5 minutes)
   enabled?: () => boolean;         // Query enable condition
-  realtime?: RealtimeConfig<TUiData>;
+  realtime?: RealtimeConfig<TApiData, TUiData>;
 }
 ```
 

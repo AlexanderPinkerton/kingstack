@@ -408,8 +408,7 @@ describe("ObservableUIData", () => {
 
       store.upsert(initialData);
 
-      // Mock console.log to verify it's called
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const initialReference = store.get("1");
 
       // Reconcile with same data (but as API data) using transformer
       const sameServerData: TestApiData = {
@@ -423,11 +422,7 @@ describe("ObservableUIData", () => {
 
       store.reconcile([sameServerData], mockTransformer);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "reconciled: no changes detected, skipping update",
-      );
-
-      consoleSpy.mockRestore();
+      expect(store.get("1")).toBe(initialReference);
     });
 
     it("should clear snapshots during reconciliation", () => {

@@ -120,7 +120,6 @@ const checkboxTransformer = {
         updated_at: new Date(),
       };
     },
-    pendingFields: [] as (keyof CheckboxUiData)[],
   },
 };
 

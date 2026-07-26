@@ -825,7 +825,6 @@ describe("OptimisticStore Advanced Scenarios", () => {
             tags,
           };
         },
-        pendingFields: [],
       },
     };
 

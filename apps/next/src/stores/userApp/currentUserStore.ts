@@ -83,6 +83,7 @@ export class CurrentUserStore {
   private authToken: string | null = null;
   private isEnabled: boolean = false;
   private transformer = new CurrentUserTransformer();
+  private cacheScope = 0;
 
   constructor() {
     // Store is created but not enabled until auth is available
@@ -95,6 +96,7 @@ export class CurrentUserStore {
       CurrentUserUiData
     >({
       name: "user",
+      queryKey: () => ["user", this.cacheScope],
       queryFn: this.getQueryFn(),
       mutations: {
         create: this.getCreateMutation(),
@@ -243,6 +245,9 @@ export class CurrentUserStore {
 
   // Enable the store with auth token
   enable(authToken: string) {
+    if (this.authToken !== authToken) {
+      this.cacheScope += 1;
+    }
     this.authToken = authToken;
     this.isEnabled = true;
     // Update the store manager options to enable the query
@@ -251,6 +256,9 @@ export class CurrentUserStore {
 
   // Enable for playground mode (no auth token needed)
   enablePlayground() {
+    if (this.authToken !== "playground-token") {
+      this.cacheScope += 1;
+    }
     this.authToken = "playground-token";
     this.isEnabled = true;
     // Update the store manager options to enable the query
@@ -261,6 +269,8 @@ export class CurrentUserStore {
   disable() {
     this.isEnabled = false;
     this.authToken = null;
+    this.cacheScope += 1;
+    this.optimisticStore?.ui.clear();
     // Update the store manager options to disable the query
     this.optimisticStore?.updateOptions();
   }

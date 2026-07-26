@@ -4,18 +4,17 @@
   "description": "Framework-agnostic optimistic updates with MobX + TanStack Query Core + optional realtime",
   "type": "module",
   "private": true,
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js"
     },
     "./realtime": {
       "types": "./dist/realtime/index.d.ts",
-      "import": "./dist/realtime/index.js",
-      "require": "./dist/realtime/index.js"
+      "import": "./dist/realtime/index.js"
     }
   },
   "files": [
@@ -23,22 +22,18 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "yarn clean && tsc",
     "dev": "tsc --watch",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint \"src/**/*.ts\" --fix",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
   "peerDependencies": {
     "@tanstack/query-core": "^5.0.0",
     "mobx": "^6.0.0"
-  },
-  "peerDependenciesMeta": {
-    "socket.io-client": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -49,7 +44,6 @@
     "eslint": "^9.25.0",
     "mobx": "^6.13.5",
     "prettier": "^3.4.2",
-    "socket.io-client": "^4.8.1",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"
   }

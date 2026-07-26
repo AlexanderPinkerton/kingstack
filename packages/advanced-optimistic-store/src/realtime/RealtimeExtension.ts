@@ -1,17 +1,25 @@
 // Realtime Extension for Optimistic Store Pattern
-// Provides a simple interface for integrating WebSocket realtime updates with optimistic stores
+// Provides a transport-agnostic interface for event-emitter style realtime clients.
 
-import { Socket } from "socket.io-client";
-import type { ObservableUIData } from "../core/ObservableUIData";
-import type { RealtimeEvent, RealtimeConfig } from "./types";
+import type { ObservableUIData } from "../core/ObservableUIData.js";
+import type { RealtimeEvent, RealtimeConfig, RealtimeSocket } from "./types.js";
 
-export class RealtimeExtension<T extends { id: string }> {
-  private store: ObservableUIData<T>;
-  private socket: Socket | null = null;
-  private config: RealtimeConfig<T>;
+export class RealtimeExtension<
+  TApiData extends { id: string },
+  TUiData extends { id: string } = TApiData,
+> {
+  private store: ObservableUIData<TUiData>;
+  private socket: RealtimeSocket | null = null;
+  private config: RealtimeConfig<TApiData, TUiData>;
   private isConnected = false;
+  private readonly eventListener = (event: RealtimeEvent): void => {
+    this.handleRealtimeEvent(event as RealtimeEvent<TApiData>);
+  };
 
-  constructor(store: ObservableUIData<T>, config: RealtimeConfig<T>) {
+  constructor(
+    store: ObservableUIData<TUiData>,
+    config: RealtimeConfig<TApiData, TUiData>,
+  ) {
     this.store = store;
     this.config = config;
   }
@@ -19,7 +27,7 @@ export class RealtimeExtension<T extends { id: string }> {
   /**
    * Connect to realtime updates via WebSocket
    */
-  connect(socket: Socket): void {
+  connect(socket: RealtimeSocket): void {
     if (this.socket) {
       this.disconnect();
     }
@@ -28,11 +36,7 @@ export class RealtimeExtension<T extends { id: string }> {
     this.isConnected = true;
 
     // Listen for the configured event type
-    this.socket.on(this.config.eventType, this.handleRealtimeEvent.bind(this));
-
-    console.log(
-      `🔌 RealtimeExtension: Connected to ${this.config.eventType} events`,
-    );
+    this.socket.on(this.config.eventType, this.eventListener);
   }
 
   /**
@@ -40,113 +44,69 @@ export class RealtimeExtension<T extends { id: string }> {
    */
   disconnect(): void {
     if (this.socket) {
-      this.socket.off(
-        this.config.eventType,
-        this.handleRealtimeEvent.bind(this),
-      );
+      this.socket.off(this.config.eventType, this.eventListener);
       this.socket = null;
     }
     this.isConnected = false;
-    console.log(
-      `🔌 RealtimeExtension: Disconnected from ${this.config.eventType} events`,
-    );
   }
 
   /**
    * Handle incoming realtime events
    */
-  private handleRealtimeEvent(event: RealtimeEvent): void {
-    console.log(
-      `📡 RealtimeExtension: Received ${this.config.eventType} event:`,
-      event,
-    );
+  private handleRealtimeEvent(event: RealtimeEvent<TApiData>): void {
+    try {
+      // Filter out self-originated events to prevent server echoes.
+      if (this.config.browserId && event.browserId === this.config.browserId) {
+        return;
+      }
 
-    // 🛡️ PROTECTION 1: Filter out self-originated events (prevent echo)
-    if (this.config.browserId && event.browserId === this.config.browserId) {
-      console.log(
-        `📡 RealtimeExtension: Skipping self-originated event from browser ${event.browserId}`,
-      );
-      return;
+      if (
+        this.config.shouldProcessEvent &&
+        !this.config.shouldProcessEvent(event)
+      ) {
+        return;
+      }
+
+      const customHandler =
+        this.config.customHandlers?.[event.event] ??
+        this.config.customHandlers?.[event.type];
+
+      if (customHandler) {
+        customHandler(this.store, event);
+        return;
+      }
+
+      this.handleDefaultEvent(event);
+    } catch (error) {
+      this.config.onError?.(error, event);
     }
-
-    // 🛡️ PROTECTION 2: Check if we should process this event
-    if (
-      this.config.shouldProcessEvent &&
-      !this.config.shouldProcessEvent(event)
-    ) {
-      console.log(
-        `📡 RealtimeExtension: Skipping event due to shouldProcessEvent filter`,
-      );
-      return;
-    }
-
-    // Use custom handler if available
-    if (this.config.customHandlers?.[event.type]) {
-      this.config.customHandlers[event.type](this.store, event);
-      return;
-    }
-
-    // Default handling based on event type
-    this.handleDefaultEvent(event);
   }
 
   /**
    * Default event handling for INSERT, UPDATE, DELETE operations
    */
-  private handleDefaultEvent(event: RealtimeEvent): void {
-    // Handle the actual event structure: { type, event, data }
+  private handleDefaultEvent(event: RealtimeEvent<TApiData>): void {
     const eventType = event.event;
 
-    // 🔧 Use configurable data extractor or default to event.data
     const dataExtractor =
-      this.config.dataExtractor || ((e: RealtimeEvent) => e.data);
+      this.config.dataExtractor ??
+      ((candidate: RealtimeEvent<TApiData>) => candidate.data);
     const data = dataExtractor(event);
 
-    try {
-      switch (eventType) {
-        case "INSERT": // Drop to the UPDATE case
-        case "UPDATE":
-          if (!data) {
-            console.warn(
-              `📡 RealtimeExtension: No data found in ${eventType} event:`,
-              event,
-            );
-            return;
-          }
+    if (!data) {
+      return;
+    }
 
-          // UI-only update (server already updated via realtime)
-          this.store.upsertViaRealtime(data);
-          console.log(
-            `📡 RealtimeExtension: ${eventType} processed for item ${data.id}`,
-          );
-          break;
-
-        case "DELETE":
-          if (!data) {
-            console.warn(
-              `📡 RealtimeExtension: No data found in DELETE event:`,
-              event,
-            );
-            return;
-          }
-
-          // UI-only removal (server already updated via realtime)
-          this.store.removeViaRealtime(data.id);
-          console.log(
-            `📡 RealtimeExtension: DELETE processed for item ${data.id}`,
-          );
-          break;
-
-        default:
-          console.warn(
-            `📡 RealtimeExtension: Unknown event type: ${eventType}`,
-          );
-      }
-    } catch (error) {
-      console.error(
-        `📡 RealtimeExtension: Error processing ${eventType} event:`,
-        error,
-      );
+    switch (eventType) {
+      case "INSERT":
+      case "UPDATE":
+        this.store.upsertViaRealtime<TApiData>(data);
+        this.config.onApplied?.(eventType, data, event);
+        break;
+      case "DELETE":
+        this.store.removeViaRealtime(data.id);
+        this.config.onApplied?.(eventType, data, event);
+        break;
     }
   }
 
@@ -154,13 +114,17 @@ export class RealtimeExtension<T extends { id: string }> {
    * Get connection status
    */
   get connected(): boolean {
-    return this.isConnected && this.socket?.connected === true;
+    return (
+      this.isConnected &&
+      this.socket !== null &&
+      this.socket.connected !== false
+    );
   }
 
   /**
    * Get the underlying socket
    */
-  get socketInstance(): Socket | null {
+  get socketInstance(): RealtimeSocket | null {
     return this.socket;
   }
 }

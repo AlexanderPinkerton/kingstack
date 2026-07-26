@@ -22,6 +22,8 @@ export function getGlobalQueryClient(): QueryClient {
         },
       },
     });
+    // Query core only subscribes to focus/online managers after mounting.
+    globalQueryClient.mount();
   }
   return globalQueryClient;
 }

@@ -102,7 +102,6 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
         tags,
       } as PostUiData;
     },
-    pendingFields: [],
   };
 
   toUi(apiData: PostApiData): PostUiData {
@@ -243,6 +242,7 @@ export class AdvancedPostStore {
     null;
   private authToken: string | null = null;
   private isEnabled: boolean = false;
+  private cacheScope = 0;
 
   constructor() {
     // Store is created but not enabled until auth is available
@@ -254,6 +254,7 @@ export class AdvancedPostStore {
 
     this.optimisticStore = createOptimisticStore<PostApiData, PostUiData>({
       name: "advanced-posts",
+      queryKey: () => ["advanced-posts", this.cacheScope],
       queryFn: this.getQueryFn(),
       mutations: {
         create: this.getCreateMutation(),
@@ -269,6 +270,9 @@ export class AdvancedPostStore {
 
   // Enable the store with auth token
   enable(authToken: string) {
+    if (this.authToken !== authToken) {
+      this.cacheScope += 1;
+    }
     this.authToken = authToken;
     this.isEnabled = true;
     // Update the store manager options to enable the query
@@ -279,6 +283,8 @@ export class AdvancedPostStore {
   disable() {
     this.isEnabled = false;
     this.authToken = null;
+    this.cacheScope += 1;
+    this.optimisticStore?.ui.clear();
     // Update the store manager options to disable the query
     this.optimisticStore?.updateOptions();
   }
