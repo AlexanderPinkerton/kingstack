@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { isPlaygroundMode } from "@kingstack/shared";
 import type { SupabaseSession } from "@/lib/session-manager";
-import { RealtimeManager, type RealtimeStore } from "@/lib/realtime-manager";
+import type { RealtimeSource } from "@/lib/realtime-manager";
 import { AdvancedPostStore } from "./postStore";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { CurrentUserStore } from "./currentUserStore";
@@ -10,6 +10,7 @@ import { PublicTodoStore } from "./publicTodoStore";
 interface UserStoreManagerOptions {
   queryClient: QueryClient;
   browserId: string;
+  realtimeSource: RealtimeSource;
 }
 
 /**
@@ -24,13 +25,20 @@ export class UserStoreManager {
   readonly publicTodoStore: PublicTodoStore;
   readonly currentUserStore: CurrentUserStore;
 
-  private realtimeManager: RealtimeManager | null = null;
   private releaseCurrentUser: (() => void) | null = null;
   private isDisposed = false;
 
-  constructor({ queryClient, browserId }: UserStoreManagerOptions) {
+  constructor({
+    queryClient,
+    browserId,
+    realtimeSource,
+  }: UserStoreManagerOptions) {
     this.postStore = new AdvancedPostStore(queryClient);
-    this.checkboxStore = new RealtimeCheckboxStore(queryClient, browserId);
+    this.checkboxStore = new RealtimeCheckboxStore(
+      queryClient,
+      realtimeSource,
+      browserId,
+    );
     this.publicTodoStore = new PublicTodoStore(queryClient);
     this.currentUserStore = new CurrentUserStore(queryClient);
   }
@@ -52,32 +60,12 @@ export class UserStoreManager {
     }
   }
 
-  getRealtimeStores(): RealtimeStore[] {
-    return [this.checkboxStore];
-  }
-
-  registerRealtime(realtimeManager: RealtimeManager): void {
-    if (this.realtimeManager === realtimeManager) return;
-
-    if (this.realtimeManager) {
-      this.realtimeManager.unregisterStores(this.getRealtimeStores());
-    }
-
-    this.realtimeManager = realtimeManager;
-    realtimeManager.registerStores(this.getRealtimeStores());
-  }
-
   dispose(): void {
     if (this.isDisposed) return;
     this.isDisposed = true;
 
     this.releaseCurrentUser?.();
     this.releaseCurrentUser = null;
-
-    if (this.realtimeManager) {
-      this.realtimeManager.unregisterStores(this.getRealtimeStores());
-      this.realtimeManager = null;
-    }
 
     this.postStore.dispose();
     this.checkboxStore.dispose();

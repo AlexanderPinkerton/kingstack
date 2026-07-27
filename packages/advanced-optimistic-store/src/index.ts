@@ -9,6 +9,12 @@ export type {
   DataTransformer,
   OptimisticStoreConfig,
   OptimisticStore,
+  RemoteApplyResult,
+  RemoteChange,
+  RemoteChangeContext,
+  RemoteConfig,
+  RemoteMembership,
+  RemoteOperation,
 } from "./core/index.js";
 
 // Transforms
@@ -19,15 +25,3 @@ export {
 
 // Query
 export { getGlobalQueryClient } from "./query/index.js";
-
-// Realtime (optional)
-export {
-  RealtimeExtension,
-  createRealtimeExtension,
-} from "./realtime/index.js";
-export type {
-  RealtimeConfig,
-  RealtimeEvent,
-  RealtimeOperation,
-  RealtimeSocket,
-} from "./realtime/index.js";

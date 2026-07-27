@@ -18,24 +18,19 @@ createDefaultTransformer;
 // Query client
 getGlobalQueryClient;
 
-// Realtime
-RealtimeExtension;
-createRealtimeExtension;
-
 // Types
 Entity;
 OptimisticDefaults;
 DataTransformer;
 OptimisticStoreConfig;
 OptimisticStore;
-RealtimeConfig;
-RealtimeEvent;
-RealtimeOperation;
-RealtimeSocket;
+RemoteApplyResult;
+RemoteChange;
+RemoteChangeContext;
+RemoteConfig;
+RemoteMembership;
+RemoteOperation;
 ```
-
-Realtime values and types are also available from
-`@kingstack/advanced-optimistic-store/realtime`.
 
 ## `Entity`
 
@@ -218,14 +213,15 @@ whenever values used by the predicate change.
 This predicate is combined with the store's manual `enable()`/`disable()` gate.
 Both must allow the query for an automatic observer subscription to exist.
 
-### `realtime`
+### `remote`
 
 ```ts
-realtime?: RealtimeConfig<TApiData, TUiData>;
+remote?: RemoteConfig<TApiData, TUiData>;
 ```
 
-Adds the optional `store.realtime` API. It does not create or own a socket.
-See [Realtime](./realtime.md).
+Configures optional self-origin filtering and application-defined acceptance
+rules for `applyRemote()`. It does not create or own a transport. See
+[Remote changes](./realtime.md).
 
 ## `OptimisticStore`
 
@@ -364,17 +360,107 @@ store's lifetime ends. It does not abort application-owned query or mutation
 promises that are already running. Calls made after destruction are outside the
 supported lifecycle.
 
-### `realtime`
+### `applyRemote`
 
 ```ts
-realtime?: {
-  readonly isConnected: boolean;
-  connect(socket: RealtimeSocket): void;
-  disconnect(): void;
-};
+applyRemote(change: RemoteChange<TApiData>): RemoteApplyResult;
 ```
 
-Present only when the configuration includes `realtime`.
+Applies a normalized remote insert, update, or delete to the target TanStack
+cache scope and, when that scope is current, the MobX projection.
+
+Remote confirmed entities become the base underneath pending local optimistic
+layers. See [Remote changes](./realtime.md) for membership, scope, and conflict
+semantics.
+
+## Remote changes
+
+### `RemoteChange`
+
+```ts
+type RemoteChange<TApiData extends Entity> =
+  | {
+      operation: "insert" | "update";
+      entity: TApiData;
+      membership?: RemoteMembership;
+      queryKey?: QueryKey;
+      originId?: string;
+      revision?: string | number;
+    }
+  | {
+      operation: "delete";
+      id: string;
+      queryKey?: QueryKey;
+      originId?: string;
+      revision?: string | number;
+    };
+```
+
+The entity is a complete API entity. `queryKey` defaults to the current resolved
+store key.
+
+### `RemoteMembership`
+
+```ts
+type RemoteMembership = "include" | "exclude" | "unknown";
+```
+
+- `include` upserts the entity into an existing target collection.
+- `exclude` removes it from the target collection.
+- `unknown` updates only an existing member and invalidates the exact query.
+
+`unknown` is the default and does not append a missing member.
+
+### `RemoteConfig`
+
+```ts
+interface RemoteConfig<TApiData extends Entity, TUiData extends Entity> {
+  localOriginId?: string | (() => string | undefined);
+  shouldApply?: (
+    change: RemoteChange<TApiData>,
+    context: RemoteChangeContext<TApiData, TUiData>,
+  ) => boolean;
+}
+```
+
+`localOriginId` filters a change only when the change also supplies an equal
+`originId`.
+
+`shouldApply` runs before cache or UI mutation. It can implement domain
+authorization, revision comparison, or other conflict policy. A false result
+rejects the whole change.
+
+### `RemoteChangeContext`
+
+```ts
+interface RemoteChangeContext<TApiData, TUiData> {
+  currentQueryKey: QueryKey;
+  targetQueryKey: QueryKey;
+  cachedEntity?: TApiData;
+  visibleEntity?: TUiData;
+}
+```
+
+The cached entity is the API representation from the target cache scope. The
+visible entity is supplied only when the target key is the current scope.
+
+### `RemoteApplyResult`
+
+```ts
+type RemoteApplyResult =
+  | {
+      applied: true;
+      scope: "current" | "background";
+      queryKey: QueryKey;
+    }
+  | {
+      applied: false;
+      reason: "destroyed" | "self-origin" | "rejected";
+      queryKey: QueryKey;
+    };
+```
+
+`background` means the target key differed from the visible store scope.
 
 ## `ObservableUIData`
 
@@ -466,23 +552,3 @@ reconnect refetching.
 
 Prefer an injected client in applications, tests, SSR, and any runtime that
 already owns a QueryClient.
-
-## Standalone realtime extension
-
-`RealtimeExtension` and `createRealtimeExtension` can attach the same event
-handling to an existing `ObservableUIData` without creating a full optimistic
-store:
-
-```ts
-const extension = createRealtimeExtension(
-  uiStore,
-  "todo_changed",
-  realtimeOptions,
-);
-
-extension.connect(socket);
-extension.disconnect();
-```
-
-When used standalone, the extension updates only the supplied UI store. It has
-no QueryClient to synchronize.

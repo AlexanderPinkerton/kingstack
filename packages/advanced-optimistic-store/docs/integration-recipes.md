@@ -450,7 +450,8 @@ Useful assertions include:
 - correct cache entry after success;
 - old-scope mutation completion does not touch new-scope UI;
 - query observer count returns to zero after deactivation;
-- realtime listener removal uses the original callback.
+- remote changes preserve pending local optimistic intent;
+- transport subscriptions are released when feature demand ends.
 
 Always call `store.destroy()` in cleanup.
 

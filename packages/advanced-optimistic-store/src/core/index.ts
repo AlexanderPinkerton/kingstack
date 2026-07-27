@@ -13,4 +13,10 @@ export type {
   DataTransformer,
   OptimisticStoreConfig,
   OptimisticStore,
+  RemoteApplyResult,
+  RemoteChange,
+  RemoteChangeContext,
+  RemoteConfig,
+  RemoteMembership,
+  RemoteOperation,
 } from "./types.js";

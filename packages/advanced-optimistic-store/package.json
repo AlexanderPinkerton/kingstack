@@ -1,7 +1,7 @@
 {
   "name": "@kingstack/advanced-optimistic-store",
   "version": "0.1.0",
-  "description": "Framework-agnostic optimistic updates with MobX + TanStack Query Core + optional realtime",
+  "description": "Framework-agnostic optimistic and remote updates with MobX + TanStack Query Core",
   "type": "module",
   "private": true,
   "sideEffects": false,
@@ -11,10 +11,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./realtime": {
-      "types": "./dist/realtime/index.d.ts",
-      "import": "./dist/realtime/index.js"
     }
   },
   "files": [

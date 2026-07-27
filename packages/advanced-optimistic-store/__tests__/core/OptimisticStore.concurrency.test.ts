@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/query-core";
 import { createOptimisticStore } from "../../src/core/OptimisticStore";
 import type { ObservableUIData } from "../../src/core/ObservableUIData";
-import type { RealtimeEvent } from "../../src/realtime/types";
 
 interface Item {
   id: string;
@@ -417,13 +416,11 @@ describe("OptimisticStore deterministic concurrency", () => {
     expect(store.ui.list).toEqual([secondItem]);
   });
 
-  it("synchronizes default realtime events into the scoped query cache", () => {
+  it("applies normalized remote changes to the UI and scoped cache", () => {
     const queryClient = createQueryClient();
     const queryKey = ["items", "tenant-a"] as const;
-    queryClient.setQueryData<Item[]>(queryKey, [
-      { id: "1", title: "base", revision: 0 },
-    ]);
-    let listener: ((event: RealtimeEvent<Item>) => void) | undefined;
+    const base = { id: "1", title: "base", revision: 0 };
+    queryClient.setQueryData<Item[]>(queryKey, [base]);
 
     const store = createOptimisticStore<
       Item,
@@ -451,35 +448,356 @@ describe("OptimisticStore deterministic concurrency", () => {
           remove: async (id) => ({ id }),
         },
         transformer: false,
-        realtime: {
-          eventType: "item_update",
-        },
       },
       queryClient,
     );
+    store.ui.upsert(base);
 
-    store.realtime?.connect({
-      connected: true,
-      on: (_eventType, registeredListener) => {
-        listener = registeredListener;
-      },
-      off: () => undefined,
+    const updateResult = store.applyRemote({
+      operation: "update",
+      entity: { id: "1", title: "remote", revision: 2 },
+      membership: "include",
     });
 
-    listener?.({
-      type: "item_update",
-      event: "UPDATE",
-      data: { id: "1", title: "remote", revision: 2 },
+    expect(updateResult).toMatchObject({ applied: true, scope: "current" });
+    expect(store.ui.get("1")).toEqual({
+      id: "1",
+      title: "remote",
+      revision: 2,
     });
     expect(queryClient.getQueryData<Item[]>(queryKey)).toEqual([
       { id: "1", title: "remote", revision: 2 },
     ]);
 
-    listener?.({
-      type: "item_update",
-      event: "DELETE",
-      data: { id: "1", title: "remote", revision: 2 },
+    store.applyRemote({
+      operation: "delete",
+      id: "1",
     });
+    expect(store.ui.get("1")).toBeUndefined();
     expect(queryClient.getQueryData<Item[]>(queryKey)).toEqual([]);
+  });
+
+  it("removes an entity when a remote upsert is excluded from the collection", () => {
+    const queryClient = createQueryClient();
+    const queryKey = ["items", { status: "open" }] as const;
+    const base = { id: "1", title: "base", revision: 0 };
+    queryClient.setQueryData<Item[]>(queryKey, [base]);
+
+    const store = createOptimisticStore<
+      Item,
+      Item,
+      ObservableUIData<Item>,
+      CreateInput,
+      UpdateInput
+    >(
+      {
+        name: "items",
+        queryKey,
+        enabled: () => false,
+        queryFn: async () => [],
+        mutations: {
+          create: async (data) => ({
+            id: "created",
+            title: data.title,
+            revision: 1,
+          }),
+          update: async ({ id, data }) => ({
+            id,
+            title: data.title,
+            revision: 1,
+          }),
+          remove: async (id) => ({ id }),
+        },
+        transformer: false,
+      },
+      queryClient,
+    );
+    store.ui.upsert(base);
+
+    store.applyRemote({
+      operation: "update",
+      entity: { id: "1", title: "closed", revision: 1 },
+      membership: "exclude",
+    });
+
+    expect(store.ui.get("1")).toBeUndefined();
+    expect(queryClient.getQueryData<Item[]>(queryKey)).toEqual([]);
+  });
+
+  it("uses a remote update as the confirmed base beneath a local optimistic layer", async () => {
+    const queryClient = createQueryClient();
+    const updateResult = deferred<Item>();
+    const base = { id: "1", title: "base", revision: 0 };
+
+    const store = createOptimisticStore<
+      Item,
+      Item,
+      ObservableUIData<Item>,
+      CreateInput,
+      UpdateInput
+    >(
+      {
+        name: "items",
+        enabled: () => false,
+        queryFn: async () => [],
+        mutations: {
+          create: async (data) => ({
+            id: "created",
+            title: data.title,
+            revision: 1,
+          }),
+          update: () => updateResult.promise,
+          remove: async (id) => ({ id }),
+        },
+        transformer: false,
+      },
+      queryClient,
+    );
+    store.ui.upsert(base);
+
+    const mutation = store.api.update("1", { title: "local" });
+    await vi.waitFor(() => {
+      expect(store.ui.get("1")?.title).toBe("local");
+    });
+
+    store.applyRemote({
+      operation: "update",
+      entity: { id: "1", title: "remote", revision: 2 },
+      membership: "include",
+    });
+
+    expect(store.ui.get("1")).toEqual({
+      id: "1",
+      title: "local",
+      revision: 2,
+    });
+
+    updateResult.reject(new Error("local failed"));
+    await expect(mutation).rejects.toThrow("local failed");
+    expect(store.ui.get("1")).toEqual({
+      id: "1",
+      title: "remote",
+      revision: 2,
+    });
+  });
+
+  it("keeps remote changes for another query scope out of the visible projection", () => {
+    const queryClient = createQueryClient();
+    const tenantAKey = ["items", "tenant-a"] as const;
+    const tenantBKey = ["items", "tenant-b"] as const;
+    const tenantAItem = { id: "1", title: "tenant-a", revision: 0 };
+    const tenantBItem = { id: "1", title: "tenant-b", revision: 0 };
+    queryClient.setQueryData<Item[]>(tenantAKey, [tenantAItem]);
+    queryClient.setQueryData<Item[]>(tenantBKey, [tenantBItem]);
+
+    const store = createOptimisticStore<
+      Item,
+      Item,
+      ObservableUIData<Item>,
+      CreateInput,
+      UpdateInput
+    >(
+      {
+        name: "items",
+        queryKey: tenantBKey,
+        enabled: () => false,
+        queryFn: async () => [],
+        mutations: {
+          create: async (data) => ({
+            id: "created",
+            title: data.title,
+            revision: 1,
+          }),
+          update: async ({ id, data }) => ({
+            id,
+            title: data.title,
+            revision: 1,
+          }),
+          remove: async (id) => ({ id }),
+        },
+        transformer: false,
+      },
+      queryClient,
+    );
+    store.ui.upsert(tenantBItem);
+
+    const result = store.applyRemote({
+      operation: "update",
+      entity: { id: "1", title: "remote-a", revision: 2 },
+      membership: "include",
+      queryKey: tenantAKey,
+    });
+
+    expect(result).toMatchObject({ applied: true, scope: "background" });
+    expect(queryClient.getQueryData<Item[]>(tenantAKey)?.[0]?.title).toBe(
+      "remote-a",
+    );
+    expect(store.ui.list).toEqual([tenantBItem]);
+  });
+
+  it("does not append unknown collection members and supports origin and domain filtering", () => {
+    const queryClient = createQueryClient();
+    const queryKey = ["items", { status: "open" }] as const;
+    queryClient.setQueryData<Item[]>(queryKey, []);
+
+    const store = createOptimisticStore<
+      Item,
+      Item,
+      ObservableUIData<Item>,
+      CreateInput,
+      UpdateInput
+    >(
+      {
+        name: "items",
+        queryKey,
+        enabled: () => false,
+        queryFn: async () => [],
+        mutations: {
+          create: async (data) => ({
+            id: "created",
+            title: data.title,
+            revision: 1,
+          }),
+          update: async ({ id, data }) => ({
+            id,
+            title: data.title,
+            revision: 1,
+          }),
+          remove: async (id) => ({ id }),
+        },
+        transformer: false,
+        remote: {
+          localOriginId: "local-client",
+          shouldApply: (change) => change.revision !== 1,
+        },
+      },
+      queryClient,
+    );
+
+    store.applyRemote({
+      operation: "insert",
+      entity: { id: "1", title: "unknown", revision: 2 },
+    });
+    expect(store.ui.count).toBe(0);
+    expect(queryClient.getQueryData<Item[]>(queryKey)).toEqual([]);
+    expect(
+      queryClient.getQueryCache().find({ queryKey })?.state.isInvalidated,
+    ).toBe(true);
+
+    expect(
+      store.applyRemote({
+        operation: "insert",
+        entity: { id: "1", title: "self", revision: 3 },
+        membership: "include",
+        originId: "local-client",
+      }),
+    ).toMatchObject({ applied: false, reason: "self-origin" });
+
+    expect(
+      store.applyRemote({
+        operation: "insert",
+        entity: { id: "1", title: "rejected", revision: 1 },
+        membership: "include",
+        revision: 1,
+      }),
+    ).toMatchObject({ applied: false, reason: "rejected" });
+
+    store.applyRemote({
+      operation: "insert",
+      entity: { id: "1", title: "included", revision: 3 },
+      membership: "include",
+    });
+    expect(store.ui.get("1")?.title).toBe("included");
+  });
+
+  it("preserves a remote delete when a pending local update fails", async () => {
+    const queryClient = createQueryClient();
+    const updateResult = deferred<Item>();
+    const base = { id: "1", title: "base", revision: 0 };
+
+    const store = createOptimisticStore<
+      Item,
+      Item,
+      ObservableUIData<Item>,
+      CreateInput,
+      UpdateInput
+    >(
+      {
+        name: "items",
+        enabled: () => false,
+        queryFn: async () => [],
+        mutations: {
+          create: async (data) => ({
+            id: "created",
+            title: data.title,
+            revision: 1,
+          }),
+          update: () => updateResult.promise,
+          remove: async (id) => ({ id }),
+        },
+        transformer: false,
+      },
+      queryClient,
+    );
+    store.ui.upsert(base);
+
+    const mutation = store.api.update("1", { title: "local" });
+    await vi.waitFor(() => {
+      expect(store.ui.get("1")?.title).toBe("local");
+    });
+
+    store.applyRemote({ operation: "delete", id: "1" });
+    expect(store.ui.get("1")).toBeUndefined();
+
+    updateResult.reject(new Error("deleted remotely"));
+    await expect(mutation).rejects.toThrow("deleted remotely");
+    expect(store.ui.get("1")).toBeUndefined();
+  });
+
+  it("preserves a remote delete when a pending local delete fails", async () => {
+    const queryClient = createQueryClient();
+    const removeResult = deferred<{ id: string }>();
+    const base = { id: "1", title: "base", revision: 0 };
+
+    const store = createOptimisticStore<
+      Item,
+      Item,
+      ObservableUIData<Item>,
+      CreateInput,
+      UpdateInput
+    >(
+      {
+        name: "items",
+        enabled: () => false,
+        queryFn: async () => [],
+        mutations: {
+          create: async (data) => ({
+            id: "created",
+            title: data.title,
+            revision: 1,
+          }),
+          update: async ({ id, data }) => ({
+            id,
+            title: data.title,
+            revision: 1,
+          }),
+          remove: () => removeResult.promise,
+        },
+        transformer: false,
+      },
+      queryClient,
+    );
+    store.ui.upsert(base);
+
+    const mutation = store.api.remove("1");
+    await vi.waitFor(() => {
+      expect(store.ui.get("1")).toBeUndefined();
+    });
+
+    store.applyRemote({ operation: "delete", id: "1" });
+    removeResult.reject(new Error("already deleted remotely"));
+
+    await expect(mutation).rejects.toThrow("already deleted remotely");
+    expect(store.ui.get("1")).toBeUndefined();
   });
 });

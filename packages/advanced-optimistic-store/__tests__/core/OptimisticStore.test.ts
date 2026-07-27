@@ -45,19 +45,6 @@ const mockTransformer = {
   }),
 };
 
-// Mock realtime extension
-const mockRealtimeExtension = {
-  connected: false,
-  connect: vi.fn(),
-  disconnect: vi.fn(),
-  handleEvent: vi.fn(),
-};
-
-// Mock the realtime module
-vi.mock("../../src/realtime", () => ({
-  createRealtimeExtension: vi.fn(() => mockRealtimeExtension),
-}));
-
 // Mock the query client module
 vi.mock("../../src/query/queryClient", () => ({
   getGlobalQueryClient: vi.fn(() => new QueryClient()),
@@ -547,59 +534,25 @@ describe("createOptimisticStore", () => {
     });
   });
 
-  describe("realtime functionality", () => {
-    it("should create realtime extension when config provided", () => {
-      const configWithRealtime = {
-        ...config,
-        realtime: {
-          eventType: "test_update",
-          browserId: "test-browser",
-        },
-      };
-
-      const store = createOptimisticStore(configWithRealtime, queryClient);
-
-      expect(store.realtime).toBeDefined();
-      expect(store.realtime?.isConnected).toBe(false);
-      expect(store.realtime?.connect).toBeDefined();
-      expect(store.realtime?.disconnect).toBeDefined();
-    });
-
-    it("should not create realtime extension when config not provided", () => {
+  describe("remote changes", () => {
+    it("ignores remote changes after destruction", () => {
       const store = createOptimisticStore(config, queryClient);
+      store.destroy();
 
-      expect(store.realtime).toBeUndefined();
-    });
-
-    it("should handle realtime connection", () => {
-      const configWithRealtime = {
-        ...config,
-        realtime: {
-          eventType: "test_update",
-        },
-      };
-
-      const store = createOptimisticStore(configWithRealtime, queryClient);
-      const mockSocket = { on: vi.fn(), emit: vi.fn() };
-
-      store.realtime?.connect(mockSocket);
-
-      expect(mockRealtimeExtension.connect).toHaveBeenCalledWith(mockSocket);
-    });
-
-    it("should handle realtime disconnection", () => {
-      const configWithRealtime = {
-        ...config,
-        realtime: {
-          eventType: "test_update",
-        },
-      };
-
-      const store = createOptimisticStore(configWithRealtime, queryClient);
-
-      store.realtime?.disconnect();
-
-      expect(mockRealtimeExtension.disconnect).toHaveBeenCalled();
+      expect(
+        store.applyRemote({
+          operation: "insert",
+          entity: {
+            id: "remote",
+            title: "Remote",
+            completed: "false",
+            priority: "1",
+            created_at: new Date().toISOString(),
+          },
+          membership: "include",
+        }),
+      ).toMatchObject({ applied: false, reason: "destroyed" });
+      expect(store.ui.get("remote")).toBeUndefined();
     });
   });
 

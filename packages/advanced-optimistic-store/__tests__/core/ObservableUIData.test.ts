@@ -190,57 +190,6 @@ describe("ObservableUIData", () => {
     });
   });
 
-  describe("realtime operations", () => {
-    const apiData: TestApiData = {
-      id: "1",
-      title: "Realtime Task",
-      completed: "true",
-      priority: "3",
-      tags: "realtime,test",
-      created_at: "2023-01-01T00:00:00.000Z",
-    };
-
-    it("should upsert via realtime with transformer", () => {
-      const storeWithTransformer = new ObservableUIData<TestEntity>(
-        mockTransformer,
-      );
-
-      storeWithTransformer.upsertViaRealtime(apiData);
-
-      const result = storeWithTransformer.get("1");
-      expect(result).toBeDefined();
-      expect(result?.title).toBe("Realtime Task");
-      expect(result?.completed).toBe(true);
-      expect(result?.priority).toBe(3);
-      expect(result?.tags).toEqual(["realtime", "test"]);
-      expect(result?.createdAt).toBeInstanceOf(Date);
-    });
-
-    it("should upsert via realtime without transformer", () => {
-      store.upsertViaRealtime(apiData as any);
-
-      const result = store.get("1");
-      expect(result).toEqual(apiData);
-    });
-
-    it("should remove via realtime", () => {
-      const testEntity: TestEntity = {
-        id: "1",
-        title: "Test Task",
-        completed: false,
-        priority: 1,
-        tags: ["test"],
-        createdAt: new Date("2023-01-01"),
-      };
-
-      store.upsert(testEntity);
-      expect(store.count).toBe(1);
-
-      store.removeViaRealtime("1");
-      expect(store.count).toBe(0);
-    });
-  });
-
   describe("snapshot and rollback", () => {
     const entity1: TestEntity = {
       id: "1",

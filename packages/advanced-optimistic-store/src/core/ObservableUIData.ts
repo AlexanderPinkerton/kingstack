@@ -19,10 +19,10 @@ export class ObservableUIData<T extends Entity> {
    */
   public entities = new Map<string, T>();
   private snapshots: Map<string, T>[] = [];
-  private transformer?: DataTransformer<any, T>;
 
-  constructor(transformer?: DataTransformer<any, T>) {
-    this.transformer = transformer;
+  constructor(_transformer?: DataTransformer<any, T>) {
+    void _transformer;
+
     makeObservable(this, {
       entities: observable,
       list: computed,
@@ -80,23 +80,6 @@ export class ObservableUIData<T extends Entity> {
 
   clear(): void {
     this.entities.clear();
-  }
-
-  // MobX-aware methods for realtime updates (UI-only, server already updated)
-  // These methods handle runInAction internally so the realtime extension doesn't need MobX
-  upsertViaRealtime<TApiData extends Entity>(apiData: TApiData): void {
-    runInAction(() => {
-      const uiData = this.transformer
-        ? this.transformer.toUi(apiData)
-        : (apiData as unknown as T);
-      this.upsert(uiData);
-    });
-  }
-
-  removeViaRealtime(id: string): void {
-    runInAction(() => {
-      this.remove(id);
-    });
   }
 
   // Optimistic update support

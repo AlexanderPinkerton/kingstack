@@ -28,16 +28,16 @@ export class RootStore {
   constructor({ queryClient }: RootStoreOptions) {
     this.browserId = getBrowserId();
 
-    this.userStore = new UserStoreManager({
-      queryClient,
-      browserId: this.browserId,
-    });
-    this.adminStore = new AdminStoreManager(queryClient);
-
     this.realtimeManager = new RealtimeManager({
       browserId: this.browserId,
     });
-    this.userStore.registerRealtime(this.realtimeManager);
+
+    this.userStore = new UserStoreManager({
+      queryClient,
+      browserId: this.browserId,
+      realtimeSource: this.realtimeManager,
+    });
+    this.adminStore = new AdminStoreManager(queryClient);
 
     this.sessionManager = new SessionManager((session) =>
       this.handleSessionChange(session),
@@ -47,6 +47,8 @@ export class RootStore {
       session: observable,
       sessionReady: observable,
       userData: computed,
+      realtimeStatus: computed,
+      realtimeConnected: computed,
     });
   }
 
@@ -94,8 +96,12 @@ export class RootStore {
     this.sessionManager.initialize();
   }
 
-  get socket() {
-    return this.realtimeManager.getSocket();
+  get realtimeStatus() {
+    return this.realtimeManager.status;
+  }
+
+  get realtimeConnected(): boolean {
+    return this.realtimeManager.connected;
   }
 
   async refreshSession(): Promise<void> {
@@ -111,9 +117,9 @@ export class RootStore {
     this.disposalGeneration += 1;
 
     this.sessionManager.dispose();
-    this.realtimeManager.dispose();
     this.userStore.dispose();
     this.adminStore.dispose();
+    this.realtimeManager.dispose();
 
     runInAction(() => {
       this.session = null;

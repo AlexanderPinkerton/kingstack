@@ -25,7 +25,7 @@ updateOptions / enable / disable
   └─ synchronize the subscription with current demand
 
 destroy
-  └─ remove query and realtime subscriptions permanently
+  └─ remove query subscriptions and local bookkeeping permanently
 ```
 
 This distinction allows an application to create cheap domain-store objects
@@ -253,18 +253,34 @@ cache scope where the operation originated.
 The application should avoid starting new mutations while changing identity or
 tenant unless the user experience explicitly supports it.
 
-## Realtime consistency
+## Remote-change consistency
 
-Default realtime events update the MobX projection immediately and synchronize
-the current confirmed query cache when that cache entry already exists.
+`applyRemote()` accepts a normalized server change and sends it through the
+same cache/projection coordination used by queries and mutations.
 
-Realtime operations use arrival order. AOS cannot determine whether a late
-event is older without domain metadata. If the server supplies `revision`,
-`updatedAt`, or another ordering field, enforce it with `shouldProcessEvent` or
-a custom handler.
+For a current-scope upsert while local updates are pending:
 
-Custom handlers replace the default event path. They own both UI and cache
-coordination if that is required. See [Realtime](./realtime.md).
+```text
+incoming remote entity becomes confirmed base
+  + pending local update 1
+  + pending local update 2
+  = visible UI entity
+```
+
+If a local update succeeds, its mutation response becomes the newer confirmed
+base. If it fails, only that optimistic layer is removed, revealing the remote
+base plus any remaining layers. A remote delete hides the entity immediately
+and is not undone merely because an already-pending local update or delete
+fails.
+
+A change targeting another `queryKey` updates only that cache scope. It never
+changes the current UI projection. Unknown collection membership never appends
+a missing entity; AOS invalidates the exact target query so the server can
+resolve membership.
+
+Remote changes use arrival order unless the application supplies
+`remote.shouldApply`. AOS exposes `revision` as metadata but cannot interpret a
+domain revision scheme itself. See [Remote changes](./realtime.md).
 
 ## Imperative query controls
 

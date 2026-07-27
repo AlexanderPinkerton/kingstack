@@ -9,9 +9,6 @@ import {
 } from "@tanstack/query-core";
 import { observable, runInAction } from "mobx";
 import { ObservableUIData } from "./ObservableUIData.js";
-import { createRealtimeExtension } from "../realtime/index.js";
-import type { RealtimeExtension } from "../realtime/RealtimeExtension.js";
-import type { RealtimeSocket } from "../realtime/types.js";
 import { createTransformer } from "../transformer/helpers.js";
 import { getGlobalQueryClient } from "../query/queryClient.js";
 import type {
@@ -19,6 +16,8 @@ import type {
   Entity,
   OptimisticStore,
   OptimisticStoreConfig,
+  RemoteApplyResult,
+  RemoteChange,
 } from "./types.js";
 
 type MutationKind = "create" | "update" | "delete";
@@ -168,9 +167,11 @@ export function createOptimisticStore<
   };
 
   let deferredReconciliation: TApiData[] | undefined;
+  const remoteDeletedEntities = new Set<string>();
 
   const reconcile = (data: TApiData[]): void => {
     if (destroyed) return;
+    remoteDeletedEntities.clear();
     runInAction(() => {
       uiStore.reconcile(data, transformer);
     });
@@ -306,6 +307,11 @@ export function createOptimisticStore<
   const updateStates = new Map<string, UpdateState<TUiData, TUpdateInput>>();
   const committedEntitySequence = new Map<string, number>();
   const activeDeleteSequence = new Map<string, number>();
+  const releaseRemoteTombstoneIfSettled = (id: string): void => {
+    if (!updateStates.has(id) && !activeDeleteSequence.has(id)) {
+      remoteDeletedEntities.delete(id);
+    }
+  };
 
   const applyUpdateLayers = (
     base: TUiData,
@@ -332,6 +338,11 @@ export function createOptimisticStore<
     id: string,
     state: UpdateState<TUiData, TUpdateInput>,
   ): void => {
+    if (remoteDeletedEntities.has(id)) {
+      uiStore.remove(id);
+      return;
+    }
+
     const activeDelete = activeDeleteSequence.get(id);
     const newestLayer =
       state.layers[state.layers.length - 1]?.operationSequence ?? -1;
@@ -343,30 +354,6 @@ export function createOptimisticStore<
 
     uiStore.upsert(applyUpdateLayers(state.base, state.layers));
   };
-
-  let realtimeExtension: RealtimeExtension<TApiData, TUiData> | null = null;
-
-  if (config.realtime) {
-    realtimeExtension = createRealtimeExtension<TApiData, TUiData>(
-      uiStore,
-      config.realtime.eventType,
-      {
-        dataExtractor: config.realtime.dataExtractor,
-        shouldProcessEvent: config.realtime.shouldProcessEvent,
-        browserId: config.realtime.browserId,
-        customHandlers: config.realtime.customHandlers,
-        onError: config.realtime.onError,
-        onApplied: (operation, data, event) => {
-          if (operation === "DELETE") {
-            removeCachedEntity(resolveQueryKey(), data.id);
-          } else {
-            upsertCachedEntity(resolveQueryKey(), data);
-          }
-          config.realtime?.onApplied?.(operation, data, event);
-        },
-      },
-    );
-  }
 
   const createMutationObserver = new MutationObserver<
     TApiData,
@@ -445,6 +432,7 @@ export function createOptimisticStore<
       }
 
       const uiData = toCleanUiData(result);
+      remoteDeletedEntities.delete(result.id);
       runInAction(() => {
         if (context?.applied && context.optimisticItemId) {
           const current = uiStore.get(context.optimisticItemId) as
@@ -564,6 +552,7 @@ export function createOptimisticStore<
 
       if (destroyed || !isCurrentQueryScope(queryKey)) return;
 
+      remoteDeletedEntities.delete(id);
       const serverUiData = toCleanUiData(result);
       const currentState = updateStates.get(id);
       const nextState = currentState
@@ -590,6 +579,7 @@ export function createOptimisticStore<
       runInAction(() => {
         renderUpdateState(id, nextState);
       });
+      releaseRemoteTombstoneIfSettled(id);
     },
     onError: (_error, _variables, context) => {
       if (
@@ -604,10 +594,16 @@ export function createOptimisticStore<
         committedEntitySequence.get(
           entitySequenceKey(context.queryKey, context.id),
         ) ?? -1;
-      if (context.operationSequence <= latestCommitted) return;
+      if (context.operationSequence <= latestCommitted) {
+        releaseRemoteTombstoneIfSettled(context.id);
+        return;
+      }
 
       const currentState = updateStates.get(context.id);
-      if (!currentState) return;
+      if (!currentState) {
+        releaseRemoteTombstoneIfSettled(context.id);
+        return;
+      }
 
       const nextState = {
         base: currentState.base,
@@ -628,6 +624,7 @@ export function createOptimisticStore<
       runInAction(() => {
         renderUpdateState(context.id, nextState);
       });
+      releaseRemoteTombstoneIfSettled(context.id);
     },
   });
 
@@ -673,7 +670,13 @@ export function createOptimisticStore<
       const sequenceKey = entitySequenceKey(queryKey, id);
       const latestCommitted = committedEntitySequence.get(sequenceKey) ?? -1;
 
-      if (currentOperation <= latestCommitted) return;
+      if (currentOperation <= latestCommitted) {
+        if (activeDeleteSequence.get(id) === currentOperation) {
+          activeDeleteSequence.delete(id);
+        }
+        releaseRemoteTombstoneIfSettled(id);
+        return;
+      }
 
       committedEntitySequence.set(sequenceKey, currentOperation);
       removeCachedEntity(queryKey, id);
@@ -698,6 +701,7 @@ export function createOptimisticStore<
       if (activeDeleteSequence.get(id) === currentOperation) {
         activeDeleteSequence.delete(id);
       }
+      releaseRemoteTombstoneIfSettled(id);
 
       runInAction(() => {
         uiStore.remove(id);
@@ -721,10 +725,16 @@ export function createOptimisticStore<
         (committedEntitySequence.get(entitySequenceKey(context.queryKey, id)) ??
           -1)
       ) {
+        releaseRemoteTombstoneIfSettled(id);
         return;
       }
 
       runInAction(() => {
+        if (remoteDeletedEntities.has(id)) {
+          uiStore.remove(id);
+          return;
+        }
+
         const currentState = updateStates.get(id);
         if (currentState) {
           renderUpdateState(id, currentState);
@@ -735,8 +745,140 @@ export function createOptimisticStore<
           uiStore.upsert(context.previousItem);
         }
       });
+      releaseRemoteTombstoneIfSettled(id);
     },
   });
+
+  const applyRemote = (change: RemoteChange<TApiData>): RemoteApplyResult => {
+    const targetQueryKey = change.queryKey ?? resolveQueryKey();
+
+    if (destroyed) {
+      return {
+        applied: false,
+        reason: "destroyed",
+        queryKey: targetQueryKey,
+      };
+    }
+
+    const localOriginId =
+      typeof config.remote?.localOriginId === "function"
+        ? config.remote.localOriginId()
+        : config.remote?.localOriginId;
+
+    if (
+      localOriginId !== undefined &&
+      change.originId !== undefined &&
+      change.originId === localOriginId
+    ) {
+      return {
+        applied: false,
+        reason: "self-origin",
+        queryKey: targetQueryKey,
+      };
+    }
+
+    const id = change.operation === "delete" ? change.id : change.entity.id;
+    const currentQueryKey = resolveQueryKey();
+    const isCurrentScope = hashKey(targetQueryKey) === hashKey(currentQueryKey);
+    const cached = qc.getQueryData<TApiData[]>(targetQueryKey);
+    const cachedEntity = cached?.find((entity) => entity.id === id);
+    const visibleEntity = isCurrentScope ? uiStore.get(id) : undefined;
+
+    if (
+      config.remote?.shouldApply &&
+      !config.remote.shouldApply(change, {
+        currentQueryKey,
+        targetQueryKey,
+        cachedEntity,
+        visibleEntity,
+      })
+    ) {
+      return {
+        applied: false,
+        reason: "rejected",
+        queryKey: targetQueryKey,
+      };
+    }
+
+    const wasLocallyKnown =
+      cachedEntity !== undefined ||
+      visibleEntity !== undefined ||
+      updateStates.has(id) ||
+      activeDeleteSequence.has(id);
+
+    if (change.operation === "delete") {
+      removeCachedEntity(targetQueryKey, id);
+    } else {
+      const membership = change.membership ?? "unknown";
+      if (membership === "include") {
+        upsertCachedEntity(targetQueryKey, change.entity);
+      } else if (membership === "exclude") {
+        removeCachedEntity(targetQueryKey, id);
+      } else {
+        if (cachedEntity) {
+          upsertCachedEntity(targetQueryKey, change.entity);
+        }
+        void qc.invalidateQueries({ queryKey: targetQueryKey, exact: true });
+      }
+    }
+
+    if (!isCurrentScope) {
+      return {
+        applied: true,
+        scope: "background",
+        queryKey: targetQueryKey,
+      };
+    }
+
+    if (change.operation === "delete" || change.membership === "exclude") {
+      if (updateStates.has(id) || activeDeleteSequence.has(id)) {
+        remoteDeletedEntities.add(id);
+      } else {
+        remoteDeletedEntities.delete(id);
+      }
+
+      runInAction(() => {
+        uiStore.remove(id);
+      });
+    } else if (
+      (change.membership ?? "unknown") === "include" ||
+      wasLocallyKnown
+    ) {
+      remoteDeletedEntities.delete(id);
+      const remoteUiData = toCleanUiData(change.entity);
+      const currentState = updateStates.get(id);
+
+      if (currentState) {
+        const nextState = {
+          base: remoteUiData,
+          layers: currentState.layers,
+        };
+        updateStates.set(id, nextState);
+        runInAction(() => {
+          renderUpdateState(id, nextState);
+        });
+      } else if (activeDeleteSequence.has(id)) {
+        const nextState = {
+          base: remoteUiData,
+          layers: [],
+        };
+        updateStates.set(id, nextState);
+        runInAction(() => {
+          renderUpdateState(id, nextState);
+        });
+      } else {
+        runInAction(() => {
+          uiStore.upsert(remoteUiData);
+        });
+      }
+    }
+
+    return {
+      applied: true,
+      scope: "current",
+      queryKey: targetQueryKey,
+    };
+  };
 
   const syncProjectionScope = (): void => {
     const nextQueryKey = resolveQueryKey();
@@ -748,6 +890,7 @@ export function createOptimisticStore<
     optimisticCreateOperations.clear();
     updateStates.clear();
     activeDeleteSequence.clear();
+    remoteDeletedEntities.clear();
     runInAction(() => {
       uiStore.clear();
     });
@@ -803,6 +946,7 @@ export function createOptimisticStore<
       queryObserver.setOptions(queryOptions());
       syncQuerySubscription();
     },
+    applyRemote,
     destroy: () => {
       if (destroyed) return;
       destroyed = true;
@@ -812,7 +956,6 @@ export function createOptimisticStore<
         triggerTimeout = null;
       }
 
-      realtimeExtension?.disconnect();
       unsubscribeQuery?.();
       unsubscribeQuery = null;
       createMutationObserver.reset();
@@ -823,20 +966,8 @@ export function createOptimisticStore<
       updateStates.clear();
       committedEntitySequence.clear();
       activeDeleteSequence.clear();
+      remoteDeletedEntities.clear();
     },
-    ...(realtimeExtension && {
-      realtime: {
-        get isConnected() {
-          return realtimeExtension.connected;
-        },
-        connect: (socket: RealtimeSocket) => {
-          realtimeExtension.connect(socket);
-        },
-        disconnect: () => {
-          realtimeExtension.disconnect();
-        },
-      },
-    }),
   };
 
   return optimisticStore;

@@ -2,11 +2,75 @@
 
 import type { QueryKey, QueryObserverResult } from "@tanstack/query-core";
 import type { ObservableUIData } from "./ObservableUIData.js";
-import type { RealtimeConfig, RealtimeSocket } from "../realtime/types.js";
 
 export interface Entity {
   id: string;
 }
+
+export type RemoteOperation = "insert" | "update" | "delete";
+
+/**
+ * Whether an upsert belongs in the collection represented by its query key.
+ *
+ * `unknown` is the safe default for filtered collections: existing entities
+ * are updated, missing entities are not appended, and the query is invalidated.
+ */
+export type RemoteMembership = "include" | "exclude" | "unknown";
+
+interface RemoteChangeMetadata {
+  /** Cache scope affected by the change. Defaults to the current query key. */
+  queryKey?: QueryKey;
+  /** Optional source identifier for application-defined echo filtering. */
+  originId?: string;
+  /** Optional application revision metadata. */
+  revision?: string | number;
+}
+
+export type RemoteChange<TApiData extends Entity> =
+  | (RemoteChangeMetadata & {
+      operation: "insert" | "update";
+      entity: TApiData;
+      membership?: RemoteMembership;
+    })
+  | (RemoteChangeMetadata & {
+      operation: "delete";
+      id: string;
+    });
+
+export interface RemoteChangeContext<
+  TApiData extends Entity,
+  TUiData extends Entity,
+> {
+  currentQueryKey: QueryKey;
+  targetQueryKey: QueryKey;
+  cachedEntity?: TApiData;
+  visibleEntity?: TUiData;
+}
+
+export interface RemoteConfig<TApiData extends Entity, TUiData extends Entity> {
+  /** Optional local origin ID. Matching remote changes are ignored. */
+  localOriginId?: string | (() => string | undefined);
+  /**
+   * Optional domain conflict policy. Return false to ignore the entire change.
+   * Revision comparison and other domain ordering rules belong here.
+   */
+  shouldApply?: (
+    change: RemoteChange<TApiData>,
+    context: RemoteChangeContext<TApiData, TUiData>,
+  ) => boolean;
+}
+
+export type RemoteApplyResult =
+  | {
+      applied: true;
+      scope: "current" | "background";
+      queryKey: QueryKey;
+    }
+  | {
+      applied: false;
+      reason: "destroyed" | "self-origin" | "rejected";
+      queryKey: QueryKey;
+    };
 
 // Optimistic state configuration
 export interface OptimisticDefaults<
@@ -80,8 +144,8 @@ export interface OptimisticStoreConfig<
   staleTime?: number;
   /** Optional: Function to determine if query should be enabled (default: () => true) */
   enabled?: () => boolean;
-  /** Optional: Realtime configuration - enables realtime updates when provided */
-  realtime?: RealtimeConfig<TApiData, TUiData>;
+  /** Optional policy for normalized remote changes applied through applyRemote(). */
+  remote?: RemoteConfig<TApiData, TUiData>;
 }
 
 export interface OptimisticStore<
@@ -125,11 +189,5 @@ export interface OptimisticStore<
   enable: () => void;
   disable: () => void;
   destroy: () => void;
-
-  // Realtime status (only available when realtime config is provided)
-  realtime?: {
-    isConnected: boolean;
-    connect: (socket: RealtimeSocket) => void;
-    disconnect: () => void;
-  };
+  applyRemote: (change: RemoteChange<TApiData>) => RemoteApplyResult;
 }

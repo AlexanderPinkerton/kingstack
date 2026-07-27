@@ -243,16 +243,12 @@ describe("Core Module Integration", () => {
       expect(store.ui.count).toBe(initialCount);
     });
 
-    it("should handle realtime updates", async () => {
+    it("should handle normalized remote updates", async () => {
       const config: OptimisticStoreConfig<TodoApiData, TodoUiData> = {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
         transformer: todoTransformer,
-        realtime: {
-          eventType: "todo_update",
-          browserId: "test-browser",
-        },
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -263,24 +259,26 @@ describe("Core Module Integration", () => {
 
       expect(store.ui.count).toBe(2);
 
-      // Simulate realtime update
-      const realtimeData: TodoApiData = {
+      const remoteData: TodoApiData = {
         id: "3",
-        title: "Realtime Task",
+        title: "Remote Task",
         completed: "false",
         priority: "3",
         created_at: "2023-01-03T00:00:00.000Z",
         user_id: "user-123",
       };
 
-      // Manually trigger realtime update (simulating WebSocket event)
-      store.ui.upsertViaRealtime(realtimeData);
+      store.applyRemote({
+        operation: "insert",
+        entity: remoteData,
+        membership: "include",
+      });
 
       expect(store.ui.count).toBe(3);
-      const realtimeTask = store.ui.get("3");
-      expect(realtimeTask?.title).toBe("Realtime Task");
-      expect(realtimeTask?.completed).toBe(false);
-      expect(realtimeTask?.priority).toBe(3);
+      const remoteTask = store.ui.get("3");
+      expect(remoteTask?.title).toBe("Remote Task");
+      expect(remoteTask?.completed).toBe(false);
+      expect(remoteTask?.priority).toBe(3);
     });
 
     it("should handle server reconciliation", async () => {

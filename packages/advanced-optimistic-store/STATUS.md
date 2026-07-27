@@ -4,8 +4,7 @@
 
 The package is an internal, private ESM workspace package used by the Next
 application. Its public API is `createOptimisticStore`, `ObservableUIData`,
-explicit data transformers, query-client access, and the optional realtime
-extension.
+explicit data transformers, query-client access, and normalized remote changes.
 
 ## Implemented
 
@@ -20,8 +19,10 @@ extension.
 - Query-scope isolation for mutations that settle after an identity change
 - Pending-operation counters
 - Explicit API-to-UI transformers
-- Optional event-emitter-compatible realtime integration
-- Stable realtime listener cleanup and self-echo filtering
+- Transport-independent `applyRemote()` reconciliation
+- Query-scope and collection-membership handling for remote changes
+- Local optimistic layers preserved over incoming confirmed remote bases
+- Optional self-origin and application conflict filtering
 - Native Node ESM output and TypeScript declarations
 
 ## Verification
@@ -35,8 +36,8 @@ yarn workspace @kingstack/advanced-optimistic-store build
 
 The regression suite includes overlapping creates, out-of-order updates,
 rollback after a newer failure, query-cache synchronization, and direct
-realtime lifecycle tests. It also verifies inactive observer counts, fresh-cache
-activation, and mutation completion across query-scope changes.
+remote/local conflict cases. It also verifies inactive observer counts,
+fresh-cache activation, and mutation completion across query-scope changes.
 
 The package README is the canonical entry point. Focused references live in
 `docs/`; superseded marketing and example documents have been removed rather
@@ -45,9 +46,11 @@ than retained as competing documentation.
 ## Deliberate boundaries
 
 - Mutation endpoints must return the complete authoritative entity.
-- Realtime events use arrival order. Applications that need version-vector,
-  revision-number, or CRDT conflict handling should implement it through
-  `shouldProcessEvent` or `customHandlers`.
+- AOS does not own transports or decode wire events. Domain stores normalize
+  them into `RemoteChange` values.
+- Remote changes use arrival order by default. Applications that need revision,
+  vector-clock, or CRDT conflict handling should implement it with
+  `remote.shouldApply`.
 - `createDefaultTransformer` remains available as an explicit legacy heuristic.
   Omitting `transformer` now means API and UI data have the same runtime shape.
 

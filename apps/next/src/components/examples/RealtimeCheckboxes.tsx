@@ -255,14 +255,16 @@ export const RealtimeCheckboxes = observer(() => {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
             <div className="flex items-center space-x-2 text-sm text-slate-400">
-              {rootStore.socket?.connected ? (
+              {rootStore.realtimeConnected ? (
                 <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
               ) : (
                 <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
               )}
               <span>
                 Socket:{" "}
-                {rootStore.socket?.connected ? "Connected" : "Disconnected"}
+                {rootStore.realtimeConnected
+                  ? "Connected"
+                  : rootStore.realtimeStatus}
               </span>
             </div>
             <div className="text-sm text-slate-500">

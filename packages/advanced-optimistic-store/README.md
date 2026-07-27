@@ -5,7 +5,7 @@ Advanced Optimistic Store (AOS) combines three focused pieces:
 - TanStack Query Core owns remote data, freshness, and the authoritative cache.
 - MobX owns the observable UI projection.
 - AOS coordinates queries, transformations, optimistic CRUD, reconciliation,
-  and optional realtime events.
+  and normalized remote changes.
 
 The package is framework-agnostic. It does not depend on React, create a
 provider, manage authentication, or choose when a feature should be active.
@@ -318,37 +318,56 @@ store.enable(); // Open the manual gate; enabled() must also pass
 Use `updateOptions()` for ordinary lifecycle changes. Reserve `refetch()` and
 `triggerQuery()` for explicit user or recovery actions.
 
-## Realtime
+## Remote and realtime changes
 
-Realtime support is transport-agnostic. A compatible socket only needs stable
-`on(event, listener)` and `off(event, listener)` methods:
+AOS does not own a WebSocket, event source, authentication handshake, or
+reconnection policy. The application owns its transport, decodes each raw event
+in the relevant domain store, then submits a normalized change:
 
 ```ts
-const store = createOptimisticStore({
-  name: "todos",
-  queryFn: fetchTodos,
-  mutations: todoMutations,
-  realtime: {
-    eventType: "todo_changed",
-    browserId,
-    dataExtractor: (event) => event.todo,
+const store = createOptimisticStore(
+  {
+    name: "todos",
+    queryFn: fetchTodos,
+    mutations: todoMutations,
+    transformer,
+    remote: {
+      localOriginId: browserId,
+      shouldApply: (change, context) => {
+        // Optional application ordering or authorization policy.
+        return isNewerRevision(change, context.cachedEntity);
+      },
+    },
   },
+  queryClient,
+);
+
+const unsubscribe = realtime.subscribe("todo_changed", (event) => {
+  const change = decodeTodoChange(event);
+  if (change) store.applyRemote(change);
 });
 
-store.realtime?.connect(socket);
-store.realtime?.disconnect();
+unsubscribe();
 ```
 
-Default `INSERT`, `UPDATE`, and `DELETE` events update the MobX projection and
-the current query cache. Self-originated events can be ignored with
-`browserId`.
+`applyRemote()` updates the scoped TanStack cache and current MobX projection
+through AOS's normal consistency machinery. A remote upsert becomes the latest
+confirmed base beneath pending local optimistic layers; it does not overwrite
+the user's in-flight intent. A remote delete remains deleted if a pending local
+operation later fails.
 
-Realtime uses arrival order; it does not implement revision comparison, vector
-clocks, or CRDT conflict resolution. Applications needing those rules should
-use `shouldProcessEvent` or `customHandlers`.
+Collection membership is explicit:
 
-See [Realtime](./docs/realtime.md) for event shapes and custom-handler
-semantics.
+- `"include"` may insert the entity into the target collection;
+- `"exclude"` removes it from that collection;
+- `"unknown"` updates an existing member, does not append a missing member,
+  and invalidates the exact query.
+
+Use `queryKey` on a change to target a background scope. That cache can be
+updated without changing the currently visible projection.
+
+See [Remote changes](./docs/realtime.md) for the complete contract and transport
+ownership example.
 
 ## Cleanup
 
@@ -359,10 +378,11 @@ store.destroy();
 ```
 
 `destroy()` is idempotent. It clears timers, removes the query subscription,
-disconnects realtime, resets mutation observers, and releases internal
-optimistic bookkeeping. It does not abort promises returned by application
-query or mutation functions; use application-level cancellation when required.
-Do not use a store after destroying it.
+resets mutation observers, and releases internal optimistic bookkeeping. The
+application remains responsible for releasing any transport subscription that
+feeds `applyRemote()`. Destruction does not abort promises returned by
+application query or mutation functions; use application-level cancellation
+when required. Do not use a store after destroying it.
 
 For React, create stores outside render or in a stable provider, activate them
 at feature boundaries, and destroy them when their owner unmounts. A complete
@@ -372,7 +392,7 @@ pattern is in [Integration recipes](./docs/integration-recipes.md).
 
 - [API reference](./docs/api-reference.md)
 - [Lifecycle and consistency](./docs/lifecycle-and-consistency.md)
-- [Realtime](./docs/realtime.md)
+- [Remote changes](./docs/realtime.md)
 - [Integration recipes](./docs/integration-recipes.md)
 - [Package status](./STATUS.md)
 
