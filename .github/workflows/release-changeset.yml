@@ -21,13 +21,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
       
-      - name: Update npm # Ensure npm 11.5.1 or later is installed to support OIDC authentication
-        run: npm install -g npm@latest
+      # Changesets 2.x expects `npm info --json` to return an object. npm 12
+      # returns a one-element array and makes every existing version appear
+      # unpublished.
+      - name: Install OIDC-compatible npm
+        run: npm install -g npm@11.18.0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
