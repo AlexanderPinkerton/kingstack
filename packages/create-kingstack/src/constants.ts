@@ -31,12 +31,14 @@ export const SKIP_PATTERNS = [
 // These will use their npm versions instead of workspace:*
 export const PUBLISHED_PACKAGES: Record<string, string> = {
     "@kingstack/config": "^0.1.4",
+    "@kingstack/advanced-optimistic-store": "^0.1.0",
 };
 
 // Packages/folders to completely remove from the template
 export const PACKAGES_TO_REMOVE = [
-    "packages/config",           // Published to npm
-    "packages/create-kingstack", // This CLI itself
+    "packages/config",                     // Published to npm
+    "packages/advanced-optimistic-store",  // Published to npm
+    "packages/create-kingstack",           // This CLI itself
 ];
 
 // File extensions to process for namespace replacement

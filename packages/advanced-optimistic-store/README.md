@@ -11,8 +11,14 @@ The package is framework-agnostic. It does not depend on React, create a
 provider, manage authentication, or choose when a feature should be active.
 Those decisions remain with the application.
 
-This is currently a private KingStack workspace package and is not published to
-the npm registry.
+## Installation
+
+```bash
+npm install @kingstack/advanced-optimistic-store @tanstack/query-core mobx
+```
+
+KingStack itself uses the workspace source during development. Projects created
+with `create-kingstack` install the released npm package.
 
 ## Mental model
 
@@ -40,7 +46,7 @@ The consuming workspace must provide compatible peer dependencies:
 ```json
 {
   "dependencies": {
-    "@kingstack/advanced-optimistic-store": "workspace:*",
+    "@kingstack/advanced-optimistic-store": "^0.1.0",
     "@tanstack/query-core": "^5.0.0",
     "mobx": "^6.0.0"
   }

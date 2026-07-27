@@ -191,5 +191,29 @@ export function removePublishedPackages(targetDir: string): number {
         }
     }
 
+    // Dockerfiles commonly copy workspace manifests before dependency
+    // installation. Remove COPY lines for packages that no longer exist in the
+    // generated project.
+    const dockerfiles = getAllFiles(targetDir).filter((filePath) =>
+        filePath.endsWith("Dockerfile")
+    );
+
+    for (const dockerfile of dockerfiles) {
+        const content = readFileSync(dockerfile, "utf-8");
+        const nextContent = content
+            .split("\n")
+            .filter(
+                (line) =>
+                    !PACKAGES_TO_REMOVE.some((packagePath) =>
+                        line.includes(`${packagePath}/`)
+                    )
+            )
+            .join("\n");
+
+        if (nextContent !== content) {
+            writeFileSync(dockerfile, nextContent, "utf-8");
+        }
+    }
+
     return removedCount;
 }

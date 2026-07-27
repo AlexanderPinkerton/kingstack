@@ -103,12 +103,14 @@ and move to the new scoped query key.
 
 ## Realtime
 
-RootStore owns one RealtimeManager and one socket. Store registration is
-deduplicated, and a store registered after the socket connects is connected
-immediately.
+RootStore owns one RealtimeManager and one socket. Domain stores subscribe by
+channel, validate their raw transport events, and pass normalized
+`RemoteChange` values to AOS. The manager knows nothing about domain stores or
+query caches.
 
-Realtime-capable feature stores may additionally gate their event listeners on
-feature demand. The checkbox store listens only while its feature is active.
+Channel subscriptions survive socket recreation and are released by their
+domain owners. Realtime-capable feature stores gate those subscriptions on
+feature demand; the checkbox store listens only while its feature is active.
 
 ## Disposal
 
@@ -118,9 +120,9 @@ Ownership is symmetrical:
 AppProviders unmounts
 → RootStore.dispose()
 → session listener unsubscribes
-→ realtime disconnects
 → child stores dispose
-→ AOS query observers and realtime listeners are destroyed
+→ feature realtime subscriptions and AOS query observers are destroyed
+→ realtime disconnects
 ```
 
 Every new child store must implement `dispose()` and call

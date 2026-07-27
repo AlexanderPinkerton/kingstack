@@ -4,9 +4,8 @@
     "dev": {
       "cache": false,
       "dependsOn": [
-        "@kingstack/shared#build",
-        "@kingstack/prisma#generate",
-        "@kingstack/advanced-optimistic-store#build"
+        "^build",
+        "@kingstack/prisma#generate"
       ],
       "outputs": []
     },

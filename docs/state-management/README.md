@@ -3,9 +3,9 @@
 KingStack separates package-level server-state behavior from
 application-level ownership:
 
-- [Advanced Optimistic Store](../../packages/advanced-optimistic-store/README.md)
+- [Advanced Optimistic Store](https://github.com/AlexanderPinkerton/kingstack/tree/main/packages/advanced-optimistic-store)
   documents queries, caching, transformations, optimistic concurrency, and
-  realtime event handling.
+  normalized remote changes.
 - [Next store architecture](../../apps/next/src/stores/README.md) documents the
   application's RootStore, session propagation, feature activation, and
   disposal conventions.
@@ -64,9 +64,9 @@ provider-owned instance and fails clearly when called outside the provider.
 ### RealtimeManager
 
 - owns one authenticated socket;
-- deduplicates store registration;
-- connects stores registered after the socket is already live;
-- disconnects listeners and the socket during teardown.
+- exposes observable connection status without exposing the raw socket;
+- retains channel subscriptions across socket recreation;
+- releases listeners and the socket during teardown.
 
 ### Store managers
 
@@ -187,14 +187,17 @@ Session with token
 RealtimeManager socket
     │
     ▼
-Registered feature store with active demand
+Domain-store subscription with active demand
     │
     ▼
-AOS realtime extension
-├── filter self-originated event
-├── transform API entity
-├── update MobX projection
-└── update existing scoped TanStack cache
+Validate and decode raw domain event
+    │
+    ▼
+AOS applyRemote()
+├── apply origin and domain policy
+├── update the scoped TanStack cache
+├── preserve pending optimistic layers
+└── reconcile the current MobX projection
 ```
 
 Socket ownership and feature-listener ownership are separate. The application
@@ -209,10 +212,10 @@ Ownership is symmetrical:
 AppProviders unmounts
 → RootStore disposes
 → SessionManager unsubscribes
-→ RealtimeManager disconnects
 → store managers dispose
 → domain stores destroy AOS instances
-→ query observers and realtime listeners are released
+→ feature realtime subscriptions are released
+→ RealtimeManager disconnects
 ```
 
 React Strict Mode's development setup/cleanup/setup probe is handled at the
@@ -230,9 +233,10 @@ probe effects.
 7. Implement idempotent `dispose()` and call `destroy()`.
 8. Add the store as a typed manager property.
 9. Forward sessions only when the domain needs authentication.
-10. Register realtime support only when the domain needs it.
+10. Subscribe to raw realtime events and decode them into `RemoteChange` values
+    only when the domain needs it.
 11. Activate the store at its feature boundary.
 12. Add tests for inactive behavior, scope changes, rollback, and cleanup.
 
 For AOS configuration and mutation contracts, use the
-[package API reference](../../packages/advanced-optimistic-store/docs/api-reference.md).
+[package API reference](https://github.com/AlexanderPinkerton/kingstack/blob/main/packages/advanced-optimistic-store/docs/api-reference.md).

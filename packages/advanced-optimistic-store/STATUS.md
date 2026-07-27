@@ -2,9 +2,10 @@
 
 ## Current state
 
-The package is an internal, private ESM workspace package used by the Next
-application. Its public API is `createOptimisticStore`, `ObservableUIData`,
-explicit data transformers, query-client access, and normalized remote changes.
+The package is a public, MIT-licensed ESM library developed in the KingStack
+workspace and consumed by the Next application. Its public API is
+`createOptimisticStore`, `ObservableUIData`, explicit data transformers,
+query-client access, and normalized remote changes.
 
 ## Implemented
 
@@ -54,9 +55,9 @@ than retained as competing documentation.
 - `createDefaultTransformer` remains available as an explicit legacy heuristic.
   Omitting `transformer` now means API and UI data have the same runtime shape.
 
-## Before external publication
+## Compatibility roadmap
 
-- Replace compatibility `any` defaults with a versioned strict-input API.
-- Add a changelog and release automation.
-- Decide whether to publish a separate CommonJS build; the current package is
-  intentionally ESM-only.
+- The `0.x` line may replace compatibility `any` defaults with a stricter input
+  API before `1.0`.
+- Releases use the repository's Changesets workflow.
+- The package is intentionally ESM-only. CommonJS is not currently planned.
