@@ -1,5 +1,12 @@
 # @kingstack/create-kingstack
 
+## 0.2.3
+
+### Patch Changes
+
+- 988cf0b: Install `@kingstack/advanced-optimistic-store` from npm in generated projects
+  instead of copying its workspace source.
+
 ## 0.2.2
 
 ### Patch Changes
