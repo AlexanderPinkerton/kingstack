@@ -1,10 +1,13 @@
 import {
   createOptimisticStore,
-  OptimisticStore,
-  DataTransformer,
-  OptimisticDefaults,
+  type OptimisticStore,
+  type DataTransformer,
+  type OptimisticDefaults,
 } from "@kingstack/advanced-optimistic-store";
+import type { QueryClient } from "@tanstack/react-query";
 import { fetchWithAuth } from "@/lib/utils";
+import type { SupabaseSession } from "@/lib/session-manager";
+import { StoreDemand } from "@/lib/store-lifecycle";
 import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 
 // API data structure (what comes from the server)
@@ -238,83 +241,71 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
 }
 
 export class AdvancedPostStore {
-  private optimisticStore: OptimisticStore<PostApiData, PostUiData> | null =
-    null;
-  private authToken: string | null = null;
-  private isEnabled: boolean = false;
-  private cacheScope = 0;
+  private readonly optimisticStore: OptimisticStore<PostApiData, PostUiData>;
+  private readonly transformer = new PostTransformer();
+  private readonly demand: StoreDemand;
+  private session: SupabaseSession = null;
 
-  constructor() {
-    // Store is created but not enabled until auth is available
-    this.initialize();
-  }
+  constructor(queryClient: QueryClient) {
+    this.demand = new StoreDemand(() => this.optimisticStore.updateOptions());
 
-  private initialize() {
-    const transformer = new PostTransformer();
-
-    this.optimisticStore = createOptimisticStore<PostApiData, PostUiData>({
-      name: "advanced-posts",
-      queryKey: () => ["advanced-posts", this.cacheScope],
-      queryFn: this.getQueryFn(),
-      mutations: {
-        create: this.getCreateMutation(),
-        update: this.getUpdateMutation(),
-        remove: this.getDeleteMutation(),
+    this.optimisticStore = createOptimisticStore<PostApiData, PostUiData>(
+      {
+        name: "advanced-posts",
+        queryKey: () => ["advanced-posts", this.sessionIdentity],
+        queryFn: this.getQueryFn(),
+        mutations: {
+          create: this.getCreateMutation(),
+          update: this.getUpdateMutation(),
+          remove: this.getDeleteMutation(),
+        },
+        transformer: this.transformer,
+        optimisticContext: () => ({
+          currentUser: this.session?.user ?? null,
+        }),
+        staleTime: 5 * 60 * 1000,
+        enabled: () =>
+          this.demand.isActive &&
+          (!!this.session?.access_token || isPlaygroundMode()),
       },
-      transformer: transformer,
-      optimisticContext: () => ({ currentUser: null }), // Will be set by the component
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      enabled: () => this.isEnabled && !!this.authToken, // Only run when enabled and we have a token
-    });
+      queryClient,
+    );
   }
 
-  // Enable the store with auth token
-  enable(authToken: string) {
-    if (this.authToken !== authToken) {
-      this.cacheScope += 1;
+  activate(): () => void {
+    return this.demand.activate();
+  }
+
+  setSession(session: SupabaseSession): void {
+    const previousIdentity = this.sessionIdentity;
+    this.session = session;
+
+    if (previousIdentity !== this.sessionIdentity) {
+      this.optimisticStore.ui.clear();
     }
-    this.authToken = authToken;
-    this.isEnabled = true;
-    // Update the store manager options to enable the query
-    this.optimisticStore?.updateOptions();
+
+    this.optimisticStore.updateOptions();
   }
 
-  // Disable the store
-  disable() {
-    this.isEnabled = false;
-    this.authToken = null;
-    this.cacheScope += 1;
-    this.optimisticStore?.ui.clear();
-    // Update the store manager options to disable the query
-    this.optimisticStore?.updateOptions();
+  dispose(): void {
+    this.demand.dispose();
+    this.transformer.clearCache();
+    this.optimisticStore.destroy();
   }
 
   // Expose UI data (observable MobX state)
   get ui() {
-    return this.optimisticStore?.ui || null;
+    return this.optimisticStore.ui;
   }
 
   // Expose API methods (mutations + query control)
   get api() {
-    return this.optimisticStore?.api || null;
-  }
-
-  // Legacy getters for backward compatibility (deprecated)
-  get store() {
-    return this.ui;
-  }
-
-  get actions() {
-    return this.api;
-  }
-
-  get status() {
-    return this.api?.status || null;
+    return this.optimisticStore.api;
   }
 
   // Check if store is ready and enabled
   get isReady() {
-    return this.optimisticStore !== null && this.isEnabled;
+    return !!this.session?.access_token || isPlaygroundMode();
   }
 
   // ============================================================================
@@ -346,14 +337,14 @@ export class AdvancedPostStore {
 
   // API Implementations
   private apiQueryFn = async (): Promise<PostApiData[]> => {
-    const token = this.authToken || "";
+    const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts`).then((res) => res.json());
   };
 
   private apiCreateMutation = async (data: any): Promise<PostApiData> => {
-    const token = this.authToken || "";
+    const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts`, {
@@ -369,7 +360,7 @@ export class AdvancedPostStore {
     id: string;
     data: any;
   }): Promise<PostApiData> => {
-    const token = this.authToken || "";
+    const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
@@ -379,7 +370,7 @@ export class AdvancedPostStore {
   };
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
-    const token = this.authToken || "";
+    const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
@@ -457,4 +448,9 @@ export class AdvancedPostStore {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return { id };
   };
+
+  private get sessionIdentity(): string {
+    if (isPlaygroundMode()) return "playground";
+    return this.session?.user.id ?? "anonymous";
+  }
 }

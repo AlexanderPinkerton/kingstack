@@ -1,6 +1,7 @@
 // Factory for a MobX UI projection backed by TanStack Query.
 
 import {
+  hashKey,
   MutationObserver,
   QueryClient,
   QueryObserver,
@@ -94,6 +95,10 @@ export function createOptimisticStore<
     }
     return config.queryKey ?? [config.name];
   };
+  const isCurrentQueryScope = (queryKey: QueryKey): boolean =>
+    hashKey(queryKey) === hashKey(resolveQueryKey());
+  const entitySequenceKey = (queryKey: QueryKey, id: string): string =>
+    `${hashKey(queryKey)}:${id}`;
 
   let manuallyEnabled = true;
   let destroyed = false;
@@ -233,7 +238,9 @@ export function createOptimisticStore<
     enabled: isEnabled(),
   });
 
-  const unsubscribeQuery = queryObserver.subscribe((result) => {
+  const handleQueryResult = (
+    result: ReturnType<typeof queryObserver.getCurrentResult>,
+  ): void => {
     runInAction(() => {
       status.isLoading = result.isLoading;
       status.isError = result.isError;
@@ -248,12 +255,33 @@ export function createOptimisticStore<
         reconcile(result.data);
       }
     }
-  });
+  };
+
+  let unsubscribeQuery: (() => void) | null = null;
+
+  const ensureQuerySubscription = (): void => {
+    if (!unsubscribeQuery && !destroyed) {
+      unsubscribeQuery = queryObserver.subscribe(handleQueryResult);
+      handleQueryResult(queryObserver.getCurrentResult());
+    }
+  };
+
+  const syncQuerySubscription = (): void => {
+    if (isEnabled()) {
+      ensureQuerySubscription();
+    } else if (unsubscribeQuery) {
+      unsubscribeQuery();
+      unsubscribeQuery = null;
+    }
+  };
+
+  syncQuerySubscription();
 
   let triggerTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const triggerQuery = (): void => {
     if (!isEnabled() || destroyed) return;
+    ensureQuerySubscription();
 
     if (triggerTimeout) {
       clearTimeout(triggerTimeout);
@@ -352,7 +380,7 @@ export function createOptimisticStore<
       const queryKey = resolveQueryKey();
       await qc.cancelQueries({ queryKey });
 
-      if (destroyed) {
+      if (destroyed || !isCurrentQueryScope(queryKey)) {
         return {
           operationSequence: currentOperation,
           queryKey,
@@ -409,6 +437,13 @@ export function createOptimisticStore<
 
       if (destroyed) return;
 
+      if (!isCurrentQueryScope(queryKey)) {
+        if (context?.applied && context.optimisticItemId) {
+          optimisticCreateOperations.delete(context.optimisticItemId);
+        }
+        return;
+      }
+
       const uiData = toCleanUiData(result);
       runInAction(() => {
         if (context?.applied && context.optimisticItemId) {
@@ -432,7 +467,12 @@ export function createOptimisticStore<
       });
     },
     onError: (_error, _variables, context) => {
-      if (destroyed || !context?.applied || !context.optimisticItemId) {
+      if (
+        destroyed ||
+        !context?.applied ||
+        !context.optimisticItemId ||
+        !isCurrentQueryScope(context.queryKey)
+      ) {
         return;
       }
 
@@ -473,7 +513,7 @@ export function createOptimisticStore<
       await qc.cancelQueries({ queryKey });
 
       const existing = uiStore.get(id);
-      if (destroyed || !existing) {
+      if (destroyed || !existing || !isCurrentQueryScope(queryKey)) {
         return {
           operationSequence: currentOperation,
           id,
@@ -511,16 +551,18 @@ export function createOptimisticStore<
       const id = context?.id ?? result.id;
       const currentOperation =
         context?.operationSequence ?? ++operationSequence;
-      const latestCommitted = committedEntitySequence.get(id) ?? -1;
+      const queryKey = context?.queryKey ?? resolveQueryKey();
+      const sequenceKey = entitySequenceKey(queryKey, id);
+      const latestCommitted = committedEntitySequence.get(sequenceKey) ?? -1;
 
       if (currentOperation <= latestCommitted) {
         return;
       }
 
-      committedEntitySequence.set(id, currentOperation);
-      upsertCachedEntity(context?.queryKey ?? resolveQueryKey(), result);
+      committedEntitySequence.set(sequenceKey, currentOperation);
+      upsertCachedEntity(queryKey, result);
 
-      if (destroyed) return;
+      if (destroyed || !isCurrentQueryScope(queryKey)) return;
 
       const serverUiData = toCleanUiData(result);
       const currentState = updateStates.get(id);
@@ -550,9 +592,18 @@ export function createOptimisticStore<
       });
     },
     onError: (_error, _variables, context) => {
-      if (destroyed || !context?.applied) return;
+      if (
+        destroyed ||
+        !context?.applied ||
+        !isCurrentQueryScope(context.queryKey)
+      ) {
+        return;
+      }
 
-      const latestCommitted = committedEntitySequence.get(context.id) ?? -1;
+      const latestCommitted =
+        committedEntitySequence.get(
+          entitySequenceKey(context.queryKey, context.id),
+        ) ?? -1;
       if (context.operationSequence <= latestCommitted) return;
 
       const currentState = updateStates.get(context.id);
@@ -593,7 +644,7 @@ export function createOptimisticStore<
       await qc.cancelQueries({ queryKey });
 
       const previousItem = uiStore.get(id);
-      if (destroyed) {
+      if (destroyed || !isCurrentQueryScope(queryKey)) {
         return {
           operationSequence: currentOperation,
           id,
@@ -618,12 +669,16 @@ export function createOptimisticStore<
     onSuccess: (_result, id, context) => {
       const currentOperation =
         context?.operationSequence ?? ++operationSequence;
-      const latestCommitted = committedEntitySequence.get(id) ?? -1;
+      const queryKey = context?.queryKey ?? resolveQueryKey();
+      const sequenceKey = entitySequenceKey(queryKey, id);
+      const latestCommitted = committedEntitySequence.get(sequenceKey) ?? -1;
 
       if (currentOperation <= latestCommitted) return;
 
-      committedEntitySequence.set(id, currentOperation);
-      removeCachedEntity(context?.queryKey ?? resolveQueryKey(), id);
+      committedEntitySequence.set(sequenceKey, currentOperation);
+      removeCachedEntity(queryKey, id);
+
+      if (destroyed || !isCurrentQueryScope(queryKey)) return;
 
       const currentState = updateStates.get(id);
       if (currentState) {
@@ -644,21 +699,27 @@ export function createOptimisticStore<
         activeDeleteSequence.delete(id);
       }
 
-      if (!destroyed) {
-        runInAction(() => {
-          uiStore.remove(id);
-        });
-      }
+      runInAction(() => {
+        uiStore.remove(id);
+      });
     },
     onError: (_error, id, context) => {
-      if (destroyed || !context?.applied) return;
+      if (
+        destroyed ||
+        !context?.applied ||
+        !isCurrentQueryScope(context.queryKey)
+      ) {
+        return;
+      }
 
       if (activeDeleteSequence.get(id) === context.operationSequence) {
         activeDeleteSequence.delete(id);
       }
 
       if (
-        context.operationSequence <= (committedEntitySequence.get(id) ?? -1)
+        context.operationSequence <=
+        (committedEntitySequence.get(entitySequenceKey(context.queryKey, id)) ??
+          -1)
       ) {
         return;
       }
@@ -677,6 +738,21 @@ export function createOptimisticStore<
     },
   });
 
+  const syncProjectionScope = (): void => {
+    const nextQueryKey = resolveQueryKey();
+    if (hashKey(queryObserver.options.queryKey) === hashKey(nextQueryKey)) {
+      return;
+    }
+
+    deferredReconciliation = undefined;
+    optimisticCreateOperations.clear();
+    updateStates.clear();
+    activeDeleteSequence.clear();
+    runInAction(() => {
+      uiStore.clear();
+    });
+  };
+
   const optimisticStore: OptimisticStore<
     TApiData,
     TUiData,
@@ -694,24 +770,38 @@ export function createOptimisticStore<
         ),
       remove: (id) =>
         runMutation("delete", () => removeMutationObserver.mutate(id)),
-      refetch: () => queryObserver.refetch(),
+      refetch: async () => {
+        const wasSubscribed = unsubscribeQuery !== null;
+        ensureQuerySubscription();
+        try {
+          return await queryObserver.refetch();
+        } finally {
+          if (!wasSubscribed) {
+            syncQuerySubscription();
+          }
+        }
+      },
       invalidate: () => qc.invalidateQueries({ queryKey: resolveQueryKey() }),
       triggerQuery,
       status,
     },
     updateOptions: () => {
+      syncProjectionScope();
       queryObserver.setOptions(queryOptions());
-      triggerQuery();
+      syncQuerySubscription();
     },
     isEnabled,
     enable: () => {
       manuallyEnabled = true;
+      syncProjectionScope();
       queryObserver.setOptions(queryOptions());
-      triggerQuery();
+      syncQuerySubscription();
     },
     disable: () => {
       manuallyEnabled = false;
+      syncProjectionScope();
       queryObserver.setOptions(queryOptions());
+      syncQuerySubscription();
     },
     destroy: () => {
       if (destroyed) return;
@@ -723,7 +813,8 @@ export function createOptimisticStore<
       }
 
       realtimeExtension?.disconnect();
-      unsubscribeQuery();
+      unsubscribeQuery?.();
+      unsubscribeQuery = null;
       createMutationObserver.reset();
       updateMutationObserver.reset();
       removeMutationObserver.reset();

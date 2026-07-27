@@ -418,7 +418,7 @@ interface OptimisticStore<TApiData, TUiData> {
     // Query control
     refetch: () => Promise<any>;
     invalidate: () => Promise<void>;
-    triggerQuery: () => void;
+    triggerQuery: () => void; // Force a fetch when enabled
     
     // Query state
     status: {
@@ -434,6 +434,8 @@ interface OptimisticStore<TApiData, TUiData> {
   };
   
   // Lifecycle methods
+  // Re-evaluate queryKey/enabled using normal TanStack freshness rules.
+  // This does not force a refetch.
   updateOptions: () => void;
   enable: () => void;
   disable: () => void;

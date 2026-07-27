@@ -3,18 +3,15 @@
 import { LoginForm } from "@/components/login/login-form";
 import { DefaultNavbar } from "@/components/navbar/presets/default";
 
-import { useContext, useEffect } from "react";
-import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
-import { NeonCard } from "@/components/ui/neon-card";
-import { GradientText } from "@/components/ui/gradient-text";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { RootStoreContext } from "@/context/rootStoreContext";
+import { useRootStore } from "@/hooks/useRootStore";
 import { observer } from "mobx-react-lite";
 
 export default observer(function Page() {
   const router = useRouter();
 
-  const rootStore = useContext(RootStoreContext);
+  const rootStore = useRootStore();
 
   useEffect(() => {
     console.log("Login useEffect", rootStore);
@@ -24,7 +21,7 @@ export default observer(function Page() {
 
       router.replace("/home");
     }
-  }, [rootStore.session]);
+  }, [rootStore.session, rootStore, router]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-slate-900 flex flex-col">

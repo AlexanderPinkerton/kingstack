@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
-import { RootStoreContext } from "@/context/rootStoreContext";
+import { useRootStore } from "@/hooks/useRootStore";
+import { useStoreActivation } from "@/hooks/useStoreActivation";
 import { isPlaygroundMode } from "@kingstack/shared";
 
 // ---------- Realtime Checkboxes Component ----------
 
 export const RealtimeCheckboxes = observer(() => {
-  const rootStore = useContext(RootStoreContext);
+  const rootStore = useRootStore();
   const checkboxStore = rootStore.userStore.checkboxStore;
+  useStoreActivation(checkboxStore);
   const [isClient, setIsClient] = useState(false);
 
   // Prevent hydration mismatch by only rendering after client mount

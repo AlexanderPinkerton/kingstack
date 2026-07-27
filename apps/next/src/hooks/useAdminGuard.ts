@@ -1,6 +1,7 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { RootStoreContext } from "@/context/rootStoreContext";
+import { comparer, reaction } from "mobx";
+import { useRootStore } from "@/hooks/useRootStore";
 import { isPlaygroundMode } from "@kingstack/shared";
 import { fetchWithAuth } from "@/lib/utils";
 
@@ -15,26 +16,32 @@ export interface UseAdminGuardOptions {
 
 export default function useAdminGuard(options?: UseAdminGuardOptions) {
   const { backend = "next" } = options || {};
-  const rootStore = useContext(RootStoreContext);
+  const rootStore = useRootStore();
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Track session access token in state so effect re-runs when it changes
-  // The component using this hook should be wrapped in observer() for reactivity
-  const [sessionToken, setSessionToken] = useState<string | null>(
-    rootStore.session?.access_token || null,
-  );
+  const [auth, setAuth] = useState<{
+    ready: boolean;
+    token: string | null;
+  }>({
+    ready: false,
+    token: null,
+  });
 
-  // Update session token when rootStore.session changes
-  // This effect will run when the component re-renders (which happens when
-  // rootStore.session changes if component is wrapped in observer)
-  useEffect(() => {
-    const token = rootStore.session?.access_token || null;
-    if (token !== sessionToken) {
-      setSessionToken(token);
-    }
-  }, [rootStore.session, sessionToken]);
+  // Thin MobX-to-React adapter so callers do not need to be observer components.
+  useEffect(
+    () =>
+      reaction(
+        () => ({
+          ready: rootStore.sessionReady,
+          token: rootStore.session?.access_token ?? null,
+        }),
+        setAuth,
+        { fireImmediately: true, equals: comparer.structural },
+      ),
+    [rootStore],
+  );
 
   useEffect(() => {
     let isCancelled = false;
@@ -49,12 +56,14 @@ export default function useAdminGuard(options?: UseAdminGuardOptions) {
         return;
       }
 
-      // If no session, wait for it to be available (on page reload, session loads asynchronously)
-      // The useEffect will re-run when sessionToken changes, so we can just return early here
-      if (!sessionToken) {
-        // Don't redirect immediately - wait for session to load
-        // The effect will re-run when session becomes available
+      if (!auth.ready) {
         setIsChecking(true);
+        return;
+      }
+
+      if (!auth.token) {
+        setIsChecking(false);
+        router.replace("/login");
         return;
       }
 
@@ -68,7 +77,7 @@ export default function useAdminGuard(options?: UseAdminGuardOptions) {
             ? `${process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000"}/admin/check`
             : "/api/admin/check";
 
-        const response = await fetchWithAuth(sessionToken, apiUrl);
+        const response = await fetchWithAuth(auth.token, apiUrl);
 
         // Check cancellation after async operation
         if (isCancelled) return;
@@ -109,7 +118,7 @@ export default function useAdminGuard(options?: UseAdminGuardOptions) {
     return () => {
       isCancelled = true;
     };
-  }, [sessionToken, router, backend]);
+  }, [auth, router, backend]);
 
   return { isChecking, isAdmin };
 }

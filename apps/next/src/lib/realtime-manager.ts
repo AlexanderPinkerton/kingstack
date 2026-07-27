@@ -20,7 +20,7 @@ export interface RealtimeStore {
  */
 export class RealtimeManager {
   private socket: Socket | null = null;
-  private stores: RealtimeStore[] = [];
+  private stores = new Set<RealtimeStore>();
   private browserId: string;
   private serverUrl: string;
   private isConnected = false;
@@ -32,7 +32,7 @@ export class RealtimeManager {
     browserId?: string;
   }) {
     const { stores = [], serverUrl, browserId } = options || {};
-    this.stores = stores;
+    stores.forEach((store) => this.stores.add(store));
     this.browserId = browserId || getBrowserId();
     this.serverUrl =
       serverUrl ||
@@ -44,7 +44,21 @@ export class RealtimeManager {
    * Register stores that support realtime
    */
   registerStores(stores: RealtimeStore[]): void {
-    this.stores = [...this.stores, ...stores];
+    stores.forEach((store) => {
+      const wasRegistered = this.stores.has(store);
+      this.stores.add(store);
+
+      if (!wasRegistered && this.connected && this.socket) {
+        this.connectStore(store, this.socket);
+      }
+    });
+  }
+
+  unregisterStores(stores: RealtimeStore[]): void {
+    stores.forEach((store) => {
+      if (!this.stores.delete(store)) return;
+      this.disconnectStore(store);
+    });
   }
 
   /**
@@ -164,32 +178,10 @@ export class RealtimeManager {
     }
 
     console.log(
-      `🔌 RealtimeManager: Connecting ${this.stores.length} stores to realtime`,
+      `🔌 RealtimeManager: Connecting ${this.stores.size} stores to realtime`,
     );
 
-    this.stores.forEach((store, index) => {
-      try {
-        // Try connectRealtime method first (for custom stores)
-        if (store.connectRealtime) {
-          store.connectRealtime(this.socket!);
-          console.log(
-            `🔌 RealtimeManager: Connected store ${index} via connectRealtime()`,
-          );
-        }
-        // Fall back to realtime.connect (for optimistic stores)
-        else if (store.realtime?.connect) {
-          store.realtime.connect(this.socket!);
-          console.log(
-            `🔌 RealtimeManager: Connected store ${index} via realtime.connect()`,
-          );
-        }
-      } catch (error) {
-        console.error(
-          `🔌 RealtimeManager: Error connecting store ${index}:`,
-          error,
-        );
-      }
-    });
+    this.stores.forEach((store) => this.connectStore(store, this.socket!));
   }
 
   /**
@@ -197,32 +189,10 @@ export class RealtimeManager {
    */
   private disconnectStores(): void {
     console.log(
-      `🔌 RealtimeManager: Disconnecting ${this.stores.length} stores from realtime`,
+      `🔌 RealtimeManager: Disconnecting ${this.stores.size} stores from realtime`,
     );
 
-    this.stores.forEach((store, index) => {
-      try {
-        // Try disconnectRealtime method first (for custom stores)
-        if (store.disconnectRealtime) {
-          store.disconnectRealtime();
-          console.log(
-            `🔌 RealtimeManager: Disconnected store ${index} via disconnectRealtime()`,
-          );
-        }
-        // Fall back to realtime.disconnect (for optimistic stores)
-        else if (store.realtime?.disconnect) {
-          store.realtime.disconnect();
-          console.log(
-            `🔌 RealtimeManager: Disconnected store ${index} via realtime.disconnect()`,
-          );
-        }
-      } catch (error) {
-        console.error(
-          `🔌 RealtimeManager: Error disconnecting store ${index}:`,
-          error,
-        );
-      }
-    });
+    this.stores.forEach((store) => this.disconnectStore(store));
   }
 
   /**
@@ -230,6 +200,30 @@ export class RealtimeManager {
    */
   dispose(): void {
     this.teardown();
-    this.stores = [];
+    this.stores.clear();
+  }
+
+  private connectStore(store: RealtimeStore, socket: Socket): void {
+    try {
+      if (store.connectRealtime) {
+        store.connectRealtime(socket);
+      } else {
+        store.realtime?.connect?.(socket);
+      }
+    } catch (error) {
+      console.error("RealtimeManager: Failed to connect store", error);
+    }
+  }
+
+  private disconnectStore(store: RealtimeStore): void {
+    try {
+      if (store.disconnectRealtime) {
+        store.disconnectRealtime();
+      } else {
+        store.realtime?.disconnect?.();
+      }
+    } catch (error) {
+      console.error("RealtimeManager: Failed to disconnect store", error);
+    }
   }
 }

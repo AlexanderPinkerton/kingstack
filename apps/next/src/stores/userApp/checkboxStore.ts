@@ -3,8 +3,12 @@
 
 import {
   createOptimisticStore,
-  Entity,
+  type Entity,
+  type OptimisticStore,
+  type RealtimeSocket,
 } from "@kingstack/advanced-optimistic-store";
+import type { QueryClient } from "@tanstack/react-query";
+import { StoreDemand } from "@/lib/store-lifecycle";
 import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 // No longer need to import realtime extension - it's integrated into the store
 
@@ -108,10 +112,10 @@ const checkboxTransformer = {
   },
 
   optimisticDefaults: {
-    createOptimisticUiData: (
-      formData: { index: number; checked: boolean },
-      context?: any,
-    ): CheckboxUiData => {
+    createOptimisticUiData: (formData: {
+      index: number;
+      checked: boolean;
+    }): CheckboxUiData => {
       return {
         id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         index: formData.index,
@@ -126,29 +130,50 @@ const checkboxTransformer = {
 // ---------- Realtime Checkbox Store Class ----------
 
 export class RealtimeCheckboxStore {
-  // Optimistic store with integrated realtime
-  public optimisticStore: ReturnType<
-    typeof createOptimisticStore<CheckboxApiData, CheckboxUiData>
+  private readonly optimisticStore: OptimisticStore<
+    CheckboxApiData,
+    CheckboxUiData
   >;
+  private readonly demand: StoreDemand;
+  private realtimeSocket: RealtimeSocket | null = null;
 
-  constructor(browserId?: string) {
+  constructor(queryClient: QueryClient, browserId?: string) {
+    this.demand = new StoreDemand(() => {
+      this.optimisticStore.updateOptions();
+      this.syncRealtimeDemand();
+    });
+
     // Store is created with realtime config but not connected yet
     // rootStore will connect it when socket is ready
     this.optimisticStore = createOptimisticStore<
       CheckboxApiData,
       CheckboxUiData
-    >({
-      name: "checkboxes",
-      queryFn: this.getQueryFn(),
-      mutations: {
-        create: this.getCreateMutation(),
-        update: this.getUpdateMutation(),
-        remove: this.getDeleteMutation(),
+    >(
+      {
+        name: "checkboxes",
+        queryFn: this.getQueryFn(),
+        mutations: {
+          create: this.getCreateMutation(),
+          update: this.getUpdateMutation(),
+          remove: this.getDeleteMutation(),
+        },
+        transformer: this.getTransformer(),
+        staleTime: 2 * 60 * 1000,
+        enabled: () => this.demand.isActive,
+        realtime: this.getRealtimeConfig(browserId),
       },
-      transformer: this.getTransformer(),
-      staleTime: 2 * 60 * 1000, // 2 minutes
-      realtime: this.getRealtimeConfig(browserId),
-    });
+      queryClient,
+    );
+  }
+
+  activate(): () => void {
+    return this.demand.activate();
+  }
+
+  dispose(): void {
+    this.demand.dispose();
+    this.realtimeSocket = null;
+    this.optimisticStore.destroy();
   }
 
   // ---------- Store Access Methods ----------
@@ -195,20 +220,14 @@ export class RealtimeCheckboxStore {
 
   // ---------- Realtime Methods (for rootStore control) ----------
 
-  connectRealtime(socket: any): void {
-    if (this.optimisticStore.realtime) {
-      this.optimisticStore.realtime.connect(socket);
-      console.log("🔌 RealtimeCheckboxStore: Connected to realtime");
-    } else {
-      console.warn("🔌 RealtimeCheckboxStore: Realtime not configured");
-    }
+  connectRealtime(socket: RealtimeSocket): void {
+    this.realtimeSocket = socket;
+    this.syncRealtimeDemand();
   }
 
   disconnectRealtime(): void {
-    if (this.optimisticStore.realtime) {
-      this.optimisticStore.realtime.disconnect();
-      console.log("🔌 RealtimeCheckboxStore: Disconnected from realtime");
-    }
+    this.realtimeSocket = null;
+    this.optimisticStore.realtime?.disconnect();
   }
 
   // ---------- Action Methods ----------
@@ -266,9 +285,12 @@ export class RealtimeCheckboxStore {
     try {
       const baseUrl =
         process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-      const response = await fetch(`${baseUrl}/checkboxes/initialize`, {
-        method: "POST",
-      });
+      const response = await fetch(
+        `${baseUrl}/checkboxes/initialize?count=${count}`,
+        {
+          method: "POST",
+        },
+      );
 
       if (response.ok) {
         this.refetch(); // Refetch data after initialization
@@ -329,6 +351,14 @@ export class RealtimeCheckboxStore {
       // 🛡️ Filter out self-originated events to prevent echo
       browserId: browserId,
     };
+  }
+
+  private syncRealtimeDemand(): void {
+    if (this.demand.isActive && this.realtimeSocket) {
+      this.optimisticStore.realtime?.connect(this.realtimeSocket);
+    } else {
+      this.optimisticStore.realtime?.disconnect();
+    }
   }
 
   // API Implementations

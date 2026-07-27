@@ -1,150 +1,147 @@
-import { makeAutoObservable } from "mobx";
-import { SingletonManager } from "@/lib/singleton";
+import { computed, makeObservable, observable, runInAction } from "mobx";
+import type { QueryClient } from "@tanstack/react-query";
 import { SessionManager, type SupabaseSession } from "@/lib/session-manager";
 import { RealtimeManager } from "@/lib/realtime-manager";
 import { getBrowserId } from "@/lib/browser-id";
 import { UserStoreManager } from "./userApp/userStoreManager";
 import { AdminStoreManager } from "./adminApp/adminStoreManager";
 
-const SINGLETON_KEY = "RootStore";
+interface RootStoreOptions {
+  queryClient: QueryClient;
+}
 
 export class RootStore {
-  // Session management
-  private sessionManager: SessionManager;
   session: SupabaseSession = null;
+  sessionReady = false;
 
-  // Realtime management
-  private realtimeManager: RealtimeManager;
+  readonly userStore: UserStoreManager;
+  readonly adminStore: AdminStoreManager;
+  readonly browserId: string;
 
-  // Store managers (lazy-loaded)
-  userStore: UserStoreManager;
-  adminStore: AdminStoreManager;
+  private readonly sessionManager: SessionManager;
+  private readonly realtimeManager: RealtimeManager;
+  private started = false;
+  private disposed = false;
+  private mounts = 0;
+  private disposalGeneration = 0;
 
-  // Stable browser ID for filtering out self-originated realtime events
-  browserId: string = getBrowserId();
+  constructor({ queryClient }: RootStoreOptions) {
+    this.browserId = getBrowserId();
 
-  private isDisposed = false;
-
-  constructor() {
-    // Register with singleton manager
-    const instanceId = SingletonManager.getInstanceCount(SINGLETON_KEY) + 1;
-    console.log(`🔧 RootStore: Constructor called (instance #${instanceId})`);
-    console.log("🔧 RootStore: Browser ID:", this.browserId);
-
-    const isDevelopment = process.env.NODE_ENV === "development";
-    SingletonManager.register(SINGLETON_KEY, this, {
-      autoDisposePrevious: true,
-      isDevelopment,
-    });
-
-    // Create store managers (stores are lazy-loaded)
-    this.userStore = new UserStoreManager();
-    this.adminStore = new AdminStoreManager();
-
-    // Initialize realtime manager (stores will be registered lazily)
-    this.realtimeManager = new RealtimeManager({
-      stores: [],
+    this.userStore = new UserStoreManager({
+      queryClient,
       browserId: this.browserId,
     });
+    this.adminStore = new AdminStoreManager(queryClient);
 
-    // Register store managers with realtime manager
-    // They will register their stores when initialized
+    this.realtimeManager = new RealtimeManager({
+      browserId: this.browserId,
+    });
     this.userStore.registerRealtime(this.realtimeManager);
-    this.adminStore.registerRealtime(this.realtimeManager);
 
-    // Initialize session manager (no stores initially - they're lazy-loaded)
-    this.sessionManager = new SessionManager({
-      stores: [],
-      onSessionChange: (session, event) => {
-        // Update observable session
-        this.session = session;
+    this.sessionManager = new SessionManager((session) =>
+      this.handleSessionChange(session),
+    );
 
-        // Update store managers with new session
-        // Only update user stores automatically - admin stores load only when accessed
-        this.userStore.updateSession(session);
-        // Admin stores are lazy-loaded only when accessed (via getters) or explicitly initialized
-
-        // Handle realtime connection based on session state
-        // Set up realtime for both SIGNED_IN and INITIAL_SESSION events
-        if (
-          session?.access_token &&
-          (event === "SIGNED_IN" || event === "INITIAL_SESSION")
-        ) {
-          console.log(
-            `✅ RootStore: Session established (${event}), setting up realtime`,
-          );
-          this.realtimeManager.setup(session.access_token);
-        } else if (!session?.access_token) {
-          console.log("❌ RootStore: Session lost, tearing down realtime");
-          this.realtimeManager.teardown();
-        }
-      },
+    makeObservable(this, {
+      session: observable,
+      sessionReady: observable,
+      userData: computed,
     });
-
-    // Make session and store managers observable
-    makeAutoObservable(this, {
-      session: true,
-      userStore: true,
-      adminStore: true,
-    });
-
-    // Initialize session management (sets up auth listener or playground mode)
-    this.sessionManager.initialize();
-
-    console.log("🔧 RootStore: Initialized");
   }
 
-  // Expose socket for external access if needed
+  /**
+   * React lifecycle adapter. Final disposal is deferred by one microtask so
+   * React Strict Mode's setup/cleanup/setup probe reuses the same live runtime.
+   */
+  mount(): () => void {
+    if (this.disposed) {
+      throw new Error("Cannot mount a disposed RootStore");
+    }
+
+    this.mounts += 1;
+    this.disposalGeneration += 1;
+    this.start();
+
+    let released = false;
+    return () => {
+      if (released || this.disposed) return;
+      released = true;
+      this.mounts = Math.max(0, this.mounts - 1);
+
+      if (this.mounts !== 0) return;
+
+      const generation = ++this.disposalGeneration;
+      queueMicrotask(() => {
+        if (
+          !this.disposed &&
+          this.mounts === 0 &&
+          this.disposalGeneration === generation
+        ) {
+          this.dispose();
+        }
+      });
+    };
+  }
+
+  start(): void {
+    if (this.disposed) {
+      throw new Error("Cannot start a disposed RootStore");
+    }
+    if (this.started) return;
+
+    this.started = true;
+    this.sessionManager.initialize();
+  }
+
   get socket() {
     return this.realtimeManager.getSocket();
   }
 
-  async refreshSession() {
+  async refreshSession(): Promise<void> {
     await this.sessionManager.refreshSession();
-    // Session is updated via onSessionChange callback
   }
 
-  // Cleanup method to properly dispose of the store
-  dispose() {
-    if (this.isDisposed) {
-      console.warn("⚠️ RootStore: Already disposed, skipping");
-      return;
-    }
+  dispose(): void {
+    if (this.disposed) return;
 
-    console.log("🧹 RootStore: Disposing");
+    this.disposed = true;
+    this.started = false;
+    this.mounts = 0;
+    this.disposalGeneration += 1;
 
-    // Mark as disposed
-    this.isDisposed = true;
-
-    // Clean up store managers
+    this.sessionManager.dispose();
+    this.realtimeManager.dispose();
     this.userStore.dispose();
     this.adminStore.dispose();
 
-    // Clean up session manager (unsubscribes from auth listener)
-    this.sessionManager.dispose();
-
-    // Clean up realtime connection
-    this.realtimeManager.dispose();
-
-    // Unregister from singleton manager
-    SingletonManager.unregister(SINGLETON_KEY, this);
-
-    console.log("🧹 RootStore: Disposed");
+    runInAction(() => {
+      this.session = null;
+      this.sessionReady = false;
+    });
   }
 
-  // Static method to get the current instance (useful for debugging)
-  static getInstance(): RootStore | null {
-    return SingletonManager.getInstance<RootStore>(SINGLETON_KEY);
-  }
-
-  // Static method to check if there's an active instance
-  static hasActiveInstance(): boolean {
-    const instance = SingletonManager.getInstance<RootStore>(SINGLETON_KEY);
-    return instance !== null && !instance.isDisposed;
-  }
-
-  // Convenience getter for user data
   get userData() {
     return this.userStore.currentUserStore.currentUser;
+  }
+
+  private handleSessionChange(session: SupabaseSession): void {
+    if (this.disposed) return;
+
+    runInAction(() => {
+      this.session = session;
+      this.sessionReady = true;
+    });
+
+    // Inactive feature queries remain inactive; session propagation only
+    // updates their authorization and cache identity.
+    this.userStore.updateSession(session);
+    this.adminStore.updateSession(session);
+
+    if (session?.access_token) {
+      this.realtimeManager.setup(session.access_token);
+    } else {
+      this.realtimeManager.teardown();
+    }
   }
 }

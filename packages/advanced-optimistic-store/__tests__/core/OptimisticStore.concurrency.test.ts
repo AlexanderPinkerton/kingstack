@@ -38,6 +38,67 @@ function createQueryClient() {
 }
 
 describe("OptimisticStore deterministic concurrency", () => {
+  it("does not fetch while disabled or bypass fresh cache on activation", async () => {
+    const queryClient = createQueryClient();
+    const queryKey = ["items", "tenant-a"] as const;
+    const cachedItem = { id: "1", title: "cached", revision: 1 };
+    const queryFn = vi.fn(async () => [cachedItem]);
+    let active = false;
+
+    queryClient.setQueryData<Item[]>(queryKey, [cachedItem]);
+    const store = createOptimisticStore<
+      Item,
+      Item,
+      ObservableUIData<Item>,
+      CreateInput,
+      UpdateInput
+    >(
+      {
+        name: "items",
+        queryKey,
+        enabled: () => active,
+        staleTime: 60_000,
+        queryFn,
+        mutations: {
+          create: async (data) => ({
+            id: "created",
+            title: data.title,
+            revision: 1,
+          }),
+          update: async ({ id, data }) => ({
+            id,
+            title: data.title,
+            revision: 1,
+          }),
+          remove: async (id) => ({ id }),
+        },
+        transformer: false,
+      },
+      queryClient,
+    );
+
+    expect(queryFn).not.toHaveBeenCalled();
+    expect(
+      queryClient.getQueryCache().find({ queryKey })?.getObserversCount(),
+    ).toBe(0);
+
+    active = true;
+    store.updateOptions();
+    await Promise.resolve();
+
+    expect(queryFn).not.toHaveBeenCalled();
+    expect(store.ui.list).toEqual([cachedItem]);
+    expect(
+      queryClient.getQueryCache().find({ queryKey })?.getObserversCount(),
+    ).toBe(1);
+
+    active = false;
+    store.updateOptions();
+    expect(
+      queryClient.getQueryCache().find({ queryKey })?.getObserversCount(),
+    ).toBe(0);
+  });
+
   it("rolls back only the failed create and tracks every pending create", async () => {
     const first = deferred<Item>();
     const second = deferred<Item>();
@@ -252,6 +313,68 @@ describe("OptimisticStore deterministic concurrency", () => {
 
     await store.api.remove("1");
     expect(queryClient.getQueryData<Item[]>(queryKey)).toEqual([]);
+  });
+
+  it("commits an old in-flight mutation to its cache without touching the new scope UI", async () => {
+    const queryClient = createQueryClient();
+    const updateResult = deferred<Item>();
+    let scope = "tenant-a";
+    const firstKey = ["items", "tenant-a"] as const;
+    const secondKey = ["items", "tenant-b"] as const;
+    const firstItem = { id: "1", title: "tenant-a", revision: 0 };
+    const secondItem = { id: "1", title: "tenant-b", revision: 0 };
+
+    queryClient.setQueryData<Item[]>(firstKey, [firstItem]);
+    queryClient.setQueryData<Item[]>(secondKey, [secondItem]);
+
+    const store = createOptimisticStore<
+      Item,
+      Item,
+      ObservableUIData<Item>,
+      CreateInput,
+      UpdateInput
+    >(
+      {
+        name: "items",
+        queryKey: () => ["items", scope],
+        enabled: () => false,
+        queryFn: async () => [],
+        mutations: {
+          create: async (data) => ({
+            id: "created",
+            title: data.title,
+            revision: 1,
+          }),
+          update: () => updateResult.promise,
+          remove: async (id) => ({ id }),
+        },
+        transformer: false,
+      },
+      queryClient,
+    );
+    store.ui.upsert(firstItem);
+
+    const mutation = store.api.update("1", { title: "optimistic-a" });
+    await vi.waitFor(() => {
+      expect(store.ui.get("1")?.title).toBe("optimistic-a");
+    });
+
+    scope = "tenant-b";
+    store.updateOptions();
+    store.ui.upsert(secondItem);
+
+    updateResult.resolve({
+      id: "1",
+      title: "confirmed-a",
+      revision: 1,
+    });
+    await mutation;
+
+    expect(queryClient.getQueryData<Item[]>(firstKey)).toEqual([
+      { id: "1", title: "confirmed-a", revision: 1 },
+    ]);
+    expect(queryClient.getQueryData<Item[]>(secondKey)).toEqual([secondItem]);
+    expect(store.ui.list).toEqual([secondItem]);
   });
 
   it("synchronizes default realtime events into the scoped query cache", () => {

@@ -3,8 +3,11 @@
 
 import {
   createOptimisticStore,
-  Entity,
+  type Entity,
+  type OptimisticStore,
 } from "@kingstack/advanced-optimistic-store";
+import type { QueryClient } from "@tanstack/react-query";
+import { StoreDemand } from "@/lib/store-lifecycle";
 import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 
 // ---------- Types ----------
@@ -110,10 +113,7 @@ const publicTodoTransformer = {
   },
 
   optimisticDefaults: {
-    createOptimisticUiData: (
-      formData: { title: string },
-      context?: any,
-    ): PublicTodoUiData => {
+    createOptimisticUiData: (formData: { title: string }): PublicTodoUiData => {
       return {
         id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         title: formData.title,
@@ -129,25 +129,42 @@ const publicTodoTransformer = {
 // ---------- Public Todo Store Class ----------
 
 export class PublicTodoStore {
-  public optimisticStore: ReturnType<
-    typeof createOptimisticStore<PublicTodoApiData, PublicTodoUiData>
+  private readonly optimisticStore: OptimisticStore<
+    PublicTodoApiData,
+    PublicTodoUiData
   >;
+  private readonly demand: StoreDemand;
 
-  constructor() {
+  constructor(queryClient: QueryClient) {
+    this.demand = new StoreDemand(() => this.optimisticStore.updateOptions());
+
     this.optimisticStore = createOptimisticStore<
       PublicTodoApiData,
       PublicTodoUiData
-    >({
-      name: "publicTodos",
-      queryFn: this.getQueryFn(),
-      mutations: {
-        create: this.getCreateMutation(),
-        update: this.getUpdateMutation(),
-        remove: this.getDeleteMutation(),
+    >(
+      {
+        name: "publicTodos",
+        queryFn: this.getQueryFn(),
+        mutations: {
+          create: this.getCreateMutation(),
+          update: this.getUpdateMutation(),
+          remove: this.getDeleteMutation(),
+        },
+        transformer: this.getTransformer(),
+        staleTime: 2 * 60 * 1000,
+        enabled: () => this.demand.isActive,
       },
-      transformer: this.getTransformer(),
-      staleTime: 2 * 60 * 1000, // 2 minutes
-    });
+      queryClient,
+    );
+  }
+
+  activate(): () => void {
+    return this.demand.activate();
+  }
+
+  dispose(): void {
+    this.demand.dispose();
+    this.optimisticStore.destroy();
   }
 
   // ---------- Store Access Methods ----------
