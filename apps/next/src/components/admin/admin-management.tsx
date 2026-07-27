@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
-import { RootStoreContext } from "@/context/rootStoreContext";
+import { useRootStore } from "@/hooks/useRootStore";
+import { useStoreActivation } from "@/hooks/useStoreActivation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,7 +28,10 @@ import { IconPlus, IconTrash, IconLoader } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 export const AdminManagement = observer(() => {
-  const rootStore = useContext(RootStoreContext);
+  const rootStore = useRootStore();
+  const adminMgmtStore = rootStore.adminStore.adminMgmtStore;
+  useStoreActivation(adminMgmtStore);
+
   const [isClient, setIsClient] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -38,14 +42,7 @@ export const AdminManagement = observer(() => {
     setIsClient(true);
   }, []);
 
-  // Ensure admin store is initialized before accessing
-  useEffect(() => {
-    if (rootStore.session && !rootStore.adminStore.initialized) {
-      rootStore.adminStore.initializeWithSession(rootStore.session);
-    }
-  }, [rootStore.session, rootStore]);
-
-  // Prevent hydration mismatch and ensure store is initialized
+  // Prevent hydration mismatch.
   if (!isClient) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -54,25 +51,7 @@ export const AdminManagement = observer(() => {
     );
   }
 
-  // Get the admin management store (only after initialization)
-  if (!rootStore.adminStore.initialized) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-lg">Initializing admin store...</div>
-      </div>
-    );
-  }
-
-  const adminMgmtStore = rootStore.adminStore.adminMgmtStore;
   const { ui, api } = adminMgmtStore;
-
-  if (!ui) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-lg">Loading admin management...</div>
-      </div>
-    );
-  }
 
   const admins = ui.list || [];
   const isLoading = api?.status.isLoading || false;

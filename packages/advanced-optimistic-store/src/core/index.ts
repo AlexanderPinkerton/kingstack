@@ -1,10 +1,10 @@
 // Core module exports
 
 // UI data store class (MobX observable)
-export { ObservableUIData } from "./ObservableUIData";
+export { ObservableUIData } from "./ObservableUIData.js";
 
 // Factory function (main API)
-export { createOptimisticStore } from "./OptimisticStore";
+export { createOptimisticStore } from "./OptimisticStore.js";
 
 // Types
 export type {
@@ -13,4 +13,10 @@ export type {
   DataTransformer,
   OptimisticStoreConfig,
   OptimisticStore,
-} from "./types";
+  RemoteApplyResult,
+  RemoteChange,
+  RemoteChangeContext,
+  RemoteConfig,
+  RemoteMembership,
+  RemoteOperation,
+} from "./types.js";

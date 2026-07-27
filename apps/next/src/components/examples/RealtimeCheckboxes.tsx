@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
-import { RootStoreContext } from "@/context/rootStoreContext";
+import { useRootStore } from "@/hooks/useRootStore";
+import { useStoreActivation } from "@/hooks/useStoreActivation";
 import { isPlaygroundMode } from "@kingstack/shared";
 
 // ---------- Realtime Checkboxes Component ----------
 
 export const RealtimeCheckboxes = observer(() => {
-  const rootStore = useContext(RootStoreContext);
+  const rootStore = useRootStore();
   const checkboxStore = rootStore.userStore.checkboxStore;
+  useStoreActivation(checkboxStore);
   const [isClient, setIsClient] = useState(false);
 
   // Prevent hydration mismatch by only rendering after client mount
@@ -253,14 +255,16 @@ export const RealtimeCheckboxes = observer(() => {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
             <div className="flex items-center space-x-2 text-sm text-slate-400">
-              {rootStore.socket?.connected ? (
+              {rootStore.realtimeConnected ? (
                 <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
               ) : (
                 <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
               )}
               <span>
                 Socket:{" "}
-                {rootStore.socket?.connected ? "Connected" : "Disconnected"}
+                {rootStore.realtimeConnected
+                  ? "Connected"
+                  : rootStore.realtimeStatus}
               </span>
             </div>
             <div className="text-sm text-slate-500">

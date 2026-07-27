@@ -1,20 +1,24 @@
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { RootStoreContext } from "@/context/rootStoreContext";
+import { autorun } from "mobx";
+import { useRootStore } from "@/hooks/useRootStore";
 import { isPlaygroundMode } from "@kingstack/shared";
 
 export default function useAuthGuard() {
-  const rootStore = useContext(RootStoreContext);
+  const rootStore = useRootStore();
   const router = useRouter();
 
-  useEffect(() => {
-    // Skip auth guard in playground mode
-    if (isPlaygroundMode()) {
-      return;
-    }
-
-    if (!rootStore.session) {
-      router.replace("/login");
-    }
-  }, [rootStore.session, router]);
+  useEffect(
+    () =>
+      autorun(() => {
+        if (
+          !isPlaygroundMode() &&
+          rootStore.sessionReady &&
+          !rootStore.session
+        ) {
+          router.replace("/login");
+        }
+      }),
+    [rootStore, router],
+  );
 }

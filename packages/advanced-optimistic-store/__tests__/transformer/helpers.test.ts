@@ -40,34 +40,14 @@ describe("createTransformer", () => {
     expect(result).toHaveProperty("toApi");
   });
 
-  it("should return default transformer when transformer is undefined", () => {
+  it("should return undefined when transformer is undefined", () => {
     const result = createTransformer<TestApiData, TestUiData>(undefined);
-
-    expect(result).toBeDefined();
-    expect(result).toHaveProperty("toUi");
-    expect(result).toHaveProperty("toApi");
-
-    // Test that it behaves like the default transformer
-    const apiData: TestApiData = {
-      id: "123",
-      title: "Test",
-    };
-
-    const uiData = result!.toUi(apiData);
-    expect(uiData.id).toBe("123");
-    expect(uiData.title).toBe("Test");
-
-    const backToApi = result!.toApi(uiData);
-    expect(backToApi.id).toBe("123");
-    expect(backToApi.title).toBe("Test");
+    expect(result).toBeUndefined();
   });
 
-  it("should return default transformer when transformer is null", () => {
+  it("should return undefined when transformer is null", () => {
     const result = createTransformer<TestApiData, TestUiData>(null as any);
-
-    expect(result).toBeDefined();
-    expect(result).toHaveProperty("toUi");
-    expect(result).toHaveProperty("toApi");
+    expect(result).toBeUndefined();
   });
 
   it("should work with custom transformer that has different behavior", () => {
@@ -202,17 +182,10 @@ describe("createTransformer", () => {
   });
 
   it("should handle edge cases with falsy values", () => {
-    // Test with empty string (falsy but not false)
     const result1 = createTransformer<TestApiData, TestUiData>("" as any);
-    expect(result1).toBeDefined();
-    expect(result1).toHaveProperty("toUi");
-    expect(result1).toHaveProperty("toApi");
-
-    // Test with 0 (falsy but not false)
     const result2 = createTransformer<TestApiData, TestUiData>(0 as any);
-    expect(result2).toBeDefined();
-    expect(result2).toHaveProperty("toUi");
-    expect(result2).toHaveProperty("toApi");
+    expect(result1).toBeUndefined();
+    expect(result2).toBeUndefined();
   });
 
   it("should maintain reference equality for custom transformers", () => {
@@ -233,20 +206,11 @@ describe("createTransformer", () => {
     expect(result1).toBe(result2);
   });
 
-  it("should create new default transformer instances", () => {
+  it("should not create implicit heuristic transformers", () => {
     const result1 = createTransformer<TestApiData, TestUiData>(undefined);
     const result2 = createTransformer<TestApiData, TestUiData>(undefined);
 
-    // Should be different instances but functionally equivalent
-    expect(result1).not.toBe(result2);
-    expect(result1).toBeDefined();
-    expect(result2).toBeDefined();
-
-    // Test that they behave the same
-    const apiData: TestApiData = { id: "123", title: "Test" };
-    const uiData1 = result1!.toUi(apiData);
-    const uiData2 = result2!.toUi(apiData);
-
-    expect(uiData1).toEqual(uiData2);
+    expect(result1).toBeUndefined();
+    expect(result2).toBeUndefined();
   });
 });

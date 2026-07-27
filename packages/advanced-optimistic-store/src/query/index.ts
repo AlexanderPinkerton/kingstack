@@ -1,3 +1,3 @@
 // Query module exports
 
-export { getGlobalQueryClient } from "./queryClient";
+export { getGlobalQueryClient } from "./queryClient.js";

@@ -1,7 +1,6 @@
+"use client";
+
 import { createContext } from "react";
+import type { RootStore } from "@/stores/rootStore";
 
-import { RootStore } from "@/stores/rootStore";
-
-const rootStore = new RootStore();
-
-export const RootStoreContext = createContext(rootStore);
+export const RootStoreContext = createContext<RootStore | null>(null);

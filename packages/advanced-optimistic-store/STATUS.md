@@ -1,142 +1,63 @@
 # Package Status: @kingstack/advanced-optimistic-store
 
-## ✅ Completed
+## Current state
 
-### File Organization
-- **963 lines** split into organized modules:
-  - `core/` - Store, manager, types (4 files)
-  - `transformer/` - Data transformation (3 files)
-  - `realtime/` - WebSocket integration (3 files)
-  - `query/` - TanStack Query client (2 files)
-  - Main exports (`index.ts`)
+The package is a public, MIT-licensed ESM library developed in the KingStack
+workspace and consumed by the Next application. Its public API is
+`createOptimisticStore`, `ObservableUIData`, explicit data transformers,
+query-client access, and normalized remote changes.
 
-### Monorepo Integration
-- ✅ Uses shared `@kingstack/ts-config`
-- ✅ Uses shared `@kingstack/eslint-config`
-- ✅ Turbo pipeline configured
-- ✅ Build working (`yarn build`)
-- ✅ Linting working (`yarn lint`)
-- ✅ Type checking working (`yarn typecheck`)
-- ✅ Proper peer dependencies
-- ✅ `.npmignore` configured
+## Implemented
 
-### Build Output
-- ✅ TypeScript declarations (`.d.ts`)
-- ✅ Source maps (`.js.map`, `.d.ts.map`)
-- ✅ ES modules (`.js`)
-- ✅ Proper exports for tree-shaking
+- MobX entity projection with O(1) ID lookup
+- TanStack Query fetching, cache synchronization, and invalidation
+- Configurable query keys for user, tenant, and filter isolation
+- Zero QueryObserver subscriptions while a store is disabled
+- Fresh-cache reuse when a store becomes active
+- Optimistic create, update, and delete
+- Mutation-specific rollback without a shared global snapshot
+- Deterministic handling of overlapping and out-of-order local mutations
+- Query-scope isolation for mutations that settle after an identity change
+- Pending-operation counters
+- Explicit API-to-UI transformers
+- Transport-independent `applyRemote()` reconciliation
+- Query-scope and collection-membership handling for remote changes
+- Local optimistic layers preserved over incoming confirmed remote bases
+- Optional self-origin and application conflict filtering
+- Native Node ESM output and TypeScript declarations
 
-## 📂 Structure
-
-```
-packages/advanced-optimistic-store/
-├── src/
-│   ├── core/
-│   │   ├── types.ts              (Type definitions)
-│   │   ├── OptimisticStore.ts    (MobX store with snapshot/rollback)
-│   │   ├── createStoreManager.ts (Factory with TanStack Query)
-│   │   └── index.ts              (Core exports)
-│   ├── transformer/
-│   │   ├── defaultTransformer.ts (Smart type conversions)
-│   │   ├── helpers.ts            (createTransformer)
-│   │   └── index.ts              (Transform exports)
-│   ├── realtime/
-│   │   ├── types.ts              (Realtime types)
-│   │   ├── RealtimeExtension.ts  (WebSocket handler)
-│   │   └── index.ts              (Realtime exports)
-│   ├── query/
-│   │   ├── queryClient.ts        (TanStack singleton)
-│   │   └── index.ts              (Query exports)
-│   └── index.ts                  (Main library export)
-├── dist/                         (Build output)
-├── package.json                  (Monorepo-aligned)
-├── tsconfig.json                 (Extends @kingstack/ts-config)
-├── turbo.jsonc                   (Turbo pipeline)
-├── eslint.config.mjs             (Extends shared eslint)
-├── .npmignore                    (Package publishing)
-└── README.md                     (Documentation)
-```
-
-## 🧪 Testing Commands
+## Verification
 
 ```bash
-# From root
-yarn turbo run build --filter=@kingstack/advanced-optimistic-store
-yarn turbo run lint --filter=@kingstack/advanced-optimistic-store
-yarn turbo run typecheck --filter=@kingstack/advanced-optimistic-store
-
-# From package directory
-yarn build
-yarn lint
-yarn typecheck
-yarn dev    # Watch mode
+yarn workspace @kingstack/advanced-optimistic-store typecheck
+yarn workspace @kingstack/advanced-optimistic-store lint
+yarn workspace @kingstack/advanced-optimistic-store test
+yarn workspace @kingstack/advanced-optimistic-store build
 ```
 
-## 📦 Usage
+The regression suite includes overlapping creates, out-of-order updates,
+rollback after a newer failure, query-cache synchronization, and direct
+remote/local conflict cases. It also verifies inactive observer counts,
+fresh-cache activation, and mutation completion across query-scope changes.
 
-```typescript
-import { createOptimisticStoreManager } from "@kingstack/advanced-optimistic-store";
+The package README is the canonical entry point. Focused references live in
+`docs/`; superseded marketing and example documents have been removed rather
+than retained as competing documentation.
 
-const store = createOptimisticStoreManager({
-  name: "todos",
-  queryFn: () => fetch("/api/todos").then(r => r.json()),
-  mutations: {
-    create: (data) => /* ... */,
-    update: ({ id, data }) => /* ... */,
-    remove: (id) => /* ... */,
-  },
-});
-```
+## Deliberate boundaries
 
-## 🚀 Next Steps (Optional)
+- Mutation endpoints must return the complete authoritative entity.
+- AOS does not own transports or decode wire events. Domain stores normalize
+  them into `RemoteChange` values.
+- Remote changes use arrival order by default. Applications that need revision,
+  vector-clock, or CRDT conflict handling should implement it with
+  `remote.shouldApply`.
+- `createDefaultTransformer` remains available as an explicit legacy heuristic.
+  Omitting `transformer` now means API and UI data have the same runtime shape.
 
-### Testing (Priority: High)
-- [ ] Add vitest configuration
-- [ ] Unit tests for OptimisticStore
-- [ ] Unit tests for createStoreManager
-- [ ] Integration tests for realtime
-- [ ] Mock fixtures and helpers
+## Compatibility roadmap
 
-### Documentation (Priority: Medium)
-- [ ] API documentation for each module
-- [ ] Getting started guide
-- [ ] Migration guide (from old location)
-- [ ] Examples directory
-- [ ] Architecture documentation
-
-### Build & Release (Priority: Low)
-- [ ] Add tsup for optimized bundling
-- [ ] Multiple output formats (ESM, CJS, UMD)
-- [ ] Minified production build
-- [ ] Bundle size analysis
-- [ ] Automated version bumping
-- [ ] Changelog generation
-
-### Future Features
-- [ ] React hooks wrapper
-- [ ] Vue composition API wrapper  
-- [ ] Conflict resolution strategies
-- [ ] Offline queue
-- [ ] Devtools integration
-
-## 📝 Notes
-
-- Package is **private** in monorepo (not published to npm yet)
-- Original code preserved in `apps/next/src/lib/`
-- All TypeScript checks pass ✅
-- All linting checks pass ✅
-- Turbo build caching works ✅
-
-## 🔄 Migration Path
-
-To use the new package in your apps:
-
-```typescript
-// Old
-import { createOptimisticStoreManager } from "@/lib/optimistic-store-pattern";
-
-// New
-import { createOptimisticStoreManager } from "@kingstack/advanced-optimistic-store";
-```
-
-No code changes needed - just update the import!
+- The `0.x` line may replace compatibility `any` defaults with a stricter input
+  API before `1.0`.
+- Releases use the repository's Changesets workflow.
+- The package is intentionally ESM-only. CommonJS is not currently planned.

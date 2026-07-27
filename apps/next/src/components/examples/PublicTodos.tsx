@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
-import { RootStoreContext } from "@/context/rootStoreContext";
+import { useRootStore } from "@/hooks/useRootStore";
+import { useStoreActivation } from "@/hooks/useStoreActivation";
 import { isPlaygroundMode } from "@kingstack/shared";
 
 export const PublicTodos = observer(() => {
-  const rootStore = useContext(RootStoreContext);
+  const rootStore = useRootStore();
   const publicTodoStore = rootStore.userStore.publicTodoStore;
+  useStoreActivation(publicTodoStore);
   const [isClient, setIsClient] = useState(false);
   const [newTodoTitle, setNewTodoTitle] = useState("");
 

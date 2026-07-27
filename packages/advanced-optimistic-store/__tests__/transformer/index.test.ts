@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { createDefaultTransformer, createTransformer } from "../../src/transformer/index";
+import {
+  createDefaultTransformer,
+  createTransformer,
+} from "../../src/transformer/index";
 import type { Entity, DataTransformer } from "../core/types";
 
 // Test data types
@@ -60,12 +63,10 @@ describe("Transformer Module Integration", () => {
   });
 
   describe("createTransformer", () => {
-    it("should be exported and work correctly", () => {
+    it("should be exported and preserve identity mode by default", () => {
       const transformer = createTransformer<TodoApiData, TodoUiData>(undefined);
 
-      expect(transformer).toBeDefined();
-      expect(transformer).toHaveProperty("toUi");
-      expect(transformer).toHaveProperty("toApi");
+      expect(transformer).toBeUndefined();
     });
 
     it("should work with custom transformer", () => {

@@ -1,9 +1,12 @@
 import {
   createOptimisticStore,
-  OptimisticStore,
-  DataTransformer,
+  type OptimisticStore,
+  type DataTransformer,
 } from "@kingstack/advanced-optimistic-store";
+import type { QueryClient } from "@tanstack/react-query";
 import { fetchWithAuth } from "@/lib/utils";
+import type { SupabaseSession } from "@/lib/session-manager";
+import { StoreDemand } from "@/lib/store-lifecycle";
 import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 
 // API data structure (what comes from the server)
@@ -76,40 +79,43 @@ class CurrentUserTransformer
 }
 
 export class CurrentUserStore {
-  private optimisticStore: OptimisticStore<
+  private readonly optimisticStore: OptimisticStore<
     CurrentUserApiData,
     CurrentUserUiData
-  > | null = null;
-  private authToken: string | null = null;
-  private isEnabled: boolean = false;
-  private transformer = new CurrentUserTransformer();
+  >;
+  private readonly transformer = new CurrentUserTransformer();
+  private readonly demand: StoreDemand;
+  private session: SupabaseSession = null;
 
-  constructor() {
-    // Store is created but not enabled until auth is available
-    this.initialize();
-  }
+  constructor(queryClient: QueryClient) {
+    this.demand = new StoreDemand(() => this.optimisticStore.updateOptions());
 
-  private initialize() {
     this.optimisticStore = createOptimisticStore<
       CurrentUserApiData,
       CurrentUserUiData
-    >({
-      name: "user",
-      queryFn: this.getQueryFn(),
-      mutations: {
-        create: this.getCreateMutation(),
-        update: this.getUpdateMutation(),
-        remove: this.getDeleteMutation(),
+    >(
+      {
+        name: "user",
+        queryKey: () => ["user", this.sessionIdentity],
+        queryFn: this.getQueryFn(),
+        mutations: {
+          create: this.getCreateMutation(),
+          update: this.getUpdateMutation(),
+          remove: this.getDeleteMutation(),
+        },
+        transformer: this.transformer,
+        staleTime: 10 * 60 * 1000,
+        enabled: () =>
+          this.demand.isActive &&
+          (!!this.session?.access_token || isPlaygroundMode()),
       },
-      transformer: this.transformer,
-      staleTime: 10 * 60 * 1000, // 10 minutes (user data changes less frequently)
-      enabled: () => this.isEnabled && (!!this.authToken || isPlaygroundMode()), // Run when enabled and we have a token OR in playground mode
-    });
+      queryClient,
+    );
   }
 
   // API Implementations
   private apiQueryFn = async (): Promise<CurrentUserApiData[]> => {
-    const token = this.authToken || "";
+    const token = this.session?.access_token || "";
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3069";
     const currentUser = await fetchWithAuth(token, `${baseUrl}/api/user`).then(
       (res) => res.json(),
@@ -121,7 +127,7 @@ export class CurrentUserStore {
   private apiCreateMutation = async (
     data: any,
   ): Promise<CurrentUserApiData> => {
-    const token = this.authToken || "";
+    const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/api/user`, {
@@ -131,13 +137,12 @@ export class CurrentUserStore {
   };
 
   private apiUpdateMutation = async ({
-    id,
     data,
   }: {
     id: string;
     data: any;
   }): Promise<CurrentUserApiData> => {
-    const token = this.authToken || "";
+    const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/api/user`, {
@@ -146,8 +151,8 @@ export class CurrentUserStore {
     }).then((res) => res.json());
   };
 
-  private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
-    const token = this.authToken || "";
+  private apiDeleteMutation = async (): Promise<{ id: string }> => {
+    const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     const response = await fetchWithAuth(token, `${baseUrl}/api/user`, {
@@ -241,68 +246,45 @@ export class CurrentUserStore {
       : this.apiDeleteMutation;
   }
 
-  // Enable the store with auth token
-  enable(authToken: string) {
-    this.authToken = authToken;
-    this.isEnabled = true;
-    // Update the store manager options to enable the query
-    this.optimisticStore?.updateOptions();
+  activate(): () => void {
+    return this.demand.activate();
   }
 
-  // Enable for playground mode (no auth token needed)
-  enablePlayground() {
-    this.authToken = "playground-token";
-    this.isEnabled = true;
-    // Update the store manager options to enable the query
-    this.optimisticStore?.updateOptions();
+  setSession(session: SupabaseSession): void {
+    const previousIdentity = this.sessionIdentity;
+    this.session = session;
+
+    if (previousIdentity !== this.sessionIdentity) {
+      this.optimisticStore.ui.clear();
+    }
+
+    this.optimisticStore.updateOptions();
   }
 
-  // Disable the store
-  disable() {
-    this.isEnabled = false;
-    this.authToken = null;
-    // Update the store manager options to disable the query
-    this.optimisticStore?.updateOptions();
+  dispose(): void {
+    this.demand.dispose();
+    this.optimisticStore.destroy();
   }
 
   // Expose UI data (observable MobX state)
   get ui() {
-    return this.optimisticStore?.ui || null;
+    return this.optimisticStore.ui;
   }
 
   // Expose API methods (mutations + query control)
   get api() {
-    return this.optimisticStore?.api || null;
-  }
-
-  // Legacy getters for backward compatibility (deprecated)
-  get store() {
-    return this.ui;
-  }
-
-  get actions() {
-    return this.api;
-  }
-
-  get status() {
-    return this.api?.status || null;
-  }
-
-  // Check if store is ready and enabled
-  get isReady() {
-    return this.optimisticStore !== null && this.isEnabled;
-  }
-
-  // Manually trigger query (useful for debugging or manual refresh)
-  triggerQuery() {
-    this.optimisticStore?.api.triggerQuery();
+    return this.optimisticStore.api;
   }
 
   // Convenience method to get current user data
   get currentUser() {
-    if (!this.ui?.entities) return null;
     // For user data, we expect a single entity, so get the first one
     const entities = Array.from(this.ui.entities.values());
     return entities[0] || null;
+  }
+
+  private get sessionIdentity(): string {
+    if (isPlaygroundMode()) return "playground";
+    return this.session?.user.id ?? "anonymous";
   }
 }

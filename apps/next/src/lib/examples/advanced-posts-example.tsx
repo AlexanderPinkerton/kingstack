@@ -1,9 +1,10 @@
 "use client";
 
 import { observer } from "mobx-react-lite";
-import { useState, useContext, useEffect } from "react";
-import { RootStoreContext } from "@/context/rootStoreContext";
-import { PostApiData, PostUiData } from "@/stores/userApp/postStore";
+import { useState, useEffect } from "react";
+import { useRootStore } from "@/hooks/useRootStore";
+import { useStoreActivation } from "@/hooks/useStoreActivation";
+import { PostUiData } from "@/stores/userApp/postStore";
 
 // ---------- Advanced Types ----------
 // Types are now imported from postStore2.ts
@@ -14,8 +15,9 @@ import { PostApiData, PostUiData } from "@/stores/userApp/postStore";
 // ---------- Component ----------
 
 export const AdvancedPostsExample = observer(() => {
-  const rootStore = useContext(RootStoreContext);
+  const rootStore = useRootStore();
   const postStore = rootStore.userStore.postStore;
+  useStoreActivation(postStore);
   const { ui, api } = postStore;
 
   // Client-side only state to prevent hydration mismatches

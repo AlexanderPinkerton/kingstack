@@ -3,7 +3,10 @@ import { QueryClient } from "@tanstack/query-core";
 import { autorun } from "mobx";
 import { createOptimisticStore } from "../../src/core/OptimisticStore";
 import type { Entity, OptimisticStoreConfig } from "../../src/core/types";
-import { getPerformanceThresholds, measureMemoryUsage } from "../utils/testHelpers";
+import {
+  getPerformanceThresholds,
+  measureMemoryUsage,
+} from "../utils/testHelpers";
 
 // Test data types
 interface TestApiData extends Entity {
@@ -45,19 +48,6 @@ const mockTransformer = {
     created_at: uiData.created_at.toISOString(),
   }),
 };
-
-// Mock realtime extension
-const mockRealtimeExtension = {
-  connected: false,
-  connect: vi.fn(),
-  disconnect: vi.fn(),
-  handleEvent: vi.fn(),
-};
-
-// Mock the realtime module
-vi.mock("../../src/realtime", () => ({
-  createRealtimeExtension: vi.fn(() => mockRealtimeExtension),
-}));
 
 // Mock the query client module
 vi.mock("../../src/query/queryClient", () => ({
@@ -443,17 +433,9 @@ describe("OptimisticStore Advanced Scenarios", () => {
     });
   });
 
-  describe("Realtime Edge Cases", () => {
-    it("should handle realtime events during mutations", async () => {
-      const configWithRealtime = {
-        ...config,
-        realtime: {
-          eventType: "test_update",
-          browserId: "test-browser",
-        },
-      };
-
-      const store = createOptimisticStore(configWithRealtime, queryClient);
+  describe("Remote Change Edge Cases", () => {
+    it("should preserve local optimistic intent over a new remote base", async () => {
+      const store = createOptimisticStore(config, queryClient);
 
       // Wait for initial load
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -471,7 +453,7 @@ describe("OptimisticStore Advanced Scenarios", () => {
       // Wait for optimistic update
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      // Simulate realtime event during mutation
+      // Apply a confirmed remote change during the mutation.
       const realtimeData = {
         id: "1",
         title: "Realtime Update",
@@ -479,7 +461,13 @@ describe("OptimisticStore Advanced Scenarios", () => {
         priority: "1",
         created_at: "2023-01-01T00:00:00.000Z",
       };
-      store.ui.upsertViaRealtime(realtimeData);
+      store.applyRemote({
+        operation: "update",
+        entity: realtimeData,
+        membership: "include",
+      });
+
+      expect(store.ui.get("1")?.title).toBe("Mutation Update");
 
       // Resolve mutation
       resolveMutation!({
@@ -496,33 +484,6 @@ describe("OptimisticStore Advanced Scenarios", () => {
       // Final state should be from mutation
       const finalTask = store.ui.get("1");
       expect(finalTask?.title).toBe("Final Mutation Result");
-    });
-
-    it("should handle realtime connection failures gracefully", () => {
-      const configWithRealtime = {
-        ...config,
-        realtime: {
-          eventType: "test_update",
-          browserId: "test-browser",
-        },
-      };
-
-      const store = createOptimisticStore(configWithRealtime, queryClient);
-
-      // Simulate connection failure
-      const mockSocket = { on: vi.fn(), emit: vi.fn() };
-      mockRealtimeExtension.connect.mockImplementationOnce(() => {
-        throw new Error("Connection failed");
-      });
-
-      // Should handle error gracefully
-      expect(() => {
-        try {
-          store.realtime?.connect(mockSocket);
-        } catch (error) {
-          // Expected to throw, but we handle it gracefully
-        }
-      }).not.toThrow();
     });
   });
 
@@ -774,10 +735,14 @@ describe("OptimisticStore Advanced Scenarios", () => {
     const postTransformer = {
       toUi: (apiData: PostApiData): PostUiData => {
         const content = apiData.content || "";
-        const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+        const wordCount = content
+          .split(/\s+/)
+          .filter((word) => word.length > 0).length;
         const readingTime = Math.ceil(wordCount / 200); // 200 words per minute
-        const excerpt = content.length > 100 ? content.substring(0, 100) + "..." : content;
-        const tags = content.match(/#\w+/g)?.map(tag => tag.substring(1)) || [];
+        const excerpt =
+          content.length > 100 ? content.substring(0, 100) + "..." : content;
+        const tags =
+          content.match(/#\w+/g)?.map((tag) => tag.substring(1)) || [];
 
         return {
           id: apiData.id,
@@ -804,10 +769,15 @@ describe("OptimisticStore Advanced Scenarios", () => {
       optimisticDefaults: {
         createOptimisticUiData: (userInput: any, context?: any): PostUiData => {
           const content = userInput.content || "";
-          const wordCount = content.split(/\s+/).filter((word: string) => word.length > 0).length;
+          const wordCount = content
+            .split(/\s+/)
+            .filter((word: string) => word.length > 0).length;
           const readingTime = Math.ceil(wordCount / 200);
-          const excerpt = content.length > 100 ? content.substring(0, 100) + "..." : content;
-          const tags = content.match(/#\w+/g)?.map((tag: string) => tag.substring(1)) || [];
+          const excerpt =
+            content.length > 100 ? content.substring(0, 100) + "..." : content;
+          const tags =
+            content.match(/#\w+/g)?.map((tag: string) => tag.substring(1)) ||
+            [];
 
           return {
             id: userInput.id || `temp-${Date.now()}`,
@@ -815,17 +785,18 @@ describe("OptimisticStore Advanced Scenarios", () => {
             content,
             published: userInput.published ?? false,
             author_id: userInput.author_id || "unknown",
-            created_at: userInput.created_at instanceof Date
-              ? userInput.created_at
-              : new Date(userInput.created_at || Date.now()),
-            publishStatus: (userInput.published ?? false) ? "published" : "draft",
+            created_at:
+              userInput.created_at instanceof Date
+                ? userInput.created_at
+                : new Date(userInput.created_at || Date.now()),
+            publishStatus:
+              (userInput.published ?? false) ? "published" : "draft",
             excerpt,
             wordCount,
             readingTime,
             tags,
           };
         },
-        pendingFields: [],
       },
     };
 
@@ -857,17 +828,25 @@ describe("OptimisticStore Advanced Scenarios", () => {
       ]);
 
       // Mock successful mutations with delay to allow optimistic updates to be checked
-      mockUpdateMutation.mockImplementation(({ data }) =>
-        new Promise(resolve =>
-          setTimeout(() => resolve({
-            id: "1",
-            title: data.title || "Updated Post",
-            content: data.content || "Updated content with #new and #updated tags",
-            published: data.published !== undefined ? data.published : true,
-            author_id: "user1",
-            created_at: "2023-01-01T00:00:00.000Z",
-          }), 50)
-        )
+      mockUpdateMutation.mockImplementation(
+        ({ data }) =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  id: "1",
+                  title: data.title || "Updated Post",
+                  content:
+                    data.content ||
+                    "Updated content with #new and #updated tags",
+                  published:
+                    data.published !== undefined ? data.published : true,
+                  author_id: "user1",
+                  created_at: "2023-01-01T00:00:00.000Z",
+                }),
+              50,
+            ),
+          ),
       );
     });
 
@@ -913,11 +892,14 @@ describe("OptimisticStore Advanced Scenarios", () => {
       expect(initialPost).toBeDefined();
       expect(initialPost!.wordCount).toBe(10); // "This is a test post with #testing and #optimistic tags" (10 words)
       expect(initialPost!.readingTime).toBe(1); // 10 words / 200 = 1 minute
-      expect(initialPost!.excerpt).toBe("This is a test post with #testing and #optimistic tags");
+      expect(initialPost!.excerpt).toBe(
+        "This is a test post with #testing and #optimistic tags",
+      );
       expect(initialPost!.tags).toEqual(["testing", "optimistic"]);
 
       // Start optimistic update with new content
-      const newContent = "This is a much longer post with many more words to test the word count calculation and reading time estimation. It should have #new #tags and #more #content for testing purposes.";
+      const newContent =
+        "This is a much longer post with many more words to test the word count calculation and reading time estimation. It should have #new #tags and #more #content for testing purposes.";
       const updatePromise = store.api.update("1", { content: newContent });
 
       // Wait for optimistic update to be applied
@@ -929,7 +911,9 @@ describe("OptimisticStore Advanced Scenarios", () => {
       expect(optimisticPost!.content).toBe(newContent);
       expect(optimisticPost!.wordCount).toBe(31); // Should be recalculated immediately
       expect(optimisticPost!.readingTime).toBe(1); // 35 words / 200 = 1 minute
-      expect(optimisticPost!.excerpt).toBe("This is a much longer post with many more words to test the word count calculation and reading time ..."); // Should be recalculated (truncated at 100 chars)
+      expect(optimisticPost!.excerpt).toBe(
+        "This is a much longer post with many more words to test the word count calculation and reading time ...",
+      ); // Should be recalculated (truncated at 100 chars)
       expect(optimisticPost!.tags).toEqual(["new", "tags", "more", "content"]); // Should be recalculated immediately
 
       // Complete the mutation
@@ -995,10 +979,11 @@ describe("OptimisticStore Advanced Scenarios", () => {
       const initialPublishStatus = initialPost!.publishStatus;
 
       // Mock mutation to fail after delay
-      mockUpdateMutation.mockImplementationOnce(() =>
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Update failed")), 50)
-        )
+      mockUpdateMutation.mockImplementationOnce(
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Update failed")), 50),
+          ),
       );
 
       // Start optimistic update
@@ -1012,7 +997,9 @@ describe("OptimisticStore Advanced Scenarios", () => {
 
       // Check optimistic state
       const optimisticPost = store.ui.get("1");
-      expect(optimisticPost!.content).toBe("This will fail and should rollback");
+      expect(optimisticPost!.content).toBe(
+        "This will fail and should rollback",
+      );
       expect(optimisticPost!.published).toBe(true);
       expect(optimisticPost!.publishStatus).toBe("published");
 
@@ -1029,7 +1016,9 @@ describe("OptimisticStore Advanced Scenarios", () => {
 
       // Check that computed fields are rolled back
       const rolledBackPost = store.ui.get("1");
-      expect(rolledBackPost!.content).toBe("This is a test post with #testing and #optimistic tags");
+      expect(rolledBackPost!.content).toBe(
+        "This is a test post with #testing and #optimistic tags",
+      );
       expect(rolledBackPost!.published).toBe(false);
       expect(rolledBackPost!.publishStatus).toBe("draft");
       expect(rolledBackPost!.wordCount).toBe(initialWordCount);

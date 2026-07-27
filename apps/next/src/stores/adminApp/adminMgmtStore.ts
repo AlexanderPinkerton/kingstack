@@ -1,9 +1,11 @@
 import {
   createOptimisticStore,
   type OptimisticStore,
-  type ObservableUIData,
 } from "@kingstack/advanced-optimistic-store";
+import type { QueryClient } from "@tanstack/react-query";
 import { fetchWithAuth } from "@/lib/utils";
+import type { SupabaseSession } from "@/lib/session-manager";
+import { StoreDemand } from "@/lib/store-lifecycle";
 import { isPlaygroundMode } from "@kingstack/shared";
 
 // API data structure (what comes from the server)
@@ -24,73 +26,67 @@ export interface AdminEmailUiData {
 }
 
 export class AdminMgmtStore {
-  private optimisticStore: OptimisticStore<
+  private readonly optimisticStore: OptimisticStore<
     AdminEmailApiData,
-    AdminEmailUiData,
-    ObservableUIData<AdminEmailUiData>
-  > | null = null;
-  private authToken: string | null = null;
-  private isEnabled: boolean = false;
+    AdminEmailUiData
+  >;
+  private readonly demand: StoreDemand;
+  private session: SupabaseSession = null;
 
-  constructor() {
-    // Store is created but not enabled until auth is available
-    this.initialize();
-  }
+  constructor(queryClient: QueryClient) {
+    this.demand = new StoreDemand(() => this.optimisticStore.updateOptions());
 
-  private initialize() {
     this.optimisticStore = createOptimisticStore<
       AdminEmailApiData,
       AdminEmailUiData
-    >({
-      name: "admin-emails",
-      queryFn: this.getQueryFn(),
-      mutations: {
-        create: this.getCreateMutation(),
-        update: this.getUpdateMutation(),
-        remove: this.getDeleteMutation(),
+    >(
+      {
+        name: "admin-emails",
+        queryKey: () => ["admin-emails", this.sessionIdentity],
+        queryFn: this.getQueryFn(),
+        mutations: {
+          create: this.getCreateMutation(),
+          update: this.getUpdateMutation(),
+          remove: this.getDeleteMutation(),
+        },
+        transformer: this.getTransformer(),
+        staleTime: 2 * 60 * 1000,
+        enabled: () =>
+          this.demand.isActive &&
+          (!!this.session?.access_token || isPlaygroundMode()),
       },
-      transformer: this.getTransformer(),
-      staleTime: 2 * 60 * 1000, // 2 minutes (admin list changes infrequently)
-      enabled: () =>
-        this.isEnabled &&
-        (!!this.authToken || this.authToken === "playground-token"),
-    });
+      queryClient,
+    );
   }
 
-  // Enable the store with auth token
-  enable(authToken: string) {
-    this.authToken = authToken;
-    this.isEnabled = true;
-    // Update the store options to enable the query
-    this.optimisticStore?.updateOptions();
+  activate(): () => void {
+    return this.demand.activate();
   }
 
-  // Disable the store
-  disable() {
-    this.isEnabled = false;
-    this.authToken = null;
-    // Update the store options to disable the query
-    this.optimisticStore?.updateOptions();
+  setSession(session: SupabaseSession): void {
+    const previousIdentity = this.sessionIdentity;
+    this.session = session;
+
+    if (previousIdentity !== this.sessionIdentity) {
+      this.optimisticStore.ui.clear();
+    }
+
+    this.optimisticStore.updateOptions();
+  }
+
+  dispose(): void {
+    this.demand.dispose();
+    this.optimisticStore.destroy();
   }
 
   // Expose UI data (observable MobX state)
   get ui() {
-    return this.optimisticStore?.ui || null;
+    return this.optimisticStore.ui;
   }
 
   // Expose API methods (mutations + query control)
   get api() {
-    return this.optimisticStore?.api || null;
-  }
-
-  // Check if store is ready and enabled
-  get isReady() {
-    return this.optimisticStore !== null && this.isEnabled;
-  }
-
-  // Manually trigger query (useful for debugging or manual refresh)
-  triggerQuery() {
-    this.optimisticStore?.api.triggerQuery();
+    return this.optimisticStore.api;
   }
 
   // ============================================================================
@@ -157,7 +153,7 @@ export class AdminMgmtStore {
 
   // API Implementations
   private apiQueryFn = async (): Promise<AdminEmailApiData[]> => {
-    const token = this.authToken || "";
+    const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/admin/emails`).then((res) =>
@@ -168,7 +164,7 @@ export class AdminMgmtStore {
   private apiCreateMutation = async (data: {
     email: string;
   }): Promise<AdminEmailApiData> => {
-    const token = this.authToken || "";
+    const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/admin/emails`, {
@@ -184,7 +180,7 @@ export class AdminMgmtStore {
     id: string;
     data: { email: string };
   }): Promise<AdminEmailApiData> => {
-    const token = this.authToken || "";
+    const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     return fetchWithAuth(token, `${baseUrl}/admin/emails/${id}`, {
@@ -194,7 +190,7 @@ export class AdminMgmtStore {
   };
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
-    const token = this.authToken || "";
+    const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
     const response = await fetchWithAuth(
@@ -265,4 +261,9 @@ export class AdminMgmtStore {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return { id };
   };
+
+  private get sessionIdentity(): string {
+    if (isPlaygroundMode()) return "playground";
+    return this.session?.user.id ?? "anonymous";
+  }
 }

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { QueryClient } from "@tanstack/query-core";
 import { createOptimisticStore, ObservableUIData } from "../../src/core/index";
 import type { Entity, OptimisticStoreConfig } from "../../src/core/types";
+import { createDefaultTransformer } from "../../src/transformer/index";
 
 // Test data types
 interface TodoApiData extends Entity {
@@ -21,6 +22,8 @@ interface TodoUiData extends Entity {
   created_at: Date;
   user_id: string;
 }
+
+const todoTransformer = createDefaultTransformer<TodoApiData, TodoUiData>();
 
 describe("Core Module Integration", () => {
   let queryClient: QueryClient;
@@ -103,11 +106,12 @@ describe("Core Module Integration", () => {
       expect(typeof createOptimisticStore).toBe("function");
     });
 
-    it("should create optimistic store with default transformer", () => {
+    it("should create an optimistic store with an explicit transformer", () => {
       const config: OptimisticStoreConfig<TodoApiData, TodoUiData> = {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -125,6 +129,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -199,6 +204,7 @@ describe("Core Module Integration", () => {
           ...mockMutations,
           create: vi.fn().mockRejectedValue(new Error("Server error")),
         },
+        transformer: todoTransformer,
         optimisticDefaults: {
           createOptimisticUiData: (userInput: any) => ({
             id: `temp-${Date.now()}`,
@@ -237,15 +243,12 @@ describe("Core Module Integration", () => {
       expect(store.ui.count).toBe(initialCount);
     });
 
-    it("should handle realtime updates", async () => {
+    it("should handle normalized remote updates", async () => {
       const config: OptimisticStoreConfig<TodoApiData, TodoUiData> = {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
-        realtime: {
-          eventType: "todo_update",
-          browserId: "test-browser",
-        },
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -256,24 +259,26 @@ describe("Core Module Integration", () => {
 
       expect(store.ui.count).toBe(2);
 
-      // Simulate realtime update
-      const realtimeData: TodoApiData = {
+      const remoteData: TodoApiData = {
         id: "3",
-        title: "Realtime Task",
+        title: "Remote Task",
         completed: "false",
         priority: "3",
         created_at: "2023-01-03T00:00:00.000Z",
         user_id: "user-123",
       };
 
-      // Manually trigger realtime update (simulating WebSocket event)
-      store.ui.upsertViaRealtime(realtimeData);
+      store.applyRemote({
+        operation: "insert",
+        entity: remoteData,
+        membership: "include",
+      });
 
       expect(store.ui.count).toBe(3);
-      const realtimeTask = store.ui.get("3");
-      expect(realtimeTask?.title).toBe("Realtime Task");
-      expect(realtimeTask?.completed).toBe(false);
-      expect(realtimeTask?.priority).toBe(3);
+      const remoteTask = store.ui.get("3");
+      expect(remoteTask?.title).toBe("Remote Task");
+      expect(remoteTask?.completed).toBe(false);
+      expect(remoteTask?.priority).toBe(3);
     });
 
     it("should handle server reconciliation", async () => {
@@ -281,6 +286,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -354,6 +360,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -374,6 +381,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -403,6 +411,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);
@@ -427,6 +436,7 @@ describe("Core Module Integration", () => {
         name: "todos",
         queryFn: mockQueryFn,
         mutations: mockMutations,
+        transformer: todoTransformer,
       };
 
       const store = createOptimisticStore(config, queryClient);

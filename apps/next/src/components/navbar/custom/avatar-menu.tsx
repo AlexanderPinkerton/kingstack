@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useContext, useCallback } from "react";
+import React, { useCallback } from "react";
 import Link from "next/link";
 import { User, LogOut } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { RootStoreContext } from "@/context/rootStoreContext";
+import { useRootStore } from "@/hooks/useRootStore";
 import { observer } from "mobx-react-lite";
 import { createClient } from "@/lib/supabase/browserClient";
 import { isPlaygroundMode } from "@kingstack/shared";
@@ -25,7 +25,7 @@ interface AvatarMenuProps {
 export const AvatarMenu = observer(function AvatarMenu({
   className = "",
 }: AvatarMenuProps) {
-  const rootStore = useContext(RootStoreContext);
+  const rootStore = useRootStore();
   const supabase = createClient();
   const session = rootStore.session;
   const user = session?.user;

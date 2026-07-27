@@ -95,7 +95,6 @@ kingstack/
 │   ├── next/                    # Next.js app (frontend + serverless API)
 │   └── nest/                     # NestJS app (API, logic, jobs, realtime)
 ├── packages/
-│   ├── advanced-optimistic-store/  # Optimistic updates with MobX + TanStack Query
 │   ├── eslint-config/              # Shared ESLint configuration
 │   ├── prisma/                     # Schema + generated client
 │   ├── shared/                     # Shared TS code (@kingstack/shared)
@@ -376,7 +375,10 @@ bun run apps/nest/src/scripts/backfill-user-data.ts
 ### 📦 Packages
 
 - **`@kingstack/shared`** (in `packages/shared/`): Shared TypeScript types and utilities used by both Next.js and NestJS
-- **`@kingstack/advanced-optimistic-store`**: Framework-agnostic optimistic updates with MobX + TanStack Query Core + optional realtime
+- **`@kingstack/advanced-optimistic-store`**: Public MIT package for
+  framework-agnostic optimistic and remote updates with MobX + TanStack Query
+  Core. The upstream monorepo contains its source; generated projects install it
+  from npm.
 - **`@kingstack/eslint-config`**: Shared ESLint configuration for consistent code quality
 - **`@kingstack/ts-config`**: Shared TypeScript configuration
 - **`@kingstack/prisma`**: Prisma schema and migrations
