@@ -99,6 +99,46 @@ describe("OptimisticStore deterministic concurrency", () => {
     ).toBe(0);
   });
 
+  it("reconciles a completed query when staleTime is zero", async () => {
+    const queryClient = createQueryClient();
+    const item = { id: "1", title: "always stale", revision: 1 };
+
+    const store = createOptimisticStore<
+      Item,
+      Item,
+      ObservableUIData<Item>,
+      CreateInput,
+      UpdateInput
+    >(
+      {
+        name: "always-stale-items",
+        staleTime: 0,
+        queryFn: async () => [item],
+        mutations: {
+          create: async (data) => ({
+            id: "created",
+            title: data.title,
+            revision: 1,
+          }),
+          update: async ({ id, data }) => ({
+            id,
+            title: data.title,
+            revision: 1,
+          }),
+          remove: async (id) => ({ id }),
+        },
+        transformer: false,
+      },
+      queryClient,
+    );
+
+    await vi.waitFor(() => {
+      expect(store.ui.list).toEqual([item]);
+    });
+
+    store.destroy();
+  });
+
   it("rolls back only the failed create and tracks every pending create", async () => {
     const first = deferred<Item>();
     const second = deferred<Item>();

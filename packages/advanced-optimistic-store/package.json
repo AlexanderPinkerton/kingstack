@@ -19,7 +19,9 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "STATUS.md",
+    "docs"
   ],
   "scripts": {
     "build": "yarn clean && tsc",

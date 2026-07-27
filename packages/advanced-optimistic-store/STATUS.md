@@ -12,9 +12,12 @@ extension.
 - MobX entity projection with O(1) ID lookup
 - TanStack Query fetching, cache synchronization, and invalidation
 - Configurable query keys for user, tenant, and filter isolation
+- Zero QueryObserver subscriptions while a store is disabled
+- Fresh-cache reuse when a store becomes active
 - Optimistic create, update, and delete
 - Mutation-specific rollback without a shared global snapshot
 - Deterministic handling of overlapping and out-of-order local mutations
+- Query-scope isolation for mutations that settle after an identity change
 - Pending-operation counters
 - Explicit API-to-UI transformers
 - Optional event-emitter-compatible realtime integration
@@ -32,7 +35,12 @@ yarn workspace @kingstack/advanced-optimistic-store build
 
 The regression suite includes overlapping creates, out-of-order updates,
 rollback after a newer failure, query-cache synchronization, and direct
-realtime lifecycle tests.
+realtime lifecycle tests. It also verifies inactive observer counts, fresh-cache
+activation, and mutation completion across query-scope changes.
+
+The package README is the canonical entry point. Focused references live in
+`docs/`; superseded marketing and example documents have been removed rather
+than retained as competing documentation.
 
 ## Deliberate boundaries
 

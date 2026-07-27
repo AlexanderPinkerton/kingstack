@@ -248,7 +248,7 @@ export function createOptimisticStore<
       status.isSyncing = result.isFetching;
     });
 
-    if (result.data && !result.isStale && !result.isFetching) {
+    if (result.data && !result.isFetching) {
       if (status.hasPendingMutations) {
         deferredReconciliation = result.data;
       } else {

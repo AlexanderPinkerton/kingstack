@@ -1,524 +1,386 @@
 # @kingstack/advanced-optimistic-store
 
-> **Framework-agnostic optimistic updates with MobX + TanStack Query Core + optional realtime**
+Advanced Optimistic Store (AOS) combines three focused pieces:
 
-Modern apps need to feel instant, stay correct, and scale without turning your state layer into a ball of mud. **@kingstack/advanced-optimistic-store (AOS)** gives you that balance by combining MobX, TanStack Query Core, and optional realtime into a single, coherent pattern.
+- TanStack Query Core owns remote data, freshness, and the authoritative cache.
+- MobX owns the observable UI projection.
+- AOS coordinates queries, transformations, optimistic CRUD, reconciliation,
+  and optional realtime events.
 
-## Why Use Advanced Optimistic Store?
+The package is framework-agnostic. It does not depend on React, create a
+provider, manage authentication, or choose when a feature should be active.
+Those decisions remain with the application.
 
-### ⚡ Instant, Confident UX
+This is currently a private KingStack workspace package and is not published to
+the npm registry.
 
-Give users the feeling that everything happens immediately—because from their perspective, it does.
+## Mental model
 
-* Optimistic updates apply instantly, before the server responds
-* Automatic rollback keeps your UI honest when something fails
-* No more "loading…" flicker for every small interaction
+```text
+API response
+    │
+    ▼
+TanStack Query cache (authoritative API entities)
+    │ transform + reconcile
+    ▼
+MobX UI projection (observable UI entities)
+    ▲
+    │ temporary optimistic layers
+User mutation
+```
 
-Your app feels like it's running on local data, while still staying fully in sync with the backend.
+Successful mutations update the MobX projection and any existing scoped
+TanStack collection cache. Failed mutations roll back only their own optimistic
+work. Overlapping mutations do not share one global snapshot.
 
-### 🧠 Clear Separation of Concerns
+## Requirements
 
-Stop forcing one tool to do everything.
+The consuming workspace must provide compatible peer dependencies:
 
-* **UI domain (MobX)** handles reactive lists, computed values, snapshots, and rollback
-* **API domain (TanStack Query Core)** manages caching, fetches, mutations, and background syncing
-* **Transformation layer** cleanly maps API data ↔ UI data with type safety
-
-You get a state model that's easy to reason about, test, and evolve—without hidden coupling between your UI and API logic.
-
-### 🗃️ Perfect Fit for CRUD Backends
-
-AOS really shines when paired with a straightforward backend design:
-
-* A **DB table or collection** for each entity
-* A clean **CRUD API** for that entity
-* **Mutation endpoints that return the full updated object**
-
-This makes optimistic updates trivial: the UI instantly shows the change, and the server's response "locks in" the final, authoritative version without extra refetching or reconciliation hacks.
-
-### 🧾 Forms That Map Directly to Operations
-
-For maximum speed and clarity, each mutation is best paired with its own form:
-
-* A form per operation (create, update, etc.)
-* Fields match the **UI data shape** (or a subset of it)
-* Minimal transformation between what the user fills out and what the API expects
-
-That means fewer bugs, less glue code, and a more intuitive mental model:
-**"This form drives this mutation, which updates this store."**
-
-### 🌐 Realtime-Ready When You Are
-
-If your app needs realtime updates, AOS plugs into WebSockets or other event sources without rewriting your state layer:
-
-* Realtime events merge into the same optimistic store
-* Self-echo prevention and deterministic local mutation ordering are built in
-* Local optimistic changes and remote updates stay in sync
-
-You don't have to choose between "optimistic" and "realtime" — you get both.
-
-### 🧩 Framework-Agnostic, Future-Proof
-
-AOS is designed to slot into your stack, not lock you into one.
-
-* Works with React, Vue, Svelte, or vanilla JS
-* UI stays powered by MobX observables
-* API logic stays powered by TanStack Query Core
-* Your data model stays consistent across the entire app
-
-You can refactor your UI layer, evolve your API, or add realtime later—without rewriting how your state works.
-
-### 💻 Developer Experience That Feels Right
-
-* No more hand-rolling optimistic logic for every feature
-* No more guessing how API data will flow into the UI
-* No more bolting realtime onto an already fragile state layer
-
-Instead, you get a **single, opinionated pattern**:
-
-> A DB table → a CRUD API → an AOS store → forms and components bound to a fast, optimistic, reactive UI.
-
-The end result: a system that feels instant to users, predictable to developers, and scalable for your product.
-
-## 🚀 Quick Start: A Complete Example
-
-This example demonstrates how **clean and simple** the advanced optimistic store pattern can be. You'll see how a few lines of configuration give you instant UI updates, automatic rollback, type-safe transformations, and reactive state—all without any boilerplate.
-
-### Step 1: Define Your Types
-
-```typescript
-import { createOptimisticStore } from "@kingstack/advanced-optimistic-store";
-
-// API data shape (what comes from the server)
-interface PostApiData {
-  id: string;
-  title: string;
-  content: string;
-  author_id: string;
-  published: boolean;
-  created_at: string;      // ISO string from server
-  updated_at: string;      // ISO string from server
-}
-
-// UI data shape (what your components use)
-interface PostUiData {
-  id: string;
-  title: string;
-  content: string;
-  author_id: string;
-  published: boolean;
-  created_at: Date;        // JavaScript Date object
-  updated_at: Date;        // JavaScript Date object
-  isNew: boolean;          // Computed: less than 24 hours old
-  wordCount: number;        // Computed: words in content
+```json
+{
+  "dependencies": {
+    "@kingstack/advanced-optimistic-store": "workspace:*",
+    "@tanstack/query-core": "^5.0.0",
+    "mobx": "^6.0.0"
+  }
 }
 ```
 
-### Step 2: Create the Store
+Use the exact `QueryClient` instance owned by the application whenever
+possible. This gives AOS and the rest of the application one cache:
 
-```typescript
-const postStore = createOptimisticStore<PostApiData, PostUiData>({
-  name: "posts",
-  
-  // How to fetch all posts
-  queryFn: async () => {
-    const response = await fetch("/api/posts");
-    return response.json();
-  },
-  
-  // CRUD mutations - each returns the full updated object
-  // **IMPORTANT**: If your CRUD API endpoints do not return the object, instant update confirmations will not work!
-  mutations: {
-    create: async (data) => {
-      const response = await fetch("/api/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      return response.json(); // Returns full PostApiData
-    },
-    
-    update: async (params) => {
-      const { id, data } = params;
-      const response = await fetch(`/api/posts/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      return response.json(); // Returns full PostApiData
-    },
-    
-    remove: async (id) => {
-      await fetch(`/api/posts/${id}`, { method: "DELETE" });
-      return { id }; // Just return the ID for deletion
-    },
-  },
-  
-  // Transform API data ↔ UI data with computed properties
-  transformer: {
-    // Server data → UI data
-    toUi: (apiData) => ({
-      ...apiData,
-      created_at: new Date(apiData.created_at),
-      updated_at: new Date(apiData.updated_at),
-      isNew: (Date.now() - new Date(apiData.created_at).getTime()) < 24 * 60 * 60 * 1000,
-      wordCount: apiData.content.split(/\s+/).filter(Boolean).length,
+```ts
+import { QueryClient } from "@tanstack/query-core";
+
+export const queryClient = new QueryClient();
+```
+
+Pass it as the second argument to `createOptimisticStore`. If it is omitted,
+AOS uses its package-level client from `getGlobalQueryClient()`. The global
+client is convenient for small non-SSR runtimes, but explicit injection is the
+recommended application architecture.
+
+## Quick start
+
+### 1. Define API, UI, and mutation shapes
+
+Every entity must have a string `id`.
+
+```ts
+import type { Entity } from "@kingstack/advanced-optimistic-store";
+
+interface TodoApi extends Entity {
+  title: string;
+  done: boolean;
+  created_at: string;
+}
+
+interface TodoUi extends Entity {
+  title: string;
+  done: boolean;
+  createdAt: Date;
+}
+
+type CreateTodoInput = {
+  title: string;
+};
+
+type UpdateTodoInput = Partial<Pick<TodoUi, "title" | "done">>;
+```
+
+### 2. Create the store
+
+```ts
+import {
+  createOptimisticStore,
+  type DataTransformer,
+  type ObservableUIData,
+} from "@kingstack/advanced-optimistic-store";
+import { QueryClient } from "@tanstack/query-core";
+
+const queryClient = new QueryClient();
+
+const transformer: DataTransformer<TodoApi, TodoUi, CreateTodoInput> = {
+  toUi: (todo) => ({
+    id: todo.id,
+    title: todo.title,
+    done: todo.done,
+    createdAt: new Date(todo.created_at),
+  }),
+  toApi: (todo) => ({
+    id: todo.id,
+    title: todo.title,
+    done: todo.done,
+    created_at: todo.createdAt.toISOString(),
+  }),
+  optimisticDefaults: {
+    createOptimisticUiData: (input) => ({
+      id: `todo-${crypto.randomUUID()}`,
+      title: input.title,
+      done: false,
+      createdAt: new Date(),
     }),
-    
-    // UI data → API data
-    toApi: (uiData) => ({
-      id: uiData.id,
-      title: uiData.title,
-      content: uiData.content,
-      author_id: uiData.author_id,
-      published: uiData.published,
-      created_at: uiData.created_at.toISOString(),
-      updated_at: uiData.updated_at.toISOString(),
-    }),
-    
-    // Optimistic defaults: what to show before server confirms
-    optimisticDefaults: {
-      createOptimisticUiData: (formData) => ({
-        id: `temp-${Date.now()}`,
-        ...formData,
-        created_at: new Date(),
-        updated_at: new Date(),
-        isNew: true,
-        wordCount: formData.content?.split(/\s+/).filter(Boolean).length || 0,
-      }),
-    },
   },
-});
+};
+
+export const todoStore = createOptimisticStore<
+  TodoApi,
+  TodoUi,
+  ObservableUIData<TodoUi>,
+  CreateTodoInput,
+  UpdateTodoInput
+>(
+  {
+    name: "todos",
+    queryKey: ["todos"],
+    queryFn: async () => {
+      const response = await fetch("/api/todos");
+      if (!response.ok) throw new Error("Could not load todos");
+      return response.json() as Promise<TodoApi[]>;
+    },
+    mutations: {
+      create: async (input) => {
+        const response = await fetch("/api/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        if (!response.ok) throw new Error("Could not create todo");
+        return response.json() as Promise<TodoApi>;
+      },
+      update: async ({ id, data }) => {
+        const response = await fetch(`/api/todos/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error("Could not update todo");
+        return response.json() as Promise<TodoApi>;
+      },
+      remove: async (id) => {
+        const response = await fetch(`/api/todos/${id}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) throw new Error("Could not delete todo");
+        return { id };
+      },
+    },
+    transformer,
+    staleTime: 5 * 60 * 1000,
+  },
+  queryClient,
+);
 ```
 
-**That's it.** You now have:
-- ✅ Instant optimistic updates
-- ✅ Automatic rollback on errors
-- ✅ Type-safe data transformations
-- ✅ Reactive UI state (MobX)
-- ✅ Smart caching (TanStack Query)
-- ✅ Loading and error states
+Mutation endpoints must return the complete authoritative entity after a create
+or update. AOS uses that response to replace the optimistic projection and
+update an existing query cache entry. It does not treat one mutation result as
+a complete collection when the query has never been cached.
 
-### Step 3: Use It
+### 3. Read and mutate
 
-#### Access Reactive UI Data
+```ts
+todoStore.ui.list;
+todoStore.ui.count;
+todoStore.ui.getById("todo-1");
 
-```typescript
-// Reactive list (MobX observable)
-const posts = postStore.ui.list;
+await todoStore.api.create({ title: "Write documentation" });
+await todoStore.api.update("todo-1", { done: true });
+await todoStore.api.remove("todo-1");
 
-// Computed values work automatically
-const publishedPosts = posts.filter(p => p.published);
-const totalWords = posts.reduce((sum, p) => sum + p.wordCount, 0);
-const newPostsCount = posts.filter(p => p.isNew).length;
-
-// Direct lookups
-const post = postStore.ui.getById("post-123");
-const hasPost = postStore.ui.hasItem("post-123");
+todoStore.api.status.isLoading;
+todoStore.api.status.isSyncing;
+todoStore.api.status.hasPendingMutations;
 ```
 
-#### Perform Optimistic Mutations
+`ui.entities`, `ui.list`, `ui.count`, and the status object are MobX
+observables. A framework needs its normal MobX adapter to react to them. For
+example, React components should use `observer` from `mobx-react-lite`.
 
-```typescript
-// Create - UI updates instantly, server confirms later
-await postStore.api.create({
-  title: "My New Post",
-  content: "This is the content...",
-  author_id: "user-123",
-  published: false,
-});
+## Query activation
 
-// Update - checkbox toggles instantly, server confirms
-await postStore.api.update("post-123", { published: true });
+Store construction and data demand are separate concerns. Supply a dynamic
+`enabled` predicate, then call `updateOptions()` when its dependencies change:
 
-// Delete - item disappears instantly, server confirms
-await postStore.api.remove("post-123");
+```ts
+let featureConsumers = 0;
+let accessToken: string | null = null;
+
+const store = createOptimisticStore(
+  {
+    name: "projects",
+    queryKey: () => ["projects", currentUserId],
+    queryFn: () => fetchProjects(accessToken),
+    mutations: projectMutations,
+    enabled: () => featureConsumers > 0 && accessToken !== null,
+  },
+  queryClient,
+);
+
+featureConsumers += 1;
+store.updateOptions();
+
+featureConsumers -= 1;
+store.updateOptions();
 ```
 
-#### Check Status
+While disabled, AOS holds no TanStack `QueryObserver` subscription and performs
+no automatic fetch. Re-enabling follows normal TanStack freshness rules:
 
-```typescript
-// Loading states
-const isLoading = postStore.api.status.isLoading;
-const isCreating = postStore.api.status.createPending;
-const isUpdating = postStore.api.status.updatePending;
-const hasErrors = postStore.api.status.isError;
-const error = postStore.api.status.error;
+- fresh cached data is reused without a request;
+- stale or missing data is fetched;
+- changing the query key moves the store to the new cache scope.
+
+`updateOptions()` is the normal way to re-evaluate a dynamic query key,
+function, or enabled predicate. It does not force a request.
+
+## Query keys and authentication
+
+The query key must contain every value that changes the returned dataset:
+
+```ts
+queryKey: () => ["projects", userId, organizationId, filters];
 ```
 
-### Step 4: Use in a React Component
+Use stable data identity in the key. An access token authorizes a request but
+usually does not identify its result:
 
-```tsx
-import { observer } from "mobx-react-lite";
+```ts
+// Good: token refresh reuses the same user's cache.
+queryKey: () => ["projects", session?.user.id ?? "anonymous"];
 
-const PostList = observer(() => {
-  const { ui, api } = postStore;
-  
-  // Reactive data - automatically re-renders when it changes
-  const posts = ui.list;
-  const publishedCount = posts.filter(p => p.published).length;
-  const isLoading = api.status.isLoading;
-  
-  const handleCreate = async () => {
-    await api.create({
-      title: "New Post",
-      content: "Content here...",
-      author_id: "user-123",
-      published: false,
-    });
-  };
-  
-  const handleTogglePublish = async (id: string, published: boolean) => {
-    await api.update(id, { published });
-  };
-  
-  if (isLoading) return <div>Loading posts...</div>;
-  
-  return (
-    <div>
-      <h2>Posts ({posts.length})</h2>
-      <p>Published: {publishedCount}</p>
-      
-      {posts.map(post => (
-        <div key={post.id}>
-          <h3>{post.title}</h3>
-          <p>{post.content}</p>
-          <p>
-            {post.wordCount} words • 
-            {post.isNew ? " 🆕 New" : ""} • 
-            Created: {post.created_at.toLocaleDateString()}
-          </p>
-          <button onClick={() => handleTogglePublish(post.id, !post.published)}>
-            {post.published ? "Unpublish" : "Publish"}
-          </button>
-        </div>
-      ))}
-      
-      <button onClick={handleCreate} disabled={api.status.createPending}>
-        {api.status.createPending ? "Creating..." : "Create Post"}
-      </button>
-    </div>
-  );
-});
+// Avoid: every token refresh creates a new cache namespace.
+queryKey: () => ["projects", session?.access_token];
 ```
 
-## 🎯 What Happens Behind the Scenes
+When a dynamic key changes and `updateOptions()` runs, AOS clears the current
+MobX projection before observing the new scope. A mutation started in the old
+scope may still update an existing old-scope cache entry, but it cannot update
+the new scope's UI projection.
 
-### When You Call `api.create()`:
+See [Lifecycle and consistency](./docs/lifecycle-and-consistency.md) for the
+full cache and concurrency contract.
 
-1. **Instant UI Update** (optimistic)
-   - `createOptimisticUiData()` generates a temporary post
-   - It appears in `ui.list` immediately
-   - User sees the new post right away
+## Transformations
 
-2. **Server Request**
-   - Mutation runs in the background
-   - TanStack Query handles retries and error handling
+Omitting `transformer`, or setting it to `false`, means API and UI data have the
+same runtime shape. AOS does not apply implicit date, number, boolean, or CSV
+conversion.
 
-3. **Confirmation or Rollback**
-   - **Success**: Temporary post replaced with server response
-   - **Error**: Temporary post removed, UI rolls back automatically
+Use an explicit `DataTransformer` when the shapes differ:
 
-### When Data Transforms:
+- `toUi` maps confirmed API entities into the MobX projection.
+- `toApi` lets optimistic updates round-trip through the UI model.
+- `optimisticDefaults.createOptimisticUiData` builds a complete UI entity for
+  a create before the server responds.
 
-- **API → UI**: Dates become `Date` objects, computed properties added
-- **UI → API**: Dates become ISO strings, computed properties stripped
-- **All type-safe**: TypeScript ensures correctness at compile time
+`createDefaultTransformer()` is still exported as a legacy, opt-in heuristic.
+It only examines top-level fields and is not a runtime validation system.
+Explicit transformers are safer for application data.
 
-### When You Access `ui.list`:
+## Optimistic mutation behavior
 
-- **MobX observable**: Any component reading it re-renders when it changes
-- **No manual subscriptions**: MobX handles reactivity automatically
-- **Computed values**: `isNew`, `wordCount` computed on-the-fly
+### Create
 
-## ✨ The Magic: It Just Works
+A temporary UI entity is inserted immediately. On success it is replaced by
+the full server entity. On failure only that create is removed or restored.
 
-Notice what you **didn't** have to write:
+### Update
 
-- ❌ No manual optimistic update logic
-- ❌ No rollback handlers
-- ❌ No cache invalidation code
-- ❌ No loading state management
-- ❌ No error state management
-- ❌ No data transformation boilerplate
-- ❌ No subscription/unsubscription logic
-- ❌ No reconciliation code
+The update input is layered over the current UI entity. Concurrent updates to
+the same entity are ordered, and an older server response cannot overwrite a
+newer confirmed result.
 
-All of that is handled automatically. You just:
+For the optimistic merge to be meaningful, update fields should correspond to
+fields in the UI entity. If API update input has a different shape, adapt it in
+your domain-store wrapper before calling `api.update`.
 
-1. Define your types
-2. Configure the store
-3. Use `ui.list` and `api.create/update/remove`
+### Remove
 
-**That's the power of this pattern: maximum functionality with minimum code.**
+The entity is removed immediately. A failure restores the appropriate prior
+entity unless a newer confirmed operation superseded it.
 
-## 🌐 Adding Realtime: One More Config Object
+Query reconciliation is deferred while local mutations are pending so a
+background response cannot erase optimistic layers.
 
-If you need realtime updates (WebSocket, SSE, etc.), just add:
+## Query controls
 
-```typescript
-const postStore = createOptimisticStore<PostApiData, PostUiData>({
-  // ... existing config ...
-  
+```ts
+await store.api.refetch(); // Imperative fetch, even when normally disabled
+await store.api.invalidate(); // Invalidate the current query key
+store.api.triggerQuery(); // Coalesced forced fetch, only while enabled
+store.updateOptions(); // Re-evaluate dynamic options and freshness
+store.disable(); // Close the manual query gate
+store.enable(); // Open the manual gate; enabled() must also pass
+```
+
+Use `updateOptions()` for ordinary lifecycle changes. Reserve `refetch()` and
+`triggerQuery()` for explicit user or recovery actions.
+
+## Realtime
+
+Realtime support is transport-agnostic. A compatible socket only needs stable
+`on(event, listener)` and `off(event, listener)` methods:
+
+```ts
+const store = createOptimisticStore({
+  name: "todos",
+  queryFn: fetchTodos,
+  mutations: todoMutations,
   realtime: {
-    eventType: "post_update",
-    browserId: "browser-123", // Prevents self-echo
-    dataExtractor: (event) => event.data,
-    shouldProcessEvent: (event) => event.type === "post_update",
+    eventType: "todo_changed",
+    browserId,
+    dataExtractor: (event) => event.todo,
   },
 });
 
-// Later, when socket is ready:
-postStore.realtime?.connect(socket);
+store.realtime?.connect(socket);
+store.realtime?.disconnect();
 ```
 
-Realtime events now merge into the UI store and self-originated events can be filtered. Remote events use arrival order; provide `shouldProcessEvent` or a `customHandlers` entry when your domain needs version-aware conflict handling.
+Default `INSERT`, `UPDATE`, and `DELETE` events update the MobX projection and
+the current query cache. Self-originated events can be ignored with
+`browserId`.
 
+Realtime uses arrival order; it does not implement revision comparison, vector
+clocks, or CRDT conflict resolution. Applications needing those rules should
+use `shouldProcessEvent` or `customHandlers`.
 
-## 🔧 API Reference
+See [Realtime](./docs/realtime.md) for event shapes and custom-handler
+semantics.
 
-### `createOptimisticStore<TApiData, TUiData>(config)`
+## Cleanup
 
-Creates an optimistic store with clear separation between UI and API domains.
+The owner of a store must destroy it:
 
-#### Configuration
-
-```typescript
-interface OptimisticStoreConfig<TApiData, TUiData> {
-  name: string;                    // Store name and fallback query key
-  queryKey?: QueryKey | (() => QueryKey); // Include tenant/user/filter context
-  queryFn: () => Promise<TApiData[]>;  // Fetch all items
-  mutations: {
-    create: (data: any) => Promise<TApiData>;
-    update: (params: { id: string; data: any }) => Promise<TApiData>;
-    remove: (id: string) => Promise<{ id: string } | void>;
-  };
-  transformer?: DataTransformer<TApiData, TUiData> | false;
-  optimisticDefaults?: OptimisticDefaults<TUiData>;
-  staleTime?: number;              // Freshness window in ms (default: 5 minutes)
-  enabled?: () => boolean;         // Query enable condition
-  realtime?: RealtimeConfig<TApiData, TUiData>;
-}
+```ts
+store.destroy();
 ```
 
-#### Return Value
+`destroy()` is idempotent. It clears timers, removes the query subscription,
+disconnects realtime, resets mutation observers, and releases internal
+optimistic bookkeeping. It does not abort promises returned by application
+query or mutation functions; use application-level cancellation when required.
+Do not use a store after destroying it.
 
-```typescript
-interface OptimisticStore<TApiData, TUiData> {
-  // UI Domain - MobX observable state
-  ui: ObservableUIData<TUiData>;
-  
-  // API Domain - TanStack Query + mutations
-  api: {
-    // Optimistic mutations
-    create: (data: any) => Promise<TApiData>;
-    update: (id: string, data: any) => Promise<TApiData>;
-    remove: (id: string) => Promise<{ id: string } | void>;
-    
-    // Query control
-    refetch: () => Promise<any>;
-    invalidate: () => Promise<void>;
-    triggerQuery: () => void; // Force a fetch when enabled
-    
-    // Query state
-    status: {
-      isLoading: boolean;
-      isError: boolean;
-      error: Error | null;
-      isSyncing: boolean;
-      createPending: boolean;
-      updatePending: boolean;
-      deletePending: boolean;
-      hasPendingMutations: boolean;
-    };
-  };
-  
-  // Lifecycle methods
-  // Re-evaluate queryKey/enabled using normal TanStack freshness rules.
-  // This does not force a refetch.
-  updateOptions: () => void;
-  enable: () => void;
-  disable: () => void;
-  destroy: () => void;
-  
-  // Realtime (if configured)
-  realtime?: {
-    isConnected: boolean;
-    connect: (socket: any) => void;
-    disconnect: () => void;
-  };
-}
-```
+For React, create stores outside render or in a stable provider, activate them
+at feature boundaries, and destroy them when their owner unmounts. A complete
+pattern is in [Integration recipes](./docs/integration-recipes.md).
 
-### `ObservableUIData<TUiData>`
+## Documentation
 
-The MobX store that holds your UI data with reactive access patterns.
+- [API reference](./docs/api-reference.md)
+- [Lifecycle and consistency](./docs/lifecycle-and-consistency.md)
+- [Realtime](./docs/realtime.md)
+- [Integration recipes](./docs/integration-recipes.md)
+- [Package status](./STATUS.md)
 
-```typescript
-interface ObservableUIData<TUiData> {
-  list: TUiData[];                 // Reactive array of items
-  count: number;                   // Computed count
-  entities: Map<string, TUiData>;  // Map for O(1) lookups
-  
-  // Methods
-  getById(id: string): TUiData | undefined;
-  hasItem(id: string): boolean;
-  snapshot(): TUiData[];           // Non-reactive snapshot
-  
-  // Internal methods (used by the store)
-  upsert(item: TUiData): void;
-  update(id: string, updates: Partial<TUiData>): void;
-  remove(id: string): void;
-  reconcile(items: TUiData[]): void;
-  pushSnapshot(): void;
-  rollback(): void;
-}
-```
-
-## 🎯 Why This Approach?
-
-### The Problem with Other Solutions
-
-**TanStack Query alone:**
-- ❌ Complex optimistic updates require lots of boilerplate
-- ❌ No reactive computed values
-- ❌ Difficult to manage UI-specific state
-
-**MobX alone:**
-- ❌ No built-in server state caching
-- ❌ Manual cache invalidation
-- ❌ No background sync capabilities
-
-**Redux + RTK Query:**
-- ❌ Boilerplate-heavy
-- ❌ Complex optimistic updates
-- ❌ No reactive computed values
-
-### Our Solution
-
-**Clear Separation of Concerns:**
-- 🎯 **UI Domain**: MobX handles reactive state, computed values, optimistic updates
-- 🎯 **API Domain**: TanStack Query handles server state, caching, background sync
-- 🎯 **Transformation Layer**: Type-safe conversion between API and UI formats
-
-**Best of Both Worlds:**
-- ✅ Instant optimistic updates with automatic rollback
-- ✅ Reactive computed values and derived state
-- ✅ Smart server state caching and invalidation
-- ✅ Seamless realtime synchronization
-- ✅ Type-safe data transformations
-- ✅ Framework agnostic
-
-## 📦 Installation
+## Development
 
 ```bash
-# In your monorepo workspace
-yarn add @kingstack/advanced-optimistic-store
-
-# Peer dependencies (you probably already have these)
-yarn add mobx @tanstack/query-core
+yarn workspace @kingstack/advanced-optimistic-store typecheck
+yarn workspace @kingstack/advanced-optimistic-store lint
+yarn workspace @kingstack/advanced-optimistic-store test
+yarn workspace @kingstack/advanced-optimistic-store build
 ```
-
-## 🤝 Contributing
-
-This is an internal package for the KingStack monorepo. For external contributions, please open an issue first.
