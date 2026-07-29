@@ -2,15 +2,15 @@
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { cn } from "./utils";
+import { cn } from "./utils.js";
 
 import type {
   CommentData,
   CommentItems,
   CommentTreeProps,
   CommentRenderProps,
-} from "./types";
-import { DEFAULT_DEPTH_COLORS } from "./types";
+} from "./types.js";
+import { DEFAULT_DEPTH_COLORS } from "./types.js";
 import {
   flattenComments,
   removeCollapsedChildren,
@@ -18,8 +18,8 @@ import {
   getReplyCount,
   getDepthColor,
   getAncestorIds,
-} from "./utilities";
-import { DefaultCommentItem } from "./DefaultCommentItem";
+} from "./utilities.js";
+import { DefaultCommentItem } from "./DefaultCommentItem.js";
 
 export function CommentTree<T extends CommentData = CommentData>({
   id,

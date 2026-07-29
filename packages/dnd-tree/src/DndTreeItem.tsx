@@ -4,8 +4,8 @@ import React, {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { cn } from "./utils";
-import type { TreeItemAction, TreeClassNames } from "./types";
+import { cn } from "./utils.js";
+import type { TreeItemAction, TreeClassNames } from "./types.js";
 
 /** Default icons as SVG - users can override via props */
 const ChevronRightIcon = ({

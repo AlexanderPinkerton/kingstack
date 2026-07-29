@@ -3,7 +3,7 @@ import { AppService } from "./app.service";
 import { JwtAuthGuard } from "./auth/guards/jwt.auth.guard";
 import { AdminGuard } from "./auth/guards/admin.guard";
 import { AdminService } from "./auth/services/admin.service";
-import { FastifyRequest } from "fastify";
+import type { FastifyRequest } from "fastify";
 
 @Controller()
 export class AppController {

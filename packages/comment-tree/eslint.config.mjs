@@ -1,39 +1,17 @@
-// Frontend config: extends shared base + adds React hooks rules
+// React package config: shared TypeScript rules plus React Hooks.
 
 import baseConfig from "@kingstack/eslint-config";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 import reactHooks from "eslint-plugin-react-hooks";
 
-const esLintConfig = [
-    {
-        plugins: {
-            "react-hooks": reactHooks,
-        },
-        rules: {
-            ...reactHooks.configs.recommended.rules,
-        },
+export default [
+  ...baseConfig,
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    plugins: {
+      "react-hooks": reactHooks,
     },
-    ...baseConfig.map((config) => {
-        if (config.languageOptions?.parser === "@typescript-eslint/parser") {
-            return {
-                ...config,
-                languageOptions: {
-                    ...config.languageOptions,
-                    parserOptions: {
-                        ...config.languageOptions.parserOptions,
-                        tsconfigRootDir: __dirname,
-                        project: ["./tsconfig.json"],
-                    },
-                },
-            };
-        }
-        return config;
-    }),
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+    },
+  },
 ];
-
-export default esLintConfig;

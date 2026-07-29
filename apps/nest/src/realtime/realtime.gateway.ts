@@ -43,7 +43,7 @@ export class RealtimeGateway
     this.connectSupabase();
   }
 
-  afterInit(server: Server) {
+  afterInit(_server: Server) {
     this.logger.log("WebSocket Gateway Initialized");
   }
 
@@ -124,10 +124,7 @@ export class RealtimeGateway
 
     try {
       // First verify we can access the database
-      const { data, error } = await this.supabase
-        .from("post")
-        .select("id")
-        .limit(1);
+      const { error } = await this.supabase.from("post").select("id").limit(1);
 
       if (error) {
         this.logger.error("Error accessing database:", error);

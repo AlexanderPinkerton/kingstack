@@ -1,11 +1,12 @@
 {
-  "extends": "../../packages/ts-config/base.json",
+  "extends": "../../packages/ts-config/browser.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "noEmit": true,
     "jsx": "preserve",
-    "moduleResolution": "bundler",
     "allowJs": false,
+    "types": [
+      "node"
+    ],
     "paths": {
       "@/*": [
         "./src/*"

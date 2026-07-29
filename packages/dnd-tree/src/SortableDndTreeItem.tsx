@@ -3,8 +3,8 @@ import type { UniqueIdentifier } from "@dnd-kit/core";
 import { AnimateLayoutChanges, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { DndTreeItem, type DndTreeItemProps } from "./DndTreeItem";
-import { iOS } from "./utils";
+import { DndTreeItem, type DndTreeItemProps } from "./DndTreeItem.js";
+import { iOS } from "./utils.js";
 
 export interface SortableDndTreeItemProps
   extends Omit<

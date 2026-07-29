@@ -5,21 +5,26 @@
             "mode": "auto"
         }
     ],
-    // 1. Only run ESLint fixes on save (which now include Prettier)
+    "eslint.format.enable": true,
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    // Only run ESLint fixes on save (which include Prettier)
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "explicit"
     },
-    // 2. Don’t let the Prettier extension also format
+    // Use the same ESLint/Prettier formatter for JavaScript and TypeScript.
     "[javascript]": {
         "editor.defaultFormatter": "dbaeumer.vscode-eslint"
     },
     "[typescript]": {
-        "editor.defaultFormatter": "vscode.typescript-language-features"
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
     },
     "[typescriptreact]": {
         "editor.defaultFormatter": "dbaeumer.vscode-eslint"
     },
-    // 3. Make sure ESLint is enabled for the filetypes you care about
+    "[javascriptreact]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    },
     "eslint.validate": [
         "javascript",
         "typescript",

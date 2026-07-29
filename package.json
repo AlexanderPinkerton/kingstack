@@ -11,6 +11,7 @@
     "build": "turbo run build",
     "build:release-packages": "turbo run build $(bun scripts/get-public-packages.ts)",
     "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "local": "yarn env:local && yarn supabase:start",
     "docker:build-nest": "docker build -f apps/nest/Dockerfile -t kingstack-nest .",
@@ -49,6 +50,7 @@
     "@kingstack/config": "workspace:*",
     "@types/node": "^24.10.1",
     "supabase": "2.58.5",
+    "typescript": "5.9.3",
     "vercel": "^49.1.0"
   }
 }

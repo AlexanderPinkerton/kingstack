@@ -7,6 +7,7 @@ type AccordionContextValue = {
   value: string[];
   onValueChange: (value: string[]) => void;
   type: "single" | "multiple";
+  collapsible: boolean;
 };
 
 const AccordionContext = React.createContext<AccordionContextValue | null>(
@@ -30,7 +31,10 @@ interface AccordionProps {
 }
 
 const Accordion = React.forwardRef<HTMLDivElement, AccordionProps>(
-  ({ type, defaultValue, children, className, collapsible, ...props }, ref) => {
+  (
+    { type, defaultValue, children, className, collapsible = false, ...props },
+    ref,
+  ) => {
     const [value, setValue] = React.useState<string[]>(() => {
       if (defaultValue) {
         return Array.isArray(defaultValue) ? defaultValue : [defaultValue];
@@ -43,7 +47,9 @@ const Accordion = React.forwardRef<HTMLDivElement, AccordionProps>(
     }, []);
 
     return (
-      <AccordionContext.Provider value={{ value, onValueChange, type }}>
+      <AccordionContext.Provider
+        value={{ value, onValueChange, type, collapsible }}
+      >
         <div ref={ref} className={cn("space-y-2", className)} {...props}>
           {children}
         </div>
@@ -84,7 +90,7 @@ const AccordionTrigger = React.forwardRef<
   HTMLButtonElement,
   AccordionTriggerProps
 >(({ className, children, ...props }, ref) => {
-  const { value, onValueChange, type } = useAccordion();
+  const { value, onValueChange, type, collapsible } = useAccordion();
   const itemValue = React.useContext(AccordionItemContext);
 
   if (!itemValue) {
@@ -95,7 +101,9 @@ const AccordionTrigger = React.forwardRef<
 
   const handleClick = () => {
     if (type === "single") {
-      onValueChange(isOpen ? [] : [itemValue]);
+      if (!isOpen || collapsible) {
+        onValueChange(isOpen ? [] : [itemValue]);
+      }
     } else {
       onValueChange(
         isOpen ? value.filter((v) => v !== itemValue) : [...value, itemValue],

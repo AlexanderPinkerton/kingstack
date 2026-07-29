@@ -28,13 +28,14 @@ export function CtaSection() {
       { threshold: 0.1, rootMargin: "0px 0px -100px 0px" },
     );
 
-    if (ctaRef.current) {
-      observer.observe(ctaRef.current);
+    const cta = ctaRef.current;
+    if (cta) {
+      observer.observe(cta);
     }
 
     return () => {
-      if (ctaRef.current) {
-        observer.unobserve(ctaRef.current);
+      if (cta) {
+        observer.unobserve(cta);
       }
     };
   }, []);

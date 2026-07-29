@@ -10,18 +10,10 @@ import {
   IconAssembly,
   IconTrash,
   IconEdit,
-  IconDotsVertical,
   IconCopy,
   IconArrowRight,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 
 import {
   DndTree,

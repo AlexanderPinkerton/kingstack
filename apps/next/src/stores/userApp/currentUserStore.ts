@@ -277,10 +277,9 @@ export class CurrentUserStore {
   }
 
   // Convenience method to get current user data
-  get currentUser() {
+  get currentUser(): CurrentUserUiData | null {
     // For user data, we expect a single entity, so get the first one
-    const entities = Array.from(this.ui.entities.values());
-    return entities[0] || null;
+    return this.ui.list[0] ?? null;
   }
 
   private get sessionIdentity(): string {

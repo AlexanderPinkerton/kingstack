@@ -1,45 +1,45 @@
-// Shared base config for all apps — includes TypeScript and Prettier support.
-// Does NOT include any React/Next.js-specific rules (those are added in the nextjs config).
+// Shared TypeScript and Prettier configuration. Type-aware correctness is
+// handled by each package's tsc check; framework rules are layered on by
+// consuming apps and packages.
 
-import tseslint from "typescript-eslint";                  // Official flat config helper for TypeScript
-import prettierPlugin from "eslint-plugin-prettier";       // Plugin to run Prettier as an ESLint rule
-import eslintConfigPrettierFlat from "eslint-config-prettier/flat"; // Disable ESLint rules that conflict with Prettier
+import { defineConfig } from "eslint/config";
+import eslintConfigPrettier from "eslint-config-prettier/flat";
+import prettierPlugin from "eslint-plugin-prettier";
+import tseslint from "typescript-eslint";
 
-// TypeScript ESLint config with Prettier rules added
-// Using plain object instead of deprecated tseslint.config()
-const tsEslintConfig = {
-    files: ["**/*.ts", "**/*.tsx"],
-
+export default defineConfig(
+  {
+    ignores: [
+      "**/.next/**",
+      "**/.turbo/**",
+      "**/coverage/**",
+      "**/dist/**",
+      "**/node_modules/**",
+    ],
+  },
+  {
+    files: ["**/*.{ts,tsx,mts,cts}"],
+    extends: [
+      ...tseslint.configs.recommended,
+      eslintConfigPrettier,
+    ],
     languageOptions: {
-        parser: tseslint.parser,
-        parserOptions: {
-            ecmaVersion: "latest",
-            sourceType: "module",
-            ecmaFeatures: {
-                jsx: true, // Enable parsing of JSX for shared use in nextjs
-            },
-        },
+      parser: tseslint.parser,
     },
-
     plugins: {
-        "@typescript-eslint": tseslint.plugin,
-        prettier: prettierPlugin,
+      prettier: prettierPlugin,
     },
-    // THIS is the key: pull in both the "plugin:prettier" rule AND
-    // disable any ESLint rules that might conflict with Prettier
     rules: {
-        "prettier/prettier": "error",         // Run Prettier as an ESLint error
-        "@typescript-eslint/no-explicit-any": "off",  // Allow 'any'
-        "@typescript-eslint/no-unused-vars": "warn",  // Warn on unused vars
+      "prettier/prettier": "error",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
     },
-};
-
-// Export the combined config: recommended TS rules + our overrides + ignores
-export default [
-    eslintConfigPrettierFlat,
-    ...tseslint.configs.recommended, // Base rules from typescript-eslint
-    tsEslintConfig,                     // Our overrides and Prettier integration
-    {
-        ignores: [".next/", "dist/", "coverage/"], // Common ignored folders
-    },
-];
+  },
+);

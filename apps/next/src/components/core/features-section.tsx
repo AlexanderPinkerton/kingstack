@@ -68,21 +68,25 @@ export function FeaturesSection() {
       { threshold: 0.1, rootMargin: "0px 0px -100px 0px" },
     );
 
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
+    const section = sectionRef.current;
+    if (section) {
+      observer.observe(section);
     }
 
-    featureRefs.current.forEach((ref) => {
+    const featureElements = featureRefs.current.filter(
+      (ref): ref is HTMLDivElement => ref !== null,
+    );
+    featureElements.forEach((ref) => {
       if (ref) observer.observe(ref);
     });
 
     return () => {
-      if (sectionRef.current) {
-        observer.unobserve(sectionRef.current);
+      if (section) {
+        observer.unobserve(section);
       }
 
-      featureRefs.current.forEach((ref) => {
-        if (ref) observer.unobserve(ref);
+      featureElements.forEach((ref) => {
+        observer.unobserve(ref);
       });
     };
   }, []);

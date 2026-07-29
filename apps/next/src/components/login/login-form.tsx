@@ -1,11 +1,9 @@
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
 import { NeonCard } from "@/components/ui/neon-card";
 import { GradientText } from "@/components/ui/gradient-text";
 import { ThemedInput } from "@/components/ui/themed-input";
 import { ThemedButton } from "@/components/ui/themed-button";
-import { ThemedOutlineButton } from "@/components/ui/themed-outline-button";
 import { ThemedLabel } from "@/components/ui/themed-label";
 import { ThemedErrorText } from "@/components/ui/themed-error-text";
 import { ThemedSuccessText } from "@/components/ui/themed-success-text";
@@ -86,34 +84,6 @@ export function LoginForm({
     }
   };
 
-  async function onLogin(event: React.MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin + "/login",
-          // redirectTo: window.location.origin + '/api/auth/loginComplete',
-          // scopes: 'email profile',
-          // queryParams: {
-          //   access_type: 'offline',
-          //   prompt: 'consent',
-          // },
-        },
-      });
-      if (error) {
-        console.error("Error signing in:", error);
-      } else {
-        console.log("Sign in initiated successfully");
-      }
-    } catch (err) {
-      console.error("Unexpected error during sign in:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
@@ -141,7 +111,7 @@ export function LoginForm({
           return;
         }
 
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -272,13 +242,6 @@ export function LoginForm({
                       ? "Login"
                       : "Register"}
                 </ThemedButton>
-                {/* <ThemedOutlineButton
-                  onClick={onLogin}
-                  disabled={loading}
-                  type="button"
-                >
-                  {loading ? "Redirecting..." : "Login with Google"}
-                </ThemedOutlineButton> */}
               </div>
               {formError && <ThemedErrorText>{formError}</ThemedErrorText>}
               {successMsg && (

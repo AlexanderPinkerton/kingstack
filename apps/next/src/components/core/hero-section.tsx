@@ -28,13 +28,14 @@ export function HeroSection() {
       { threshold: 0.1, rootMargin: "0px 0px -100px 0px" },
     );
 
-    if (heroRef.current) {
-      observer.observe(heroRef.current);
+    const hero = heroRef.current;
+    if (hero) {
+      observer.observe(hero);
     }
 
     return () => {
-      if (heroRef.current) {
-        observer.unobserve(heroRef.current);
+      if (hero) {
+        observer.unobserve(hero);
       }
     };
   }, []);

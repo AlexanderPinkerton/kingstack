@@ -39,13 +39,14 @@ export function AnimateOnScroll({
       { threshold, rootMargin },
     );
 
-    if (elementRef.current) {
-      observer.observe(elementRef.current);
+    const element = elementRef.current;
+    if (element) {
+      observer.observe(element);
     }
 
     return () => {
-      if (elementRef.current) {
-        observer.unobserve(elementRef.current);
+      if (element) {
+        observer.unobserve(element);
       }
     };
   }, [delay, threshold, rootMargin]);

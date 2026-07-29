@@ -4,11 +4,11 @@ import { resolve } from "path";
 export default defineConfig({
   resolve: {
     alias: {
-      "@": resolve(__dirname, "src"),
+      "@": resolve(import.meta.dirname, "src"),
     },
   },
   test: {
-    include: ["__tests__/**/*.test.ts"],
+    include: ["src/**/*.spec.ts", "test/**/*.spec.ts", "test/**/*.e2e-spec.ts"],
     exclude: ["node_modules", "dist"],
     globals: true,
     environment: "node",
@@ -20,5 +20,9 @@ export default defineConfig({
         },
       ],
     ],
+    setupFiles: [],
+    coverage: {
+      enabled: false,
+    },
   },
 });

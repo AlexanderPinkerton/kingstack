@@ -6,7 +6,6 @@ import { AppNavbar } from "@/components/navbar/presets/app";
 import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
 import { NeonCard } from "@/components/ui/neon-card";
 import { GradientText } from "@/components/ui/gradient-text";
-import { ThemedButton } from "@/components/ui/themed-button";
 import { AdvancedPostsExample } from "@/lib/examples/advanced-posts-example";
 import { ArrowLeft } from "lucide-react";
 

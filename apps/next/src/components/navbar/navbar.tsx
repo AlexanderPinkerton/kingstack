@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NavbarMobile } from "./navbar-mobile";
@@ -10,12 +9,6 @@ import { MobileHamburgerButton } from "./custom/mobile-hamburger-button";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { Button } from "@/components/ui/button";
 import { NavbarProps, NavLink, CTA } from "./types";
-// import RequireIDBanner from "@/components/RequireIDBanner";
-import dynamic from "next/dynamic";
-
-// const IDUploadModal = dynamic(() => import("@/components/IDUploadModal"), {
-//   ssr: false,
-// });
 
 // Re-export types for convenience
 export type { NavbarProps, NavLink, CTA };
@@ -35,14 +28,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   transparent = true,
 }) => {
   const isMobile = useIsMobile();
-  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [showIDUpload, setShowIDUpload] = useState(false);
   const [mounted, setMounted] = useState(false);
-
-  // Check if we're on the home page to show the banner
-  const isHomePage = pathname === "/home";
 
   // Mount guard to prevent hydration mismatches
   // Using useLayoutEffect for synchronous update before paint
@@ -209,14 +197,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         onToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
         onNavLinkClick={onNavLinkClick}
       />
-
-      {/* ID Verification Banner - only show on homepage and when mounted */}
-      {/* {mounted && isHomePage && (
-        <RequireIDBanner onUpload={() => setShowIDUpload(true)} />
-      )} */}
-
-      {/* ID Upload Modal */}
-      {/* <IDUploadModal open={showIDUpload} onOpenChange={setShowIDUpload} /> */}
     </nav>
   );
 };

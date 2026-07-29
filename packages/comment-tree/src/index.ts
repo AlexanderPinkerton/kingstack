@@ -1,9 +1,9 @@
 // Main component
-export { CommentTree } from "./CommentTree";
+export { CommentTree } from "./CommentTree.js";
 
 // Default item component for custom rendering
-export { DefaultCommentItem } from "./DefaultCommentItem";
-export type { DefaultCommentItemProps } from "./DefaultCommentItem";
+export { DefaultCommentItem } from "./DefaultCommentItem.js";
+export type { DefaultCommentItemProps } from "./DefaultCommentItem.js";
 
 // Types
 export type {
@@ -15,9 +15,9 @@ export type {
   CommentRenderProps,
   CommentTreeProps,
   CommentTreeClassNames,
-} from "./types";
+} from "./types.js";
 
-export { DEFAULT_DEPTH_COLORS } from "./types";
+export { DEFAULT_DEPTH_COLORS } from "./types.js";
 
 // Utilities for working with comment data
 export {
@@ -31,7 +31,7 @@ export {
   removeComment,
   getAncestorIds,
   getDescendantIds,
-} from "./utilities";
+} from "./utilities.js";
 
 // Utils
-export { cn } from "./utils";
+export { cn } from "./utils.js";

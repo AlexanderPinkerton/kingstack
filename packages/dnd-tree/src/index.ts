@@ -1,11 +1,11 @@
 // Main component
-export { DndTree } from "./DndTree";
+export { DndTree } from "./DndTree.js";
 
 // Sub-components for custom rendering
-export { DndTreeItem } from "./DndTreeItem";
-export type { DndTreeItemProps } from "./DndTreeItem";
-export { SortableDndTreeItem } from "./SortableDndTreeItem";
-export type { SortableDndTreeItemProps } from "./SortableDndTreeItem";
+export { DndTreeItem } from "./DndTreeItem.js";
+export type { DndTreeItemProps } from "./DndTreeItem.js";
+export { SortableDndTreeItem } from "./SortableDndTreeItem.js";
+export type { SortableDndTreeItemProps } from "./SortableDndTreeItem.js";
 
 // Types
 export type {
@@ -25,7 +25,7 @@ export type {
   TreeItemAction,
   TreeClassNames,
   SensorContext,
-} from "./types";
+} from "./types.js";
 
 // Utilities for working with tree data
 export {
@@ -41,7 +41,7 @@ export {
   getDescendantIds,
   canDropAsChild,
   getProjection,
-} from "./utilities";
+} from "./utilities.js";
 
 // Utils
-export { cn, iOS } from "./utils";
+export { cn, iOS } from "./utils.js";

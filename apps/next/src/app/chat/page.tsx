@@ -103,7 +103,7 @@ export default function ChatPage() {
       };
 
       setImageMessages((prev) => [...prev, assistantMessage]);
-    } catch (err) {
+    } catch {
       const errorMessage: ImageMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -298,6 +298,8 @@ export default function ChatPage() {
                   <div className="flex flex-col gap-3">
                     <p className="whitespace-pre-wrap">{message.content}</p>
                     {message.image && (
+                      // Base64 image dimensions are not known until the response arrives.
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={`data:image/png;base64,${message.image}`}
                         alt="Generated"
