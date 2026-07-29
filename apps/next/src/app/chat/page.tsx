@@ -60,7 +60,7 @@ export default function ChatPage() {
   const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && status === "ready") {
-      sendMessage({ text: input });
+      void sendMessage({ text: input });
       setInput("");
     }
   };
@@ -337,7 +337,7 @@ export default function ChatPage() {
                       {status === "submitted" ? "Thinking..." : "Responding..."}
                     </span>
                     <Button
-                      onClick={stop}
+                      onClick={() => void stop()}
                       variant="ghost"
                       size="sm"
                       className="text-red-400 hover:text-red-300 hover:bg-red-950/20"

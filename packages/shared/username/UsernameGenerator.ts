@@ -171,9 +171,9 @@ export class UsernameGenerator {
    * Check if username is available (this would typically call a database check)
    * For now, this is a placeholder that would be implemented with actual DB calls
    */
-  static async isUsernameAvailable(_username: string): Promise<boolean> {
+  static isUsernameAvailable(_username: string): Promise<boolean> {
     // This would typically make a database call to check if username exists
     // For now, return true as a placeholder
-    return true;
+    return Promise.resolve(true);
   }
 }

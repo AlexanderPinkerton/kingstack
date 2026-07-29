@@ -1,17 +1,30 @@
-// NextJS config: extends shared base + adds Next.js rules
-// Next.js 16's eslint-config-next already exports flat config format
-
 import baseConfig from "@kingstack/eslint-config";
-import nextConfig from "eslint-config-next";
+import nextPlugin from "@next/eslint-plugin-next";
+import { defineConfig } from "eslint/config";
+import reactHooks from "eslint-plugin-react-hooks";
 
-// Filter out the 'next/typescript' config from nextConfig since we handle TypeScript in baseConfig
-// This prevents plugin redefinition conflicts
-const nextBaseConfig = nextConfig.filter((config) => config.name !== "next/typescript");
-
-// Merge Next.js rules with the shared TypeScript config.
-const esLintConfig = [
-    ...nextBaseConfig,
-    ...baseConfig,
-];
-
-export default esLintConfig
+export default defineConfig(
+  ...baseConfig,
+  {
+    name: "kingstack/next",
+    files: ["**/*.{js,jsx,ts,tsx,mjs,mts}"],
+    plugins: {
+      "@next/next": nextPlugin,
+    },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
+    },
+  },
+  {
+    name: "kingstack/react-hooks",
+    files: ["**/*.{js,jsx,ts,tsx}"],
+    extends: [reactHooks.configs.flat.recommended],
+    rules: {
+      // Third-party hooks such as TanStack Table intentionally return functions.
+      "react-hooks/incompatible-library": "off",
+      // Hydration guards and responsive state intentionally synchronize on mount.
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
+);

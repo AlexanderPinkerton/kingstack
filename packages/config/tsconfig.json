@@ -1,20 +1,10 @@
 {
-    "extends": "../../packages/ts-config/node.json",
-    "compilerOptions": {
-        "outDir": "dist",
-        "rootDir": "src",
-        "declaration": true,
-        "sourceMap": true,
-        "composite": false,
-        "esModuleInterop": true,
-        "noEmit": false
-    },
-    "include": [
-        "src/**/*"
-    ],
-    "exclude": [
-        "node_modules",
-        "dist",
-        "**/*.test.ts"
-    ]
+  "extends": "../../packages/ts-config/node.json",
+  "compilerOptions": {
+    "composite": false,
+    "esModuleInterop": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -75,9 +75,7 @@ function main() {
 
     if (config.projectId) {
       console.log(`   Project ID:     ${config.projectId}`);
-      console.log(
-        `   └─ Used to identify this project's Docker containers`
-      );
+      console.log(`   └─ Used to identify this project's Docker containers`);
     } else {
       console.log("   Project ID:     ⚠️  Not set (will use directory name)");
     }
@@ -98,7 +96,9 @@ function main() {
     console.log("\n💡 Tips:");
     console.log("   • The Supabase CLI automatically uses this config.toml");
     console.log("   • Each project should have a unique project_id");
-    console.log("   • To run multiple projects, use different ports in each config.toml");
+    console.log(
+      "   • To run multiple projects, use different ports in each config.toml",
+    );
     console.log("   • Check status with: yarn supabase:status");
   } catch (error: any) {
     console.error("❌ Error reading configuration:", error.message);
@@ -107,4 +107,3 @@ function main() {
 }
 
 main();
-

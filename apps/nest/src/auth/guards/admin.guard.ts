@@ -22,7 +22,7 @@ export class AdminGuard extends JwtAuthGuard {
 
     // Get the request and user from JWT payload
     const request = context.switchToHttp().getRequest<FastifyRequest>();
-    const user = request.user as any;
+    const user = request.user;
 
     // Extract email from JWT payload (Supabase JWT has email in payload)
     const email = user?.email;

@@ -3,12 +3,7 @@ import { io, type Socket } from "socket.io-client";
 import { getBrowserId } from "./browser-id";
 
 export type RealtimeStatus =
-  | "idle"
-  | "connecting"
-  | "connected"
-  | "reconnecting"
-  | "error"
-  | "disposed";
+  "idle" | "connecting" | "connected" | "reconnecting" | "error" | "disposed";
 
 export interface RealtimeSource {
   subscribe<TEvent>(

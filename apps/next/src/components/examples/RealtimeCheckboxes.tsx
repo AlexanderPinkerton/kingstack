@@ -49,12 +49,12 @@ export const RealtimeCheckboxes = observer(() => {
           No checkboxes found. Please initialize the database first.
         </p>
         <button
-          onClick={async () => {
-            try {
-              await checkboxStore.initializeCheckboxes();
-            } catch (error) {
-              console.error("Failed to initialize checkboxes:", error);
-            }
+          onClick={() => {
+            void checkboxStore
+              .initializeCheckboxes()
+              .catch((error: unknown) => {
+                console.error("Failed to initialize checkboxes:", error);
+              });
           }}
           className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
         >

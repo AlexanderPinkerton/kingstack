@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { createDefaultTransformer, createTransformer } from "../../src/transformer/index";
+import {
+  createDefaultTransformer,
+  createTransformer,
+} from "../../src/transformer/index";
 import type { Entity, DataTransformer } from "../core/types";
 
 // Test data types
@@ -46,36 +49,36 @@ describe("Transformer Edge Cases", () => {
 
     it("should handle partial transformer errors", () => {
       const partialErrorTransformer: DataTransformer<TestApiData, TestUiData> =
-      {
-        toUi: vi.fn().mockImplementation((data) => {
-          if (data.id === "error") {
-            throw new Error("UI transformation error");
-          }
-          return {
-            id: data.id,
-            title: data.title,
-            completed: data.completed === "true",
-            priority: parseInt(data.priority),
-            created_at: new Date(data.created_at),
-            tags: data.tags.split(","),
-            metadata: data.metadata,
-          };
-        }),
-        toApi: vi.fn().mockImplementation((data) => {
-          if (data.title === "error") {
-            throw new Error("API transformation error");
-          }
-          return {
-            id: data.id,
-            title: data.title,
-            completed: data.completed.toString(),
-            priority: data.priority.toString(),
-            created_at: data.created_at.toISOString(),
-            tags: data.tags.join(","),
-            metadata: data.metadata,
-          };
-        }),
-      };
+        {
+          toUi: vi.fn().mockImplementation((data) => {
+            if (data.id === "error") {
+              throw new Error("UI transformation error");
+            }
+            return {
+              id: data.id,
+              title: data.title,
+              completed: data.completed === "true",
+              priority: parseInt(data.priority),
+              created_at: new Date(data.created_at),
+              tags: data.tags.split(","),
+              metadata: data.metadata,
+            };
+          }),
+          toApi: vi.fn().mockImplementation((data) => {
+            if (data.title === "error") {
+              throw new Error("API transformation error");
+            }
+            return {
+              id: data.id,
+              title: data.title,
+              completed: data.completed.toString(),
+              priority: data.priority.toString(),
+              created_at: data.created_at.toISOString(),
+              tags: data.tags.join(","),
+              metadata: data.metadata,
+            };
+          }),
+        };
 
       const transformer = createTransformer<TestApiData, TestUiData>(
         partialErrorTransformer,

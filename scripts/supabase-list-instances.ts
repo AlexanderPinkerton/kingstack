@@ -14,7 +14,7 @@ function main() {
       {
         encoding: "utf-8",
         shell: "/bin/bash",
-      }
+      },
     );
 
     if (!output.trim()) {
@@ -41,7 +41,9 @@ function main() {
       console.log(`  └─ Project ID: ${projectId}, API Port: ${apiPort}`);
     });
 
-    console.log("\n💡 To stop an instance, navigate to its project directory and run: supabase stop");
+    console.log(
+      "\n💡 To stop an instance, navigate to its project directory and run: supabase stop",
+    );
   } catch (error: any) {
     console.error("❌ Error listing Supabase instances:", error.message);
     process.exit(1);
@@ -49,4 +51,3 @@ function main() {
 }
 
 main();
-

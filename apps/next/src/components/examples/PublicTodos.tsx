@@ -22,7 +22,7 @@ export const PublicTodos = observer(() => {
     e.preventDefault();
     if (!newTodoTitle.trim() || !publicTodoStore.api) return;
 
-    publicTodoStore.api.create({
+    void publicTodoStore.api.create({
       title: newTodoTitle.trim(),
     });
 
@@ -210,11 +210,11 @@ export const PublicTodos = observer(() => {
             <input
               type="checkbox"
               checked={todo.done}
-              onChange={() =>
-                api?.update(todo.id, {
+              onChange={() => {
+                void api?.update(todo.id, {
                   done: !todo.done,
-                })
-              }
+                });
+              }}
               className="w-5 h-5 rounded border-slate-500 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 disabled:opacity-50"
             />
 
@@ -227,7 +227,7 @@ export const PublicTodos = observer(() => {
             </span>
 
             <button
-              onClick={() => api?.remove(todo.id)}
+              onClick={() => void api?.remove(todo.id)}
               className="px-3 py-1 text-xs bg-red-600/20 text-red-300 border border-red-500/50 rounded hover:bg-red-600/30 transition-colors disabled:opacity-50"
             >
               Delete

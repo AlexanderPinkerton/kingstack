@@ -27,8 +27,9 @@ export type CommentItems<T extends CommentData = CommentData> =
 /**
  * Flattened comment for rendering
  */
-export interface FlattenedComment<T extends CommentData = CommentData>
-  extends CommentItem<T> {
+export interface FlattenedComment<
+  T extends CommentData = CommentData,
+> extends CommentItem<T> {
   parentId: string | null;
   depth: number;
   index: number;
@@ -139,8 +140,7 @@ export interface CommentTreeProps<T extends CommentData = CommentData> {
   onCollapseChange?: (id: string, collapsed: boolean) => void;
   /** Actions available for each comment */
   commentActions?:
-    | CommentAction[]
-    | ((comment: FlattenedComment<T>) => CommentAction[]);
+    CommentAction[] | ((comment: FlattenedComment<T>) => CommentAction[]);
   /** Callback when an action is triggered */
   onAction?: (actionKey: string, commentId: string) => void;
   /** Whether comments can be collapsed */

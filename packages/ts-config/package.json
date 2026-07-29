@@ -1,13 +1,13 @@
 {
-    "name": "@kingstack/ts-config",
-    "version": "1.0.0",
-    "main": "base.json",
-    "exports": {
-        "./base.json": "./base.json",
-        "./browser.json": "./browser.json",
-        "./esm-library.json": "./esm-library.json",
-        "./node.json": "./node.json",
-        "./react-library.json": "./react-library.json"
-    },
-    "private": true
+  "name": "@kingstack/ts-config",
+  "version": "1.0.0",
+  "main": "base.json",
+  "exports": {
+    "./base.json": "./base.json",
+    "./browser.json": "./browser.json",
+    "./esm-library.json": "./esm-library.json",
+    "./node.json": "./node.json",
+    "./react-library.json": "./react-library.json"
+  },
+  "private": true
 }

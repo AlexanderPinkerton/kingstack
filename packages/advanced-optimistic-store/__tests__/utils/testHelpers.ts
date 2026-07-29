@@ -7,11 +7,13 @@
  * Detects if running in a CI environment
  */
 export const isCI = (): boolean => {
-  return process.env.CI === 'true' ||
-    process.env.GITHUB_ACTIONS === 'true' ||
-    process.env.CIRCLECI === 'true' ||
-    process.env.TRAVIS === 'true' ||
-    process.env.JENKINS_URL !== undefined;
+  return (
+    process.env.CI === "true" ||
+    process.env.GITHUB_ACTIONS === "true" ||
+    process.env.CIRCLECI === "true" ||
+    process.env.TRAVIS === "true" ||
+    process.env.JENKINS_URL !== undefined
+  );
 };
 
 /**
@@ -22,12 +24,12 @@ export const getPerformanceThresholds = () => {
   const ci = isCI();
   return {
     // Performance thresholds (in milliseconds)
-    largeDataset: ci ? 500 : 100,     // 500ms for CI, 100ms for local
-    rapidUpdates: ci ? 300 : 50,      // 200ms for CI, 50ms for local
-    smallOperations: ci ? 100 : 25,   // 100ms for CI, 25ms for local
+    largeDataset: ci ? 500 : 100, // 500ms for CI, 100ms for local
+    rapidUpdates: ci ? 300 : 50, // 200ms for CI, 50ms for local
+    smallOperations: ci ? 100 : 25, // 100ms for CI, 25ms for local
 
     // Memory thresholds (in bytes)
-    memoryLeak: ci ? 5 * 1024 * 1024 : 5 * 1024 * 1024,        // 5MB for CI, 5MB for local
+    memoryLeak: ci ? 5 * 1024 * 1024 : 5 * 1024 * 1024, // 5MB for CI, 5MB for local
     largeDatasetMemory: ci ? 200 * 1024 * 1024 : 100 * 1024 * 1024, // 200MB for CI, 100MB for local
   };
 };
@@ -38,7 +40,7 @@ export const getPerformanceThresholds = () => {
 export const measurePerformance = async <T>(
   fn: () => T | Promise<T>,
   threshold: number,
-  description: string
+  description: string,
 ): Promise<{ result: T; duration: number; passed: boolean }> => {
   const startTime = performance.now();
   const result = await fn();
@@ -47,7 +49,9 @@ export const measurePerformance = async <T>(
   const passed = duration < threshold;
 
   if (!passed) {
-    console.warn(`Performance test "${description}" took ${duration.toFixed(2)}ms (threshold: ${threshold}ms)`);
+    console.warn(
+      `Performance test "${description}" took ${duration.toFixed(2)}ms (threshold: ${threshold}ms)`,
+    );
   }
 
   return { result, duration, passed };

@@ -13,18 +13,23 @@
   "exports": {
     ".": "./index.mjs"
   },
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
   "dependencies": {
-    "eslint": "^9.25.0",
-    "eslint-config-prettier": "^10.0.0",
-    "eslint-plugin-prettier": "^5.0.0",
-    "prettier": "^3.4.2",
-    "typescript": "5.9.3",
-    "typescript-eslint": "^8.46.2"
+    "@eslint/js": "10.0.1",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.8.0",
+    "typescript-eslint": "8.65.0"
   },
   "peerDependencies": {
-    "eslint": "^9.25.0",
-    "prettier": "^3.0.0",
-    "typescript": "^5.9.3"
+    "eslint": "^10.0.0",
+    "typescript": ">=5.9.3 <8.0.0"
+  },
+  "devDependencies": {
+    "eslint": "10.8.0",
+    "typescript": "5.9.3"
   },
   "private": true
 }

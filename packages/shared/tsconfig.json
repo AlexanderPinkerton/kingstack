@@ -9,11 +9,6 @@
     "noEmit": false,
     "composite": true
   },
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules"
-  ]
+  "include": ["**/*.ts"],
+  "exclude": ["dist", "node_modules"]
 }

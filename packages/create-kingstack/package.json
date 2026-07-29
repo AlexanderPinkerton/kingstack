@@ -1,51 +1,55 @@
 {
-    "name": "@kingstack/create-kingstack",
-    "version": "0.2.3",
-    "author": "Alexander Pinkerton <alexanderpinkerton.business@gmail.com>",
-    "license": "MIT",
-    "description": "CLI to create a new project from the KingStack template",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/AlexanderPinkerton/kingstack.git",
-        "directory": "packages/create-kingstack"
-    },
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "bin": "dist/index.js",
-    "files": [
-        "dist"
-    ],
-    "scripts": {
-        "build": "tsc",
-        "dev": "bun src/index.ts",
-        "typecheck": "tsc --noEmit",
-        "test": "vitest run",
-        "test:watch": "vitest",
-        "test:integration": "bun scripts/integration-test.ts"
-    },
-    "keywords": [
-        "kingstack",
-        "create",
-        "cli",
-        "template",
-        "typescript",
-        "nextjs",
-        "nestjs",
-        "supabase",
-        "monorepo"
-    ],
-    "dependencies": {
-        "picocolors": "^1.1.1",
-        "prompts": "^2.4.2"
-    },
-    "devDependencies": {
-        "@types/bun": "latest",
-        "@types/node": "^20.11.0",
-        "@types/prompts": "^2.4.9",
-        "typescript": "5.9.3",
-        "vitest": "^3.0.0"
-    },
-    "publishConfig": {
-        "access": "public"
-    }
+  "name": "@kingstack/create-kingstack",
+  "version": "0.2.3",
+  "author": "Alexander Pinkerton <alexanderpinkerton.business@gmail.com>",
+  "license": "MIT",
+  "description": "CLI to create a new project from the KingStack template",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlexanderPinkerton/kingstack.git",
+    "directory": "packages/create-kingstack"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc --watch",
+    "cli": "bun src/index.ts",
+    "lint": "eslint \"{src,scripts}/**/*.ts\"",
+    "lint:fix": "eslint \"{src,scripts}/**/*.ts\" --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "bun scripts/integration-test.ts"
+  },
+  "keywords": [
+    "kingstack",
+    "create",
+    "cli",
+    "template",
+    "typescript",
+    "nextjs",
+    "nestjs",
+    "supabase"
+  ],
+  "dependencies": {
+    "picocolors": "^1.1.1",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@kingstack/eslint-config": "workspace:*",
+    "@types/bun": "latest",
+    "@types/node": "^20.11.0",
+    "@types/prompts": "^2.4.9",
+    "eslint": "10.8.0",
+    "typescript": "5.9.3",
+    "vitest": "^3.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

@@ -56,9 +56,8 @@
     "@kingstack/eslint-config": "workspace:*",
     "@kingstack/ts-config": "workspace:*",
     "@tanstack/query-core": "5.90.1",
-    "eslint": "^9.25.0",
+    "eslint": "10.8.0",
     "mobx": "^6.13.5",
-    "prettier": "^3.4.2",
     "typescript": "5.9.3",
     "vitest": "^2.0.0"
   }

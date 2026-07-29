@@ -8,7 +8,7 @@ import { ThemedLabel } from "@/components/ui/themed-label";
 import { ThemedErrorText } from "@/components/ui/themed-error-text";
 import { ThemedSuccessText } from "@/components/ui/themed-success-text";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/browserClient";
 import { UsernameGenerator } from "@kingstack/shared";
 import { APPNAME } from "@kingstack/shared";
@@ -32,34 +32,14 @@ export function LoginForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Debounced username validation
-  useEffect(() => {
-    if (mode === "register" && username) {
-      const timeoutId = setTimeout(() => {
-        validateUsername(username);
-      }, 500);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [username, mode]);
-
-  // Show playground mode message
-  if (isPlaygroundMode()) {
-    return (
-      <div className="text-center text-gray-400">
-        <p>Authentication is disabled in playground mode.</p>
-        <p>Switch to development mode to use authentication.</p>
-      </div>
-    );
-  }
-
   // Username validation and suggestions
-  const validateUsername = async (username: string) => {
-    if (!username) {
+  const validateUsername = useCallback(async (candidate: string) => {
+    if (!candidate) {
       setUsernameError(null);
       return;
     }
 
-    const validation = UsernameGenerator.validateUsername(username);
+    const validation = UsernameGenerator.validateUsername(candidate);
     if (!validation.isValid) {
       setUsernameError(validation.error || "Invalid username");
       return;
@@ -69,7 +49,7 @@ export function LoginForm({
       const response = await fetch("/api/username/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ username: candidate }),
       });
 
       if (response.ok) {
@@ -82,7 +62,27 @@ export function LoginForm({
       console.error("Username validation error:", error);
       setUsernameError("Error checking username availability");
     }
-  };
+  }, []);
+
+  // Debounced username validation
+  useEffect(() => {
+    if (mode === "register" && username) {
+      const timeoutId = setTimeout(() => {
+        void validateUsername(username);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [mode, username, validateUsername]);
+
+  // Show playground mode message
+  if (isPlaygroundMode()) {
+    return (
+      <div className="text-center text-gray-400">
+        <p>Authentication is disabled in playground mode.</p>
+        <p>Switch to development mode to use authentication.</p>
+      </div>
+    );
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -155,7 +155,10 @@ export function LoginForm({
     >
       <AnimatedBorderContainer className="max-w-md w-full">
         <NeonCard className="bg-black/80 backdrop-blur border border-cyan-400/30 shadow-lg p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form
+            onSubmit={(event) => void handleSubmit(event)}
+            className="space-y-6"
+          >
             <div className="mb-6 text-center">
               <GradientText className="text-3xl font-bold tracking-tight">
                 {mode === "login"

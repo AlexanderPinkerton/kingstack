@@ -1,17 +1,13 @@
-// React package config: shared TypeScript rules plus React Hooks.
-
 import baseConfig from "@kingstack/eslint-config";
+import { defineConfig } from "eslint/config";
 import reactHooks from "eslint-plugin-react-hooks";
 
-export default [
-  ...baseConfig,
-  {
-    files: ["src/**/*.{ts,tsx}"],
-    plugins: {
-      "react-hooks": reactHooks,
-    },
-    rules: {
-      ...reactHooks.configs.recommended.rules,
-    },
+export default defineConfig(...baseConfig, {
+  name: "kingstack/react-hooks",
+  files: ["src/**/*.{ts,tsx}"],
+  extends: [reactHooks.configs.flat.recommended],
+  rules: {
+    // TanStack Virtual is intentionally not memoized by React Compiler.
+    "react-hooks/incompatible-library": "off",
   },
-];
+});

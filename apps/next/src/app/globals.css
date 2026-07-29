@@ -9,9 +9,9 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-gambetta: Georgia, "Times New Roman", serif;
-  --color-cream-100: #FAF9F4;
-  --color-cream-200: #F0EEE6;
-  --color-cream-300: #E2DACB;
+  --color-cream-100: #faf9f4;
+  --color-cream-200: #f0eee6;
+  --color-cream-300: #e2dacb;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -92,47 +92,46 @@
   d - dark
   sd - super dark
   */
-  --accent-1-sl: oklch(from var(--accent-1-m) calc(l + 0.50) c h);
+  --accent-1-sl: oklch(from var(--accent-1-m) calc(l + 0.5) c h);
   --accent-1-l: oklch(from var(--accent-1-m) calc(l + 0.25) c h);
   --accent-1-m: oklch(0.7971 0.1339 211.53);
   --accent-1-d: oklch(from var(--accent-1-m) calc(l - 0.25) c h);
-  --accent-1-sd: oklch(from var(--accent-1-m) calc(l - 0.50) c h);
+  --accent-1-sd: oklch(from var(--accent-1-m) calc(l - 0.5) c h);
 
   /* purple color */
-  --accent-2-sl: oklch(from var(--accent-2-m) calc(l + 0.50) c h);
+  --accent-2-sl: oklch(from var(--accent-2-m) calc(l + 0.5) c h);
   --accent-2-l: oklch(from var(--accent-2-m) calc(l + 0.25) c h);
   --accent-2-m: oklch(55.8% 0.288 302.321);
   --accent-2-d: oklch(from var(--accent-2-m) calc(l - 0.25) c h);
-  --accent-2-sd: oklch(from var(--accent-2-m) calc(l - 0.50) c h);
+  --accent-2-sd: oklch(from var(--accent-2-m) calc(l - 0.5) c h);
 
   --accent-mix: color-mix(in oklch, var(--accent-1-m), var(--accent-2-m));
-
 }
 
 /* === Theme Variants === */
 
 /* Futuristic Green Theme */
 .theme-green {
-  --accent-1-m: oklch(0.75 0.18 140);   /* Green */
-  --accent-2-m: oklch(0.65 0.14 170);   /* Teal */
+  --accent-1-m: oklch(0.75 0.18 140); /* Green */
+  --accent-2-m: oklch(0.65 0.14 170); /* Teal */
 }
 
 /* Solarized Orange Theme */
 .theme-orange {
-  --accent-1-m: oklch(0.8 0.18 60);    /* Orange */
-  --accent-2-m: oklch(0.7 0.14 90);    /* Yellow-Orange */
+  --accent-1-m: oklch(0.8 0.18 60); /* Orange */
+  --accent-2-m: oklch(0.7 0.14 90); /* Yellow-Orange */
 }
 
 /* Classic Blue Theme */
 .theme-blue {
-  --accent-1-m: oklch(0.7 0.15 250);   /* Blue */
-  --accent-2-m: oklch(0.6 0.13 270);   /* Indigo */
+  --accent-1-m: oklch(0.7 0.15 250); /* Blue */
+  --accent-2-m: oklch(0.6 0.13 270); /* Indigo */
 }
 
 /* Magenta Dream Theme */
 .theme-magenta {
-  --accent-1-m: oklch(0.75 0.19 340);  /* Magenta */
-  --accent-2-m: oklch(0.65 0.16 320);  /* Pink */
+  --accent-1-m: oklch(0.75 0.19 340); /* Magenta */
+  --accent-2-m: oklch(0.65 0.16 320); /* Pink */
 }
 
 @layer base {

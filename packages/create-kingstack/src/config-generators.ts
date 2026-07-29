@@ -14,12 +14,15 @@ import { DEFAULT_PORTS } from "./constants";
 /**
  * Update the root package.json with the new project name
  */
-export function updateRootPackageJson(targetDir: string, projectName: string): void {
-    const pkgPath = join(targetDir, "package.json");
-    const content = readFileSync(pkgPath, "utf-8");
-    const pkg = JSON.parse(content);
-    pkg.name = projectName;
-    writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
+export function updateRootPackageJson(
+  targetDir: string,
+  projectName: string,
+): void {
+  const pkgPath = join(targetDir, "package.json");
+  const content = readFileSync(pkgPath, "utf-8");
+  const pkg = JSON.parse(content);
+  pkg.name = projectName;
+  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
 }
 
 // ============================================================================
@@ -29,8 +32,12 @@ export function updateRootPackageJson(targetDir: string, projectName: string): v
 /**
  * Generate the config/local.ts file for local development
  */
-export function generateLocalConfig(targetDir: string, projectName: string, ports: typeof DEFAULT_PORTS): void {
-    const configContent = `import { defineValues } from "@kingstack/config";
+export function generateLocalConfig(
+  targetDir: string,
+  projectName: string,
+  ports: typeof DEFAULT_PORTS,
+): void {
+  const configContent = `import { defineValues } from "@kingstack/config";
 
 /**
  * Local development configuration for ${projectName}
@@ -91,14 +98,17 @@ export const values = defineValues({
     ENVIRONMENT_TYPE: "local",
 });
 `;
-    writeFileSync(join(targetDir, "config", "local.ts"), configContent, "utf-8");
+  writeFileSync(join(targetDir, "config", "local.ts"), configContent, "utf-8");
 }
 
 /**
  * Generate/update the config/playground.ts file with valid placeholder values
  */
-export function updatePlaygroundConfig(targetDir: string, projectName: string): void {
-    const playgroundConfigContent = `import { defineValues } from "@kingstack/config";
+export function updatePlaygroundConfig(
+  targetDir: string,
+  projectName: string,
+): void {
+  const playgroundConfigContent = `import { defineValues } from "@kingstack/config";
 
 /**
  * Playground mode values - safe mock data for development without a backend.
@@ -156,7 +166,11 @@ export const values = defineValues({
     ENVIRONMENT_TYPE: "local",
 });
 `;
-    writeFileSync(join(targetDir, "config", "playground.ts"), playgroundConfigContent, "utf-8");
+  writeFileSync(
+    join(targetDir, "config", "playground.ts"),
+    playgroundConfigContent,
+    "utf-8",
+  );
 }
 
 // ============================================================================
@@ -167,17 +181,17 @@ export const values = defineValues({
  * Initialize a git repository in the target directory
  */
 export function initGit(targetDir: string): boolean {
-    try {
-        execSync("git init", { cwd: targetDir, stdio: "ignore" });
-        execSync("git add -A", { cwd: targetDir, stdio: "ignore" });
-        execSync('git commit -m "Initial commit from create-kingstack"', {
-            cwd: targetDir,
-            stdio: "ignore",
-        });
-        return true;
-    } catch {
-        return false;
-    }
+  try {
+    execSync("git init", { cwd: targetDir, stdio: "ignore" });
+    execSync("git add -A", { cwd: targetDir, stdio: "ignore" });
+    execSync('git commit -m "Initial commit from create-kingstack"', {
+      cwd: targetDir,
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ============================================================================
@@ -188,8 +202,8 @@ export function initGit(targetDir: string): boolean {
  * Delete yarn.lock to force fresh dependency resolution
  */
 export function deleteYarnLock(targetDir: string): void {
-    const lockPath = join(targetDir, "yarn.lock");
-    if (existsSync(lockPath)) {
-        rmSync(lockPath);
-    }
+  const lockPath = join(targetDir, "yarn.lock");
+  if (existsSync(lockPath)) {
+    rmSync(lockPath);
+  }
 }

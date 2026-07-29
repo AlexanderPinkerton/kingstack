@@ -103,7 +103,7 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
         isNew,
         publishStatus: (userInput.published ?? false) ? "published" : "draft",
         tags,
-      } as PostUiData;
+      };
     },
   };
 
@@ -381,7 +381,7 @@ export class AdvancedPostStore {
   // Playground Implementations
   private playgroundQueryFn = async (): Promise<PostApiData[]> => {
     await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
-    return getMockData("posts") as PostApiData[];
+    return getMockData("posts");
   };
 
   private playgroundCreateMutation = async (
@@ -413,7 +413,7 @@ export class AdvancedPostStore {
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Get existing post from mock data to preserve unchanged fields
-    const existingPosts = getMockData("posts") as PostApiData[];
+    const existingPosts = getMockData<PostApiData>("posts");
     const existingPost = existingPosts.find((p) => p.id === id);
 
     // If we have an existing post, merge it with the updates

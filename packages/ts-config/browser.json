@@ -1,11 +1,8 @@
 {
-    "extends": "./base.json",
-    "compilerOptions": {
-        "module": "ESNext",
-        "moduleResolution": "Bundler",
-        "lib": [
-            "DOM",
-            "ES2022"
-        ]
-    }
+  "extends": "./base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["DOM", "ES2022"]
+  }
 }

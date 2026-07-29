@@ -48,22 +48,22 @@ export const AdvancedPostsExample = observer(() => {
       author_id: rootStore.session?.user?.id || "unknown",
     };
 
-    api.create(postData);
+    void api.create(postData);
     setNewPost({ title: "", content: "", published: false });
   };
 
   const handleUpdatePost = (post: PostUiData, updates: Partial<PostUiData>) => {
     if (!api) return;
-    api.update(post.id, updates);
+    void api.update(post.id, updates);
     setEditingPost(null);
   };
 
   const handleDeletePost = (post: PostUiData) => {
-    api?.remove(post.id);
+    void api?.remove(post.id);
   };
 
   const togglePublish = (post: PostUiData) => {
-    api?.update(post.id, { published: !post.published });
+    void api?.update(post.id, { published: !post.published });
   };
 
   // Filtering and sorting logic
@@ -104,7 +104,7 @@ export const AdvancedPostsExample = observer(() => {
     // Sort posts
     posts.sort((a, b) => {
       switch (sortBy) {
-        case "newest":
+        case "newest": {
           const dateA =
             a.created_at instanceof Date
               ? a.created_at
@@ -114,7 +114,8 @@ export const AdvancedPostsExample = observer(() => {
               ? b.created_at
               : new Date(b.created_at);
           return dateB.getTime() - dateA.getTime();
-        case "oldest":
+        }
+        case "oldest": {
           const dateAOld =
             a.created_at instanceof Date
               ? a.created_at
@@ -124,6 +125,7 @@ export const AdvancedPostsExample = observer(() => {
               ? b.created_at
               : new Date(b.created_at);
           return dateAOld.getTime() - dateBOld.getTime();
+        }
         case "title":
           return a.title.localeCompare(b.title);
         default:
@@ -186,7 +188,7 @@ export const AdvancedPostsExample = observer(() => {
           ❌ Error: {api.status.error?.message}
         </div>
         <button
-          onClick={() => api?.refetch()}
+          onClick={() => void api?.refetch()}
           className="px-3 py-1 bg-red-600/20 text-red-300 border border-red-500/50 rounded hover:bg-red-600/30 transition-colors"
         >
           Retry

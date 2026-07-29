@@ -6,24 +6,25 @@ export function createPlaygroundClient() {
   return {
     auth: {
       // Mock auth methods that return promises but don't do anything
-      signInWithPassword: async () => ({
-        data: { user: null, session: null },
-        error: { message: "Authentication disabled in playground mode" },
-      }),
+      signInWithPassword: () =>
+        Promise.resolve({
+          data: { user: null, session: null },
+          error: { message: "Authentication disabled in playground mode" },
+        }),
 
-      signInWithOAuth: async () => ({
-        data: { provider: null, url: null },
-        error: { message: "OAuth disabled in playground mode" },
-      }),
+      signInWithOAuth: () =>
+        Promise.resolve({
+          data: { provider: null, url: null },
+          error: { message: "OAuth disabled in playground mode" },
+        }),
 
-      signUp: async () => ({
-        data: { user: null, session: null },
-        error: { message: "Registration disabled in playground mode" },
-      }),
+      signUp: () =>
+        Promise.resolve({
+          data: { user: null, session: null },
+          error: { message: "Registration disabled in playground mode" },
+        }),
 
-      signOut: async () => ({
-        error: null,
-      }),
+      signOut: () => Promise.resolve({ error: null }),
 
       onAuthStateChange: (
         _callback: (event: string, session: any) => void,
@@ -31,40 +32,42 @@ export function createPlaygroundClient() {
         data: { subscription: { unsubscribe: () => {} } },
       }),
 
-      getSession: async () => ({
-        data: { session: null },
-        error: null,
-      }),
+      getSession: () =>
+        Promise.resolve({
+          data: { session: null },
+          error: null,
+        }),
 
-      getUser: async () => ({
-        data: { user: null },
-        error: null,
-      }),
+      getUser: () =>
+        Promise.resolve({
+          data: { user: null },
+          error: null,
+        }),
     },
 
     // Mock other Supabase services as needed
     from: (_table: string) => ({
       select: () => ({
         eq: () => ({
-          single: async () => ({ data: null, error: null }),
-          maybeSingle: async () => ({ data: null, error: null }),
+          single: () => Promise.resolve({ data: null, error: null }),
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
         }),
         insert: () => ({
           select: () => ({
-            single: async () => ({ data: null, error: null }),
+            single: () => Promise.resolve({ data: null, error: null }),
           }),
         }),
         update: () => ({
           eq: () => ({
             select: () => ({
-              single: async () => ({ data: null, error: null }),
+              single: () => Promise.resolve({ data: null, error: null }),
             }),
           }),
         }),
         delete: () => ({
           eq: () => ({
             select: () => ({
-              single: async () => ({ data: null, error: null }),
+              single: () => Promise.resolve({ data: null, error: null }),
             }),
           }),
         }),

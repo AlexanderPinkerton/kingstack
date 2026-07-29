@@ -273,7 +273,7 @@ export class PublicTodoStore {
   // Playground Implementations
   private playgroundQueryFn = async (): Promise<PublicTodoApiData[]> => {
     await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
-    return getMockData("todos") as PublicTodoApiData[];
+    return getMockData("todos");
   };
 
   private playgroundCreateMutation = async (data: {

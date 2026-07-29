@@ -2,8 +2,8 @@
 // Setup script for playground mode
 // This creates the necessary environment files for playground mode
 
-import { writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { writeFileSync } from "fs";
+import { join } from "path";
 
 const NEXT_PLAYGROUND_ENV = `# NextJS Playground Mode - No Supabase Required
 # This configuration allows KingStack to run as a UI playground
@@ -60,33 +60,33 @@ SUPABASE_DB_POOL_URL=
 SUPABASE_DB_DIRECT_URL=
 `;
 
-async function main() {
-  console.log('🎮 Setting up KingStack Playground Mode...');
+function main() {
+  console.log("🎮 Setting up KingStack Playground Mode...");
 
   // Create playground environment files
-  const nextEnvPath = join('apps', 'next', '.env');
-  const nestEnvPath = join('apps', 'nest', '.env');
-  const prismaEnvPath = join('packages', 'prisma', '.env');
+  const nextEnvPath = join("apps", "next", ".env");
+  const nestEnvPath = join("apps", "nest", ".env");
+  const prismaEnvPath = join("packages", "prisma", ".env");
 
   // Write nextjs environment
   writeFileSync(nextEnvPath, NEXT_PLAYGROUND_ENV);
-  console.log('✅ Created nextjs playground environment');
+  console.log("✅ Created nextjs playground environment");
 
   // Write nestjs environment
   writeFileSync(nestEnvPath, NEST_PLAYGROUND_ENV);
-  console.log('✅ Created nestjs playground environment');
+  console.log("✅ Created nestjs playground environment");
 
   // Write prisma environment
   writeFileSync(prismaEnvPath, PRISMA_PLAYGROUND_ENV);
-  console.log('✅ Created prisma playground environment');
+  console.log("✅ Created prisma playground environment");
 
-  console.log('\n🎉 Playground mode setup complete!');
-  console.log('\nTo start the playground:');
-  console.log('  yarn dev');
-  console.log('\nTo switch back to development mode:');
-  console.log('  bun scripts/swap-env.ts development');
-  console.log('\nTo switch back to production mode:');
-  console.log('  bun scripts/swap-env.ts production');
+  console.log("\n🎉 Playground mode setup complete!");
+  console.log("\nTo start the playground:");
+  console.log("  yarn dev");
+  console.log("\nTo switch back to development mode:");
+  console.log("  bun scripts/swap-env.ts development");
+  console.log("\nTo switch back to production mode:");
+  console.log("  bun scripts/swap-env.ts production");
 }
 
-main().catch(console.error);
+main();

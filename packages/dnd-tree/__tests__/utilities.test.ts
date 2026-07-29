@@ -29,8 +29,16 @@ const createSampleTree = (): TreeItems<TestItem> => [
         id: "child1",
         data: { name: "Child 1", type: "folder" },
         children: [
-          { id: "grandchild1", data: { name: "Grandchild 1", type: "file" }, children: [] },
-          { id: "grandchild2", data: { name: "Grandchild 2", type: "file" }, children: [] },
+          {
+            id: "grandchild1",
+            data: { name: "Grandchild 1", type: "file" },
+            children: [],
+          },
+          {
+            id: "grandchild2",
+            data: { name: "Grandchild 2", type: "file" },
+            children: [],
+          },
         ],
       },
       { id: "child2", data: { name: "Child 2", type: "file" }, children: [] },
@@ -54,7 +62,7 @@ describe("flattenTree", () => {
   it("flattens a nested tree into a flat array", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
-    
+
     expect(flattened).toHaveLength(8);
     expect(flattened.map((item) => item.id)).toEqual([
       "root1",
@@ -71,7 +79,7 @@ describe("flattenTree", () => {
   it("assigns correct depth to each item", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
-    
+
     expect(flattened.find((i) => i.id === "root1")?.depth).toBe(0);
     expect(flattened.find((i) => i.id === "child1")?.depth).toBe(1);
     expect(flattened.find((i) => i.id === "grandchild1")?.depth).toBe(2);
@@ -80,10 +88,12 @@ describe("flattenTree", () => {
   it("assigns correct parentId to each item", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
-    
+
     expect(flattened.find((i) => i.id === "root1")?.parentId).toBeNull();
     expect(flattened.find((i) => i.id === "child1")?.parentId).toBe("root1");
-    expect(flattened.find((i) => i.id === "grandchild1")?.parentId).toBe("child1");
+    expect(flattened.find((i) => i.id === "grandchild1")?.parentId).toBe(
+      "child1",
+    );
   });
 
   it("handles empty tree", () => {
@@ -95,7 +105,7 @@ describe("flattenTree", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
     const child1 = flattened.find((i) => i.id === "child1");
-    
+
     expect(child1?.data?.name).toBe("Child 1");
     expect(child1?.data?.type).toBe("folder");
   });
@@ -110,7 +120,7 @@ describe("buildTree", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
     const rebuilt = buildTree(flattened);
-    
+
     expect(rebuilt).toHaveLength(3);
     expect(rebuilt[0].id).toBe("root1");
     expect(rebuilt[0].children).toHaveLength(2);
@@ -126,7 +136,7 @@ describe("buildTree", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
     const rebuilt = buildTree(flattened);
-    
+
     // Check structure integrity
     expect(rebuilt[0].children[0].id).toBe("child1");
     expect(rebuilt[0].children[0].children[0].id).toBe("grandchild1");
@@ -143,7 +153,7 @@ describe("findItem", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
     const found = findItem(flattened, "child1");
-    
+
     expect(found?.id).toBe("child1");
   });
 
@@ -151,7 +161,7 @@ describe("findItem", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
     const found = findItem(flattened, "nonexistent");
-    
+
     expect(found).toBeUndefined();
   });
 });
@@ -184,7 +194,7 @@ describe("removeItem", () => {
   it("removes an item from root level", () => {
     const sampleTree = createSampleTree();
     const result = removeItem(sampleTree, "root3");
-    
+
     expect(result).toHaveLength(2);
     expect(findItemDeep(result, "root3")).toBeUndefined();
   });
@@ -193,7 +203,7 @@ describe("removeItem", () => {
     const sampleTree = createSampleTree();
     const result = removeItem(sampleTree, "grandchild1");
     const child1 = findItemDeep(result, "child1");
-    
+
     expect(child1?.children).toHaveLength(1);
     expect(findItemDeep(result, "grandchild1")).toBeUndefined();
   });
@@ -202,7 +212,7 @@ describe("removeItem", () => {
     const sampleTree = createSampleTree();
     const result = removeItem(sampleTree, "child1");
     const root1 = findItemDeep(result, "root1");
-    
+
     expect(root1?.children).toHaveLength(1);
     expect(root1?.children[0].id).toBe("child2");
   });
@@ -222,7 +232,7 @@ describe("setProperty", () => {
   it("sets a property on a root item", () => {
     const sampleTree = createSampleTree();
     const result = setProperty(sampleTree, "root1", "collapsed", () => true);
-    
+
     expect(result[0].collapsed).toBe(true);
     expect(result[1].collapsed).toBeUndefined();
   });
@@ -231,14 +241,14 @@ describe("setProperty", () => {
     const sampleTree = createSampleTree();
     const tree1 = setProperty(sampleTree, "root1", "collapsed", () => true);
     const tree2 = setProperty(tree1, "root1", "collapsed", (val) => !val);
-    
+
     expect(tree2[0].collapsed).toBe(false);
   });
 
   it("returns new array (immutable)", () => {
     const sampleTree = createSampleTree();
     const result = setProperty(sampleTree, "root1", "collapsed", () => true);
-    
+
     expect(result).not.toBe(sampleTree);
   });
 });
@@ -282,7 +292,7 @@ describe("removeChildrenOf", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
     const result = removeChildrenOf(flattened, ["root1"]);
-    
+
     // Should keep root1 but remove all its descendants
     expect(result.find((i) => i.id === "root1")).toBeDefined();
     expect(result.find((i) => i.id === "child1")).toBeUndefined();
@@ -293,7 +303,7 @@ describe("removeChildrenOf", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
     const result = removeChildrenOf(flattened, ["root1", "root2"]);
-    
+
     // Only root items and root3 should remain
     expect(result.map((i) => i.id)).toContain("root1");
     expect(result.map((i) => i.id)).toContain("root2");
@@ -306,7 +316,7 @@ describe("removeChildrenOf", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
     const result = removeChildrenOf(flattened, []);
-    
+
     expect(result).toHaveLength(8);
   });
 });
@@ -320,10 +330,12 @@ describe("Integration: Tree Manipulation Cycle", () => {
     const sampleTree = createSampleTree();
     const flattened = flattenTree(sampleTree);
     const rebuilt = buildTree(flattened);
-    
+
     // Compare IDs at each level
     expect(rebuilt.map((i) => i.id)).toEqual(sampleTree.map((i) => i.id));
-    expect(rebuilt[0].children.map((i) => i.id)).toEqual(sampleTree[0].children.map((i) => i.id));
+    expect(rebuilt[0].children.map((i) => i.id)).toEqual(
+      sampleTree[0].children.map((i) => i.id),
+    );
   });
 
   it("remove and rebuild maintains integrity", () => {
@@ -331,7 +343,7 @@ describe("Integration: Tree Manipulation Cycle", () => {
     const modified = removeItem(sampleTree, "child1");
     const flattened = flattenTree(modified);
     const rebuilt = buildTree(flattened);
-    
+
     expect(findItemDeep(rebuilt, "child1")).toBeUndefined();
     expect(findItemDeep(rebuilt, "root1")?.children).toHaveLength(1);
   });
@@ -339,7 +351,7 @@ describe("Integration: Tree Manipulation Cycle", () => {
   it("setProperty on root preserves structure", () => {
     const sampleTree = createSampleTree();
     const modified = setProperty(sampleTree, "root1", "collapsed", () => true);
-    
+
     expect(modified[0].collapsed).toBe(true);
     expect(modified[0].children).toHaveLength(2);
     expect(modified[0].children[0].id).toBe("child1");
@@ -355,12 +367,12 @@ describe("Edge Cases", () => {
     const tree: TreeItems<TestItem> = [
       { id: "only", data: { name: "Only", type: "file" }, children: [] },
     ];
-    
+
     const flattened = flattenTree(tree);
     expect(flattened).toHaveLength(1);
     expect(flattened[0].parentId).toBeNull();
     expect(flattened[0].depth).toBe(0);
-    
+
     const rebuilt = buildTree(flattened);
     expect(rebuilt).toHaveLength(1);
     expect(rebuilt[0].id).toBe("only");
@@ -370,22 +382,30 @@ describe("Edge Cases", () => {
     const tree: TreeItems = [
       {
         id: "l1",
-        children: [{
-          id: "l2",
-          children: [{
-            id: "l3",
-            children: [{
-              id: "l4",
-              children: [{
-                id: "l5",
-                children: [],
-              }],
-            }],
-          }],
-        }],
+        children: [
+          {
+            id: "l2",
+            children: [
+              {
+                id: "l3",
+                children: [
+                  {
+                    id: "l4",
+                    children: [
+                      {
+                        id: "l5",
+                        children: [],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
       },
     ];
-    
+
     const flattened = flattenTree(tree);
     expect(flattened).toHaveLength(5);
     expect(flattened[4].depth).toBe(4);
@@ -397,7 +417,7 @@ describe("Edge Cases", () => {
       { id: "nodata1", children: [] },
       { id: "nodata2", children: [{ id: "nodata3", children: [] }] },
     ];
-    
+
     const flattened = flattenTree(tree);
     expect(flattened).toHaveLength(3);
     expect(flattened[0].data).toBeUndefined();
@@ -408,7 +428,7 @@ describe("Edge Cases", () => {
       { id: 1, children: [{ id: 2, children: [] }] },
       { id: 3, children: [] },
     ];
-    
+
     const flattened = flattenTree(tree);
     expect(flattened.find((i) => i.id === 1)).toBeDefined();
     expect(flattened.find((i) => i.id === 2)?.parentId).toBe(1);
@@ -418,10 +438,10 @@ describe("Edge Cases", () => {
     const tree: TreeItems = [
       { id: "a", collapsed: true, children: [{ id: "b", children: [] }] },
     ];
-    
+
     const flattened = flattenTree(tree);
     const rebuilt = buildTree(flattened);
-    
+
     expect(rebuilt[0].collapsed).toBe(true);
   });
 });
@@ -444,36 +464,35 @@ describe("Large Tree Performance", () => {
 
   it("handles 100 items efficiently", () => {
     const tree = generateLargeTree(100);
-    
+
     const start = performance.now();
     const flattened = flattenTree(tree);
     const duration = performance.now() - start;
-    
+
     expect(flattened.length).toBe(110); // 100 + 10 children
     expect(duration).toBeLessThan(50); // Should be very fast
   });
 
   it("handles 1000 items efficiently", () => {
     const tree = generateLargeTree(1000);
-    
+
     const start = performance.now();
     const flattened = flattenTree(tree);
     const duration = performance.now() - start;
-    
+
     expect(flattened.length).toBe(1100); // 1000 + 100 children
     expect(duration).toBeLessThan(100); // Should still be fast
   });
 
   it("flatten and rebuild 1000 items roundtrip", () => {
     const tree = generateLargeTree(1000);
-    
+
     const start = performance.now();
     const flattened = flattenTree(tree);
     const rebuilt = buildTree(flattened);
     const duration = performance.now() - start;
-    
+
     expect(rebuilt.length).toBe(1000);
     expect(duration).toBeLessThan(200);
   });
 });
-

@@ -35,9 +35,10 @@ export interface CurrentUserUiData {
 }
 
 // Transformer to convert API data to UI data with computed fields
-class CurrentUserTransformer
-  implements DataTransformer<CurrentUserApiData, CurrentUserUiData>
-{
+class CurrentUserTransformer implements DataTransformer<
+  CurrentUserApiData,
+  CurrentUserUiData
+> {
   toUi(apiData: CurrentUserApiData): CurrentUserUiData {
     const created_at = new Date(apiData.created_at);
     const username_changed_at = apiData.username_changed_at
@@ -169,7 +170,7 @@ export class CurrentUserStore {
   // Playground Implementations
   private playgroundQueryFn = async (): Promise<CurrentUserApiData[]> => {
     await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
-    const mockUsers = getMockData("users") as any[];
+    const mockUsers = getMockData<CurrentUserApiData>("users");
     // Transform mock data to match CurrentUserApiData interface
     const userData: CurrentUserApiData = {
       id: mockUsers[0]?.id || "playground-user",

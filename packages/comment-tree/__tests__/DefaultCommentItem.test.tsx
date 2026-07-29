@@ -213,8 +213,12 @@ describe("DefaultCommentItem", () => {
 
       const depthIndicators = container.querySelectorAll("[data-depth-line]");
       // Colors are now applied via inline styles (hex values)
-      expect((depthIndicators[0] as HTMLElement).style.borderLeftColor).toBe("rgb(59, 130, 246)"); // #3b82f6 blue
-      expect((depthIndicators[1] as HTMLElement).style.borderLeftColor).toBe("rgb(249, 115, 22)"); // #f97316 orange
+      expect((depthIndicators[0] as HTMLElement).style.borderLeftColor).toBe(
+        "rgb(59, 130, 246)",
+      ); // #3b82f6 blue
+      expect((depthIndicators[1] as HTMLElement).style.borderLeftColor).toBe(
+        "rgb(249, 115, 22)",
+      ); // #f97316 orange
     });
   });
 
@@ -345,7 +349,9 @@ describe("DefaultCommentItem", () => {
       );
 
       // The collapsible wrapper should have aria-hidden when collapsed
-      const collapsibleWrapper = container.querySelector("[aria-hidden='true']");
+      const collapsibleWrapper = container.querySelector(
+        "[aria-hidden='true']",
+      );
       expect(collapsibleWrapper).toBeDefined();
       // And the content should have opacity 0
       const replyButton = screen.getByText("Reply");
@@ -357,10 +363,7 @@ describe("DefaultCommentItem", () => {
         { key: "reply", label: "Reply", disabled: true },
       ];
       render(
-        <DefaultCommentItem
-          {...defaultProps}
-          actions={actionsWithDisabled}
-        />,
+        <DefaultCommentItem {...defaultProps} actions={actionsWithDisabled} />,
       );
 
       const button = screen.getByText("Reply");

@@ -108,7 +108,7 @@ export const AvatarMenu = observer(function AvatarMenu({
           {/* Logout Section */}
           <div className="px-4 py-3">
             <DropdownMenuItem
-              onClick={handleLogout}
+              onClick={() => void handleLogout()}
               className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 rounded-md flex items-center gap-2 cursor-pointer"
             >
               <LogOut size={16} /> Logout

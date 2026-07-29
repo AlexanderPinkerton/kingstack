@@ -112,7 +112,7 @@ export default function useAdminGuard(options?: UseAdminGuardOptions) {
       }
     };
 
-    checkAdmin();
+    void checkAdmin();
 
     // Cleanup function to cancel if component unmounts or dependencies change
     return () => {

@@ -1,24 +1,20 @@
 {
-  "extends": [
-    "//"
-  ],
+  "$schema": "https://turborepo.dev/schema.json",
+  "extends": ["//"],
   "tasks": {
     "build": {
       "dependsOn": [],
-      "outputs": [
-        "dist/**"
-      ]
+      "outputs": ["dist/**"],
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
     },
     "lint": {
-      "dependsOn": []
+      "dependsOn": [],
     },
     "typecheck": {
       "dependsOn": [],
-      "outputs": []
-    }
-  }
+    },
+  },
 }

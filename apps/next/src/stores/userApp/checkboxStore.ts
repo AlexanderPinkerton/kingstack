@@ -271,12 +271,12 @@ export class RealtimeCheckboxStore {
 
     if (existingCheckbox) {
       // Update existing checkbox
-      this.optimisticStore.api.update(existingCheckbox.id, {
+      void this.optimisticStore.api.update(existingCheckbox.id, {
         checked: !existingCheckbox.checked,
       });
     } else {
       // Create new checkbox
-      this.optimisticStore.api.create({
+      void this.optimisticStore.api.create({
         index,
         checked: true,
       });
@@ -288,10 +288,10 @@ export class RealtimeCheckboxStore {
 
     if (existingCheckbox) {
       // Update existing checkbox
-      this.optimisticStore.api.update(existingCheckbox.id, { checked });
+      void this.optimisticStore.api.update(existingCheckbox.id, { checked });
     } else {
       // Create new checkbox
-      this.optimisticStore.api.create({
+      void this.optimisticStore.api.create({
         index,
         checked,
       });
@@ -299,7 +299,7 @@ export class RealtimeCheckboxStore {
   }
 
   refetch(): void {
-    this.optimisticStore.api.refetch();
+    void this.optimisticStore.api.refetch();
   }
 
   // ---------- Initialization ----------
@@ -408,7 +408,7 @@ export class RealtimeCheckboxStore {
   // Playground Implementations
   private playgroundQueryFn = async (): Promise<CheckboxApiData[]> => {
     await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
-    return getMockData("checkboxes") as CheckboxApiData[];
+    return getMockData("checkboxes");
   };
 
   private playgroundCreateMutation = async (data: {
@@ -435,7 +435,7 @@ export class RealtimeCheckboxStore {
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Get existing checkbox from mock data to preserve unchanged fields
-    const existingCheckboxes = getMockData("checkboxes") as CheckboxApiData[];
+    const existingCheckboxes = getMockData<CheckboxApiData>("checkboxes");
     const existingCheckbox = existingCheckboxes.find((c) => c.id === id);
 
     // If we have an existing checkbox, merge it with the updates

@@ -1,0 +1,13 @@
+.changeset
+.next
+.turbo
+.yarn
+coverage
+dist
+node_modules
+yarn.lock
+
+**/*.md
+apps/next/next-env.d.ts
+apps/next/public
+packages/create-kingstack/template

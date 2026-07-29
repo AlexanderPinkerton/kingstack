@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { autorun, reaction } from "mobx";
 import { ObservableUIData } from "../../src/core/ObservableUIData";
 import type { Entity, DataTransformer } from "../../src/core/types";
-import { getPerformanceThresholds, measurePerformance, measureMemoryUsage } from "../utils/testHelpers";
+import {
+  getPerformanceThresholds,
+  measurePerformance,
+  measureMemoryUsage,
+} from "../utils/testHelpers";
 
 // Test data types
 interface TestEntity extends Entity {
@@ -204,7 +208,7 @@ describe("ObservableUIData Advanced Scenarios", () => {
   describe("Performance & Memory", () => {
     it("should handle large datasets efficiently", async () => {
       const thresholds = getPerformanceThresholds();
-      
+
       const { result, duration, passed } = await measurePerformance(
         () => {
           // Add 1000 entities
@@ -221,7 +225,7 @@ describe("ObservableUIData Advanced Scenarios", () => {
           return store.count;
         },
         thresholds.largeDataset,
-        "large dataset insertion"
+        "large dataset insertion",
       );
 
       expect(passed).toBe(true);
@@ -250,7 +254,7 @@ describe("ObservableUIData Advanced Scenarios", () => {
           return store.get("1")?.priority;
         },
         thresholds.rapidUpdates,
-        "rapid updates"
+        "rapid updates",
       );
 
       expect(passed).toBe(true);
@@ -259,7 +263,7 @@ describe("ObservableUIData Advanced Scenarios", () => {
 
     it("should handle memory efficiently with large datasets", async () => {
       const thresholds = getPerformanceThresholds();
-      
+
       const memoryUsage = await measureMemoryUsage(async () => {
         // Add 10000 entities
         for (let i = 0; i < 10000; i++) {
@@ -280,9 +284,11 @@ describe("ObservableUIData Advanced Scenarios", () => {
       // Clear all and measure memory reclamation
       store.clear();
       const memoryAfterClear = await measureMemoryUsage(() => {});
-      
+
       // Memory should be reclaimed (very lenient check)
-      expect(memoryAfterClear.increase).toBeLessThan(memoryUsage.increase * 1.1);
+      expect(memoryAfterClear.increase).toBeLessThan(
+        memoryUsage.increase * 1.1,
+      );
     });
   });
 

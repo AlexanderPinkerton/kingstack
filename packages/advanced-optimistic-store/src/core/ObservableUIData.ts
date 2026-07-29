@@ -195,7 +195,7 @@ export class ObservableUIData<T extends Entity> {
         const valBKeys = Object.keys(valB);
         if (valAKeys.length !== valBKeys.length) return false;
         for (const valKey of valAKeys) {
-          if ((valA as any)[valKey] !== (valB as any)[valKey]) return false;
+          if (valA[valKey] !== valB[valKey]) return false;
         }
         continue;
       }
