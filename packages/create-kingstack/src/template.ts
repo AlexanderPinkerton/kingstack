@@ -3,14 +3,17 @@
 // ============================================================================
 
 import {
+  cpSync,
   existsSync,
+  mkdirSync,
   readFileSync,
   writeFileSync,
   rmSync,
   readdirSync,
   statSync,
 } from "fs";
-import { join } from "path";
+import { spawnSync } from "child_process";
+import { dirname, isAbsolute, join, relative, resolve } from "path";
 import {
   SKIP_PATTERNS,
   PROCESS_EXTENSIONS,
@@ -28,7 +31,14 @@ import { commandExists, error, runCommandWithRetry } from "./utils";
  * Clone the KingStack template to the target directory
  * Uses shallow git clone for speed (no history, main branch only)
  */
-export function cloneTemplate(targetDir: string): boolean {
+export function cloneTemplate(
+  targetDir: string,
+  options: { templateDir?: string } = {},
+): boolean {
+  if (options.templateDir) {
+    return copyLocalTemplate(options.templateDir, targetDir);
+  }
+
   if (!commandExists("git")) {
     error("git is not installed. Please install git and try again.");
     return false;
@@ -54,6 +64,75 @@ export function cloneTemplate(targetDir: string): boolean {
 
   error("git clone failed after retries");
   return false;
+}
+
+/**
+ * Copy the current state of a local Git working tree, including uncommitted
+ * tracked changes and non-ignored untracked files.
+ */
+export function copyLocalTemplate(
+  sourceDir: string,
+  targetDir: string,
+): boolean {
+  const source = resolve(sourceDir);
+  const target = resolve(targetDir);
+  const targetFromSource = relative(source, target);
+
+  if (
+    target === source ||
+    (!targetFromSource.startsWith("..") && !isAbsolute(targetFromSource))
+  ) {
+    error("Local template output must be outside the source repository.");
+    return false;
+  }
+
+  const filesResult = spawnSync(
+    "git",
+    [
+      "-C",
+      source,
+      "ls-files",
+      "--cached",
+      "--others",
+      "--exclude-standard",
+      "-z",
+    ],
+    {
+      encoding: "buffer",
+      maxBuffer: 50 * 1024 * 1024,
+    },
+  );
+
+  if (filesResult.status !== 0 || !filesResult.stdout) {
+    error(`${source} is not a readable Git working tree.`);
+    return false;
+  }
+
+  const files = filesResult.stdout.toString("utf8").split("\0").filter(Boolean);
+
+  if (files.length === 0) {
+    error(`No template files were found in ${source}.`);
+    return false;
+  }
+
+  if (existsSync(target)) {
+    rmSync(target, { recursive: true, force: true });
+  }
+  mkdirSync(target, { recursive: true });
+
+  for (const file of files) {
+    const sourcePath = join(source, file);
+    if (!existsSync(sourcePath)) continue;
+
+    const targetPath = join(target, file);
+    mkdirSync(dirname(targetPath), { recursive: true });
+    cpSync(sourcePath, targetPath, {
+      recursive: true,
+      preserveTimestamps: true,
+    });
+  }
+
+  return true;
 }
 
 // ============================================================================
@@ -216,6 +295,46 @@ export function removePublishedPackages(targetDir: string): number {
     if (existsSync(fullPath)) {
       rmSync(fullPath, { recursive: true, force: true });
       removedCount++;
+    }
+  }
+
+  // Contributor tooling depends on source packages that are removed from
+  // generated applications.
+  rmSync(join(targetDir, "scripts", "test-create-kingstack.ts"), {
+    force: true,
+  });
+
+  const rootPackagePath = join(targetDir, "package.json");
+  if (existsSync(rootPackagePath)) {
+    try {
+      const rootPackage = JSON.parse(readFileSync(rootPackagePath, "utf-8"));
+      if (rootPackage.scripts?.["test:create-kingstack"]) {
+        delete rootPackage.scripts["test:create-kingstack"];
+        writeFileSync(
+          rootPackagePath,
+          JSON.stringify(rootPackage, null, 2) + "\n",
+          "utf-8",
+        );
+      }
+    } catch {
+      // Namespace replacement will report malformed package files later.
+    }
+  }
+
+  const rootReadmePath = join(targetDir, "readme.md");
+  if (existsSync(rootReadmePath)) {
+    const contributorStart = "<!-- create-kingstack:contributor-only:start -->";
+    const contributorEnd = "<!-- create-kingstack:contributor-only:end -->";
+    const content = readFileSync(rootReadmePath, "utf-8");
+    const startIndex = content.indexOf(contributorStart);
+    const endIndex = content.indexOf(contributorEnd);
+
+    if (startIndex !== -1 && endIndex > startIndex) {
+      const nextContent =
+        content.slice(0, startIndex).trimEnd() +
+        "\n\n" +
+        content.slice(endIndex + contributorEnd.length).trimStart();
+      writeFileSync(rootReadmePath, nextContent, "utf-8");
     }
   }
 

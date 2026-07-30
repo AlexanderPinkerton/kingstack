@@ -128,8 +128,16 @@ async function main() {
   // ==========================================================================
   // Step 1: Clone template
   // ==========================================================================
-  step(1, totalSteps, "Downloading KingStack template...");
-  const cloned = cloneTemplate(targetDir);
+  step(
+    1,
+    totalSteps,
+    args.templateDir
+      ? "Copying local KingStack working tree..."
+      : "Downloading KingStack template...",
+  );
+  const cloned = cloneTemplate(targetDir, {
+    templateDir: args.templateDir,
+  });
   if (!cloned) {
     error("Failed to download template.");
     process.exit(1);
@@ -243,10 +251,28 @@ async function main() {
       success("Database migrated");
     }
 
-    step(12, totalSteps, "Starting full-stack development server...");
+    step(
+      12,
+      totalSteps,
+      args.noStart
+        ? "Full-stack project is ready"
+        : "Starting full-stack development server...",
+    );
   } else {
-    step(10, totalSteps, "Starting frontend draft server...");
+    step(
+      10,
+      totalSteps,
+      args.noStart
+        ? "Frontend-draft project is ready"
+        : "Starting frontend draft server...",
+    );
     info("Backend services were not started. Add them whenever you are ready.");
+  }
+
+  if (args.noStart) {
+    success(`Project generated at ${targetDir}`);
+    info(`Start it later with: cd ${targetDir} && yarn ${profile.devScript}`);
+    return;
   }
 
   startDevServer(targetDir, ports.next, {

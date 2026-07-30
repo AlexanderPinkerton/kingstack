@@ -18,6 +18,9 @@ export interface ParsedArgs {
   baseDir: string;
   help: boolean;
   setup?: SetupKind;
+  templateDir?: string;
+  noStart: boolean;
+  yes: boolean;
 }
 
 export interface ProjectConfig {
@@ -37,6 +40,9 @@ export function parseArgs(rawArgs = process.argv.slice(2)): ParsedArgs {
     baseDir: process.cwd(),
     help: false,
     setup: undefined,
+    templateDir: undefined,
+    noStart: false,
+    yes: false,
   };
 
   const positionalArgs: string[] = [];
@@ -59,6 +65,19 @@ export function parseArgs(rawArgs = process.argv.slice(2)): ParsedArgs {
         throw new Error("--draft and --full cannot be used together");
       }
       result.setup = "full";
+      i++;
+    } else if (arg === "--template-dir") {
+      const nextArg = rawArgs[i + 1];
+      if (!nextArg || nextArg.startsWith("-")) {
+        throw new Error("--template-dir requires a path argument");
+      }
+      result.templateDir = resolve(nextArg);
+      i += 2;
+    } else if (arg === "--no-start") {
+      result.noStart = true;
+      i++;
+    } else if (arg === "--yes" || arg === "-y") {
+      result.yes = true;
       i++;
     } else if (arg === "--dir" || arg === "-d") {
       const nextArg = rawArgs[i + 1];
@@ -104,12 +123,17 @@ export function printHelp(): void {
     -d, --dir <path>   Base directory for the new project (default: current directory)
     --draft            Start Next.js only; skip Docker, Supabase, and migrations
     --full             Start the complete local stack and run database setup
+    --template-dir <path>
+                       Copy a local Git working tree instead of downloading main
+    --no-start         Generate and configure the project without a dev server
+    -y, --yes          Accept default setup and port choices
     -h, --help         Show this help message
 
   ${pc.bold("Examples:")}
     npx create-kingstack my-app
     npx create-kingstack my-app --draft
     npx create-kingstack my-app --full
+    npx create-kingstack my-app --draft --no-start --yes
     npx create-kingstack my-app --dir ~/Projects
     npx create-kingstack --dir ~/Projects
     bun src/index.ts test-app --dir ~/Desktop
@@ -138,7 +162,7 @@ export async function promptForConfig(
         validate: validateProjectName,
       },
       {
-        type: args.setup ? null : "select",
+        type: args.setup || args.yes ? null : "select",
         name: "setup",
         message: "How would you like to start?",
         choices: [
@@ -158,7 +182,7 @@ export async function promptForConfig(
         initial: 0,
       },
       {
-        type: "confirm",
+        type: args.yes ? null : "confirm",
         name: "customPorts",
         message: "Customize ports?",
         initial: false,

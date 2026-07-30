@@ -23,6 +23,24 @@ describe("setup selection", () => {
     );
   });
 
+  it("parses local-template smoke-test controls", () => {
+    expect(
+      parseArgs([
+        "my-app",
+        "--draft",
+        "--template-dir",
+        "../kingstack",
+        "--no-start",
+        "--yes",
+      ]),
+    ).toMatchObject({
+      projectName: "my-app",
+      setup: "draft",
+      noStart: true,
+      yes: true,
+    });
+  });
+
   it("keeps draft setup independent from Docker and backend startup", () => {
     expect(getSetupProfile("draft")).toMatchObject({
       requiresDocker: false,

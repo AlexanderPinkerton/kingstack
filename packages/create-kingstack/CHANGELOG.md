@@ -7,6 +7,10 @@
 - Add frontend-draft and full-stack setup choices. Draft setup generates the
   complete project but does not require Docker or start Supabase, initialize
   the shadow database, or run migrations.
+- Add safe local-working-tree and no-start controls for testing the compiled
+  CLI against uncommitted template changes.
+- Add a root smoke-test helper that scaffolds into
+  `~/kingstack-smoke-tests`, then typechecks and tests the generated project.
 
 ## 0.2.3
 

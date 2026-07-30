@@ -35,7 +35,7 @@
     "@nestjs/schedule": "^6.0.0",
     "@nestjs/websockets": "^11.1.2",
     "@prisma/client": "6.6.0",
-    "@supabase/supabase-js": "^2.49.8",
+    "@supabase/supabase-js": "2.57.4",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "postgres": "^3.4.5",

@@ -18,6 +18,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit -p tsconfig.json && turbo run typecheck",
     "test": "turbo run test",
+    "test:create-kingstack": "bun scripts/test-create-kingstack.ts",
     "local": "yarn env:local && yarn supabase:start",
     "docker:build-nest": "docker build -f apps/nest/Dockerfile -t kingstack-nest .",
     "docker:run-nest": "docker run --rm -p 3000:3000 --name kingstack-nest --env-file apps/nest/.env -d kingstack-nest",

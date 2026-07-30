@@ -1,13 +1,62 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { tmpdir } from "os";
 import { join } from "path";
+import { execFileSync } from "child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import {
   replaceNamespace,
   replaceWorkspaceVersions,
   removePublishedPackages,
   getAllFiles,
+  copyLocalTemplate,
 } from "../template";
+
+describe("copyLocalTemplate", () => {
+  const testRoot = join(
+    tmpdir(),
+    "create-kingstack-local-template-" + Date.now(),
+  );
+  const sourceDir = join(testRoot, "source");
+  const targetDir = join(testRoot, "target");
+
+  beforeEach(() => {
+    mkdirSync(sourceDir, { recursive: true });
+    execFileSync("git", ["init", "-q"], { cwd: sourceDir });
+
+    writeFileSync(join(sourceDir, ".gitignore"), "ignored.txt\n");
+    writeFileSync(join(sourceDir, "tracked.txt"), "original");
+    execFileSync("git", ["add", ".gitignore", "tracked.txt"], {
+      cwd: sourceDir,
+    });
+
+    writeFileSync(join(sourceDir, "tracked.txt"), "uncommitted change");
+    writeFileSync(join(sourceDir, "untracked.txt"), "untracked template file");
+    writeFileSync(join(sourceDir, "ignored.txt"), "local secret");
+  });
+
+  afterEach(() => {
+    rmSync(testRoot, { recursive: true, force: true });
+  });
+
+  it("copies dirty tracked and non-ignored untracked files without .git", () => {
+    expect(copyLocalTemplate(sourceDir, targetDir)).toBe(true);
+
+    expect(readFileSync(join(targetDir, "tracked.txt"), "utf-8")).toBe(
+      "uncommitted change",
+    );
+    expect(readFileSync(join(targetDir, "untracked.txt"), "utf-8")).toBe(
+      "untracked template file",
+    );
+    expect(existsSync(join(targetDir, "ignored.txt"))).toBe(false);
+    expect(existsSync(join(targetDir, ".git"))).toBe(false);
+  });
+
+  it("refuses to put generated output inside the source repository", () => {
+    expect(copyLocalTemplate(sourceDir, join(sourceDir, "generated"))).toBe(
+      false,
+    );
+  });
+});
 
 describe("replaceNamespace", () => {
   const testDir = join(tmpdir(), "create-kingstack-test-" + Date.now());
@@ -188,6 +237,32 @@ describe("removePublishedPackages", () => {
         "COPY packages/shared/package.json packages/shared/package.json",
       ].join("\n"),
     );
+    mkdirSync(join(testDir, "scripts"), { recursive: true });
+    writeFileSync(
+      join(testDir, "scripts", "test-create-kingstack.ts"),
+      "contributor only",
+    );
+    writeFileSync(
+      join(testDir, "package.json"),
+      JSON.stringify({
+        scripts: {
+          test: "vitest",
+          "test:create-kingstack": "bun scripts/test-create-kingstack.ts",
+        },
+      }),
+    );
+    writeFileSync(
+      join(testDir, "readme.md"),
+      [
+        "# App",
+        "",
+        "<!-- create-kingstack:contributor-only:start -->",
+        "bun scripts/test-create-kingstack example",
+        "<!-- create-kingstack:contributor-only:end -->",
+        "",
+        "Generated-project documentation.",
+      ].join("\n"),
+    );
   });
 
   afterEach(() => {
@@ -221,6 +296,21 @@ describe("removePublishedPackages", () => {
   it("should return count of removed packages", () => {
     const count = removePublishedPackages(testDir);
     expect(count).toBe(3);
+  });
+
+  it("should remove the local smoke-test helper", () => {
+    removePublishedPackages(testDir);
+    expect(
+      existsSync(join(testDir, "scripts", "test-create-kingstack.ts")),
+    ).toBe(false);
+    const pkg = JSON.parse(
+      readFileSync(join(testDir, "package.json"), "utf-8"),
+    );
+    expect(pkg.scripts.test).toBe("vitest");
+    expect(pkg.scripts["test:create-kingstack"]).toBeUndefined();
+    const readme = readFileSync(join(testDir, "readme.md"), "utf-8");
+    expect(readme).not.toContain("scripts/test-create-kingstack");
+    expect(readme).toContain("Generated-project documentation.");
   });
 
   it("should remove published workspace COPY lines from Dockerfiles", () => {

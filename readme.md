@@ -167,6 +167,19 @@ clear links to backend-free drafts and the Supabase-backed full-stack showcase.
 Use `--full` when you want the CLI to start Supabase and run migrations during
 initial setup.
 
+<!-- create-kingstack:contributor-only:start -->
+Contributors can test the compiled CLI against uncommitted template changes
+without touching `main`:
+
+```bash
+bun scripts/test-create-kingstack my-draft-check
+```
+
+Smoke projects are retained under `~/kingstack-smoke-tests`. See the
+[create-kingstack testing guide](./packages/create-kingstack/README.md#testing-local-cli-and-template-changes)
+for full-stack, no-start, and custom-output examples.
+<!-- create-kingstack:contributor-only:end -->
+
 1. **Clone the repository**
    ```bash
    git clone https://github.com/your-username/kingstack.git
