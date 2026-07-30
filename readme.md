@@ -56,6 +56,10 @@ KingStack excels at making common tasks **easy**:
 
 📖 **[State Management Architecture →](./docs/state-management/README.md)**
 
+For UI exploration before a backend exists, use
+**[backend-free frontend drafts →](./docs/frontend-drafts.md)**. Drafts keep the
+real optimistic store pattern and swap only the repository adapter.
+
 ### Tackling Common Annoyances
 
 KingStack takes an **explicit approach** to avoid hidden pitfalls:
@@ -151,6 +155,17 @@ kingstack/
 - **Supabase CLI** (optional) - For local Supabase development
 
 ### Quick Start
+
+To generate a project and begin with frontend drafts immediately:
+
+```bash
+npx create-kingstack my-app --draft
+```
+
+This creates the complete stack but starts only Next.js. The root page provides
+clear links to backend-free drafts and the Supabase-backed full-stack showcase.
+Use `--full` when you want the CLI to start Supabase and run migrations during
+initial setup.
 
 1. **Clone the repository**
    ```bash

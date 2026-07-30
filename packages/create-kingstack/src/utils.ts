@@ -144,24 +144,33 @@ export function openBrowser(url: string): void {
 /**
  * Start the development server (takes over the terminal)
  */
-export function startDevServer(cwd: string, port: number): void {
+export interface StartDevServerOptions {
+  script?: "dev" | "dev:frontend";
+  pathname?: string;
+}
+
+export function startDevServer(
+  cwd: string,
+  port: number,
+  options: StartDevServerOptions = {},
+): void {
+  const { script = "dev", pathname = "/" } = options;
+  const url = `http://localhost:${port}${pathname}`;
   console.log();
   console.log(pc.dim("  ─────────────────────────────────"));
   console.log();
   console.log(pc.bold("  🚀 Starting development server..."));
   console.log();
-  console.log(
-    `  ${pc.green("➜")} ${pc.bold("Local:")}   ${pc.cyan(`http://localhost:${port}`)}`,
-  );
+  console.log(`  ${pc.green("➜")} ${pc.bold("Local:")}   ${pc.cyan(url)}`);
   console.log();
   console.log(pc.dim("  Press Ctrl+C to stop"));
   console.log();
 
   // Open browser after a short delay to let server start
-  setTimeout(() => openBrowser(`http://localhost:${port}`), 3000);
+  setTimeout(() => openBrowser(url), 3000);
 
   // Start dev server in foreground (takes over the terminal)
-  const child = spawn("yarn", ["dev"], {
+  const child = spawn("yarn", [script], {
     cwd,
     stdio: "inherit",
     shell: true,

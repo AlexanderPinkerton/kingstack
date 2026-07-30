@@ -1,5 +1,13 @@
 # @kingstack/create-kingstack
 
+## Unreleased
+
+### Minor Changes
+
+- Add frontend-draft and full-stack setup choices. Draft setup generates the
+  complete project but does not require Docker or start Supabase, initialize
+  the shadow database, or run migrations.
+
 ## 0.2.3
 
 ### Patch Changes

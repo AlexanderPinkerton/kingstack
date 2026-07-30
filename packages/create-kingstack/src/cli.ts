@@ -7,6 +7,7 @@ import { resolve } from "path";
 import { DEFAULT_PORTS } from "./constants";
 import { validateProjectName } from "./validators";
 import { info } from "./utils";
+import type { SetupKind } from "./setup";
 
 // ============================================================================
 // Types
@@ -16,24 +17,26 @@ export interface ParsedArgs {
   projectName?: string;
   baseDir: string;
   help: boolean;
+  setup?: SetupKind;
 }
 
 export interface ProjectConfig {
   projectName: string;
   ports: typeof DEFAULT_PORTS;
   targetDir: string;
+  setup: SetupKind;
 }
 
 // ============================================================================
 // Argument Parsing
 // ============================================================================
 
-export function parseArgs(): ParsedArgs {
-  const rawArgs = process.argv.slice(2);
+export function parseArgs(rawArgs = process.argv.slice(2)): ParsedArgs {
   const result: ParsedArgs = {
     projectName: undefined,
     baseDir: process.cwd(),
     help: false,
+    setup: undefined,
   };
 
   const positionalArgs: string[] = [];
@@ -44,6 +47,18 @@ export function parseArgs(): ParsedArgs {
 
     if (arg === "--help" || arg === "-h") {
       result.help = true;
+      i++;
+    } else if (arg === "--draft") {
+      if (result.setup === "full") {
+        throw new Error("--draft and --full cannot be used together");
+      }
+      result.setup = "draft";
+      i++;
+    } else if (arg === "--full") {
+      if (result.setup === "draft") {
+        throw new Error("--draft and --full cannot be used together");
+      }
+      result.setup = "full";
       i++;
     } else if (arg === "--dir" || arg === "-d") {
       const nextArg = rawArgs[i + 1];
@@ -87,10 +102,14 @@ export function printHelp(): void {
 
   ${pc.bold("Options:")}
     -d, --dir <path>   Base directory for the new project (default: current directory)
+    --draft            Start Next.js only; skip Docker, Supabase, and migrations
+    --full             Start the complete local stack and run database setup
     -h, --help         Show this help message
 
   ${pc.bold("Examples:")}
     npx create-kingstack my-app
+    npx create-kingstack my-app --draft
+    npx create-kingstack my-app --full
     npx create-kingstack my-app --dir ~/Projects
     npx create-kingstack --dir ~/Projects
     bun src/index.ts test-app --dir ~/Desktop
@@ -119,6 +138,26 @@ export async function promptForConfig(
         validate: validateProjectName,
       },
       {
+        type: args.setup ? null : "select",
+        name: "setup",
+        message: "How would you like to start?",
+        choices: [
+          {
+            title: "Frontend draft (no backend services)",
+            description:
+              "Run Next.js with in-memory repositories; connect Supabase later",
+            value: "draft",
+          },
+          {
+            title: "Full stack",
+            description:
+              "Start Supabase, run migrations, and launch Next.js plus NestJS",
+            value: "full",
+          },
+        ],
+        initial: 0,
+      },
+      {
         type: "confirm",
         name: "customPorts",
         message: "Customize ports?",
@@ -131,15 +170,27 @@ export async function promptForConfig(
         initial: DEFAULT_PORTS.next,
       },
       {
-        type: (_prev: number, values: { customPorts: boolean }) =>
-          values.customPorts ? "number" : null,
+        type: (
+          _prev: number,
+          values: { customPorts: boolean; setup?: SetupKind },
+        ) =>
+          values.customPorts &&
+          (args.setup ?? values.setup ?? "draft") === "full"
+            ? "number"
+            : null,
         name: "nestPort",
         message: "NestJS port:",
         initial: DEFAULT_PORTS.nest,
       },
       {
-        type: (_prev: number, values: { customPorts: boolean }) =>
-          values.customPorts ? "number" : null,
+        type: (
+          _prev: number,
+          values: { customPorts: boolean; setup?: SetupKind },
+        ) =>
+          values.customPorts &&
+          (args.setup ?? values.setup ?? "draft") === "full"
+            ? "number"
+            : null,
         name: "supabaseBasePort",
         message: "Supabase base port:",
         initial: DEFAULT_PORTS.supabaseApiPort,
@@ -155,6 +206,7 @@ export async function promptForConfig(
   );
 
   projectName = projectName || response.projectName;
+  const setup = args.setup ?? response.setup ?? "draft";
 
   if (!projectName) {
     return null;
@@ -179,5 +231,6 @@ export async function promptForConfig(
     projectName,
     ports,
     targetDir: resolve(args.baseDir, projectName),
+    setup,
   };
 }

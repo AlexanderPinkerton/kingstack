@@ -15,14 +15,18 @@ That's it! The CLI will:
 3. Generate configuration files
 4. Initialize git
 5. Install dependencies
-6. Start the dev server
-7. Open your browser to the running app
+6. Ask whether to start with frontend drafts or the complete local stack
+7. Start the appropriate development server
+8. Open the backend-free project gateway
+
+Both choices generate the complete KingStack project. The choice only controls
+which services the installer starts immediately.
 
 ## Interactive Prompts
 
 ```
 ? Project name: my-project
-? Target directory: my-project
+? How would you like to start? Frontend draft (no backend services)
 ? Customize ports? No
 ```
 
@@ -31,6 +35,12 @@ That's it! The CLI will:
 ```bash
 # Specify project name
 npx create-kingstack my-project
+
+# Start Next.js without Docker, Supabase, NestJS, or migrations
+npx create-kingstack my-project --draft
+
+# Configure and start the complete local stack
+npx create-kingstack my-project --full
 
 # Specify a different base directory (instead of cwd)
 npx create-kingstack my-project --dir ~/Projects
@@ -44,14 +54,16 @@ npx create-kingstack --dir /tmp
 | Flag | Description |
 |------|-------------|
 | `-d, --dir <path>` | Base directory for the new project (default: current directory) |
+| `--draft` | Start Next.js only and skip local backend infrastructure |
+| `--full` | Start Supabase, run migrations, and launch the full stack |
 | `-h, --help` | Show help message |
 
 ## Requirements
 
 - **Node.js 20+**
 - **Yarn** (installed automatically via corepack)
-- **Docker**
 - **Bun** (for running scripts)
+- **Docker** (full-stack setup only)
 
 ## What Gets Created
 
@@ -71,12 +83,21 @@ my-project/
 
 ## After Creation
 
-Your app will be running at `http://localhost:3069`
+The browser opens the generated project's root gateway. From there:
 
-The generated project includes:
-- Supabase Studio at `http://localhost:54324`
-- PostgreSQL database ready
-- Auth system configured
+- **Frontend drafts** run without Supabase or NestJS and use in-memory
+  repositories with the production store pattern.
+- **Full-stack showcase** initializes the Supabase-backed runtime and uses the
+  configured NestJS and database services.
+
+If you initially choose draft setup, connect the backend later with:
+
+```bash
+yarn supabase:start
+bun scripts/setup-shadow-db.ts
+yarn prisma:migrate
+yarn dev
+```
 
 ## License
 

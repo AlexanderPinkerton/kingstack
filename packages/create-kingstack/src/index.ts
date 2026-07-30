@@ -39,6 +39,7 @@ import {
   initGit,
   deleteYarnLock,
 } from "./config-generators";
+import { getSetupProfile } from "./setup";
 
 // ============================================================================
 // Main
@@ -54,15 +55,12 @@ async function main() {
 
   banner();
 
-  // ==========================================================================
-  // Upfront Tool Validation
-  // ==========================================================================
-
-  const toolCheck = validateTools();
-  displayToolStatus(toolCheck.status);
-
-  if (!toolCheck.success) {
-    printMissingToolsError(toolCheck.missing);
+  // Validate the tools every setup needs before opening interactive prompts.
+  // Docker is validated later because draft setup does not require it.
+  const coreToolCheck = validateTools({ requireDocker: false });
+  if (!coreToolCheck.success) {
+    displayToolStatus(coreToolCheck.status, { requireDocker: false });
+    printMissingToolsError(coreToolCheck.missing);
     process.exit(1);
   }
 
@@ -78,9 +76,22 @@ async function main() {
     process.exit(1);
   }
 
-  const { projectName, ports, targetDir } = config;
+  const { projectName, ports, targetDir, setup } = config;
+  const profile = getSetupProfile(setup);
 
-  if (!checkDockerRunning()) {
+  const toolCheck = validateTools({
+    requireDocker: profile.requiresDocker,
+  });
+  displayToolStatus(toolCheck.status, {
+    requireDocker: profile.requiresDocker,
+  });
+
+  if (!toolCheck.success) {
+    printMissingToolsError(toolCheck.missing);
+    process.exit(1);
+  }
+
+  if (profile.requiresDocker && !checkDockerRunning()) {
     printDockerNotRunningError();
     process.exit(1);
   }
@@ -89,7 +100,7 @@ async function main() {
   // Setup
   // ==========================================================================
 
-  const totalSteps = 12;
+  const totalSteps = profile.totalSteps;
 
   // Check if directory exists and not empty
   if (existsSync(targetDir)) {
@@ -112,6 +123,7 @@ async function main() {
   console.log(pc.dim("  ─────────────────────────────────"));
   console.log();
   info(`Creating ${pc.bold(projectName)} in ${pc.dim(targetDir)}`);
+  info(`Setup: ${pc.bold(profile.label)}`);
 
   // ==========================================================================
   // Step 1: Clone template
@@ -194,44 +206,52 @@ async function main() {
   }
   success("Environment files generated");
 
-  step(10, totalSteps, "Starting Supabase...");
-  // startSupabase shows its own messages
-  const supabaseStarted = startSupabase(targetDir);
-  if (!supabaseStarted) {
-    console.log();
-    warn("Supabase failed to start. Check the error messages above.");
-    console.log();
-    console.log(pc.bold("  To complete setup manually:"));
-    console.log();
-    console.log(pc.dim("  1.") + ` cd ${projectName}`);
-    console.log(pc.dim("  2.") + " yarn supabase:start");
-    console.log(pc.dim("  3.") + " bun scripts/setup-shadow-db.ts");
-    console.log(pc.dim("  4.") + " yarn prisma:migrate");
-    console.log(pc.dim("  5.") + " yarn dev");
-    console.log();
-    process.exit(1);
-  }
-  success("Supabase started");
+  if (setup === "full") {
+    step(10, totalSteps, "Starting Supabase...");
+    // startSupabase shows its own messages
+    const supabaseStarted = startSupabase(targetDir);
+    if (!supabaseStarted) {
+      console.log();
+      warn("Supabase failed to start. Check the error messages above.");
+      console.log();
+      console.log(pc.bold("  To complete setup manually:"));
+      console.log();
+      console.log(pc.dim("  1.") + ` cd ${projectName}`);
+      console.log(pc.dim("  2.") + " yarn supabase:start");
+      console.log(pc.dim("  3.") + " bun scripts/setup-shadow-db.ts");
+      console.log(pc.dim("  4.") + " yarn prisma:migrate");
+      console.log(pc.dim("  5.") + " yarn dev");
+      console.log();
+      process.exit(1);
+    }
+    success("Supabase started");
 
-  step(11, totalSteps, "Setting up database...");
-  info("Creating shadow database...");
-  if (!runCommand("bun scripts/setup-shadow-db.ts", targetDir)) {
-    warn("Shadow database setup failed. You may need to run it manually.");
+    step(11, totalSteps, "Setting up database...");
+    info("Creating shadow database...");
+    if (!runCommand("bun scripts/setup-shadow-db.ts", targetDir)) {
+      warn("Shadow database setup failed. You may need to run it manually.");
+    } else {
+      success("Shadow database created");
+    }
+
+    info("Running migrations...");
+    if (!runCommand("yarn prisma:migrate", targetDir)) {
+      warn(
+        "Migrations failed. Run 'yarn prisma:migrate' manually after fixing any issues.",
+      );
+    } else {
+      success("Database migrated");
+    }
+
+    step(12, totalSteps, "Starting full-stack development server...");
   } else {
-    success("Shadow database created");
+    step(10, totalSteps, "Starting frontend draft server...");
+    info("Backend services were not started. Add them whenever you are ready.");
   }
 
-  info("Running migrations...");
-  if (!runCommand("yarn prisma:migrate", targetDir)) {
-    warn(
-      "Migrations failed. Run 'yarn prisma:migrate' manually after fixing any issues.",
-    );
-  } else {
-    success("Database migrated");
-  }
-
-  step(12, totalSteps, "Starting development server...");
-  startDevServer(targetDir, ports.next);
+  startDevServer(targetDir, ports.next, {
+    script: profile.devScript,
+  });
 }
 
 main().catch((err) => {

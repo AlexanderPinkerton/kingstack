@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
+    "dev:frontend": "yarn workspace @kingstack/next dev",
     "start": "turbo run start",
     "build": "turbo run build",
     "build:release-packages": "turbo run build $(bun scripts/get-public-packages.ts)",

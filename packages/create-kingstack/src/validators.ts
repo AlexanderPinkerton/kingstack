@@ -57,7 +57,11 @@ export function checkAllTools(): ToolStatus {
 /**
  * Display tool status to user upfront
  */
-export function displayToolStatus(status: ToolStatus): void {
+export function displayToolStatus(
+  status: ToolStatus,
+  options: { requireDocker?: boolean } = {},
+): void {
+  const { requireDocker = true } = options;
   console.log();
   console.log(pc.bold("  Checking required tools..."));
   console.log();
@@ -71,7 +75,13 @@ export function displayToolStatus(status: ToolStatus): void {
   check("git", status.git);
   check("yarn", status.yarn);
   check("bun", status.bun);
-  check("docker", status.docker);
+  if (requireDocker) {
+    check("docker", status.docker);
+  } else if (status.docker) {
+    check("docker (optional)", true);
+  } else {
+    console.log(`  ${pc.yellow("–")} ${pc.dim("docker (not needed)")}`);
+  }
   console.log();
 }
 
@@ -79,14 +89,17 @@ export function displayToolStatus(status: ToolStatus): void {
  * Perform upfront tool validation
  * Returns whether all required tools are available
  */
-export function validateTools(): ToolCheckResult {
+export function validateTools(
+  options: { requireDocker?: boolean } = {},
+): ToolCheckResult {
+  const { requireDocker = true } = options;
   const status = checkAllTools();
   const missing: string[] = [];
 
   if (!status.git) missing.push("git - install from https://git-scm.com/");
   if (!status.yarn) missing.push("yarn - install with: npm install -g yarn");
   if (!status.bun) missing.push("bun - install from https://bun.sh/");
-  if (!status.docker) {
+  if (requireDocker && !status.docker) {
     missing.push(
       "docker - install from https://www.docker.com/products/docker-desktop/",
     );

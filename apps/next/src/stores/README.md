@@ -21,9 +21,9 @@ AppProviders
         └── AdminMgmtStore
 ```
 
-`AppProviders` constructs one QueryClient and injects that same client through
-RootStore into every Advanced Optimistic Store. It also mounts and disposes the
-RootStore with the application.
+For backend-dependent routes, `AppProviders` constructs one QueryClient and
+injects that same client through RootStore into every Advanced Optimistic
+Store. It also mounts and disposes RootStore with that route runtime.
 
 `RootStore` is the single coordinator for session and realtime changes.
 `SessionManager` only reports authentication state; it does not reach into
@@ -67,8 +67,21 @@ function PostsPage() {
 }
 ```
 
-The hook only maps mount/unmount to acquire/release. Query keys, permissions,
-API behavior, caching, and optimistic updates remain in raw TypeScript.
+The hook only maps mount/unmount to acquire/release. Query keys, repository
+composition, caching, and optimistic updates remain in raw TypeScript.
+
+## Repository adapters
+
+Stores that can run against multiple data sources accept a domain repository
+in their constructor. `AdvancedPostStore`, for example, receives either the
+authenticated Nest HTTP adapter or an in-memory draft adapter. Both expose the
+same asynchronous operations and return the same API entity shape, so AOS and
+the UI do not branch on a global mode.
+
+Reusable UI receives the domain store directly. RootStore-backed pages add a
+thin composition wrapper, while backend-free routes compose the same UI and
+store outside `AppProviders`. See
+[Frontend drafts without Supabase](../../../../docs/frontend-drafts.md).
 
 ## Query Activation Policy
 
@@ -92,7 +105,7 @@ active.
 Authenticated query keys use data identity:
 
 ```ts
-["advanced-posts", session.user.id]
+["advanced-posts", context.scope]
 ```
 
 Access tokens authorize requests but are not cache identity. Token refreshes
@@ -131,14 +144,15 @@ Every new child store must implement `dispose()` and call
 ## Adding a Store
 
 1. Create a domain store in the appropriate feature folder.
-2. Accept the shared QueryClient in its constructor.
-3. Add an `enabled` predicate that separates session availability from feature
+2. Define a domain repository contract and its production adapter.
+3. Accept the shared QueryClient and repository in the store constructor.
+4. Add an `enabled` predicate that separates runtime availability from feature
    demand.
-4. Implement `activate()` when the query should be feature-driven.
-5. Implement `dispose()` and destroy the optimistic store.
-6. Add the store as a typed property of the user or admin store manager.
-7. Forward session state only if the store is authenticated.
-8. Add `useStoreActivation()` at the feature boundary that needs its data.
+5. Implement `activate()` when the query should be feature-driven.
+6. Implement `dispose()` and destroy the optimistic store.
+7. Add the store as a typed property of the user or admin store manager.
+8. Forward runtime context only if the store needs it.
+9. Add `useStoreActivation()` at the feature boundary that needs its data.
 
 For genuinely large or optional domains, prefer a route-level provider and
 dynamic route bundle instead of a synchronous “lazy” getter. Client-side code

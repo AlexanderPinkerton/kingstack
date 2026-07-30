@@ -83,8 +83,7 @@ loading.
 Each domain store owns:
 
 - its complete query key;
-- request authorization;
-- query and mutation functions;
+- its repository contract and runtime context;
 - API-to-UI transformations;
 - activation policy;
 - optimistic behavior exposed by AOS;
@@ -121,6 +120,13 @@ All enabling rules remain in the domain store:
 enabled: () => demand.isActive && Boolean(session?.access_token);
 ```
 
+Stores that support more than one data source use a repository-neutral
+predicate instead:
+
+```ts
+enabled: () => demand.isActive && context.enabled;
+```
+
 When demand or session changes, the store calls `updateOptions()`. TanStack
 Query then decides whether cached data is fresh or a request is necessary.
 
@@ -139,11 +145,11 @@ manager implementation attempted to solve.
 
 ## Sessions and cache identity
 
-Authenticated domain stores read the current access token when a request runs,
-but use stable data identity in the query key:
+Authenticated repository adapters read the current access token when a request
+runs, while domain stores use stable data identity in the query key:
 
 ```ts
-queryKey: () => ["advanced-posts", session?.user.id ?? "anonymous"];
+queryKey: () => ["advanced-posts", context.scope];
 ```
 
 This has two important effects:
@@ -166,7 +172,7 @@ Plain TypeScript domain action
     ▼
 AOS mutation
 ├── MobX UI projection: temporary optimistic layer
-├── API: perform authorized request
+├── Repository: perform an in-memory or remote mutation
 └── TanStack cache: commit complete confirmed response
     │
     ▼
@@ -221,21 +227,32 @@ React Strict Mode's development setup/cleanup/setup probe is handled at the
 RootStore mount boundary so it does not permanently dispose the runtime between
 probe effects.
 
+## Backend-free frontend drafts
+
+Reusable domain UI can receive a store directly instead of reading RootStore.
+The same store can then be composed with an in-memory repository under
+`/drafts`, outside the Supabase-backed runtime route group. Moving the feature
+to production changes only its repository composition.
+
+See [Frontend drafts without Supabase](../frontend-drafts.md) for the workflow
+and the advanced-posts reference implementation.
+
 ## Adding a domain store
 
 1. Define API, UI, create-input, and update-input types.
-2. Accept the shared QueryClient in the constructor.
-3. Create the AOS instance with a complete scoped query key.
-4. Read credentials dynamically in request functions.
-5. Add a demand predicate if the domain is optional.
-6. Implement `activate()` with reference-counted release when needed.
-7. Implement idempotent `dispose()` and call `destroy()`.
-8. Add the store as a typed manager property.
-9. Forward sessions only when the domain needs authentication.
-10. Subscribe to raw realtime events and decode them into `RemoteChange` values
+2. Define a repository contract for the domain's data operations.
+3. Put transport and authorization details in production adapters.
+4. Accept the shared QueryClient and repository in the store constructor.
+5. Create the AOS instance with a complete scoped query key.
+6. Add a demand predicate if the domain is optional.
+7. Implement `activate()` with reference-counted release when needed.
+8. Implement idempotent `dispose()` and call `destroy()`.
+9. Add the store as a typed manager property.
+10. Forward runtime context only when the domain needs it.
+11. Subscribe to raw realtime events and decode them into `RemoteChange` values
     only when the domain needs it.
-11. Activate the store at its feature boundary.
-12. Add tests for inactive behavior, scope changes, rollback, and cleanup.
+12. Activate the store at its feature boundary.
+13. Add tests for inactive behavior, scope changes, rollback, and cleanup.
 
 For AOS configuration and mutation contracts, use the
 [package API reference](https://github.com/AlexanderPinkerton/kingstack/blob/main/packages/advanced-optimistic-store/docs/api-reference.md).

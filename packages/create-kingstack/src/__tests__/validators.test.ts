@@ -93,6 +93,17 @@ describe("validateTools", () => {
     expect(result.success).toBe(false);
     expect(result.missing.some((m) => m.includes("docker"))).toBe(true);
   });
+
+  it("should allow draft setup without docker", () => {
+    vi.spyOn(utils, "commandExists").mockImplementation(
+      (cmd) => cmd !== "docker",
+    );
+    const result = validateTools({ requireDocker: false });
+
+    expect(result.success).toBe(true);
+    expect(result.status.docker).toBe(false);
+    expect(result.missing).toHaveLength(0);
+  });
 });
 
 describe("checkDockerRunning", () => {
