@@ -135,14 +135,15 @@ typechecks, and tests a timestamped project under:
 ~/kingstack-smoke-tests/<timestamp>/my-draft-check
 ```
 
-After verification, the helper starts the generated development server. Draft
-setup is the default. Useful variants:
+Without a setup flag, the helper presents the real `create-kingstack` setup and
+port-block prompts. After verification, it starts the development server for
+the selected setup. Useful variants:
 
 ```bash
-# Verify and retain the project without taking over the terminal
-bun scripts/test-create-kingstack my-draft-check --no-start
+# Select draft setup without prompts, verify, and retain the project
+bun scripts/test-create-kingstack my-draft-check --draft --no-start
 
-# Exercise Supabase and migrations with an isolated automatic port block
+# Select full setup without prompts and exercise Supabase plus migrations
 bun scripts/test-create-kingstack my-full-check --full
 
 # Put smoke projects somewhere else

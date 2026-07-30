@@ -61,6 +61,7 @@ describe("smart port allocation", () => {
     await allocateProjectPorts({
       projectName: "existing-project",
       targetDir: existingProject,
+      setup: "full",
       preferredBase: 10000,
       registryPath,
       probe: () => Promise.resolve(true),
@@ -76,6 +77,7 @@ describe("smart port allocation", () => {
     expect(allocation.basePort).toBe(10010);
     const registry = JSON.parse(readFileSync(registryPath, "utf-8"));
     expect(registry.allocations).toHaveLength(2);
+    expect(registry.allocations[0].setup).toBe("full");
   });
 
   it("rejects an explicitly requested block when any port is unavailable", async () => {

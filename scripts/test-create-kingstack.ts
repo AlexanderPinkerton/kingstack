@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, readFileSync } from "fs";
 import { homedir } from "os";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -8,7 +8,7 @@ import { spawnSync } from "child_process";
 
 interface Options {
   projectName: string;
-  setup: "draft" | "full";
+  setup?: "draft" | "full";
   noStart: boolean;
   outputRoot: string;
 }
@@ -21,19 +21,20 @@ Usage:
   bun scripts/test-create-kingstack <project-name> [options]
 
 Options:
-  --draft                 Test frontend-draft setup (default)
-  --full                  Test complete Supabase and database setup
+  --draft                 Select frontend-draft setup without prompting
+  --full                  Select complete setup without prompting
   --no-start              Verify the project without starting its dev server
   --output-dir <path>     Output root (default: ~/kingstack-smoke-tests)
   -h, --help              Show this help
 
 Examples:
-  bun scripts/test-create-kingstack draft-check
-  bun scripts/test-create-kingstack draft-check --no-start
+  bun scripts/test-create-kingstack interactive-check
+  bun scripts/test-create-kingstack draft-check --draft --no-start
   bun scripts/test-create-kingstack full-check --full
 
-Every run uses automatic port allocation, typechecks the generated project, and
-runs its tests before starting the development server.
+Without --draft or --full, the real create-kingstack setup prompt is shown.
+Every run typechecks and tests the generated project before starting its
+selected development server.
 `);
 }
 
@@ -44,7 +45,7 @@ function parseArgs(args: string[]): Options | null {
   }
 
   let projectName: string | undefined;
-  let setup: Options["setup"] = "draft";
+  let setup: Options["setup"];
   let setupFlag: Options["setup"] | undefined;
   let noStart = false;
   let outputRoot = join(homedir(), "kingstack-smoke-tests");
@@ -125,6 +126,31 @@ function timestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
+function readSelectedSetup(
+  registryPath: string,
+  projectDirectory: string,
+): "draft" | "full" {
+  const registry = JSON.parse(readFileSync(registryPath, "utf-8")) as {
+    allocations?: Array<{
+      projectPath?: string;
+      setup?: "draft" | "full";
+    }>;
+  };
+  const projectPath = resolve(projectDirectory);
+  const allocation = registry.allocations?.find(
+    (candidate) =>
+      candidate.projectPath && resolve(candidate.projectPath) === projectPath,
+  );
+
+  if (allocation?.setup === "draft" || allocation?.setup === "full") {
+    return allocation.setup;
+  }
+
+  throw new Error(
+    `Could not determine the selected setup from ${registryPath}.`,
+  );
+}
+
 function main(): void {
   const options = parseArgs(process.argv.slice(2));
   if (!options) return;
@@ -140,13 +166,14 @@ function main(): void {
   );
   const runDirectory = join(options.outputRoot, timestamp());
   const projectDirectory = join(runDirectory, options.projectName);
+  const registryPath = join(options.outputRoot, "port-allocations.json");
 
   mkdirSync(runDirectory, { recursive: true });
 
   console.log();
   console.log("👑 Local create-kingstack smoke test");
   console.log(`   Template: ${repoRoot}`);
-  console.log(`   Setup:    ${options.setup}`);
+  console.log(`   Setup:    ${options.setup ?? "interactive"}`);
   console.log(`   Output:   ${projectDirectory}`);
   console.log();
 
@@ -160,13 +187,15 @@ function main(): void {
   const cliArgs = [
     cliEntry,
     options.projectName,
-    `--${options.setup}`,
     "--template-dir",
     repoRoot,
     "--dir",
     runDirectory,
-    "--yes",
   ];
+
+  if (options.setup) {
+    cliArgs.push(`--${options.setup}`, "--yes");
+  }
 
   // Keep control in this wrapper so it can validate the generated project
   // before optionally handing the terminal to the development server.
@@ -175,12 +204,18 @@ function main(): void {
   run("node", cliArgs, repoRoot, {
     env: {
       ...process.env,
-      KINGSTACK_PORT_REGISTRY: join(
-        options.outputRoot,
-        "port-allocations.json",
-      ),
+      KINGSTACK_PORT_REGISTRY: registryPath,
     },
   });
+
+  if (!existsSync(projectDirectory)) {
+    console.log();
+    console.log("create-kingstack smoke test cancelled.");
+    return;
+  }
+
+  const selectedSetup =
+    options.setup ?? readSelectedSetup(registryPath, projectDirectory);
 
   console.log();
   console.log("Verifying the generated project...");
@@ -195,7 +230,7 @@ function main(): void {
     return;
   }
 
-  const devScript = options.setup === "draft" ? "dev:frontend" : "dev";
+  const devScript = selectedSetup === "draft" ? "dev:frontend" : "dev";
   console.log();
   console.log(`Starting the generated project with yarn ${devScript}...`);
   run("yarn", [devScript], projectDirectory, { allowInterrupt: true });

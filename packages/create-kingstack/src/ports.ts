@@ -34,6 +34,7 @@ export type PortProbe = (port: number) => Promise<boolean>;
 interface PortAllocationRecord {
   projectName: string;
   projectPath: string;
+  setup?: "draft" | "full";
   assignedAt: string;
   basePort: number;
   ports: PortAssignments;
@@ -47,6 +48,7 @@ interface PortRegistry {
 export interface AllocateProjectPortsOptions {
   projectName: string;
   targetDir: string;
+  setup?: "draft" | "full";
   preferredBase?: number;
   registryPath?: string;
   probe?: PortProbe;
@@ -278,6 +280,7 @@ export async function allocateProjectPorts(
       allocations.push({
         projectName,
         projectPath: targetDir,
+        setup: options.setup,
         assignedAt: now.toISOString(),
         basePort,
         ports,

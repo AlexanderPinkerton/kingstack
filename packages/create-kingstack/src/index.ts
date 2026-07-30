@@ -129,6 +129,7 @@ async function main() {
   const { basePort, ports } = await allocateProjectPorts({
     projectName,
     targetDir,
+    setup,
     preferredBase: requestedPortBase,
   });
 
