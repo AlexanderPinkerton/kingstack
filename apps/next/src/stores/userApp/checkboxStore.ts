@@ -376,5 +376,4 @@ export class RealtimeCheckboxStore {
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
     return deleteCheckbox(id);
   };
-
 }

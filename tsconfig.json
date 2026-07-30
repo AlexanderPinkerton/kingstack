@@ -6,9 +6,5 @@
       "@kingstack/config": ["./packages/config/src/index.ts"]
     }
   },
-  "include": [
-    "config/example.ts",
-    "config/schema.ts",
-    "scripts/**/*.ts"
-  ]
+  "include": ["config/example.ts", "config/schema.ts", "scripts/**/*.ts"]
 }

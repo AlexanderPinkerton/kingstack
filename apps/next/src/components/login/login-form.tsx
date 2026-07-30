@@ -13,7 +13,6 @@ import { createClient } from "@/lib/supabase/browserClient";
 import { UsernameGenerator } from "@kingstack/shared";
 import { APPNAME } from "@kingstack/shared";
 
-
 export function LoginForm({
   className,
   ...props

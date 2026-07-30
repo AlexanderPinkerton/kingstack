@@ -15,10 +15,7 @@ program
 program
   .command("generate")
   .description("Generate .env files and update configs")
-  .argument(
-    "<env>",
-    "Environment to generate (local, development, production)",
-  )
+  .argument("<env>", "Environment to generate (local, development, production)")
   .option("--cwd <path>", "Working directory", process.cwd())
   .action(async (env: string, options: { cwd: string }) => {
     await generateCommand(env, options);

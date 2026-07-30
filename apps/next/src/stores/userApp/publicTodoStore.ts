@@ -240,5 +240,4 @@ export class PublicTodoStore {
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
     return deletePublicTodo(id);
   };
-
 }
