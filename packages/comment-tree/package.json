@@ -1,6 +1,6 @@
 {
   "name": "@kingstack/comment-tree",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "license": "MIT",
   "description": "A virtualized comment tree component for React with depth indicators",
   "type": "module",
