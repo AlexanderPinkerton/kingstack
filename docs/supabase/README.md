@@ -141,7 +141,8 @@ If containers have wrong names or you're connecting to the wrong instance:
 1. **Always use `yarn supabase:*` commands** - They ensure proper directory context
 2. **Check status before starting** - Use `yarn supabase:list` to see what's running
 3. **Use unique project_ids** - Makes it easier to identify containers
-4. **Document port assignments** - If using custom ports, keep notes
+4. **Use allocated ports** - `create-kingstack` reserves a complete project
+   block in `~/.kingstack/port-allocations.json`
 5. **Stop unused instances** - Free up Docker resources
 
 ## How It Works

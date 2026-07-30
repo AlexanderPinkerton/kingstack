@@ -165,7 +165,9 @@ npx create-kingstack my-app --draft
 This creates the complete stack but starts only Next.js. The root page provides
 clear links to backend-free drafts and the Supabase-backed full-stack showcase.
 Use `--full` when you want the CLI to start Supabase and run migrations during
-initial setup.
+initial setup. Each generated project automatically receives and reserves an
+available ten-port block, preventing collisions with other running or stopped
+KingStack projects.
 
 <!-- create-kingstack:contributor-only:start -->
 Contributors can test the compiled CLI against uncommitted template changes

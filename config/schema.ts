@@ -96,6 +96,11 @@ export const schema = defineSchema({
       default: "54326",
       description: "Supabase email port",
     },
+    SUPABASE_EDGE_RUNTIME_INSPECTOR_PORT: {
+      required: false,
+      default: "54327",
+      description: "Supabase Edge Runtime inspector port",
+    },
 
     // Optional: Deployment
     VERCEL_TOKEN: {
@@ -296,6 +301,7 @@ export const schema = defineSchema({
         "studio.port": "SUPABASE_STUDIO_PORT",
         "inbucket.port": "SUPABASE_EMAIL_PORT",
         "analytics.port": "SUPABASE_ANALYTICS_PORT",
+        "edge_runtime.inspector_port": "SUPABASE_EDGE_RUNTIME_INSPECTOR_PORT",
         "auth.site_url": "NEXT_URL",
       },
     },

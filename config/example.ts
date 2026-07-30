@@ -31,6 +31,7 @@ export const values = defineValues({
   SUPABASE_STUDIO_PORT: "54324",
   SUPABASE_ANALYTICS_PORT: "54325",
   SUPABASE_EMAIL_PORT: "54326",
+  SUPABASE_EDGE_RUNTIME_INSPECTOR_PORT: "54327",
 
   // ============================================================================
   // Supabase Configuration

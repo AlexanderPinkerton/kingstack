@@ -4,7 +4,11 @@
 
 import prompts from "prompts";
 import { resolve } from "path";
-import { DEFAULT_PORTS } from "./constants";
+import {
+  AUTO_PORT_BASE_MIN,
+  PORT_BLOCK_BASE_MAX,
+  PORT_BLOCK_BASE_MIN,
+} from "./constants";
 import { validateProjectName } from "./validators";
 import { info } from "./utils";
 import type { SetupKind } from "./setup";
@@ -19,13 +23,14 @@ export interface ParsedArgs {
   help: boolean;
   setup?: SetupKind;
   templateDir?: string;
+  portBase?: number;
   noStart: boolean;
   yes: boolean;
 }
 
 export interface ProjectConfig {
   projectName: string;
-  ports: typeof DEFAULT_PORTS;
+  requestedPortBase?: number;
   targetDir: string;
   setup: SetupKind;
 }
@@ -41,6 +46,7 @@ export function parseArgs(rawArgs = process.argv.slice(2)): ParsedArgs {
     help: false,
     setup: undefined,
     templateDir: undefined,
+    portBase: undefined,
     noStart: false,
     yes: false,
   };
@@ -72,6 +78,21 @@ export function parseArgs(rawArgs = process.argv.slice(2)): ParsedArgs {
         throw new Error("--template-dir requires a path argument");
       }
       result.templateDir = resolve(nextArg);
+      i += 2;
+    } else if (arg === "--port-base") {
+      const nextArg = rawArgs[i + 1];
+      const portBase = Number(nextArg);
+      if (
+        !nextArg ||
+        !Number.isInteger(portBase) ||
+        portBase < PORT_BLOCK_BASE_MIN ||
+        portBase > PORT_BLOCK_BASE_MAX
+      ) {
+        throw new Error(
+          `--port-base requires an integer between ${PORT_BLOCK_BASE_MIN} and ${PORT_BLOCK_BASE_MAX}`,
+        );
+      }
+      result.portBase = portBase;
       i += 2;
     } else if (arg === "--no-start") {
       result.noStart = true;
@@ -123,16 +144,18 @@ export function printHelp(): void {
     -d, --dir <path>   Base directory for the new project (default: current directory)
     --draft            Start Next.js only; skip Docker, Supabase, and migrations
     --full             Start the complete local stack and run database setup
+    --port-base <port> Use a specific ten-port project block instead of auto-detection
     --template-dir <path>
                        Copy a local Git working tree instead of downloading main
     --no-start         Generate and configure the project without a dev server
-    -y, --yes          Accept default setup and port choices
+    -y, --yes          Accept default setup and automatic port selection
     -h, --help         Show this help message
 
   ${pc.bold("Examples:")}
     npx create-kingstack my-app
     npx create-kingstack my-app --draft
     npx create-kingstack my-app --full
+    npx create-kingstack my-app --port-base 17420
     npx create-kingstack my-app --draft --no-start --yes
     npx create-kingstack my-app --dir ~/Projects
     npx create-kingstack --dir ~/Projects
@@ -182,42 +205,21 @@ export async function promptForConfig(
         initial: 0,
       },
       {
-        type: args.yes ? null : "confirm",
+        type: args.yes || args.portBase !== undefined ? null : "confirm",
         name: "customPorts",
-        message: "Customize ports?",
+        message: "Choose a specific port block?",
         initial: false,
       },
       {
         type: (prev: boolean) => (prev ? "number" : null),
-        name: "nextPort",
-        message: "Next.js port:",
-        initial: DEFAULT_PORTS.next,
-      },
-      {
-        type: (
-          _prev: number,
-          values: { customPorts: boolean; setup?: SetupKind },
-        ) =>
-          values.customPorts &&
-          (args.setup ?? values.setup ?? "draft") === "full"
-            ? "number"
-            : null,
-        name: "nestPort",
-        message: "NestJS port:",
-        initial: DEFAULT_PORTS.nest,
-      },
-      {
-        type: (
-          _prev: number,
-          values: { customPorts: boolean; setup?: SetupKind },
-        ) =>
-          values.customPorts &&
-          (args.setup ?? values.setup ?? "draft") === "full"
-            ? "number"
-            : null,
-        name: "supabaseBasePort",
-        message: "Supabase base port:",
-        initial: DEFAULT_PORTS.supabaseApiPort,
+        name: "portBase",
+        message: "Project port block base:",
+        initial: AUTO_PORT_BASE_MIN,
+        validate: (value: number) =>
+          (Number.isInteger(value) &&
+            value >= PORT_BLOCK_BASE_MIN &&
+            value <= PORT_BLOCK_BASE_MAX) ||
+          `Enter an integer between ${PORT_BLOCK_BASE_MIN} and ${PORT_BLOCK_BASE_MAX}`,
       },
     ],
     {
@@ -236,24 +238,10 @@ export async function promptForConfig(
     return null;
   }
 
-  // Calculate ports
-  const ports = { ...DEFAULT_PORTS };
-  if (response.customPorts) {
-    ports.next = response.nextPort || DEFAULT_PORTS.next;
-    ports.nest = response.nestPort || DEFAULT_PORTS.nest;
-    const basePort = response.supabaseBasePort || DEFAULT_PORTS.supabaseApiPort;
-    ports.supabaseApiPort = basePort;
-    ports.supabaseDbDirectPort = basePort + 1;
-    ports.supabaseDbPoolerPort = basePort + 1;
-    ports.supabaseStudioPort = basePort + 2;
-    ports.supabaseAnalyticsPort = basePort + 3;
-    ports.supabaseEmailPort = basePort + 4;
-    ports.supabaseDbShadowPort = basePort - 1;
-  }
-
   return {
     projectName,
-    ports,
+    requestedPortBase:
+      args.portBase ?? (response.customPorts ? response.portBase : undefined),
     targetDir: resolve(args.baseDir, projectName),
     setup,
   };

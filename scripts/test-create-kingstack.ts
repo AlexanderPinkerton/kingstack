@@ -32,9 +32,8 @@ Examples:
   bun scripts/test-create-kingstack draft-check --no-start
   bun scripts/test-create-kingstack full-check --full
 
-Full-stack tests prompt for custom ports so they do not collide with another
-local KingStack project. Every run typechecks and tests the generated project
-before starting its development server.
+Every run uses automatic port allocation, typechecks the generated project, and
+runs its tests before starting the development server.
 `);
 }
 
@@ -101,10 +100,11 @@ function run(
   command: string,
   args: string[],
   cwd: string,
-  options: { allowInterrupt?: boolean } = {},
+  options: { allowInterrupt?: boolean; env?: NodeJS.ProcessEnv } = {},
 ): void {
   const result = spawnSync(command, args, {
     cwd,
+    env: options.env,
     stdio: "inherit",
   });
 
@@ -165,17 +165,22 @@ function main(): void {
     repoRoot,
     "--dir",
     runDirectory,
+    "--yes",
   ];
-
-  if (options.setup === "draft") {
-    cliArgs.push("--yes");
-  }
 
   // Keep control in this wrapper so it can validate the generated project
   // before optionally handing the terminal to the development server.
   cliArgs.push("--no-start");
 
-  run("node", cliArgs, repoRoot);
+  run("node", cliArgs, repoRoot, {
+    env: {
+      ...process.env,
+      KINGSTACK_PORT_REGISTRY: join(
+        options.outputRoot,
+        "port-allocations.json",
+      ),
+    },
+  });
 
   console.log();
   console.log("Verifying the generated project...");

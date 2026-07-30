@@ -11,6 +11,8 @@
   CLI against uncommitted template changes.
 - Add a root smoke-test helper that scaffolds into
   `~/kingstack-smoke-tests`, then typechecks and tests the generated project.
+- Automatically find and reserve a complete project port block, including the
+  Supabase Edge Runtime inspector, while retaining `--port-base` as an override.
 
 ## 0.2.3
 

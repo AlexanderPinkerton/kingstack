@@ -135,7 +135,7 @@ enabled = false
 [edge_runtime]
 enabled = true
 policy = "per_worker"
-inspector_port = 8083
+inspector_port = 54357
 deno_version = 2
 
 [analytics]

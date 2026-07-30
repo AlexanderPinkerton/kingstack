@@ -41,6 +41,19 @@ describe("setup selection", () => {
     });
   });
 
+  it("parses an explicit project port block", () => {
+    expect(parseArgs(["my-app", "--port-base", "17420"])).toMatchObject({
+      projectName: "my-app",
+      portBase: 17420,
+    });
+  });
+
+  it("rejects invalid project port blocks", () => {
+    expect(() => parseArgs(["my-app", "--port-base", "70000"])).toThrow(
+      "--port-base requires an integer",
+    );
+  });
+
   it("keeps draft setup independent from Docker and backend startup", () => {
     expect(getSetupProfile("draft")).toMatchObject({
       requiresDocker: false,

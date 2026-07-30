@@ -16,8 +16,9 @@ That's it! The CLI will:
 4. Initialize git
 5. Install dependencies
 6. Ask whether to start with frontend drafts or the complete local stack
-7. Start the appropriate development server
-8. Open the backend-free project gateway
+7. Find and reserve an available ten-port block
+8. Start the appropriate development server
+9. Open the backend-free project gateway
 
 Both choices generate the complete KingStack project. The choice only controls
 which services the installer starts immediately.
@@ -27,7 +28,7 @@ which services the installer starts immediately.
 ```
 ? Project name: my-project
 ? How would you like to start? Frontend draft (no backend services)
-? Customize ports? No
+? Choose a specific port block? No
 ```
 
 ## Command Line Arguments
@@ -41,6 +42,9 @@ npx create-kingstack my-project --draft
 
 # Configure and start the complete local stack
 npx create-kingstack my-project --full
+
+# Request a particular ten-port block instead of automatic allocation
+npx create-kingstack my-project --port-base 17420
 
 # Specify a different base directory (instead of cwd)
 npx create-kingstack my-project --dir ~/Projects
@@ -56,10 +60,23 @@ npx create-kingstack --dir /tmp
 | `-d, --dir <path>` | Base directory for the new project (default: current directory) |
 | `--draft` | Start Next.js only and skip local backend infrastructure |
 | `--full` | Start Supabase, run migrations, and launch the full stack |
+| `--port-base <port>` | Request a specific ten-port project block instead of automatic allocation |
 | `--template-dir <path>` | Copy a local dirty Git working tree instead of downloading `main` |
 | `--no-start` | Finish generation without starting a development server |
-| `-y, --yes` | Accept the default setup and port choices |
+| `-y, --yes` | Accept the default setup and automatic port selection |
 | `-h, --help` | Show help message |
+
+## Automatic port allocation
+
+Every project receives one available ten-port block. The assignment covers
+Next.js, NestJS, the Supabase API, database and shadow database, Studio,
+Inbucket, Analytics, and the Edge Runtime inspector. Draft projects reserve the
+complete block so enabling their backend later does not require reconfiguration.
+
+Assignments are stored in `~/.kingstack/port-allocations.json`. The allocator
+avoids both listening ports and blocks belonging to other generated projects,
+including projects that are currently stopped. Entries for missing project
+directories are reclaimed after a short pending period.
 
 ## Requirements
 
@@ -73,8 +90,8 @@ npx create-kingstack --dir /tmp
 ```
 my-project/
 ├── apps/
-│   ├── next/          # Next.js frontend (port 3069)
-│   └── nest/          # NestJS backend (port 3420)
+│   ├── next/          # Next.js frontend (allocated automatically)
+│   └── nest/          # NestJS backend (allocated automatically)
 ├── packages/
 │   ├── shared/        # Shared TypeScript code
 │   ├── prisma/        # Database schema & migrations
@@ -125,7 +142,7 @@ setup is the default. Useful variants:
 # Verify and retain the project without taking over the terminal
 bun scripts/test-create-kingstack my-draft-check --no-start
 
-# Exercise Supabase and migrations; prompts for isolated custom ports
+# Exercise Supabase and migrations with an isolated automatic port block
 bun scripts/test-create-kingstack my-full-check --full
 
 # Put smoke projects somewhere else

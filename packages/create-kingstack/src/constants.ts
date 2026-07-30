@@ -15,7 +15,16 @@ export const DEFAULT_PORTS = {
   supabaseAnalyticsPort: 4004,
   supabaseEmailPort: 4005,
   supabaseDbShadowPort: 4000,
+  supabaseEdgeRuntimeInspectorPort: 4006,
 };
+
+export type PortAssignments = typeof DEFAULT_PORTS;
+
+export const PORT_BLOCK_SIZE = 10;
+export const PORT_BLOCK_BASE_MIN = 1024;
+export const PORT_BLOCK_BASE_MAX = 65535 - (PORT_BLOCK_SIZE - 1);
+export const AUTO_PORT_BASE_MIN = 10000;
+export const AUTO_PORT_BASE_MAX = 29990;
 
 // Files/directories to skip during namespace replacement
 export const SKIP_PATTERNS = [

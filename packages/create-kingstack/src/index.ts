@@ -40,6 +40,8 @@ import {
   deleteYarnLock,
 } from "./config-generators";
 import { getSetupProfile } from "./setup";
+import { PORT_BLOCK_SIZE } from "./constants";
+import { allocateProjectPorts } from "./ports";
 
 // ============================================================================
 // Main
@@ -76,7 +78,7 @@ async function main() {
     process.exit(1);
   }
 
-  const { projectName, ports, targetDir, setup } = config;
+  const { projectName, requestedPortBase, targetDir, setup } = config;
   const profile = getSetupProfile(setup);
 
   const toolCheck = validateTools({
@@ -119,11 +121,29 @@ async function main() {
     }
   }
 
+  info(
+    requestedPortBase === undefined
+      ? "Finding an available project port block..."
+      : `Checking requested port block ${requestedPortBase}-${requestedPortBase + PORT_BLOCK_SIZE - 1}...`,
+  );
+  const { basePort, ports } = await allocateProjectPorts({
+    projectName,
+    targetDir,
+    preferredBase: requestedPortBase,
+  });
+
   console.log();
   console.log(pc.dim("  ─────────────────────────────────"));
   console.log();
   info(`Creating ${pc.bold(projectName)} in ${pc.dim(targetDir)}`);
   info(`Setup: ${pc.bold(profile.label)}`);
+  info(
+    `Ports: ${pc.bold(`${basePort}-${basePort + PORT_BLOCK_SIZE - 1}`)} ${
+      requestedPortBase === undefined
+        ? pc.dim("(automatic)")
+        : pc.dim("(custom)")
+    }`,
+  );
 
   // ==========================================================================
   // Step 1: Clone template

@@ -60,6 +60,7 @@ export const values = defineValues({
     SUPABASE_STUDIO_PORT: "${ports.supabaseStudioPort}",
     SUPABASE_ANALYTICS_PORT: "${ports.supabaseAnalyticsPort}",
     SUPABASE_EMAIL_PORT: "${ports.supabaseEmailPort}",
+    SUPABASE_EDGE_RUNTIME_INSPECTOR_PORT: "${ports.supabaseEdgeRuntimeInspectorPort}",
 
     // Supabase Configuration (local)
     SUPABASE_PROJECT_REF: "${projectName}-local",
