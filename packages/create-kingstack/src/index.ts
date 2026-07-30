@@ -35,7 +35,6 @@ import {
 } from "./template";
 import {
   generateLocalConfig,
-  updatePlaygroundConfig,
   updateRootPackageJson,
   initGit,
   deleteYarnLock,
@@ -62,17 +61,9 @@ async function main() {
   const toolCheck = validateTools();
   displayToolStatus(toolCheck.status);
 
-  // If missing core tools (git, yarn, bun), cannot proceed at all
-  if (!toolCheck.canRunPlayground) {
+  if (!toolCheck.success) {
     printMissingToolsError(toolCheck.missing);
     process.exit(1);
-  }
-
-  // Warn if Docker not available (can still run playground)
-  if (!toolCheck.canRunFull) {
-    warn("Docker not found - 'Full setup' mode will not be available.");
-    info("You can still use 'Playground' mode for frontend development.");
-    console.log();
   }
 
   // Show base directory if not cwd
@@ -81,28 +72,24 @@ async function main() {
     console.log();
   }
 
-  // Get project configuration (pass whether full mode is available)
-  const config = await promptForConfig(args, toolCheck.canRunFull);
+  const config = await promptForConfig(args);
   if (!config) {
     error("Project name is required");
     process.exit(1);
   }
 
-  const { projectName, mode, ports, targetDir } = config;
+  const { projectName, ports, targetDir } = config;
 
-  // For full mode, verify Docker is running (not just installed)
-  if (mode === "full") {
-    if (!checkDockerRunning()) {
-      printDockerNotRunningError();
-      process.exit(1);
-    }
+  if (!checkDockerRunning()) {
+    printDockerNotRunningError();
+    process.exit(1);
   }
 
   // ==========================================================================
   // Setup
   // ==========================================================================
 
-  const totalSteps = mode === "playground" ? 9 : 12;
+  const totalSteps = 12;
 
   // Check if directory exists and not empty
   if (existsSync(targetDir)) {
@@ -125,7 +112,6 @@ async function main() {
   console.log(pc.dim("  ─────────────────────────────────"));
   console.log();
   info(`Creating ${pc.bold(projectName)} in ${pc.dim(targetDir)}`);
-  info(`Mode: ${pc.bold(mode === "playground" ? "Playground" : "Full Setup")}`);
 
   // ==========================================================================
   // Step 1: Clone template
@@ -143,7 +129,6 @@ async function main() {
   // ==========================================================================
   step(2, totalSteps, "Removing published packages...");
   const removedCount = removePublishedPackages(targetDir);
-  updatePlaygroundConfig(targetDir, projectName);
   success(`Removed ${removedCount} packages that are published to npm`);
 
   // ==========================================================================
@@ -202,74 +187,51 @@ async function main() {
     success("Prisma client generated");
   }
 
-  // ==========================================================================
-  // Mode-specific steps
-  // ==========================================================================
-
-  if (mode === "playground") {
-    // ======================================================================
-    // Playground Mode
-    // ======================================================================
-    step(9, totalSteps, "Setting up playground environment...");
-    if (!runCommand("yarn env:playground", targetDir)) {
-      error(
-        "Failed to generate environment. Run 'yarn env:playground' manually.",
-      );
-      process.exit(1);
-    }
-    success("Playground environment ready");
-
-    startDevServer(targetDir, ports.next);
-  } else {
-    // ======================================================================
-    // Full Mode (with Supabase)
-    // ======================================================================
-    step(9, totalSteps, "Generating environment files...");
-    if (!runCommand("yarn env:local", targetDir)) {
-      error("Failed to generate environment.");
-      process.exit(1);
-    }
-    success("Environment files generated");
-
-    step(10, totalSteps, "Starting Supabase...");
-    // startSupabase shows its own messages
-    const supabaseStarted = startSupabase(targetDir);
-    if (!supabaseStarted) {
-      console.log();
-      warn("Supabase failed to start. Check the error messages above.");
-      console.log();
-      console.log(pc.bold("  To complete setup manually:"));
-      console.log();
-      console.log(pc.dim("  1.") + ` cd ${projectName}`);
-      console.log(pc.dim("  2.") + " yarn supabase:start");
-      console.log(pc.dim("  3.") + " bun scripts/setup-shadow-db.ts");
-      console.log(pc.dim("  4.") + " yarn prisma:migrate");
-      console.log(pc.dim("  5.") + " yarn dev");
-      console.log();
-      process.exit(1);
-    }
-    success("Supabase started");
-
-    step(11, totalSteps, "Setting up database...");
-    info("Creating shadow database...");
-    if (!runCommand("bun scripts/setup-shadow-db.ts", targetDir)) {
-      warn("Shadow database setup failed. You may need to run it manually.");
-    } else {
-      success("Shadow database created");
-    }
-
-    info("Running migrations...");
-    if (!runCommand("yarn prisma:migrate", targetDir)) {
-      warn(
-        "Migrations failed. Run 'yarn prisma:migrate' manually after fixing any issues.",
-      );
-    } else {
-      success("Database migrated");
-    }
-
-    step(12, totalSteps, "Starting development server...");
-    startDevServer(targetDir, ports.next);
+  step(9, totalSteps, "Generating environment files...");
+  if (!runCommand("yarn env:local", targetDir)) {
+    error("Failed to generate environment.");
+    process.exit(1);
   }
+  success("Environment files generated");
+
+  step(10, totalSteps, "Starting Supabase...");
+  // startSupabase shows its own messages
+  const supabaseStarted = startSupabase(targetDir);
+  if (!supabaseStarted) {
+    console.log();
+    warn("Supabase failed to start. Check the error messages above.");
+    console.log();
+    console.log(pc.bold("  To complete setup manually:"));
+    console.log();
+    console.log(pc.dim("  1.") + ` cd ${projectName}`);
+    console.log(pc.dim("  2.") + " yarn supabase:start");
+    console.log(pc.dim("  3.") + " bun scripts/setup-shadow-db.ts");
+    console.log(pc.dim("  4.") + " yarn prisma:migrate");
+    console.log(pc.dim("  5.") + " yarn dev");
+    console.log();
+    process.exit(1);
+  }
+  success("Supabase started");
+
+  step(11, totalSteps, "Setting up database...");
+  info("Creating shadow database...");
+  if (!runCommand("bun scripts/setup-shadow-db.ts", targetDir)) {
+    warn("Shadow database setup failed. You may need to run it manually.");
+  } else {
+    success("Shadow database created");
+  }
+
+  info("Running migrations...");
+  if (!runCommand("yarn prisma:migrate", targetDir)) {
+    warn(
+      "Migrations failed. Run 'yarn prisma:migrate' manually after fixing any issues.",
+    );
+  } else {
+    success("Database migrated");
+  }
+
+  step(12, totalSteps, "Starting development server...");
+  startDevServer(targetDir, ports.next);
 }
 
 main().catch((err) => {

@@ -18,28 +18,11 @@ That's it! The CLI will:
 6. Start the dev server
 7. Open your browser to the running app
 
-## Setup Modes
-
-When you run the CLI, you'll be asked to choose a mode:
-
-### Playground Mode (recommended for getting started)
-
-- **No database required** - uses mock data
-- **Instant startup** - no Docker or Supabase needed
-- **Perfect for** - UI development, prototyping, learning the stack
-
-### Full Setup Mode
-
-- **Complete backend** - Supabase with PostgreSQL, Auth, and Realtime
-- **Requires Docker** - Supabase runs in containers
-- **Perfect for** - building production apps with auth and database
-
 ## Interactive Prompts
 
 ```
 ? Project name: my-project
 ? Target directory: my-project
-? Setup mode: Playground / Full setup
 ? Customize ports? No
 ```
 
@@ -67,7 +50,7 @@ npx create-kingstack --dir /tmp
 
 - **Node.js 20+**
 - **Yarn** (installed automatically via corepack)
-- **Docker** (only for Full Setup mode)
+- **Docker**
 - **Bun** (for running scripts)
 
 ## What Gets Created
@@ -90,9 +73,7 @@ my-project/
 
 Your app will be running at `http://localhost:3069`
 
-For Playground mode, you're ready to start building!
-
-For Full Setup mode, you have:
+The generated project includes:
 - Supabase Studio at `http://localhost:54324`
 - PostgreSQL database ready
 - Auth system configured

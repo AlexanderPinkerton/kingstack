@@ -181,14 +181,9 @@ kingstack/
    - `.env` files for Next.js, NestJS, and Prisma
    - Updates `supabase/config.toml` with your port configuration
 
-5. **Start Supabase (optional)**
+5. **Start Supabase**
    ```bash
    yarn supabase:start
-   ```
-   
-   Or skip this step and use playground mode:
-   ```bash
-   yarn env:playground
    ```
 
 6. **Generate Prisma client**
@@ -269,22 +264,6 @@ yarn workspace @kingstack/prisma prisma generate
 yarn workspace @kingstack/prisma prisma migrate dev
 ```
 
-### Playground Mode
-
-The stack can be used **without a Supabase backend** via Playground mode for:
-- 🎨 **Vibe coding** - Quick prototyping without setup
-- 🖼️ **Frontend development** - UI work with mock data
-- 💻 **Local apps** - Apps that don't need a database
-
-```bash
-yarn env:playground
-yarn dev
-```
-
-Playground mode uses mock data and doesn't require Supabase configuration.
-
----
-
 ## 🛊 Local Development
 
 ### Start Dev Servers
@@ -293,20 +272,11 @@ yarn dev
 ```
 This runs both Next.js (port 3069) and NestJS in parallel.
 
-### 🎮 Playground Mode
-For UI development and demos without Supabase:
-```bash
-yarn env:playground
-yarn dev
-```
-This runs KingStack with mock data - perfect for UI development and demos!
-
 ### Environment Management
 ```bash
 yarn env:local          # Generate config for local environment
 yarn env:development    # Generate config for development environment
 yarn env:production     # Generate config for production environment
-yarn env:playground     # Setup playground mode (mock data)
 ```
 
 Each command generates:
@@ -363,13 +333,15 @@ yarn shadow:stop         # Stop shadow DB
 
 - A Supabase **trigger** automatically syncs users from the `auth.users` (managed by Supabase) table into the `public.user` table (managed by Prisma).
 - This ensures internal application logic can use a fully controlled `user` model while still leveraging Supabase Auth.
-- This trigger will be automatically installed when running the migrations via `20250921183730_essentials`
+- The trigger is installed and maintained by the Prisma migrations; `20260729030000_repair_auth_user_sync` contains the current definition.
 - Any new required fields added to the `user` model will require a new migration which updates the trigger to handle the new fields.
 - 🔥 Failing to update the trigger when modifying `user` **will** break authentication and signup flows.
-- Existing Supabase users which "missed the boat" can be copied over with the `backfill-user-data.ts` script.
+- The projection uses `auth.users.email` and the signup `username` metadata. If a valid username is absent, it generates a stable `user_<auth-id>` fallback.
+- Existing Supabase users which "missed the boat" can be copied over without overwriting usernames changed inside the application.
 - Ensure the trigger is installed and working before running any backfills or jobs that interact with `user`.
 ```bash
-bun run apps/nest/src/scripts/backfill-user-data.ts
+yarn supabase:auth:trigger:install
+yarn supabase:auth:backfill
 ```
 
 ### 📦 Packages

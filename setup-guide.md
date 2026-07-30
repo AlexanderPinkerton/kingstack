@@ -14,7 +14,8 @@ The CLI handles everything:
 5. Starts the dev server
 6. Opens your browser
 
-You'll be prompted to choose between **Playground** (no database) or **Full Setup** (with Supabase).
+The generated project includes the Next.js frontend, NestJS backend, and local
+Supabase stack.
 
 ---
 
@@ -48,11 +49,6 @@ Edit `config/local.ts` to set your project name and ports.
 ```bash
 yarn install
 
-# For Playground mode (no database):
-yarn env:playground
-yarn dev
-
-# For Full Setup (with Supabase):
 yarn env:local
 yarn supabase:start
 bun scripts/setup-shadow-db.ts
@@ -79,4 +75,4 @@ Default ports (can be customized during setup):
 
 - **Node.js 20+**
 - **Bun** - for running TypeScript scripts
-- **Docker** - only needed for Full Setup mode
+- **Docker** - required for local Supabase

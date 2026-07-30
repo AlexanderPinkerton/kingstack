@@ -7,7 +7,6 @@ import { AppNavbar } from "@/components/navbar/presets/app";
 import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
 import { NeonCard } from "@/components/ui/neon-card";
 import { GradientText } from "@/components/ui/gradient-text";
-import { isPlaygroundMode } from "@kingstack/shared";
 import {
   Zap,
   RefreshCw,
@@ -100,20 +99,6 @@ export default function HomePage() {
             <p className="text-sm text-slate-400 max-w-2xl mx-auto">
               Explore the features below to see what makes KingStack powerful
             </p>
-
-            {/* Playground Mode Indicator */}
-            {typeof window !== "undefined" && isPlaygroundMode() && (
-              <div className="mt-6 flex justify-center">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-900/30 border border-yellow-500/40 rounded-full text-sm">
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-                  <span className="text-yellow-300">Playground Mode</span>
-                  <span className="text-yellow-400/70">•</span>
-                  <span className="text-yellow-200/80 text-xs">
-                    Connect to Supabase for full power
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Features Grid */}

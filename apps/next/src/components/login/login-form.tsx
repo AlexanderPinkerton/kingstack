@@ -13,7 +13,6 @@ import { createClient } from "@/lib/supabase/browserClient";
 import { UsernameGenerator } from "@kingstack/shared";
 import { APPNAME } from "@kingstack/shared";
 
-import { isPlaygroundMode } from "@kingstack/shared";
 
 export function LoginForm({
   className,
@@ -73,16 +72,6 @@ export function LoginForm({
       return () => clearTimeout(timeoutId);
     }
   }, [mode, username, validateUsername]);
-
-  // Show playground mode message
-  if (isPlaygroundMode()) {
-    return (
-      <div className="text-center text-gray-400">
-        <p>Authentication is disabled in playground mode.</p>
-        <p>Switch to development mode to use authentication.</p>
-      </div>
-    );
-  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -22,7 +22,7 @@ model user {
     email               String    @unique
     username            String    @unique @db.VarChar(40)
     username_changed_at DateTime?
-    previous_usernames  String[]
+    previous_usernames  String[]  @default([])
     posts               post[]
     todos               todo[]
     created_at          DateTime  @default(now())

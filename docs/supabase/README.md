@@ -12,7 +12,7 @@ yarn supabase:start      # Start local Supabase
 yarn supabase:stop        # Stop local Supabase
 
 # Status & Info
-yarn supabase:status      # Check current project's status
+yarn supabase:status      # Check status; distinguishes stopped from inaccessible Docker
 yarn supabase:list        # List all running instances (all projects)
 yarn supabase:check       # Verify configuration
 
@@ -30,6 +30,7 @@ yarn supabase:reset       # Reset database (drops data, re-runs migrations)
 
 - **[Multi-Project Setup](./multi-project-setup.md)** - Run multiple Supabase projects simultaneously
 - **[Local Development Setup](../local-supabase-setup.md)** - Complete guide to local Supabase development
+- **[Data API Security](./security.md)** - Default-deny grants, automatic RLS, and deliberate table exposure
 
 ## Key Features
 
@@ -59,6 +60,10 @@ Three TypeScript scripts make Supabase management easier:
 1. **`supabase-status.ts`** - Shows running services and connection info
 2. **`supabase-list-instances.ts`** - Lists all Supabase instances across all projects
 3. **`supabase-check-config.ts`** - Validates and displays your configuration
+
+The status helper deliberately reports Docker socket permission failures as
+`unknown`, not `stopped`. Agent sandboxes often cannot inspect host Docker even
+when the local Supabase stack is healthy.
 
 ## Common Workflows
 
@@ -161,4 +166,3 @@ Your environment files (`secrets/local/.env.*`) must match the ports configured 
 - Studio URL → Studio port (for manual access)
 
 Use `yarn env:local` to ensure your environment matches your Supabase configuration.
-

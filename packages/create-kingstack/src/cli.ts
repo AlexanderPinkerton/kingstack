@@ -20,7 +20,6 @@ export interface ParsedArgs {
 
 export interface ProjectConfig {
   projectName: string;
-  mode: "playground" | "full";
   ports: typeof DEFAULT_PORTS;
   targetDir: string;
 }
@@ -107,26 +106,8 @@ export function printHelp(): void {
 
 export async function promptForConfig(
   args: ParsedArgs,
-  canRunFull: boolean = true,
 ): Promise<ProjectConfig | null> {
   let projectName = args.projectName;
-
-  // Build mode choices - disable full mode if Docker not available
-  const modeChoices = [
-    {
-      title: "Playground (quick start, no database)",
-      description: "Perfect for UI development and prototyping",
-      value: "playground",
-    },
-  ];
-
-  if (canRunFull) {
-    modeChoices.push({
-      title: "Full setup (with Supabase)",
-      description: "Requires Docker - complete backend with auth & database",
-      value: "full",
-    });
-  }
 
   const response = await prompts(
     [
@@ -136,13 +117,6 @@ export async function promptForConfig(
         message: "Project name (also used as directory name):",
         initial: "my-app",
         validate: validateProjectName,
-      },
-      {
-        type: "select",
-        name: "mode",
-        message: "Setup mode:",
-        choices: modeChoices,
-        initial: 0,
       },
       {
         type: "confirm",
@@ -181,7 +155,6 @@ export async function promptForConfig(
   );
 
   projectName = projectName || response.projectName;
-  const mode = response.mode as "playground" | "full";
 
   if (!projectName) {
     return null;
@@ -204,7 +177,6 @@ export async function promptForConfig(
 
   return {
     projectName,
-    mode,
     ports,
     targetDir: resolve(args.baseDir, projectName),
   };

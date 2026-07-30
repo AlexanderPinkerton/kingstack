@@ -19,7 +19,6 @@ secrets/
 ├── schema.ts          # Schema definition (checked in)
 ├── utils.ts           # Type definitions and validation (checked in)
 ├── example.ts         # Example values (checked in)
-├── playground.ts      # Mock values for playground mode (checked in)
 ├── local.ts           # Your local environment values (gitignored)
 ├── development.ts     # Development environment values (gitignored)
 └── production.ts      # Production environment values (gitignored)
@@ -45,7 +44,6 @@ Run the generation script for your environment:
 yarn env:local          # Generate from secrets/local.ts
 yarn env:development    # Generate from secrets/development.ts
 yarn env:production     # Generate from secrets/production.ts
-yarn env:playground     # Generate from secrets/playground.ts
 ```
 
 This will:
@@ -125,7 +123,6 @@ The script:
 - **local**: For local Supabase instance (`supabase start`)
 - **development**: For remote development Supabase project
 - **production**: For production Supabase project
-- **playground**: Mock data for UI development (no backend needed)
 
 ## Common Tasks
 
@@ -196,7 +193,6 @@ The old system (`.env.*` files in `secrets/[env]/`) still exists for backward co
 - **Never commit** `secrets/local.ts`, `secrets/development.ts`, or `secrets/production.ts`
 - These files are gitignored by default
 - The `secrets/example.ts` file is safe to commit (contains only placeholders)
-- The `secrets/playground.ts` file is safe to commit (contains only mock data)
 
 ## Troubleshooting
 

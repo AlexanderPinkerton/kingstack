@@ -39,8 +39,6 @@ export interface ToolStatus {
 export interface ToolCheckResult {
   success: boolean;
   missing: string[];
-  canRunPlayground: boolean;
-  canRunFull: boolean;
   status: ToolStatus;
 }
 
@@ -64,54 +62,39 @@ export function displayToolStatus(status: ToolStatus): void {
   console.log(pc.bold("  Checking required tools..."));
   console.log();
 
-  const check = (
-    name: string,
-    available: boolean,
-    required: boolean = true,
-  ) => {
-    const icon = available
-      ? pc.green("✓")
-      : required
-        ? pc.red("✗")
-        : pc.yellow("○");
-    const label = available
-      ? pc.dim(name)
-      : required
-        ? pc.red(name)
-        : pc.yellow(name);
-    const suffix =
-      !available && !required ? pc.dim(" (optional for playground)") : "";
-    console.log(`  ${icon} ${label}${suffix}`);
+  const check = (name: string, available: boolean) => {
+    const icon = available ? pc.green("✓") : pc.red("✗");
+    const label = available ? pc.dim(name) : pc.red(name);
+    console.log(`  ${icon} ${label}`);
   };
 
   check("git", status.git);
   check("yarn", status.yarn);
   check("bun", status.bun);
-  check("docker", status.docker, false); // Docker is optional for playground
+  check("docker", status.docker);
   console.log();
 }
 
 /**
  * Perform upfront tool validation
- * Returns what modes are available based on installed tools
+ * Returns whether all required tools are available
  */
 export function validateTools(): ToolCheckResult {
   const status = checkAllTools();
   const missing: string[] = [];
 
-  // Core tools always required
   if (!status.git) missing.push("git - install from https://git-scm.com/");
   if (!status.yarn) missing.push("yarn - install with: npm install -g yarn");
   if (!status.bun) missing.push("bun - install from https://bun.sh/");
-
-  const canRunPlayground = status.git && status.yarn && status.bun;
-  const canRunFull = canRunPlayground && status.docker;
+  if (!status.docker) {
+    missing.push(
+      "docker - install from https://www.docker.com/products/docker-desktop/",
+    );
+  }
 
   return {
-    success: canRunPlayground, // Can at least run playground
+    success: missing.length === 0,
     missing,
-    canRunPlayground,
-    canRunFull,
     status,
   };
 }
@@ -154,12 +137,10 @@ export function checkDockerRunning(): boolean {
 export function printDockerNotRunningError(): void {
   error("Docker is not running!");
   console.log();
-  console.log("  Full setup mode requires Docker to run Supabase locally.");
+  console.log("  KingStack requires Docker to run Supabase locally.");
   console.log();
   console.log("  To fix this:");
   console.log("    1. Start Docker Desktop (or your Docker daemon)");
   console.log("    2. Wait for Docker to fully start");
   console.log("    3. Run this command again");
-  console.log();
-  console.log("  Or choose 'Playground' mode which doesn't require Docker.");
 }

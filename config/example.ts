@@ -7,7 +7,6 @@ import { defineValues } from "@kingstack/config";
  * - secrets/local.ts (for local Supabase)
  * - secrets/development.ts (for development environment)
  * - secrets/production.ts (for production environment)
- * - secrets/playground.ts (for playground mode)
  *
  * Replace all "REPLACEME" values with your actual secrets.
  */

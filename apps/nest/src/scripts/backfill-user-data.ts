@@ -1,69 +1,60 @@
-import postgres from "postgres";
+import { createSupabaseScriptConnection } from "./supabase-script-client";
 
-// psql -h aws-0-us-east-1.pooler.supabase.com -p 6543 -d postgres -U postgres.gswnatmjldebpgufckjt
-
-const sqlClient = postgres({
-  host: process.env.SUPABASE_POOLER_HOST, // e.g., aws-0-us-east-1.pooler.supabase.com
-  port: 6543, // Default port for Supabase pooler
-  database: "postgres", // Default database for Supabase
-  username: process.env.SUPABASE_POOLER_USER, // Default username for Supabase
-  password: process.env.SUPABASE_DB_PASSWORD, // Replace with your actual password
-  ssl: {
-    rejectUnauthorized: false, // This is often required for Supabase connections
-  },
-  max: 1, // Optional: set the maximum number of connections in the pool
-  idle_timeout: 10, // Optional: set the idle timeout for connections
-});
-
-// const sqlClient = postgres({
-//     host: process.env.SUPABASE_PROJECT_HOST,
-//     port: 5432,
-//     database: "postgres",
-//     username: "postgres",
-//     password: process.env.SUPABASE_DB_PASSWORD, // Replace with your actual password
-//     ssl: {
-//         rejectUnauthorized: false, // This is often required for Supabase connections
-//     },
-//     max: 1, // Optional: set the maximum number of connections in the pool
-//     idle_timeout: 10, // Optional: set the idle timeout for connections
-// });
-
-// Pull all users from the auth.users table and insert them into the public.user table
-//   on conflict (id) do update
 const backfillSQL = `
-insert into public.user (id, email, name)
-select 
-  a.id::text, -- cast UUID -> text if needed
-  a.raw_user_meta_data->>'email',
-  a.raw_user_meta_data->>'name'
+insert into public.user (id, email, username, previous_usernames)
+select
+  a.id::text,
+  a.email,
+  case
+    when nullif(a.raw_user_meta_data ->> 'username', '') is not null
+      and char_length(a.raw_user_meta_data ->> 'username') between 3 and 40
+      and (a.raw_user_meta_data ->> 'username')
+        ~ '^[A-Za-z0-9][A-Za-z0-9_-]*[A-Za-z0-9]$'
+    then a.raw_user_meta_data ->> 'username'
+    else 'user_' || replace(a.id::text, '-', '')
+  end,
+  array[]::text[]
 from auth.users a
+where a.email is not null
 on conflict (id) do update
 set
   email = excluded.email,
-  name = excluded.name;
+  previous_usernames = coalesce(
+    public.user.previous_usernames,
+    array[]::text[]
+  )
+returning id;
 `;
 
 async function main() {
+  const { sql, target } = createSupabaseScriptConnection();
+
   try {
-    console.log("Backfilling user data to", process.env.SUPABASE_PROJECT_HOST);
+    console.log(`Backfilling auth users into public.user on ${target}...`);
 
-    await sqlClient.begin(async (tx) => {
-      await tx.unsafe(backfillSQL); // 🛠️ Use `.unsafe()` for raw full SQL string
-    });
+    const missingEmailRows = await sql<{ count: number }[]>`
+      select count(*)::int as count
+      from auth.users
+      where email is null
+    `;
 
-    console.log("User data backfilled successfully.");
-  } catch (err) {
-    console.error("Error backfilling data:", err);
+    if ((missingEmailRows[0]?.count ?? 0) > 0) {
+      console.warn(
+        `Skipping ${missingEmailRows[0].count} auth user(s) without an email because public.user requires one.`,
+      );
+    }
+
+    const rows = await sql.begin((transaction) =>
+      transaction.unsafe<{ id: string }[]>(backfillSQL),
+    );
+
+    console.log(`Backfilled ${rows.length} auth user(s) successfully.`);
   } finally {
-    await sqlClient.end();
-    console.log("Connection closed.");
+    await sql.end();
   }
 }
 
-main()
-  .catch((err) => {
-    console.error("Unexpected error:", err);
-  })
-  .finally(() => {
-    process.exit(0); // Ensure the script exits after completion
-  });
+main().catch((error: unknown) => {
+  console.error("Failed to backfill auth users:", error);
+  process.exitCode = 1;
+});

@@ -74,7 +74,7 @@ API behavior, caching, and optimistic updates remain in raw TypeScript.
 
 | Store | Activation |
 | --- | --- |
-| `CurrentUserStore` | Automatically while a session exists, or in playground mode |
+| `CurrentUserStore` | Automatically while a session exists |
 | `AdvancedPostStore` | While the posts feature is mounted |
 | `PublicTodoStore` | While the public-todos feature is mounted |
 | `RealtimeCheckboxStore` | While the checkbox feature is mounted; realtime follows the same demand |

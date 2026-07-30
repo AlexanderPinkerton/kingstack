@@ -1,5 +1,4 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { isPlaygroundMode } from "@kingstack/shared";
 import type { SupabaseSession } from "@/lib/session-manager";
 import type { RealtimeSource } from "@/lib/realtime-manager";
 import { AdvancedPostStore } from "./postStore";
@@ -49,8 +48,7 @@ export class UserStoreManager {
     this.postStore.setSession(session);
     this.currentUserStore.setSession(session);
 
-    const shouldLoadCurrentUser =
-      Boolean(session?.access_token) || isPlaygroundMode();
+    const shouldLoadCurrentUser = Boolean(session?.access_token);
 
     if (shouldLoadCurrentUser && !this.releaseCurrentUser) {
       this.releaseCurrentUser = this.currentUserStore.activate();

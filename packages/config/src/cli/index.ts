@@ -17,7 +17,7 @@ program
   .description("Generate .env files and update configs")
   .argument(
     "<env>",
-    "Environment to generate (local, development, production, playground)",
+    "Environment to generate (local, development, production)",
   )
   .option("--cwd <path>", "Working directory", process.cwd())
   .action(async (env: string, options: { cwd: string }) => {

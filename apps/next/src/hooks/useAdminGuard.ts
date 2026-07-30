@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { comparer, reaction } from "mobx";
 import { useRootStore } from "@/hooks/useRootStore";
-import { isPlaygroundMode } from "@kingstack/shared";
 import { fetchWithAuth } from "@/lib/utils";
 
 export interface UseAdminGuardOptions {
@@ -47,15 +46,6 @@ export default function useAdminGuard(options?: UseAdminGuardOptions) {
     let isCancelled = false;
 
     const checkAdmin = async () => {
-      // Skip admin guard in playground mode
-      if (isPlaygroundMode()) {
-        if (!isCancelled) {
-          setIsAdmin(true);
-          setIsChecking(false);
-        }
-        return;
-      }
-
       if (!auth.ready) {
         setIsChecking(true);
         return;

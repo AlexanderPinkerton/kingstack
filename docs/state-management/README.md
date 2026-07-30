@@ -118,8 +118,7 @@ function useStoreActivation(store: ActivatableStore): void {
 All enabling rules remain in the domain store:
 
 ```ts
-enabled: () =>
-  demand.isActive && (Boolean(session?.access_token) || isPlaygroundMode());
+enabled: () => demand.isActive && Boolean(session?.access_token);
 ```
 
 When demand or session changes, the store calls `updateOptions()`. TanStack
@@ -129,7 +128,7 @@ Query then decides whether cached data is fresh or a request is necessary.
 
 | Store                   | Demand source                                                  |
 | ----------------------- | -------------------------------------------------------------- |
-| `CurrentUserStore`      | Automatically active while authenticated or in playground mode |
+| `CurrentUserStore`      | Automatically active while authenticated                        |
 | `AdvancedPostStore`     | Posts feature component                                        |
 | `PublicTodoStore`       | Public-todos feature component                                 |
 | `RealtimeCheckboxStore` | Checkbox feature; realtime follows the same demand             |

@@ -199,10 +199,18 @@ This is safe for local development and ensures a clean slate.
 ```bash
 yarn supabase:status
 # Or directly:
-supabase status
+yarn supabase status
 ```
 
-Should show all services running with no stopped services.
+The command should say `supabase local development setup is running`. It may
+also list intentionally disabled optional services under `Stopped services`;
+that list does not mean the stack itself is stopped.
+
+Some managed development agents cannot access the host Docker socket. An error
+containing `permission denied` or `operation not permitted` means the status is
+unknown, not stopped. Retry the command with Docker access, or run it directly
+in a host terminal. The `yarn supabase:status` helper preserves this distinction
+instead of reporting all CLI failures as a stopped stack.
 
 ### 2. Verify Tables Created
 
@@ -336,6 +344,10 @@ supabase stop
 # Then try again
 supabase start
 ```
+
+If a status check mentions the Docker socket and reports `permission denied` or
+`operation not permitted`, first verify whether the command is running in a
+sandbox. Do not restart Docker or Supabase based on that error alone.
 
 ### Migration Conflicts
 

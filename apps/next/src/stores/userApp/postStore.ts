@@ -8,7 +8,6 @@ import type { QueryClient } from "@tanstack/react-query";
 import { fetchWithAuth } from "@/lib/utils";
 import type { SupabaseSession } from "@/lib/session-manager";
 import { StoreDemand } from "@/lib/store-lifecycle";
-import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 
 // API data structure (what comes from the server)
 export interface PostApiData {
@@ -253,11 +252,11 @@ export class AdvancedPostStore {
       {
         name: "advanced-posts",
         queryKey: () => ["advanced-posts", this.sessionIdentity],
-        queryFn: this.getQueryFn(),
+        queryFn: this.apiQueryFn,
         mutations: {
-          create: this.getCreateMutation(),
-          update: this.getUpdateMutation(),
-          remove: this.getDeleteMutation(),
+          create: this.apiCreateMutation,
+          update: this.apiUpdateMutation,
+          remove: this.apiDeleteMutation,
         },
         transformer: this.transformer,
         optimisticContext: () => ({
@@ -265,8 +264,7 @@ export class AdvancedPostStore {
         }),
         staleTime: 5 * 60 * 1000,
         enabled: () =>
-          this.demand.isActive &&
-          (!!this.session?.access_token || isPlaygroundMode()),
+          this.demand.isActive && Boolean(this.session?.access_token),
       },
       queryClient,
     );
@@ -305,34 +303,7 @@ export class AdvancedPostStore {
 
   // Check if store is ready and enabled
   get isReady() {
-    return !!this.session?.access_token || isPlaygroundMode();
-  }
-
-  // ============================================================================
-  // PLAYGROUND CONFIGURATION
-  // ============================================================================
-  // All playground logic is centralized here for easy maintenance
-
-  private getQueryFn() {
-    return isPlaygroundMode() ? this.playgroundQueryFn : this.apiQueryFn;
-  }
-
-  private getCreateMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundCreateMutation
-      : this.apiCreateMutation;
-  }
-
-  private getUpdateMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundUpdateMutation
-      : this.apiUpdateMutation;
-  }
-
-  private getDeleteMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundDeleteMutation
-      : this.apiDeleteMutation;
+    return Boolean(this.session?.access_token);
   }
 
   // API Implementations
@@ -378,79 +349,7 @@ export class AdvancedPostStore {
     }).then(() => ({ id }));
   };
 
-  // Playground Implementations
-  private playgroundQueryFn = async (): Promise<PostApiData[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
-    return getMockData("posts");
-  };
-
-  private playgroundCreateMutation = async (
-    data: any,
-  ): Promise<PostApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return {
-      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: data.title || "New Post",
-      content: data.content || "",
-      published: data.published || false,
-      author_id: "playground-user",
-      created_at: new Date().toISOString(),
-      author: {
-        id: "playground-user",
-        username: "playground-user",
-        email: "playground@example.com",
-      },
-    };
-  };
-
-  private playgroundUpdateMutation = async ({
-    id,
-    data,
-  }: {
-    id: string;
-    data: any;
-  }): Promise<PostApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    // Get existing post from mock data to preserve unchanged fields
-    const existingPosts = getMockData<PostApiData>("posts");
-    const existingPost = existingPosts.find((p) => p.id === id);
-
-    // If we have an existing post, merge it with the updates
-    if (existingPost) {
-      return {
-        ...existingPost,
-        ...data, // This will override only the fields that were updated
-        updated_at: new Date().toISOString(), // Always update the timestamp
-      };
-    }
-
-    // Fallback if no existing post found
-    return {
-      id,
-      title: data.title || "Updated Post",
-      content: data.content || "",
-      published: data.published || false,
-      author_id: "playground-user",
-      created_at: new Date().toISOString(),
-      author: {
-        id: "playground-user",
-        username: "playground-user",
-        email: "playground@example.com",
-      },
-      ...data,
-    };
-  };
-
-  private playgroundDeleteMutation = async (
-    id: string,
-  ): Promise<{ id: string }> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return { id };
-  };
-
   private get sessionIdentity(): string {
-    if (isPlaygroundMode()) return "playground";
     return this.session?.user.id ?? "anonymous";
   }
 }

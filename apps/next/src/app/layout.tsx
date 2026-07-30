@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/QueryClientProvider";
-import { PlaygroundIndicator } from "@/components/PlaygroundIndicator";
 import { defaultMetadata, defaultViewport } from "@/lib/metadata";
 
 const geistSans = Geist({
@@ -29,10 +28,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AppProviders>
-          {children}
-          <PlaygroundIndicator />
-        </AppProviders>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

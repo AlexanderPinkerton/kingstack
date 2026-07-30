@@ -6,7 +6,6 @@ import type { QueryClient } from "@tanstack/react-query";
 import { fetchWithAuth } from "@/lib/utils";
 import type { SupabaseSession } from "@/lib/session-manager";
 import { StoreDemand } from "@/lib/store-lifecycle";
-import { isPlaygroundMode } from "@kingstack/shared";
 
 // API data structure (what comes from the server)
 export interface AdminEmailApiData {
@@ -43,17 +42,16 @@ export class AdminMgmtStore {
       {
         name: "admin-emails",
         queryKey: () => ["admin-emails", this.sessionIdentity],
-        queryFn: this.getQueryFn(),
+        queryFn: this.apiQueryFn,
         mutations: {
-          create: this.getCreateMutation(),
-          update: this.getUpdateMutation(),
-          remove: this.getDeleteMutation(),
+          create: this.apiCreateMutation,
+          update: this.apiUpdateMutation,
+          remove: this.apiDeleteMutation,
         },
         transformer: this.getTransformer(),
         staleTime: 2 * 60 * 1000,
         enabled: () =>
-          this.demand.isActive &&
-          (!!this.session?.access_token || isPlaygroundMode()),
+          this.demand.isActive && Boolean(this.session?.access_token),
       },
       queryClient,
     );
@@ -87,32 +85,6 @@ export class AdminMgmtStore {
   // Expose API methods (mutations + query control)
   get api() {
     return this.optimisticStore.api;
-  }
-
-  // ============================================================================
-  // PLAYGROUND CONFIGURATION
-  // ============================================================================
-
-  private getQueryFn() {
-    return isPlaygroundMode() ? this.playgroundQueryFn : this.apiQueryFn;
-  }
-
-  private getCreateMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundCreateMutation
-      : this.apiCreateMutation;
-  }
-
-  private getUpdateMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundUpdateMutation
-      : this.apiUpdateMutation;
-  }
-
-  private getDeleteMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundDeleteMutation
-      : this.apiDeleteMutation;
   }
 
   private getTransformer() {
@@ -209,61 +181,7 @@ export class AdminMgmtStore {
     return response.json();
   };
 
-  // Playground Implementations
-  private playgroundQueryFn = async (): Promise<AdminEmailApiData[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
-    // Return default mock data for admin emails
-    return [
-      {
-        id: "admin-1",
-        email: "admin@example.com",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "admin-2",
-        email: "superadmin@example.com",
-        created_at: new Date(
-          Date.now() - 8 * 24 * 60 * 60 * 1000,
-        ).toISOString(), // 8 days ago
-      },
-    ];
-  };
-
-  private playgroundCreateMutation = async (data: {
-    email: string;
-  }): Promise<AdminEmailApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return {
-      id: `admin-${Date.now()}`,
-      email: data.email,
-      created_at: new Date().toISOString(),
-    };
-  };
-
-  private playgroundUpdateMutation = async ({
-    id,
-    data,
-  }: {
-    id: string;
-    data: { email: string };
-  }): Promise<AdminEmailApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return {
-      id,
-      email: data.email,
-      created_at: new Date().toISOString(),
-    };
-  };
-
-  private playgroundDeleteMutation = async (
-    id: string,
-  ): Promise<{ id: string }> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return { id };
-  };
-
   private get sessionIdentity(): string {
-    if (isPlaygroundMode()) return "playground";
     return this.session?.user.id ?? "anonymous";
   }
 }
