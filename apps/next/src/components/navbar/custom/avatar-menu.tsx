@@ -25,16 +25,16 @@ export const AvatarMenu = observer(function AvatarMenu({
   className = "",
 }: AvatarMenuProps) {
   const rootStore = useRootStore();
-  const supabase = createClient();
   const session = rootStore.session;
   const user = session?.user;
 
   const handleLogout = useCallback(async () => {
+    const supabase = createClient();
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("Error signing out:", error);
     }
-  }, [supabase.auth]);
+  }, []);
 
   // Don't render if no user
   if (!user) {

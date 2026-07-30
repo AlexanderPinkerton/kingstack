@@ -1,4 +1,7 @@
-import { createClient } from "@/lib/supabase/browserClient";
+import {
+  createClient,
+  isSupabaseBrowserConfigured,
+} from "@/lib/supabase/browserClient";
 
 export type SupabaseSession = {
   access_token: string;
@@ -34,6 +37,12 @@ export class SessionManager {
   initialize(): void {
     if (this.initialized) return;
     this.initialized = true;
+
+    if (!isSupabaseBrowserConfigured()) {
+      this.session = null;
+      this.onSessionChange?.(this.session, "SUPABASE_NOT_CONFIGURED");
+      return;
+    }
 
     this.supabase = createClient();
     const supabase = this.supabase;

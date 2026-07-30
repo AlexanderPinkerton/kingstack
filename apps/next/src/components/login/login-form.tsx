@@ -9,7 +9,10 @@ import { ThemedErrorText } from "@/components/ui/themed-error-text";
 import { ThemedSuccessText } from "@/components/ui/themed-success-text";
 
 import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/browserClient";
+import {
+  createClient,
+  isSupabaseBrowserConfigured,
+} from "@/lib/supabase/browserClient";
 import { UsernameGenerator } from "@kingstack/shared";
 import { APPNAME } from "@kingstack/shared";
 
@@ -17,7 +20,7 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const supabase = createClient();
+  const supabaseConfigured = isSupabaseBrowserConfigured();
 
   // All hooks must be called before any conditional returns
   const [loading, setLoading] = useState(false);
@@ -76,7 +79,18 @@ export function LoginForm({
     event.preventDefault();
     setFormError(null);
     setLoading(true);
+
+    if (!supabaseConfigured) {
+      setFormError(
+        "Supabase is not configured for this build. Run yarn backend:enable locally or configure the public Supabase environment variables before deploying.",
+      );
+      setLoading(false);
+      return;
+    }
+
     try {
+      const supabase = createClient();
+
       if (mode === "login") {
         // Basic email/password login
         const { error } = await supabase.auth.signInWithPassword({
@@ -159,6 +173,13 @@ export function LoginForm({
                   : "Sign up with your email to get started. You'll verify your identity after registration."}
               </div>
             </div>
+            {!supabaseConfigured && (
+              <ThemedErrorText>
+                Authentication needs the KingStack backend. Run{" "}
+                <code>yarn backend:enable</code> locally, or configure Supabase
+                before deploying.
+              </ThemedErrorText>
+            )}
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
                 <ThemedLabel htmlFor="email" className="text-gray-300">
@@ -224,7 +245,10 @@ export function LoginForm({
                 />
               </div>
               <div className="flex flex-col gap-3">
-                <ThemedButton type="submit" disabled={loading}>
+                <ThemedButton
+                  type="submit"
+                  disabled={loading || !supabaseConfigured}
+                >
                   {loading
                     ? mode === "login"
                       ? "Logging in..."
