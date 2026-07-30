@@ -6,16 +6,13 @@ import {
   rmSync,
   writeFileSync,
 } from "fs";
-import { execFileSync, spawnSync } from "child_process";
+import { spawnSync } from "child_process";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repoRoot = resolve(process.cwd(), "..", "..");
 const enableBackendScript = join(repoRoot, "scripts", "enable-backend.ts");
-const bunPath = execFileSync("which", ["bun"], {
-  encoding: "utf-8",
-}).trim();
 
 describe("guided backend enablement", () => {
   let testRoot: string;
@@ -95,7 +92,7 @@ exit 0
   function runEnableBackend(
     extraEnv: NodeJS.ProcessEnv = {},
   ): ReturnType<typeof spawnSync> {
-    return spawnSync(bunPath, [enableBackendScript], {
+    return spawnSync(process.execPath, [enableBackendScript], {
       cwd: testRoot,
       encoding: "utf-8",
       env: {
