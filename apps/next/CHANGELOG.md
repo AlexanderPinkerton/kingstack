@@ -1,5 +1,13 @@
 # @kingstack/next
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [7ce3d67]
+  - @kingstack/comment-tree@0.2.3
+  - @kingstack/dnd-tree@0.2.1
+
 ## 0.0.4
 
 ### Patch Changes
