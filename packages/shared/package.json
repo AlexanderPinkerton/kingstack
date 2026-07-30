@@ -1,6 +1,7 @@
 {
   "name": "@kingstack/shared",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Shared TypeScript types and code for kingstack apps",
   "type": "module",
   "main": "dist/index.js",
@@ -8,25 +9,23 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js"
     }
   },
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "lint": "eslint \"{post,test}/**/*.ts\" --fix",
+    "lint": "eslint \"**/*.ts\"",
+    "lint:fix": "eslint \"**/*.ts\" --fix",
+    "typecheck": "tsc --noEmit",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
     "@kingstack/eslint-config": "workspace:*",
-    "@kingstack/prisma": "workspace:*",
     "@kingstack/ts-config": "workspace:*",
-    "@typescript-eslint/parser": "^8.46.2",
-    "eslint": "^9.25.0",
-    "prettier": "^3.4.2",
-    "typescript": "^5.0.0"
+    "@types/node": "^22.12.0",
+    "eslint": "10.8.0",
+    "typescript": "5.9.3"
   },
   "private": true
 }

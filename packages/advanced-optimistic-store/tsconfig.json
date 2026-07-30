@@ -1,8 +1,7 @@
 {
-  "extends": "@kingstack/ts-config/base.json",
+  "extends": "@kingstack/ts-config/esm-library.json",
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "lib": ["DOM", "ES2022"],
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true,

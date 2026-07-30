@@ -1,31 +1,18 @@
 {
-    "compilerOptions": {
-        "target": "ES2020",
-        "module": "ESNext",
-        "lib": [
-            "DOM",
-            "ES2020"
-        ],
-        "strict": true,
-        "noEmit": true,
-        "strictNullChecks": true,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "noFallthroughCasesInSwitch": true,
-        "moduleResolution": "Node",
-        "esModuleInterop": true,
-        "resolveJsonModule": true,
-        "isolatedModules": true,
-        "allowSyntheticDefaultImports": true,
-        "incremental": true,
-        "baseUrl": ".",
-        "paths": {
-            "@shared/*": [
-                "../../packages/shared/src/*"
-            ],
-            "@prisma/*": [
-                "../../packages/prisma/*"
-            ]
-        }
-    }
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noEmit": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "incremental": true,
+    "types": []
+  }
 }

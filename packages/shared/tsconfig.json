@@ -1,5 +1,5 @@
 {
-  "extends": "@kingstack/ts-config/base.json",
+  "extends": "@kingstack/ts-config/node.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./",
@@ -9,11 +9,6 @@
     "noEmit": false,
     "composite": true
   },
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules"
-  ]
+  "include": ["**/*.ts"],
+  "exclude": ["dist", "node_modules"]
 }

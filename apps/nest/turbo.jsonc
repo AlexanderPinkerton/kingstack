@@ -1,16 +1,17 @@
 {
-    "extends": [
-        "//"
-    ],
-    "tasks": {
-        "start:prod": {},
-        "build": {
-            "outputs": [
-                "dist/**"
-            ],
-            "dependsOn": [
-                "@kingstack/prisma#generate"
-            ]
-        }
-    }
+  "$schema": "https://turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "dev": {
+      "dependsOn": ["^build", "@kingstack/prisma#generate"],
+    },
+    "start:prod": {
+      "dependsOn": ["build"],
+      "persistent": true,
+    },
+    "build": {
+      "dependsOn": ["@kingstack/prisma#generate"],
+      "outputs": ["dist/**"],
+    },
+  },
 }

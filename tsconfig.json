@@ -1,0 +1,10 @@
+{
+  "extends": "./packages/ts-config/node.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@kingstack/config": ["./packages/config/src/index.ts"]
+    }
+  },
+  "include": ["config/example.ts", "config/schema.ts", "scripts/**/*.ts"]
+}

@@ -1,97 +1,83 @@
-import postgres from "postgres";
+import { createSupabaseScriptConnection } from "./supabase-script-client";
 
-// This script installs a custom trigger in the Supabase database to create a user in the User table when a new user is created in the auth.users table.
-// It uses the postgres library to connect to the database and execute the SQL commands.
-// Make sure to set the environment variables SUPABASE_PROJECT_HOST and SUPABASE_DB_PASSWORD before running this script.
-// Use Bun to run this script:
-// bun run scripts/install-custom-user-trigger.ts
-
-const sqlClient = postgres({
-  host: process.env.SUPABASE_POOLER_HOST, // e.g., aws-0-us-east-1.pooler.supabase.com
-  port: 6543, // Default port for Supabase pooler
-  database: "postgres", // Default database for Supabase
-  username: process.env.SUPABASE_POOLER_USER, // Default username for Supabase
-  password: process.env.SUPABASE_DB_PASSWORD, // Replace with your actual password
-  ssl: {
-    rejectUnauthorized: false, // This is often required for Supabase connections
-  },
-  max: 1, // Optional: set the maximum number of connections in the pool
-  idle_timeout: 10, // Optional: set the idle timeout for connections
-});
-
-// Prisma Model Reference
-// model user {
-//     id         String   @id @default(cuid())
-//     email      String   @unique
-//     name       String?
-//     posts      post[]
-//     created_at DateTime @default(now())
-//   }
-
-// Raw Supabase user meta data
-// {
-//     "iss": "https://accounts.google.com",
-//     "sub": "117336688802687046371",
-//     "name": "Alexander Pinkerton",
-//     "email": "alexpinkerton88@gmail.com",
-//     "picture": "https://lh3.googleusercontent.com/a/ACg8ocJXFTPr1PO9t6zXWzoAWMtIb7YUCDqgZ0yCKMDHQZsI05Y9vPag=s96-c",
-//     "full_name": "Alexander Pinkerton",
-//     "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocJXFTPr1PO9t6zXWzoAWMtIb7YUCDqgZ0yCKMDHQZsI05Y9vPag=s96-c",
-//     "provider_id": "117336688802687046371",
-//     "email_verified": true,
-//     "phone_verified": false
-//   }
-
-// const removeTriggerSQL = `
-// -- Remove the trigger and function if they exist
-// DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-// DROP FUNCTION IF EXISTS public.handle_new_user();
-// `;
-
-// 🔥 Golden Rules:
-// ❗ Always update this trigger when the User model changes.
-// ❗ Always run this script after deploying the app to ensure the trigger is installed.
-// ❗ Always test the trigger after installation to ensure it works as expected.
 const createTriggerSQL = `
+update public.user
+set previous_usernames = array[]::text[]
+where previous_usernames is null;
+
+alter table public.user
+  alter column previous_usernames set default array[]::text[],
+  alter column previous_usernames set not null;
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer set search_path = ''
 as $$
+declare
+  requested_username text := nullif(new.raw_user_meta_data ->> 'username', '');
+  resolved_username text;
 begin
-  insert into public.user (id, email, name)
-  values (new.id, new.email, coalesce(new.raw_user_meta_data ->> 'fullName', new.raw_user_meta_data ->> 'name', null))
-  on conflict (id) do nothing; -- Prevents error if user already exists
+  -- The application user model requires email, while Supabase Auth can also
+  -- contain phone-only identities. Leave those identities in auth.users
+  -- without aborting their creation.
+  if new.email is null then
+    return new;
+  end if;
+
+  if requested_username is not null
+    and char_length(requested_username) between 3 and 40
+    and requested_username ~ '^[A-Za-z0-9][A-Za-z0-9_-]*[A-Za-z0-9]$'
+  then
+    resolved_username := requested_username;
+  else
+    resolved_username := 'user_' || replace(new.id::text, '-', '');
+  end if;
+
+  insert into public.user (id, email, username, previous_usernames)
+  values (
+    new.id::text,
+    new.email,
+    resolved_username,
+    array[]::text[]
+  )
+  on conflict (id) do update
+  set
+    email = excluded.email,
+    previous_usernames = coalesce(
+      public.user.previous_usernames,
+      array[]::text[]
+    );
+
   return new;
 end;
 $$;
 
-create or replace trigger on_auth_user_created
+revoke all on function public.handle_new_user()
+from public, anon, authenticated;
+
+drop trigger if exists on_auth_user_created on auth.users;
+
+create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 `;
 
 async function main() {
+  const { sql, target } = createSupabaseScriptConnection();
+
   try {
-    console.log("Installing custom user trigger...");
-
-    await sqlClient.begin(async (tx) => {
-      await tx.unsafe(createTriggerSQL); // 🛠️ Use `.unsafe()` for raw full SQL string
+    console.log(`Installing auth user trigger on ${target}...`);
+    await sql.begin(async (transaction) => {
+      await transaction.unsafe(createTriggerSQL);
     });
-
-    console.log("Custom user trigger installed successfully.");
-  } catch (err) {
-    console.error("Error installing trigger:", err);
+    console.log("Auth user trigger installed successfully.");
   } finally {
-    await sqlClient.end();
-    console.log("Connection closed.");
+    await sql.end();
   }
 }
 
-main()
-  .catch((err) => {
-    console.error("Unexpected error:", err);
-  })
-  .finally(() => {
-    process.exit(0); // Ensure the script exits after completion
-  });
+main().catch((error: unknown) => {
+  console.error("Failed to install auth user trigger:", error);
+  process.exitCode = 1;
+});

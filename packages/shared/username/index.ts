@@ -1,1 +1,1 @@
-export { UsernameGenerator } from './UsernameGenerator';
+export { UsernameGenerator } from "./UsernameGenerator.js";

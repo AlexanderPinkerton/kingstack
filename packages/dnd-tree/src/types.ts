@@ -66,8 +66,9 @@ export interface TreeTypeConfig<T extends ItemData = ItemData> {
 /**
  * Flattened item used internally for rendering
  */
-export interface FlattenedItem<T extends ItemData = ItemData>
-  extends TreeItem<T> {
+export interface FlattenedItem<
+  T extends ItemData = ItemData,
+> extends TreeItem<T> {
   parentId: UniqueIdentifier | null;
   depth: number;
   index: number;
@@ -193,8 +194,7 @@ export interface DndTreeProps<T extends ItemData = ItemData> {
    * Can be a static array or a function that returns actions per item.
    */
   itemActions?:
-    | TreeItemAction[]
-    | ((item: FlattenedItem<T>) => TreeItemAction[]);
+    TreeItemAction[] | ((item: FlattenedItem<T>) => TreeItemAction[]);
   /**
    * Callback when an action is triggered on an item.
    */

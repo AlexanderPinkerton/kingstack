@@ -107,7 +107,7 @@ export const AdminManagement = observer(() => {
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <form onSubmit={handleAddAdmin}>
+            <form onSubmit={(event) => void handleAddAdmin(event)}>
               <DialogHeader>
                 <DialogTitle>Add Admin Email</DialogTitle>
                 <DialogDescription>
@@ -185,7 +185,7 @@ export const AdminManagement = observer(() => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDeleteAdmin(admin.id)}
+                      onClick={() => void handleDeleteAdmin(admin.id)}
                       disabled={isDeleting || admin.id.startsWith("temp-")}
                     >
                       <IconTrash className="h-4 w-4 text-destructive" />

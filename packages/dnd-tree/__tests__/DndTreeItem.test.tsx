@@ -22,7 +22,7 @@ describe("DndTreeItem", () => {
           hasChildren={true}
           onCollapse={onCollapse}
           collapsed={false}
-        />
+        />,
       );
 
       const button = screen.getByRole("button");
@@ -37,7 +37,7 @@ describe("DndTreeItem", () => {
           hasChildren={false}
           onCollapse={onCollapse}
           collapsed={false}
-        />
+        />,
       );
 
       const svg = container.querySelector("svg");
@@ -54,12 +54,12 @@ describe("DndTreeItem", () => {
           hasChildren={true}
           onCollapse={onCollapse}
           collapsed={false}
-        />
+        />,
       );
 
       const chevronSvg = container.querySelector("button svg");
       expect(chevronSvg).toBeDefined();
-      
+
       // Check that the style contains the rotation
       const style = chevronSvg?.getAttribute("style");
       expect(style).toContain("rotate(90deg)");
@@ -73,12 +73,12 @@ describe("DndTreeItem", () => {
           hasChildren={true}
           onCollapse={onCollapse}
           collapsed={true}
-        />
+        />,
       );
 
       const chevronSvg = container.querySelector("button svg");
       expect(chevronSvg).toBeDefined();
-      
+
       // Check that the style contains no rotation or 0deg
       const style = chevronSvg?.getAttribute("style");
       expect(style).toContain("rotate(0deg)");
@@ -92,12 +92,12 @@ describe("DndTreeItem", () => {
           hasChildren={true}
           onCollapse={onCollapse}
           collapsed={false}
-        />
+        />,
       );
 
       const button = container.querySelector("button");
       expect(button).toBeDefined();
-      
+
       fireEvent.click(button!);
       expect(onCollapse).toHaveBeenCalledTimes(1);
     });
@@ -112,12 +112,12 @@ describe("DndTreeItem", () => {
           onCollapse={onCollapse}
           onSelect={onSelect}
           collapsed={false}
-        />
+        />,
       );
 
       const button = container.querySelector("button");
       fireEvent.click(button!);
-      
+
       // onCollapse should be called, but onSelect should NOT be called
       // because the click event should be stopped
       expect(onCollapse).toHaveBeenCalledTimes(1);
@@ -129,7 +129,7 @@ describe("DndTreeItem", () => {
   describe("Selection", () => {
     it("renders with selected styles when isSelected is true", () => {
       const { container } = render(
-        <DndTreeItem {...defaultProps} isSelected={true} />
+        <DndTreeItem {...defaultProps} isSelected={true} />,
       );
 
       const item = container.querySelector("div") as HTMLElement;
@@ -140,10 +140,12 @@ describe("DndTreeItem", () => {
     it("calls onSelect when item is clicked", () => {
       const onSelect = vi.fn();
       const { container } = render(
-        <DndTreeItem {...defaultProps} onSelect={onSelect} />
+        <DndTreeItem {...defaultProps} onSelect={onSelect} />,
       );
 
-      const item = container.querySelector("[role='treeitem']") || container.querySelector("div");
+      const item =
+        container.querySelector("[role='treeitem']") ||
+        container.querySelector("div");
       fireEvent.click(item!);
       expect(onSelect).toHaveBeenCalledTimes(1);
     });
@@ -163,7 +165,7 @@ describe("DndTreeItem", () => {
 
     it("applies correct indentation based on depth", () => {
       const { container } = render(
-        <DndTreeItem {...defaultProps} depth={2} indentationWidth={24} />
+        <DndTreeItem {...defaultProps} depth={2} indentationWidth={24} />,
       );
 
       // The indentation should be depth * indentationWidth = 2 * 24 = 48px

@@ -1,38 +1,44 @@
 {
-    "name": "@kingstack/config",
-    "author": "Alexander Pinkerton <alexanderpinkerton.business@gmail.com>",
-    "version": "0.1.4",
-    "license": "MIT",
-    "description": "Configuration management system for KingStack",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/AlexanderPinkerton/kingstack.git",
-        "directory": "packages/config"
-    },
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "bin": {
-        "king-config": "dist/cli/index.js"
-    },
-    "scripts": {
-        "build": "tsc",
-        "dev": "tsc --watch",
-        "test": "vitest run"
-    },
-    "files": [
-        "dist"
-    ],
-    "dependencies": {
-        "@iarna/toml": "^2.2.5",
-        "commander": "^12.0.0",
-        "zod": "^3.22.4"
-    },
-    "devDependencies": {
-        "@types/node": "^20.11.0",
-        "typescript": "^5.3.3",
-        "vitest": "^1.2.0"
-    },
-    "publishConfig": {
-        "access": "public"
-    }
+  "name": "@kingstack/config",
+  "author": "Alexander Pinkerton <alexanderpinkerton.business@gmail.com>",
+  "version": "0.1.4",
+  "license": "MIT",
+  "description": "Configuration management system for KingStack",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlexanderPinkerton/kingstack.git",
+    "directory": "packages/config"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "king-config": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc --watch",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@iarna/toml": "^2.2.5",
+    "commander": "^12.0.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@kingstack/eslint-config": "workspace:*",
+    "@types/node": "^20.11.0",
+    "eslint": "10.8.0",
+    "typescript": "5.9.3",
+    "vitest": "^1.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

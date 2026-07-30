@@ -3,27 +3,19 @@ import {
   type OptimisticStore,
   type DataTransformer,
   type OptimisticDefaults,
+  type ObservableUIData,
 } from "@kingstack/advanced-optimistic-store";
 import type { QueryClient } from "@tanstack/react-query";
-import { fetchWithAuth } from "@/lib/utils";
-import type { SupabaseSession } from "@/lib/session-manager";
 import { StoreDemand } from "@/lib/store-lifecycle";
-import { getMockData, isPlaygroundMode } from "@kingstack/shared";
+import type {
+  PostApiData,
+  PostCreateInput,
+  PostRepository,
+  PostRepositoryContext,
+  PostUpdateInput,
+} from "@/repositories/posts/types";
 
-// API data structure (what comes from the server)
-export interface PostApiData {
-  id: string;
-  title: string;
-  content: string | null;
-  published: boolean;
-  author_id: string;
-  created_at: string; // ISO string from server
-  author: {
-    id: string;
-    username: string;
-    email: string;
-  };
-}
+export type { PostApiData } from "@/repositories/posts/types";
 
 // UI data structure (enhanced for the frontend)
 export interface PostUiData {
@@ -49,11 +41,20 @@ export interface PostUiData {
 }
 
 // Transformer to convert API data to UI data with computed fields
-class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
+class PostTransformer implements DataTransformer<
+  PostApiData,
+  PostUiData,
+  PostCreateInput,
+  Pick<PostRepositoryContext, "currentUser">
+> {
   // Memoization cache for expensive calculations
-  private calculationCache = new Map<string, any>();
-  optimisticDefaults: OptimisticDefaults<PostUiData> = {
-    createOptimisticUiData: (userInput: any, context?: any) => {
+  private calculationCache = new Map<string, number | string | string[]>();
+  optimisticDefaults: OptimisticDefaults<
+    PostUiData,
+    PostCreateInput,
+    Pick<PostRepositoryContext, "currentUser">
+  > = {
+    createOptimisticUiData: (userInput, context) => {
       const currentUser = context?.currentUser;
       const content = userInput.content || "";
 
@@ -63,16 +64,11 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
       const excerpt = this.generateExcerpt(content);
       const tags = this.extractTags(content);
 
-      // Use existing ID if available (for updates), otherwise generate temp ID
-      const id = userInput.id || `temp-${Date.now()}`;
-
-      // Use existing created_at if available (for updates), otherwise use current time
-      const createdAt =
-        userInput.created_at instanceof Date
-          ? userInput.created_at
-          : userInput.created_at
-            ? new Date(userInput.created_at)
-            : new Date();
+      const id = `temp-${
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`
+      }`;
+      const createdAt = new Date();
 
       // Determine if this is a new post using the same logic as the transformer
       const isNew = this.isPostNew(createdAt.toISOString());
@@ -84,7 +80,7 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
         published: userInput.published ?? false,
         author_id: userInput.author_id || currentUser?.id || "unknown",
         created_at: createdAt,
-        author: userInput.author || {
+        author: {
           id: currentUser?.id || "unknown",
           username:
             currentUser?.user_metadata?.username ||
@@ -103,7 +99,7 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
         isNew,
         publishStatus: (userInput.published ?? false) ? "published" : "draft",
         tags,
-      } as PostUiData;
+      };
     },
   };
 
@@ -161,8 +157,9 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
 
   private calculateWordCount(content: string): number {
     const cacheKey = `wordCount-${content}`;
-    if (this.calculationCache.has(cacheKey)) {
-      return this.calculationCache.get(cacheKey);
+    const cached = this.calculationCache.get(cacheKey);
+    if (typeof cached === "number") {
+      return cached;
     }
 
     const result = content
@@ -176,8 +173,9 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
 
   private calculateReadingTime(wordCount: number): number {
     const cacheKey = `readingTime-${wordCount}`;
-    if (this.calculationCache.has(cacheKey)) {
-      return this.calculationCache.get(cacheKey);
+    const cached = this.calculationCache.get(cacheKey);
+    if (typeof cached === "number") {
+      return cached;
     }
 
     // Average reading speed: 200 words per minute
@@ -188,8 +186,9 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
 
   private generateExcerpt(content: string, maxLength: number = 150): string {
     const cacheKey = `excerpt-${content}-${maxLength}`;
-    if (this.calculationCache.has(cacheKey)) {
-      return this.calculationCache.get(cacheKey);
+    const cached = this.calculationCache.get(cacheKey);
+    if (typeof cached === "string") {
+      return cached;
     }
 
     if (content.length <= maxLength) {
@@ -211,8 +210,9 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
 
   private extractTags(content: string): string[] {
     const cacheKey = `tags-${content}`;
-    if (this.calculationCache.has(cacheKey)) {
-      return this.calculationCache.get(cacheKey);
+    const cached = this.calculationCache.get(cacheKey);
+    if (Array.isArray(cached)) {
+      return cached;
     }
 
     // Simple tag extraction - look for #hashtags
@@ -241,32 +241,52 @@ class PostTransformer implements DataTransformer<PostApiData, PostUiData> {
 }
 
 export class AdvancedPostStore {
-  private readonly optimisticStore: OptimisticStore<PostApiData, PostUiData>;
+  private readonly optimisticStore: OptimisticStore<
+    PostApiData,
+    PostUiData,
+    ObservableUIData<PostUiData>,
+    PostCreateInput,
+    PostUpdateInput
+  >;
   private readonly transformer = new PostTransformer();
   private readonly demand: StoreDemand;
-  private session: SupabaseSession = null;
+  private context: PostRepositoryContext;
 
-  constructor(queryClient: QueryClient) {
+  constructor(
+    queryClient: QueryClient,
+    private readonly repository: PostRepository,
+    initialContext: PostRepositoryContext = {
+      scope: "disabled",
+      enabled: false,
+      currentUser: null,
+    },
+  ) {
+    this.context = initialContext;
     this.demand = new StoreDemand(() => this.optimisticStore.updateOptions());
 
-    this.optimisticStore = createOptimisticStore<PostApiData, PostUiData>(
+    this.optimisticStore = createOptimisticStore<
+      PostApiData,
+      PostUiData,
+      ObservableUIData<PostUiData>,
+      PostCreateInput,
+      PostUpdateInput,
+      Pick<PostRepositoryContext, "currentUser">
+    >(
       {
         name: "advanced-posts",
-        queryKey: () => ["advanced-posts", this.sessionIdentity],
-        queryFn: this.getQueryFn(),
+        queryKey: () => ["advanced-posts", this.context.scope],
+        queryFn: () => this.repository.list(this.context),
         mutations: {
-          create: this.getCreateMutation(),
-          update: this.getUpdateMutation(),
-          remove: this.getDeleteMutation(),
+          create: (data) => this.repository.create(data, this.context),
+          update: (params) => this.repository.update(params, this.context),
+          remove: (id) => this.repository.remove(id, this.context),
         },
         transformer: this.transformer,
         optimisticContext: () => ({
-          currentUser: this.session?.user ?? null,
+          currentUser: this.context.currentUser,
         }),
         staleTime: 5 * 60 * 1000,
-        enabled: () =>
-          this.demand.isActive &&
-          (!!this.session?.access_token || isPlaygroundMode()),
+        enabled: () => this.demand.isActive && this.context.enabled,
       },
       queryClient,
     );
@@ -276,11 +296,11 @@ export class AdvancedPostStore {
     return this.demand.activate();
   }
 
-  setSession(session: SupabaseSession): void {
-    const previousIdentity = this.sessionIdentity;
-    this.session = session;
+  setContext(context: PostRepositoryContext): void {
+    const previousScope = this.context.scope;
+    this.context = context;
 
-    if (previousIdentity !== this.sessionIdentity) {
+    if (previousScope !== context.scope) {
       this.optimisticStore.ui.clear();
     }
 
@@ -305,152 +325,6 @@ export class AdvancedPostStore {
 
   // Check if store is ready and enabled
   get isReady() {
-    return !!this.session?.access_token || isPlaygroundMode();
-  }
-
-  // ============================================================================
-  // PLAYGROUND CONFIGURATION
-  // ============================================================================
-  // All playground logic is centralized here for easy maintenance
-
-  private getQueryFn() {
-    return isPlaygroundMode() ? this.playgroundQueryFn : this.apiQueryFn;
-  }
-
-  private getCreateMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundCreateMutation
-      : this.apiCreateMutation;
-  }
-
-  private getUpdateMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundUpdateMutation
-      : this.apiUpdateMutation;
-  }
-
-  private getDeleteMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundDeleteMutation
-      : this.apiDeleteMutation;
-  }
-
-  // API Implementations
-  private apiQueryFn = async (): Promise<PostApiData[]> => {
-    const token = this.session?.access_token || "";
-    const baseUrl =
-      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-    return fetchWithAuth(token, `${baseUrl}/posts`).then((res) => res.json());
-  };
-
-  private apiCreateMutation = async (data: any): Promise<PostApiData> => {
-    const token = this.session?.access_token || "";
-    const baseUrl =
-      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-    return fetchWithAuth(token, `${baseUrl}/posts`, {
-      method: "POST",
-      body: JSON.stringify(data),
-    }).then((res) => res.json());
-  };
-
-  private apiUpdateMutation = async ({
-    id,
-    data,
-  }: {
-    id: string;
-    data: any;
-  }): Promise<PostApiData> => {
-    const token = this.session?.access_token || "";
-    const baseUrl =
-      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-    return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }).then((res) => res.json());
-  };
-
-  private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
-    const token = this.session?.access_token || "";
-    const baseUrl =
-      process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-    return fetchWithAuth(token, `${baseUrl}/posts/${id}`, {
-      method: "DELETE",
-    }).then(() => ({ id }));
-  };
-
-  // Playground Implementations
-  private playgroundQueryFn = async (): Promise<PostApiData[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
-    return getMockData("posts") as PostApiData[];
-  };
-
-  private playgroundCreateMutation = async (
-    data: any,
-  ): Promise<PostApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return {
-      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: data.title || "New Post",
-      content: data.content || "",
-      published: data.published || false,
-      author_id: "playground-user",
-      created_at: new Date().toISOString(),
-      author: {
-        id: "playground-user",
-        username: "playground-user",
-        email: "playground@example.com",
-      },
-    };
-  };
-
-  private playgroundUpdateMutation = async ({
-    id,
-    data,
-  }: {
-    id: string;
-    data: any;
-  }): Promise<PostApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    // Get existing post from mock data to preserve unchanged fields
-    const existingPosts = getMockData("posts") as PostApiData[];
-    const existingPost = existingPosts.find((p) => p.id === id);
-
-    // If we have an existing post, merge it with the updates
-    if (existingPost) {
-      return {
-        ...existingPost,
-        ...data, // This will override only the fields that were updated
-        updated_at: new Date().toISOString(), // Always update the timestamp
-      };
-    }
-
-    // Fallback if no existing post found
-    return {
-      id,
-      title: data.title || "Updated Post",
-      content: data.content || "",
-      published: data.published || false,
-      author_id: "playground-user",
-      created_at: new Date().toISOString(),
-      author: {
-        id: "playground-user",
-        username: "playground-user",
-        email: "playground@example.com",
-      },
-      ...data,
-    };
-  };
-
-  private playgroundDeleteMutation = async (
-    id: string,
-  ): Promise<{ id: string }> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return { id };
-  };
-
-  private get sessionIdentity(): string {
-    if (isPlaygroundMode()) return "playground";
-    return this.session?.user.id ?? "anonymous";
+    return this.context.enabled;
   }
 }

@@ -14,7 +14,7 @@ export class PrismaService
     await this.$disconnect();
   }
 
-  async enableShutdownHooks(app: any) {
+  async enableShutdownHooks(_app: any) {
     // Shutdown hooks are handled by OnModuleDestroy
   }
 }

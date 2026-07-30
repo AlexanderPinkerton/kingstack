@@ -91,3 +91,38 @@ All services use the same JWT secret for validation:
 SUPA_JWT_SECRET=your-supabase-jwt-secret  # Used by NestJS and realtime gateway
 ```
 
+## Supabase Auth User Projection
+
+Supabase owns identities in `auth.users`; application-facing profile data lives
+in `public.user`. The `on_auth_user_created` database trigger creates the
+application record after signup.
+
+The projection:
+
+- reads email from `auth.users.email`;
+- accepts username metadata only when it matches the application's username
+  rules;
+- generates a stable `user_<auth-id>` username when metadata is absent or
+  invalid;
+- initializes `previous_usernames` to an empty array;
+- leaves phone-only Supabase Auth identities without an application user row,
+  because the application user model requires an email; and
+- preserves usernames changed in the application when a backfill encounters an
+  existing user ID.
+
+The migration is the source of truth for deployed databases. Maintenance
+scripts use the generated `apps/nest/.env` direct database URL:
+
+```bash
+# Reinstall the current trigger definition
+yarn supabase:auth:trigger:install
+
+# Add or repair public.user records for existing auth users
+yarn supabase:auth:backfill
+
+# Remove the trigger when deliberately disabling the projection
+yarn supabase:auth:trigger:remove
+```
+
+If the required fields in Prisma's `user` model change, update the trigger in a
+new Prisma migration and keep the installer/backfill scripts aligned with it.

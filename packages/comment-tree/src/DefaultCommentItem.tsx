@@ -2,14 +2,14 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { cn } from "./utils";
+import { cn } from "./utils.js";
 
 import type {
   CommentAction,
   CommentData,
   FlattenedComment,
   CommentTreeClassNames,
-} from "./types";
+} from "./types.js";
 
 export interface DefaultCommentItemProps<T extends CommentData = CommentData> {
   comment: FlattenedComment<T>;
@@ -123,7 +123,6 @@ function OverflowMenu({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-  const [placement, setPlacement] = useState<"below" | "above">("below");
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -168,7 +167,6 @@ function OverflowMenu({
       // Decide vertical placement
       const shouldPlaceAbove =
         spaceBelow < menuHeight && spaceAbove > spaceBelow;
-      setPlacement(shouldPlaceAbove ? "above" : "below");
 
       // Calculate horizontal position (keep menu within viewport)
       let left = buttonRect.left;

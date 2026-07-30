@@ -3,7 +3,7 @@ import type {
   CommentItem,
   CommentItems,
   FlattenedComment,
-} from "./types";
+} from "./types.js";
 
 /**
  * Flatten a nested comment tree into a flat array

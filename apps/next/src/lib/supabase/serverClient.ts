@@ -1,16 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { isPlaygroundMode } from "@kingstack/shared";
-import { createPlaygroundClient } from "./playgroundClient";
 
 export async function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Check if we're in playground mode or missing environment variables
-  if (isPlaygroundMode() || !supabaseUrl || !supabaseAnonKey) {
-    console.log("🎮 Supabase client: Using mock client for playground mode");
-    return createPlaygroundClient();
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required",
+    );
   }
 
   const cookieStore = await cookies();

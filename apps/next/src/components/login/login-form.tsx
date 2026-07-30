@@ -1,27 +1,26 @@
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
 import { NeonCard } from "@/components/ui/neon-card";
 import { GradientText } from "@/components/ui/gradient-text";
 import { ThemedInput } from "@/components/ui/themed-input";
 import { ThemedButton } from "@/components/ui/themed-button";
-import { ThemedOutlineButton } from "@/components/ui/themed-outline-button";
 import { ThemedLabel } from "@/components/ui/themed-label";
 import { ThemedErrorText } from "@/components/ui/themed-error-text";
 import { ThemedSuccessText } from "@/components/ui/themed-success-text";
 
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/browserClient";
+import { useCallback, useEffect, useState } from "react";
+import {
+  createClient,
+  isSupabaseBrowserConfigured,
+} from "@/lib/supabase/browserClient";
 import { UsernameGenerator } from "@kingstack/shared";
 import { APPNAME } from "@kingstack/shared";
-
-import { isPlaygroundMode } from "@kingstack/shared";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const supabase = createClient();
+  const supabaseConfigured = isSupabaseBrowserConfigured();
 
   // All hooks must be called before any conditional returns
   const [loading, setLoading] = useState(false);
@@ -34,34 +33,14 @@ export function LoginForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Debounced username validation
-  useEffect(() => {
-    if (mode === "register" && username) {
-      const timeoutId = setTimeout(() => {
-        validateUsername(username);
-      }, 500);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [username, mode]);
-
-  // Show playground mode message
-  if (isPlaygroundMode()) {
-    return (
-      <div className="text-center text-gray-400">
-        <p>Authentication is disabled in playground mode.</p>
-        <p>Switch to development mode to use authentication.</p>
-      </div>
-    );
-  }
-
   // Username validation and suggestions
-  const validateUsername = async (username: string) => {
-    if (!username) {
+  const validateUsername = useCallback(async (candidate: string) => {
+    if (!candidate) {
       setUsernameError(null);
       return;
     }
 
-    const validation = UsernameGenerator.validateUsername(username);
+    const validation = UsernameGenerator.validateUsername(candidate);
     if (!validation.isValid) {
       setUsernameError(validation.error || "Invalid username");
       return;
@@ -71,7 +50,7 @@ export function LoginForm({
       const response = await fetch("/api/username/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ username: candidate }),
       });
 
       if (response.ok) {
@@ -84,41 +63,34 @@ export function LoginForm({
       console.error("Username validation error:", error);
       setUsernameError("Error checking username availability");
     }
-  };
+  }, []);
 
-  async function onLogin(event: React.MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin + "/login",
-          // redirectTo: window.location.origin + '/api/auth/loginComplete',
-          // scopes: 'email profile',
-          // queryParams: {
-          //   access_type: 'offline',
-          //   prompt: 'consent',
-          // },
-        },
-      });
-      if (error) {
-        console.error("Error signing in:", error);
-      } else {
-        console.log("Sign in initiated successfully");
-      }
-    } catch (err) {
-      console.error("Unexpected error during sign in:", err);
-    } finally {
-      setLoading(false);
+  // Debounced username validation
+  useEffect(() => {
+    if (mode === "register" && username) {
+      const timeoutId = setTimeout(() => {
+        void validateUsername(username);
+      }, 500);
+      return () => clearTimeout(timeoutId);
     }
-  }
+  }, [mode, username, validateUsername]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
     setLoading(true);
+
+    if (!supabaseConfigured) {
+      setFormError(
+        "Supabase is not configured for this build. Run yarn backend:enable locally or configure the public Supabase environment variables before deploying.",
+      );
+      setLoading(false);
+      return;
+    }
+
     try {
+      const supabase = createClient();
+
       if (mode === "login") {
         // Basic email/password login
         const { error } = await supabase.auth.signInWithPassword({
@@ -141,7 +113,7 @@ export function LoginForm({
           return;
         }
 
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -185,7 +157,10 @@ export function LoginForm({
     >
       <AnimatedBorderContainer className="max-w-md w-full">
         <NeonCard className="bg-black/80 backdrop-blur border border-cyan-400/30 shadow-lg p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form
+            onSubmit={(event) => void handleSubmit(event)}
+            className="space-y-6"
+          >
             <div className="mb-6 text-center">
               <GradientText className="text-3xl font-bold tracking-tight">
                 {mode === "login"
@@ -198,6 +173,13 @@ export function LoginForm({
                   : "Sign up with your email to get started. You'll verify your identity after registration."}
               </div>
             </div>
+            {!supabaseConfigured && (
+              <ThemedErrorText>
+                Authentication needs the KingStack backend. Run{" "}
+                <code>yarn backend:enable</code> locally, or configure Supabase
+                before deploying.
+              </ThemedErrorText>
+            )}
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
                 <ThemedLabel htmlFor="email" className="text-gray-300">
@@ -263,7 +245,10 @@ export function LoginForm({
                 />
               </div>
               <div className="flex flex-col gap-3">
-                <ThemedButton type="submit" disabled={loading}>
+                <ThemedButton
+                  type="submit"
+                  disabled={loading || !supabaseConfigured}
+                >
                   {loading
                     ? mode === "login"
                       ? "Logging in..."
@@ -272,13 +257,6 @@ export function LoginForm({
                       ? "Login"
                       : "Register"}
                 </ThemedButton>
-                {/* <ThemedOutlineButton
-                  onClick={onLogin}
-                  disabled={loading}
-                  type="button"
-                >
-                  {loading ? "Redirecting..." : "Login with Google"}
-                </ThemedOutlineButton> */}
               </div>
               {formError && <ThemedErrorText>{formError}</ThemedErrorText>}
               {successMsg && (

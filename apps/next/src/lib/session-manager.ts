@@ -1,5 +1,7 @@
-import { createClient } from "@/lib/supabase/browserClient";
-import { isPlaygroundMode } from "@kingstack/shared";
+import {
+  createClient,
+  isSupabaseBrowserConfigured,
+} from "@/lib/supabase/browserClient";
 
 export type SupabaseSession = {
   access_token: string;
@@ -36,8 +38,9 @@ export class SessionManager {
     if (this.initialized) return;
     this.initialized = true;
 
-    if (isPlaygroundMode()) {
-      this.onSessionChange?.(null, "PLAYGROUND");
+    if (!isSupabaseBrowserConfigured()) {
+      this.session = null;
+      this.onSessionChange?.(this.session, "SUPABASE_NOT_CONFIGURED");
       return;
     }
 
@@ -60,7 +63,7 @@ export class SessionManager {
 
   async refreshSession(): Promise<void> {
     const supabase = this.supabase;
-    if (!supabase || isPlaygroundMode()) return;
+    if (!supabase) return;
 
     const result = await supabase.auth.getSession();
     const nextSession = result.data.session;

@@ -7,7 +7,6 @@ import type { QueryClient } from "@tanstack/react-query";
 import { fetchWithAuth } from "@/lib/utils";
 import type { SupabaseSession } from "@/lib/session-manager";
 import { StoreDemand } from "@/lib/store-lifecycle";
-import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 
 // API data structure (what comes from the server)
 export interface CurrentUserApiData {
@@ -35,9 +34,10 @@ export interface CurrentUserUiData {
 }
 
 // Transformer to convert API data to UI data with computed fields
-class CurrentUserTransformer
-  implements DataTransformer<CurrentUserApiData, CurrentUserUiData>
-{
+class CurrentUserTransformer implements DataTransformer<
+  CurrentUserApiData,
+  CurrentUserUiData
+> {
   toUi(apiData: CurrentUserApiData): CurrentUserUiData {
     const created_at = new Date(apiData.created_at);
     const username_changed_at = apiData.username_changed_at
@@ -97,17 +97,16 @@ export class CurrentUserStore {
       {
         name: "user",
         queryKey: () => ["user", this.sessionIdentity],
-        queryFn: this.getQueryFn(),
+        queryFn: this.apiQueryFn,
         mutations: {
-          create: this.getCreateMutation(),
-          update: this.getUpdateMutation(),
-          remove: this.getDeleteMutation(),
+          create: this.apiCreateMutation,
+          update: this.apiUpdateMutation,
+          remove: this.apiDeleteMutation,
         },
         transformer: this.transformer,
         staleTime: 10 * 60 * 1000,
         enabled: () =>
-          this.demand.isActive &&
-          (!!this.session?.access_token || isPlaygroundMode()),
+          this.demand.isActive && Boolean(this.session?.access_token),
       },
       queryClient,
     );
@@ -166,86 +165,6 @@ export class CurrentUserStore {
     return response.json();
   };
 
-  // Playground Implementations
-  private playgroundQueryFn = async (): Promise<CurrentUserApiData[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
-    const mockUsers = getMockData("users") as any[];
-    // Transform mock data to match CurrentUserApiData interface
-    const userData: CurrentUserApiData = {
-      id: mockUsers[0]?.id || "playground-user",
-      email: mockUsers[0]?.email || "playground@kingstack.dev",
-      username: "playground-user",
-      username_changed_at: null,
-      previous_usernames: [],
-      created_at: mockUsers[0]?.created_at || new Date().toISOString(),
-    };
-    return [userData];
-  };
-
-  private playgroundCreateMutation = async (
-    data: any,
-  ): Promise<CurrentUserApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return {
-      id: `temp-${Date.now()}`,
-      email: data.email || "playground@kingstack.dev",
-      username: data.username || "playground-user",
-      username_changed_at: null,
-      previous_usernames: [],
-      created_at: new Date().toISOString(),
-      ...data,
-    };
-  };
-
-  private playgroundUpdateMutation = async ({
-    id,
-    data,
-  }: {
-    id: string;
-    data: any;
-  }): Promise<CurrentUserApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return {
-      id,
-      email: "playground@kingstack.dev",
-      username: "playground-user",
-      username_changed_at: null,
-      previous_usernames: [],
-      created_at: new Date().toISOString(),
-      ...data,
-    };
-  };
-
-  private playgroundDeleteMutation = async (
-    id: string,
-  ): Promise<{ id: string }> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return { id };
-  };
-
-  // All playground logic is centralized here for easy maintenance
-  private getQueryFn() {
-    return isPlaygroundMode() ? this.playgroundQueryFn : this.apiQueryFn;
-  }
-
-  private getCreateMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundCreateMutation
-      : this.apiCreateMutation;
-  }
-
-  private getUpdateMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundUpdateMutation
-      : this.apiUpdateMutation;
-  }
-
-  private getDeleteMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundDeleteMutation
-      : this.apiDeleteMutation;
-  }
-
   activate(): () => void {
     return this.demand.activate();
   }
@@ -277,14 +196,12 @@ export class CurrentUserStore {
   }
 
   // Convenience method to get current user data
-  get currentUser() {
+  get currentUser(): CurrentUserUiData | null {
     // For user data, we expect a single entity, so get the first one
-    const entities = Array.from(this.ui.entities.values());
-    return entities[0] || null;
+    return this.ui.list[0] ?? null;
   }
 
   private get sessionIdentity(): string {
-    if (isPlaygroundMode()) return "playground";
     return this.session?.user.id ?? "anonymous";
   }
 }

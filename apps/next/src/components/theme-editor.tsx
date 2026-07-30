@@ -24,14 +24,10 @@ export const ThemeEditor: React.FC = () => {
     const initial: Record<string, string> = {};
     COLOR_VARIABLES.forEach(({ name }) => {
       let val = getCssVar(name);
-      // Try to convert oklch to hex for color input, fallback to white
-      try {
-        if (val.startsWith("oklch")) {
-          // Optionally: parse oklch to hex (not natively supported by input[type=color])
-          // For now, fallback to #ffffff
-          val = "#ffffff";
-        }
-      } catch {}
+      // Color inputs do not natively support oklch, so use a safe fallback.
+      if (val.startsWith("oklch")) {
+        val = "#ffffff";
+      }
       initial[name] = val || "#ffffff";
     });
     return initial;

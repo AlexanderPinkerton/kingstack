@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { useRootStore } from "@/hooks/useRootStore";
 import { useStoreActivation } from "@/hooks/useStoreActivation";
-import { isPlaygroundMode } from "@kingstack/shared";
 
 export const PublicTodos = observer(() => {
   const rootStore = useRootStore();
@@ -22,7 +21,7 @@ export const PublicTodos = observer(() => {
     e.preventDefault();
     if (!newTodoTitle.trim() || !publicTodoStore.api) return;
 
-    publicTodoStore.api.create({
+    void publicTodoStore.api.create({
       title: newTodoTitle.trim(),
     });
 
@@ -55,30 +54,13 @@ export const PublicTodos = observer(() => {
     <div className="p-8 bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-sm rounded-2xl border border-slate-600 shadow-2xl">
       {/* Header Section */}
       <div className="text-center mb-8">
-        <div
-          className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-4 ${
-            isClient && isPlaygroundMode()
-              ? "bg-yellow-500/20 border border-yellow-500/30 text-yellow-400"
-              : "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"
-          }`}
-        >
-          <div
-            className={`w-2 h-2 rounded-full animate-pulse mr-2 ${
-              isClient && isPlaygroundMode()
-                ? "bg-yellow-400"
-                : "bg-emerald-400"
-            }`}
-          />
-          {isClient && isPlaygroundMode() ? "Mock Demo" : "Live Demo"}
+        <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-4 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400">
+          <div className="w-2 h-2 rounded-full animate-pulse mr-2 bg-emerald-400" />
+          Live Demo
         </div>
         <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
           Optimistic Todo Store
         </h2>
-        {isClient && isPlaygroundMode() && (
-          <p className="text-yellow-200 text-sm mb-4">
-            Playground mode is active. Enable Supabase for a full experience.
-          </p>
-        )}
         <p className="text-slate-300 text-lg max-w-2xl mx-auto leading-relaxed">
           Experience instant UI updates with automatic rollback on errors. Try
           adding, completing, or deleting todos to see the optimistic store in
@@ -210,11 +192,11 @@ export const PublicTodos = observer(() => {
             <input
               type="checkbox"
               checked={todo.done}
-              onChange={() =>
-                api?.update(todo.id, {
+              onChange={() => {
+                void api?.update(todo.id, {
                   done: !todo.done,
-                })
-              }
+                });
+              }}
               className="w-5 h-5 rounded border-slate-500 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 disabled:opacity-50"
             />
 
@@ -227,7 +209,7 @@ export const PublicTodos = observer(() => {
             </span>
 
             <button
-              onClick={() => api?.remove(todo.id)}
+              onClick={() => void api?.remove(todo.id)}
               className="px-3 py-1 text-xs bg-red-600/20 text-red-300 border border-red-500/50 rounded hover:bg-red-600/30 transition-colors disabled:opacity-50"
             >
               Delete

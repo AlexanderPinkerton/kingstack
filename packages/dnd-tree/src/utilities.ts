@@ -7,7 +7,7 @@ import type {
   TreeItems,
   ProjectedPosition,
   ItemData,
-} from "./types";
+} from "./types.js";
 
 /**
  * Calculate drag depth based on horizontal offset

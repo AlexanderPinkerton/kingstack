@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { isPlaygroundMode } from "@kingstack/shared";
 import type { SupabaseSession } from "@/lib/session-manager";
 import type { RealtimeSource } from "@/lib/realtime-manager";
+import { createHttpPostRepository } from "@/repositories/posts/http-post-repository";
 import { AdvancedPostStore } from "./postStore";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { CurrentUserStore } from "./currentUserStore";
@@ -33,7 +33,10 @@ export class UserStoreManager {
     browserId,
     realtimeSource,
   }: UserStoreManagerOptions) {
-    this.postStore = new AdvancedPostStore(queryClient);
+    this.postStore = new AdvancedPostStore(
+      queryClient,
+      createHttpPostRepository(),
+    );
     this.checkboxStore = new RealtimeCheckboxStore(
       queryClient,
       realtimeSource,
@@ -46,11 +49,15 @@ export class UserStoreManager {
   updateSession(session: SupabaseSession): void {
     if (this.isDisposed) return;
 
-    this.postStore.setSession(session);
+    this.postStore.setContext({
+      scope: session?.user.id ?? "anonymous",
+      enabled: Boolean(session?.access_token),
+      accessToken: session?.access_token,
+      currentUser: session?.user ?? null,
+    });
     this.currentUserStore.setSession(session);
 
-    const shouldLoadCurrentUser =
-      Boolean(session?.access_token) || isPlaygroundMode();
+    const shouldLoadCurrentUser = Boolean(session?.access_token);
 
     if (shouldLoadCurrentUser && !this.releaseCurrentUser) {
       this.releaseCurrentUser = this.currentUserStore.activate();

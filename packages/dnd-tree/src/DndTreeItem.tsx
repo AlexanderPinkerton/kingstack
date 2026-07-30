@@ -4,8 +4,8 @@ import React, {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { cn } from "./utils";
-import type { TreeItemAction, TreeClassNames } from "./types";
+import { cn } from "./utils.js";
+import type { TreeItemAction, TreeClassNames } from "./types.js";
 
 /** Default icons as SVG - users can override via props */
 const ChevronRightIcon = ({
@@ -74,8 +74,10 @@ const DotsVerticalIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export interface DndTreeItemProps
-  extends Omit<HTMLAttributes<HTMLLIElement>, "id"> {
+export interface DndTreeItemProps extends Omit<
+  HTMLAttributes<HTMLLIElement>,
+  "id"
+> {
   childCount?: number;
   clone?: boolean;
   collapsed?: boolean;
@@ -88,10 +90,10 @@ export interface DndTreeItemProps
   indentationWidth: number;
   value: ReactNode;
   isSelected?: boolean;
-  onCollapse?(): void;
-  onRemove?(): void;
-  onSelect?(): void;
-  wrapperRef?(node: HTMLLIElement): void;
+  onCollapse?: () => void;
+  onRemove?: () => void;
+  onSelect?: () => void;
+  wrapperRef?: (node: HTMLLIElement) => void;
   showHandle?: boolean;
   icon?: ReactNode;
   hasChildren?: boolean;
@@ -100,7 +102,7 @@ export interface DndTreeItemProps
   /** Action menu items */
   itemActions?: TreeItemAction[];
   /** Callback when an action is triggered */
-  onAction?(actionKey: string): void;
+  onAction?: (actionKey: string) => void;
   /** Custom render function for the action menu */
   renderActionMenu?: (
     actions: TreeItemAction[],
@@ -528,10 +530,10 @@ export const DndTreeItem = forwardRef<HTMLDivElement, DndTreeItemProps>(
                 {hasItemActions &&
                   onAction &&
                   (renderActionMenu ? (
-                    renderActionMenu(itemActions!, onAction)
+                    renderActionMenu(itemActions, onAction)
                   ) : (
                     <DefaultActionMenu
-                      actions={itemActions!}
+                      actions={itemActions}
                       onAction={onAction}
                       unstyled={unstyled}
                     />

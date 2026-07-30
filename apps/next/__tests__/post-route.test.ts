@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, expect, vi, type Mock } from "vitest";
+import { describe, it, beforeEach, expect, vi } from "vitest";
 import { GET as getPosts } from "../src/app/api/post/route";
 import { PrismaClient } from "@prisma/client";
 import { getUserAuthDetails } from "@/lib/admin-utils";
@@ -39,13 +39,6 @@ const fakePosts = [
     created_at: "2023-01-02T00:00:00.000Z",
   },
 ];
-
-const fakeUser = {
-  id: "user1",
-  email: "user1@example.com",
-  aud: "authenticated",
-  role: "authenticated",
-};
 
 const fakeAuthDetails = {
   isAuthenticated: true,

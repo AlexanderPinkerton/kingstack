@@ -8,7 +8,6 @@ import {
 } from "@kingstack/advanced-optimistic-store";
 import type { QueryClient } from "@tanstack/react-query";
 import { StoreDemand } from "@/lib/store-lifecycle";
-import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 
 // ---------- Types ----------
 
@@ -144,11 +143,11 @@ export class PublicTodoStore {
     >(
       {
         name: "publicTodos",
-        queryFn: this.getQueryFn(),
+        queryFn: this.apiQueryFn,
         mutations: {
-          create: this.getCreateMutation(),
-          update: this.getUpdateMutation(),
-          remove: this.getDeleteMutation(),
+          create: this.apiCreateMutation,
+          update: this.apiUpdateMutation,
+          remove: this.apiDeleteMutation,
         },
         transformer: this.getTransformer(),
         staleTime: 2 * 60 * 1000,
@@ -213,34 +212,6 @@ export class PublicTodoStore {
 
   // ---------- Private Methods ----------
 
-  private getQueryFn() {
-    if (isPlaygroundMode()) {
-      return this.playgroundQueryFn;
-    }
-    return this.apiQueryFn;
-  }
-
-  private getCreateMutation() {
-    if (isPlaygroundMode()) {
-      return this.playgroundCreateMutation;
-    }
-    return this.apiCreateMutation;
-  }
-
-  private getUpdateMutation() {
-    if (isPlaygroundMode()) {
-      return this.playgroundUpdateMutation;
-    }
-    return this.apiUpdateMutation;
-  }
-
-  private getDeleteMutation() {
-    if (isPlaygroundMode()) {
-      return this.playgroundDeleteMutation;
-    }
-    return this.apiDeleteMutation;
-  }
-
   private getTransformer() {
     return publicTodoTransformer;
   }
@@ -268,53 +239,5 @@ export class PublicTodoStore {
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
     return deletePublicTodo(id);
-  };
-
-  // Playground Implementations
-  private playgroundQueryFn = async (): Promise<PublicTodoApiData[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
-    return getMockData("todos") as PublicTodoApiData[];
-  };
-
-  private playgroundCreateMutation = async (data: {
-    title: string;
-  }): Promise<PublicTodoApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return {
-      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: data.title,
-      done: false,
-      user_id: "public-demo-user",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-  };
-
-  private playgroundUpdateMutation = async ({
-    id,
-    data,
-  }: {
-    id: string;
-    data: { title?: string; done?: boolean };
-  }): Promise<PublicTodoApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const existing = (await this.playgroundQueryFn()).find((t) => t.id === id);
-    if (!existing) {
-      throw new Error("Todo not found");
-    }
-    return {
-      ...existing,
-      ...data,
-      updated_at: new Date().toISOString(),
-    };
-  };
-
-  private playgroundDeleteMutation = async (
-    id: string,
-  ): Promise<{
-    id: string;
-  }> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return { id };
   };
 }

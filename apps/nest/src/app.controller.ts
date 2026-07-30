@@ -3,7 +3,7 @@ import { AppService } from "./app.service";
 import { JwtAuthGuard } from "./auth/guards/jwt.auth.guard";
 import { AdminGuard } from "./auth/guards/admin.guard";
 import { AdminService } from "./auth/services/admin.service";
-import { FastifyRequest } from "fastify";
+import type { FastifyRequest } from "fastify";
 
 @Controller()
 export class AppController {
@@ -39,7 +39,7 @@ export class AppController {
   @Get("/admin/check")
   @UseGuards(JwtAuthGuard)
   async checkAdminStatus(@Req() req: FastifyRequest) {
-    const user = req.user as any;
+    const user = req.user;
     const email = user?.email;
 
     if (!email) {

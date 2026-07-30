@@ -360,6 +360,8 @@ export function DataTable({
     [data],
   );
 
+  // TanStack Table intentionally returns callbacks that React Compiler cannot memoize.
+
   const table = useReactTable({
     data,
     columns,

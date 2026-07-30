@@ -144,6 +144,17 @@ export function createOptimisticStore<
     return clean;
   };
 
+  const getOptimisticOperationSequence = (
+    item: TUiData | undefined,
+  ): number | undefined => {
+    if (!item || !("_optimisticOperationSequence" in item)) {
+      return undefined;
+    }
+
+    const sequence = item._optimisticOperationSequence;
+    return typeof sequence === "number" ? sequence : undefined;
+  };
+
   const upsertCachedEntity = (queryKey: QueryKey, entity: TApiData): void => {
     qc.setQueryData<TApiData[]>(queryKey, (current) => {
       if (!current) return current;
@@ -317,7 +328,7 @@ export function createOptimisticStore<
     base: TUiData,
     layers: UpdateLayer<TUpdateInput>[],
   ): TUiData => {
-    let merged = { ...base } as TUiData;
+    let merged = { ...base };
 
     for (const layer of layers.sort(
       (a, b) => a.operationSequence - b.operationSequence,
@@ -435,16 +446,13 @@ export function createOptimisticStore<
       remoteDeletedEntities.delete(result.id);
       runInAction(() => {
         if (context?.applied && context.optimisticItemId) {
-          const current = uiStore.get(context.optimisticItemId) as
-            | (TUiData & {
-                _optimisticOperationSequence?: number;
-              })
-            | undefined;
+          const current = uiStore.get(context.optimisticItemId);
 
           if (
             optimisticCreateOperations.get(context.optimisticItemId) ===
               context.operationSequence &&
-            current?._optimisticOperationSequence === context.operationSequence
+            getOptimisticOperationSequence(current) ===
+              context.operationSequence
           ) {
             uiStore.remove(context.optimisticItemId);
           }
@@ -466,16 +474,12 @@ export function createOptimisticStore<
 
       const optimisticItemId = context.optimisticItemId;
       runInAction(() => {
-        const current = uiStore.get(optimisticItemId) as
-          | (TUiData & {
-              _optimisticOperationSequence?: number;
-            })
-          | undefined;
+        const current = uiStore.get(optimisticItemId);
 
         if (
           optimisticCreateOperations.get(optimisticItemId) ===
             context.operationSequence &&
-          current?._optimisticOperationSequence === context.operationSequence
+          getOptimisticOperationSequence(current) === context.operationSequence
         ) {
           if (context.previousItem) {
             uiStore.upsert(context.previousItem);

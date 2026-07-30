@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-import { Menu, X } from "lucide-react";
+import React from "react";
 import { NavLink, CTA } from "./types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemedButton } from "@/components/ui/themed-button";
@@ -10,7 +9,6 @@ import { Button } from "@/components/ui/button";
 interface NavbarMobileProps {
   navLinks: NavLink[];
   ctas: CTA[];
-  specialtyComponents?: React.ReactNode[];
   isOpen: boolean;
   onToggle: () => void;
   onNavLinkClick?: (tab: string) => void;
@@ -19,7 +17,6 @@ interface NavbarMobileProps {
 export const NavbarMobile: React.FC<NavbarMobileProps> = ({
   navLinks,
   ctas,
-  specialtyComponents = [],
   isOpen,
   onToggle,
   onNavLinkClick,

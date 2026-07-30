@@ -21,7 +21,6 @@ yarn env:local          # Generate from config/local.ts
 # or
 yarn env:development    # Generate from config/development.ts
 yarn env:production     # Generate from config/production.ts
-yarn env:playground     # Generate from config/playground.ts (mock data)
 ```
 
 This single command generates:
@@ -49,7 +48,6 @@ yarn deploy:sync-secrets:prod
 config/
 ├── schema.ts          # Schema definition (checked in)
 ├── example.ts         # Example values template (checked in)
-├── playground.ts      # Mock values for playground mode (checked in)
 ├── local.ts           # Your local environment values (gitignored)
 ├── development.ts     # Development environment values (gitignored)
 └── production.ts      # Production environment values (gitignored)

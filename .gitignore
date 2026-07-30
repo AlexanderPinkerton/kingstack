@@ -49,7 +49,6 @@ config/production.ts
 # - config/schema.ts (schema definition)
 # - config/utils.ts (utility functions)
 # - config/example.ts (example values)
-# - config/playground.ts (safe mock data)
 # - config/_example/ (legacy example files)
 
 !config/_example/**

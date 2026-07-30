@@ -27,9 +27,6 @@ bun scripts/swap-env.ts development
 # Swap to production environment
 bun scripts/swap-env.ts production
 
-# Setup playground mode
-bun scripts/setup-playground.ts
-
 # Check current environment
 bun scripts/swap-env.ts --current
 ```
@@ -38,7 +35,6 @@ bun scripts/swap-env.ts --current
 ```bash
 yarn env:development
 yarn env:production
-yarn env:playground
 yarn env:current
 ```
 
@@ -48,8 +44,7 @@ All scripts are in the `scripts/` directory:
 
 ```
 scripts/
-├── swap-env.ts          # Environment file swapping
-└── setup-playground.ts   # Playground mode setup
+└── swap-env.ts          # Environment file swapping
 ```
 
 ## Writing Scripts
@@ -88,7 +83,7 @@ main().catch((err) => {
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 
-const ENVIRONMENTS = ["development", "production", "playground"];
+const ENVIRONMENTS = ["development", "production"];
 
 async function main() {
   const envArg = process.argv[2];
@@ -197,14 +192,19 @@ const firstArg = args[0];
 NestJS-specific scripts live in `apps/nest/src/scripts/`:
 
 ```bash
-# Example: Backfill user data
-bun run apps/nest/src/scripts/backfill-user-data.ts
+# Install or repair the Supabase auth-user projection trigger
+yarn supabase:auth:trigger:install
+
+# Backfill existing Supabase Auth users into public.user
+yarn supabase:auth:backfill
+
+# Deliberately remove the auth-user projection trigger
+yarn supabase:auth:trigger:remove
 ```
 
-These scripts have access to:
-- Prisma client
-- NestJS modules
-- Full application context
+These commands load `apps/nest/.env` and prefer `SUPABASE_DB_DIRECT_URL`, so
+they work with both local and hosted Supabase projects. They exit nonzero on
+connection or SQL errors and never log database credentials.
 
 ## Troubleshooting
 
@@ -222,4 +222,3 @@ These scripts have access to:
 - Check error messages for clues
 - Verify required files exist
 - Ensure environment variables are set
-

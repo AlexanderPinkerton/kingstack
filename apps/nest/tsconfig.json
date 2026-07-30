@@ -1,8 +1,9 @@
 {
-  "extends": "../../packages/ts-config/base.json",
+  "extends": "../../packages/ts-config/node.json",
   "compilerOptions": {
     "outDir": "dist",
-    "module": "CommonJS",
+    "rootDir": "src",
+    "incremental": false,
     "noEmit": false,
     "declaration": true,
     "sourceMap": true,
@@ -10,10 +11,6 @@
     "experimentalDecorators": true,
     "removeComments": true
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

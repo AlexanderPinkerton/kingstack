@@ -10,7 +10,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write
   pull-requests: write
-  id-token: write  # Required for OIDC authentication
+  id-token: write # Required for OIDC authentication
 
 jobs:
   release:
@@ -18,14 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 24
-          registry-url: 'https://registry.npmjs.org'
-      
+          node-version: 24.18.0
+          registry-url: "https://registry.npmjs.org"
+
       # Changesets 2.x expects `npm info --json` to return an object. npm 12
       # returns a one-element array and makes every existing version appear
       # unpublished.
@@ -41,7 +41,15 @@ jobs:
         run: corepack enable
 
       - name: Install Dependencies
-        run: yarn install
+        run: yarn install --immutable
+
+      - name: Cache Turbo
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ github.job }}-
 
       - name: Build Packages
         run: yarn build:release-packages

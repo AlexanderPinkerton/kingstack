@@ -1,15 +1,20 @@
 import { createBrowserClient } from "@supabase/ssr";
-import { createPlaygroundClient } from "./playgroundClient";
-import { isPlaygroundMode } from "@kingstack/shared";
+
+export function isSupabaseBrowserConfigured(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+}
 
 export function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Check if we're in playground mode or missing environment variables
-  if (isPlaygroundMode() || !supabaseUrl || !supabaseAnonKey) {
-    console.log("🎮 Supabase client: Using mock client for playground mode");
-    return createPlaygroundClient();
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required",
+    );
   }
 
   const cookieName = process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME;

@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { useRootStore } from "@/hooks/useRootStore";
 import { observer } from "mobx-react-lite";
 import { createClient } from "@/lib/supabase/browserClient";
-import { isPlaygroundMode } from "@kingstack/shared";
 
 interface AvatarMenuProps {
   className?: string;
@@ -26,21 +25,16 @@ export const AvatarMenu = observer(function AvatarMenu({
   className = "",
 }: AvatarMenuProps) {
   const rootStore = useRootStore();
-  const supabase = createClient();
   const session = rootStore.session;
   const user = session?.user;
 
   const handleLogout = useCallback(async () => {
+    const supabase = createClient();
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("Error signing out:", error);
     }
-  }, [supabase.auth]);
-
-  // Don't render in playground mode
-  if (isPlaygroundMode()) {
-    return null;
-  }
+  }, []);
 
   // Don't render if no user
   if (!user) {
@@ -108,7 +102,7 @@ export const AvatarMenu = observer(function AvatarMenu({
           {/* Logout Section */}
           <div className="px-4 py-3">
             <DropdownMenuItem
-              onClick={handleLogout}
+              onClick={() => void handleLogout()}
               className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 rounded-md flex items-center gap-2 cursor-pointer"
             >
               <LogOut size={16} /> Logout

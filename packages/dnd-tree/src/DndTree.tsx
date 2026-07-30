@@ -32,7 +32,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { cn } from "./utils";
+import { cn } from "./utils.js";
 
 import {
   buildTree,
@@ -42,7 +42,7 @@ import {
   removeItem,
   removeChildrenOf,
   setProperty,
-} from "./utilities";
+} from "./utilities.js";
 import type {
   FlattenedItem,
   SensorContext,
@@ -51,10 +51,10 @@ import type {
   TreeItemRenderProps,
   DropValidationContext,
   ItemData,
-} from "./types";
-import { sortableTreeKeyboardCoordinates } from "./keyboardCoordinates";
-import { SortableDndTreeItem } from "./SortableDndTreeItem";
-import { DndTreeItem } from "./DndTreeItem";
+} from "./types.js";
+import { sortableTreeKeyboardCoordinates } from "./keyboardCoordinates.js";
+import { SortableDndTreeItem } from "./SortableDndTreeItem.js";
+import { DndTreeItem } from "./DndTreeItem.js";
 
 const measuring = {
   droppable: {
@@ -127,7 +127,7 @@ export function DndTree<T extends ItemData = ItemData>({
   const [internalItems, setInternalItems] = useState<TreeItems<T>>(
     () => externalItems,
   );
-  const items = externalItems;
+  const items = onItemsChange ? externalItems : internalItems;
 
   // For client-side only rendering to avoid hydration issues with portals
   const [isMounted, setIsMounted] = useState(false);

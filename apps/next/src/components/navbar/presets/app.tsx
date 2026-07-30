@@ -1,12 +1,9 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Navbar } from "../navbar";
 import type { NavLink, CTA } from "../types";
-import { useTheme } from "next-themes";
-import { useState, useEffect } from "react";
 import { GradientText } from "@/components/ui/gradient-text";
 
 import { AvatarMenu } from "../custom/avatar-menu";
@@ -29,8 +26,7 @@ export function AppNavbar({
   additionalNavLinks = [],
   additionalCtas = [],
 }: AppNavbarProps) {
-  const { theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = React.useState(false);
 
   // Using useLayoutEffect for synchronous update before paint to prevent hydration mismatches
   React.useLayoutEffect(() => {

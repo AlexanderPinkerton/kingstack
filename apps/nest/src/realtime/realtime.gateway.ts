@@ -40,10 +40,10 @@ export class RealtimeGateway
 
   constructor(private jwtService: JwtService) {
     this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
-    this.connectSupabase();
+    void this.connectSupabase();
   }
 
-  afterInit(server: Server) {
+  afterInit(_server: Server) {
     this.logger.log("WebSocket Gateway Initialized");
   }
 
@@ -57,7 +57,7 @@ export class RealtimeGateway
   }
 
   @SubscribeMessage("register")
-  async handleRegister(
+  handleRegister(
     @MessageBody() data: RegisterPayload,
     @ConnectedSocket() client: Socket,
   ) {
@@ -87,7 +87,7 @@ export class RealtimeGateway
   }
 
   @SubscribeMessage("register_public")
-  async handleRegisterPublic(
+  handleRegisterPublic(
     @MessageBody() data: { browserId: string },
     @ConnectedSocket() client: Socket,
   ) {
@@ -124,10 +124,7 @@ export class RealtimeGateway
 
     try {
       // First verify we can access the database
-      const { data, error } = await this.supabase
-        .from("post")
-        .select("id")
-        .limit(1);
+      const { error } = await this.supabase.from("post").select("id").limit(1);
 
       if (error) {
         this.logger.error("Error accessing database:", error);
@@ -160,7 +157,7 @@ export class RealtimeGateway
             this.logger.error(
               "Channel error occurred. Attempting to reconnect...",
             );
-            setTimeout(() => this.connectSupabase(), 5000);
+            setTimeout(() => void this.connectSupabase(), 5000);
           }
         });
 
@@ -172,7 +169,7 @@ export class RealtimeGateway
     }
   }
 
-  private async handlePostRealtime(payload: any) {
+  private handlePostRealtime(payload: any) {
     try {
       const post = payload.new || payload.old;
       const eventType = payload.eventType;
@@ -218,7 +215,7 @@ export class RealtimeGateway
     }
   }
 
-  private async handleCheckboxRealtime(payload: any) {
+  private handleCheckboxRealtime(payload: any) {
     try {
       const checkbox = payload.new || payload.old;
       const eventType = payload.eventType;

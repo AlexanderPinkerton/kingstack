@@ -10,7 +10,6 @@ import {
 import type { QueryClient } from "@tanstack/react-query";
 import { StoreDemand } from "@/lib/store-lifecycle";
 import type { RealtimeSource } from "@/lib/realtime-manager";
-import { getMockData, isPlaygroundMode } from "@kingstack/shared";
 
 // ---------- Types ----------
 
@@ -187,11 +186,11 @@ export class RealtimeCheckboxStore {
     >(
       {
         name: "checkboxes",
-        queryFn: this.getQueryFn(),
+        queryFn: this.apiQueryFn,
         mutations: {
-          create: this.getCreateMutation(),
-          update: this.getUpdateMutation(),
-          remove: this.getDeleteMutation(),
+          create: this.apiCreateMutation,
+          update: this.apiUpdateMutation,
+          remove: this.apiDeleteMutation,
         },
         transformer: this.getTransformer(),
         staleTime: 2 * 60 * 1000,
@@ -271,12 +270,12 @@ export class RealtimeCheckboxStore {
 
     if (existingCheckbox) {
       // Update existing checkbox
-      this.optimisticStore.api.update(existingCheckbox.id, {
+      void this.optimisticStore.api.update(existingCheckbox.id, {
         checked: !existingCheckbox.checked,
       });
     } else {
       // Create new checkbox
-      this.optimisticStore.api.create({
+      void this.optimisticStore.api.create({
         index,
         checked: true,
       });
@@ -288,10 +287,10 @@ export class RealtimeCheckboxStore {
 
     if (existingCheckbox) {
       // Update existing checkbox
-      this.optimisticStore.api.update(existingCheckbox.id, { checked });
+      void this.optimisticStore.api.update(existingCheckbox.id, { checked });
     } else {
       // Create new checkbox
-      this.optimisticStore.api.create({
+      void this.optimisticStore.api.create({
         index,
         checked,
       });
@@ -299,7 +298,7 @@ export class RealtimeCheckboxStore {
   }
 
   refetch(): void {
-    this.optimisticStore.api.refetch();
+    void this.optimisticStore.api.refetch();
   }
 
   // ---------- Initialization ----------
@@ -328,39 +327,12 @@ export class RealtimeCheckboxStore {
     }
   }
 
-  // ============================================================================
-  // PLAYGROUND CONFIGURATION
-  // ============================================================================
-  // All playground logic is centralized here for easy maintenance
-
-  private getQueryFn() {
-    return isPlaygroundMode() ? this.playgroundQueryFn : this.apiQueryFn;
-  }
-
-  private getCreateMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundCreateMutation
-      : this.apiCreateMutation;
-  }
-
-  private getUpdateMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundUpdateMutation
-      : this.apiUpdateMutation;
-  }
-
-  private getDeleteMutation() {
-    return isPlaygroundMode()
-      ? this.playgroundDeleteMutation
-      : this.apiDeleteMutation;
-  }
-
   private getTransformer() {
     return checkboxTransformer;
   }
 
   private syncRealtimeSubscription(): void {
-    const shouldSubscribe = this.demand.isActive && !isPlaygroundMode();
+    const shouldSubscribe = this.demand.isActive;
 
     if (shouldSubscribe && !this.releaseRealtime) {
       this.releaseRealtime =
@@ -403,64 +375,5 @@ export class RealtimeCheckboxStore {
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
     return deleteCheckbox(id);
-  };
-
-  // Playground Implementations
-  private playgroundQueryFn = async (): Promise<CheckboxApiData[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
-    return getMockData("checkboxes") as CheckboxApiData[];
-  };
-
-  private playgroundCreateMutation = async (data: {
-    index: number;
-    checked: boolean;
-  }): Promise<CheckboxApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return {
-      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      index: data.index,
-      checked: data.checked,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-  };
-
-  private playgroundUpdateMutation = async ({
-    id,
-    data,
-  }: {
-    id: string;
-    data: { index?: number; checked?: boolean };
-  }): Promise<CheckboxApiData> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    // Get existing checkbox from mock data to preserve unchanged fields
-    const existingCheckboxes = getMockData("checkboxes") as CheckboxApiData[];
-    const existingCheckbox = existingCheckboxes.find((c) => c.id === id);
-
-    // If we have an existing checkbox, merge it with the updates
-    if (existingCheckbox) {
-      return {
-        ...existingCheckbox,
-        ...data, // This will override only the fields that were updated
-        updated_at: new Date().toISOString(), // Always update the timestamp
-      };
-    }
-
-    // Fallback if no existing checkbox found
-    return {
-      id,
-      index: data.index || 0,
-      checked: data.checked || false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-  };
-
-  private playgroundDeleteMutation = async (
-    id: string,
-  ): Promise<{ id: string }> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return { id };
   };
 }

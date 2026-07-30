@@ -380,7 +380,7 @@ export const ThemeBuilder: React.FC = () => {
             Reset
           </Button>
           <Button
-            onClick={handleCopyCSS}
+            onClick={() => void handleCopyCSS()}
             className="text-sm px-4 py-2"
             variant="outline"
           >
