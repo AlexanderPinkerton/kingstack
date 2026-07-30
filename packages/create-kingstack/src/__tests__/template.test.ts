@@ -243,11 +243,16 @@ describe("removePublishedPackages", () => {
       "contributor only",
     );
     writeFileSync(
+      join(testDir, "scripts", "enable-backend.ts"),
+      "generated project command",
+    );
+    writeFileSync(
       join(testDir, "package.json"),
       JSON.stringify({
         scripts: {
           test: "vitest",
           "test:create-kingstack": "bun scripts/test-create-kingstack.ts",
+          "backend:enable": "bun scripts/enable-backend.ts",
         },
       }),
     );
@@ -308,6 +313,10 @@ describe("removePublishedPackages", () => {
     );
     expect(pkg.scripts.test).toBe("vitest");
     expect(pkg.scripts["test:create-kingstack"]).toBeUndefined();
+    expect(pkg.scripts["backend:enable"]).toBe("bun scripts/enable-backend.ts");
+    expect(existsSync(join(testDir, "scripts", "enable-backend.ts"))).toBe(
+      true,
+    );
     const readme = readFileSync(join(testDir, "readme.md"), "utf-8");
     expect(readme).not.toContain("scripts/test-create-kingstack");
     expect(readme).toContain("Generated-project documentation.");

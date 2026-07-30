@@ -169,6 +169,13 @@ initial setup. Each generated project automatically receives and reserves an
 available ten-port block, preventing collisions with other running or stopped
 KingStack projects.
 
+Enable a draft project's complete local backend later with:
+
+```bash
+yarn backend:enable
+yarn dev
+```
+
 <!-- create-kingstack:contributor-only:start -->
 Contributors can test the compiled CLI against uncommitted template changes
 without touching `main`:

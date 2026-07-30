@@ -113,11 +113,14 @@ The browser opens the generated project's root gateway. From there:
 If you initially choose draft setup, connect the backend later with:
 
 ```bash
-yarn supabase:start
-bun scripts/setup-shadow-db.ts
-yarn prisma:migrate
+yarn backend:enable
 yarn dev
 ```
+
+`backend:enable` validates Docker, refreshes the generated environment files,
+starts or reuses the project's reserved Supabase instance, prepares the Prisma
+shadow database, and applies all migrations. It is safe to rerun after fixing
+an interrupted setup.
 
 ## Testing local CLI and template changes
 

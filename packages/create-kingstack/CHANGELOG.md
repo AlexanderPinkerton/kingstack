@@ -14,6 +14,10 @@
   then typechecks and tests the generated project.
 - Automatically find and reserve a complete project port block, including the
   Supabase Edge Runtime inspector, while retaining `--port-base` as an override.
+- Add a guided `yarn backend:enable` command to promote generated draft
+  projects to the complete local Supabase, Prisma, and NestJS workflow.
+- Leave Supabase's optional Edge Runtime disabled until a generated project
+  adds Edge Functions.
 
 ## 0.2.3
 

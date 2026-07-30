@@ -51,6 +51,17 @@ IndexedDB repository adapter without changing the store or UI.
 
 ## Moving a draft to the real backend
 
+First enable the generated project's local backend:
+
+```bash
+yarn backend:enable
+yarn dev
+```
+
+The guided command uses the port block reserved during draft creation, starts
+Supabase, prepares Prisma's shadow database, and applies migrations. Draft
+fixture data remains in memory and is not copied into the database.
+
 The store and UI do not change. Compose the store with the HTTP repository and
 provide its authenticated runtime context:
 

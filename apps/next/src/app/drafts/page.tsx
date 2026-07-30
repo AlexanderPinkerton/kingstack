@@ -44,7 +44,15 @@ export default function DraftsPage() {
         </Link>
 
         <div className="mt-8 rounded-xl border border-slate-700 bg-slate-900/40 p-5 text-sm text-slate-300">
-          Ready to connect the backend? Start Supabase and NestJS, then open{" "}
+          Ready to connect the backend? Run{" "}
+          <code className="rounded bg-black/40 px-1.5 py-0.5 text-purple-200">
+            yarn backend:enable
+          </code>
+          , start the full stack with{" "}
+          <code className="rounded bg-black/40 px-1.5 py-0.5 text-purple-200">
+            yarn dev
+          </code>
+          , then open{" "}
           <Link
             href="/full-stack"
             className="font-medium text-purple-300 hover:text-purple-200"

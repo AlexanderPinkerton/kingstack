@@ -29,7 +29,10 @@ function main() {
     process.exit(1);
   }
 
-  const output = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
+  const output = [result.stdout, result.stderr]
+    .filter(Boolean)
+    .join("\n")
+    .trim();
 
   if (result.status === 0) {
     console.log(output);
@@ -54,7 +57,7 @@ function main() {
   }
 
   const definitelyStopped =
-    /local development setup is not running|supabase is not running/i.test(
+    /local development setup is not running|supabase is not running|no such container:\s*supabase_db_/i.test(
       output,
     );
 
@@ -64,7 +67,9 @@ function main() {
     process.exit(1);
   }
 
-  console.error("❌ Supabase status check failed; its running state is unknown.");
+  console.error(
+    "❌ Supabase status check failed; its running state is unknown.",
+  );
   console.error(output);
   process.exit(result.status ?? 1);
 }

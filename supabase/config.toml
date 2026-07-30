@@ -132,8 +132,9 @@ enabled = false
 [auth.third_party.clerk]
 enabled = false
 
+# Enable this when the project adds Supabase Edge Functions.
 [edge_runtime]
-enabled = true
+enabled = false
 policy = "per_worker"
 inspector_port = 54357
 deno_version = 2
