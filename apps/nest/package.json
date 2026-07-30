@@ -9,7 +9,7 @@
     "kingstack"
   ],
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",

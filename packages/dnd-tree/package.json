@@ -1,6 +1,7 @@
 {
   "name": "@kingstack/dnd-tree",
   "version": "0.2.0",
+  "license": "MIT",
   "description": "A beautiful, accessible drag-and-drop tree component for React with virtualization support",
   "type": "module",
   "publishConfig": {
@@ -21,7 +22,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc",

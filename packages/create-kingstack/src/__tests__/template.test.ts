@@ -6,9 +6,10 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import {
   replaceNamespace,
   replaceWorkspaceVersions,
-  removePublishedPackages,
+  prepareGeneratedProject,
   getAllFiles,
   copyLocalTemplate,
+  isTemplateFile,
 } from "../template";
 
 describe("copyLocalTemplate", () => {
@@ -23,14 +24,38 @@ describe("copyLocalTemplate", () => {
     mkdirSync(sourceDir, { recursive: true });
     execFileSync("git", ["init", "-q"], { cwd: sourceDir });
 
-    writeFileSync(join(sourceDir, ".gitignore"), "ignored.txt\n");
-    writeFileSync(join(sourceDir, "tracked.txt"), "original");
-    execFileSync("git", ["add", ".gitignore", "tracked.txt"], {
-      cwd: sourceDir,
+    mkdirSync(join(sourceDir, "apps", "next"), { recursive: true });
+    mkdirSync(join(sourceDir, "template"), { recursive: true });
+    mkdirSync(join(sourceDir, "packages", "create-kingstack"), {
+      recursive: true,
     });
+    writeFileSync(join(sourceDir, ".gitignore"), "ignored.txt\n");
+    writeFileSync(join(sourceDir, "apps", "next", "tracked.txt"), "original");
+    writeFileSync(
+      join(sourceDir, "template", "readme.md"),
+      "# Generated application",
+    );
+    execFileSync(
+      "git",
+      ["add", ".gitignore", "apps/next/tracked.txt", "template/readme.md"],
+      {
+        cwd: sourceDir,
+      },
+    );
 
-    writeFileSync(join(sourceDir, "tracked.txt"), "uncommitted change");
-    writeFileSync(join(sourceDir, "untracked.txt"), "untracked template file");
+    writeFileSync(
+      join(sourceDir, "apps", "next", "tracked.txt"),
+      "uncommitted change",
+    );
+    writeFileSync(
+      join(sourceDir, "apps", "next", "untracked.txt"),
+      "untracked template file",
+    );
+    writeFileSync(
+      join(sourceDir, "packages", "create-kingstack", "internal.txt"),
+      "maintainer only",
+    );
+    writeFileSync(join(sourceDir, "unclassified.txt"), "not in template");
     writeFileSync(join(sourceDir, "ignored.txt"), "local secret");
   });
 
@@ -38,16 +63,26 @@ describe("copyLocalTemplate", () => {
     rmSync(testRoot, { recursive: true, force: true });
   });
 
-  it("copies dirty tracked and non-ignored untracked files without .git", () => {
+  it("copies only allowlisted dirty template files and installs its README", () => {
     expect(copyLocalTemplate(sourceDir, targetDir)).toBe(true);
 
-    expect(readFileSync(join(targetDir, "tracked.txt"), "utf-8")).toBe(
-      "uncommitted change",
-    );
-    expect(readFileSync(join(targetDir, "untracked.txt"), "utf-8")).toBe(
-      "untracked template file",
+    expect(
+      readFileSync(join(targetDir, "apps", "next", "tracked.txt"), "utf-8"),
+    ).toBe("uncommitted change");
+    expect(
+      readFileSync(join(targetDir, "apps", "next", "untracked.txt"), "utf-8"),
+    ).toBe("untracked template file");
+    expect(readFileSync(join(targetDir, "readme.md"), "utf-8")).toBe(
+      "# Generated application",
     );
     expect(existsSync(join(targetDir, "ignored.txt"))).toBe(false);
+    expect(existsSync(join(targetDir, "unclassified.txt"))).toBe(false);
+    expect(
+      existsSync(
+        join(targetDir, "packages", "create-kingstack", "internal.txt"),
+      ),
+    ).toBe(false);
+    expect(existsSync(join(targetDir, "template"))).toBe(false);
     expect(existsSync(join(targetDir, ".git"))).toBe(false);
   });
 
@@ -55,6 +90,25 @@ describe("copyLocalTemplate", () => {
     expect(copyLocalTemplate(sourceDir, join(sourceDir, "generated"))).toBe(
       false,
     );
+  });
+});
+
+describe("template allowlist", () => {
+  it("includes generated application source and excludes upstream internals", () => {
+    expect(isTemplateFile("apps/next/src/app/page.tsx")).toBe(true);
+    expect(isTemplateFile("packages/prisma/schema.prisma")).toBe(true);
+    expect(isTemplateFile("scripts/enable-backend.ts")).toBe(true);
+
+    expect(
+      isTemplateFile("packages/advanced-optimistic-store/src/index.ts"),
+    ).toBe(false);
+    expect(isTemplateFile("packages/comment-tree/src/index.ts")).toBe(false);
+    expect(isTemplateFile("packages/dnd-tree/src/index.ts")).toBe(false);
+    expect(isTemplateFile("packages/create-kingstack/src/index.ts")).toBe(
+      false,
+    );
+    expect(isTemplateFile(".changeset/new-release.md")).toBe(false);
+    expect(isTemplateFile("some-future-internal-tool.ts")).toBe(false);
   });
 });
 
@@ -183,6 +237,30 @@ describe("replaceWorkspaceVersions", () => {
     );
   });
 
+  it("should replace component primitive workspace versions", () => {
+    const pkgPath = join(testDir, "package.json");
+    writeFileSync(
+      pkgPath,
+      JSON.stringify(
+        {
+          name: "test",
+          dependencies: {
+            "@kingstack/comment-tree": "workspace:*",
+            "@kingstack/dnd-tree": "workspace:^",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    replaceWorkspaceVersions(testDir);
+
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+    expect(pkg.dependencies["@kingstack/comment-tree"]).toBe("^0.2.2");
+    expect(pkg.dependencies["@kingstack/dnd-tree"]).toBe("^0.2.0");
+  });
+
   it("should not modify non-published packages", () => {
     const pkgPath = join(testDir, "package.json");
     writeFileSync(
@@ -206,7 +284,7 @@ describe("replaceWorkspaceVersions", () => {
   });
 });
 
-describe("removePublishedPackages", () => {
+describe("prepareGeneratedProject", () => {
   const testDir = join(tmpdir(), "create-kingstack-test-" + Date.now());
 
   beforeEach(() => {
@@ -216,6 +294,12 @@ describe("removePublishedPackages", () => {
       recursive: true,
     });
     mkdirSync(join(testDir, "packages", "create-kingstack"), {
+      recursive: true,
+    });
+    mkdirSync(join(testDir, "packages", "comment-tree"), {
+      recursive: true,
+    });
+    mkdirSync(join(testDir, "packages", "dnd-tree"), {
       recursive: true,
     });
     mkdirSync(join(testDir, "packages", "shared"), { recursive: true });
@@ -228,12 +312,19 @@ describe("removePublishedPackages", () => {
       join(testDir, "packages", "create-kingstack", "package.json"),
       "{}",
     );
+    writeFileSync(
+      join(testDir, "packages", "comment-tree", "package.json"),
+      "{}",
+    );
+    writeFileSync(join(testDir, "packages", "dnd-tree", "package.json"), "{}");
     writeFileSync(join(testDir, "packages", "shared", "package.json"), "{}");
     writeFileSync(
       join(testDir, "Dockerfile"),
       [
         "COPY packages/config/package.json packages/config/package.json",
         "COPY packages/advanced-optimistic-store/package.json packages/advanced-optimistic-store/package.json",
+        "COPY packages/comment-tree/package.json packages/comment-tree/package.json",
+        "COPY packages/dnd-tree/package.json packages/dnd-tree/package.json",
         "COPY packages/shared/package.json packages/shared/package.json",
       ].join("\n"),
     );
@@ -251,22 +342,19 @@ describe("removePublishedPackages", () => {
       JSON.stringify({
         scripts: {
           test: "vitest",
+          "build:release-packages": "maintainer release command",
           "test:create-kingstack": "bun scripts/test-create-kingstack.ts",
           "backend:enable": "bun scripts/enable-backend.ts",
+        },
+        devDependencies: {
+          "@changesets/cli": "^2.29.8",
+          vitest: "^3.0.0",
         },
       }),
     );
     writeFileSync(
       join(testDir, "readme.md"),
-      [
-        "# App",
-        "",
-        "<!-- create-kingstack:contributor-only:start -->",
-        "bun scripts/test-create-kingstack example",
-        "<!-- create-kingstack:contributor-only:end -->",
-        "",
-        "Generated-project documentation.",
-      ].join("\n"),
+      "# App\n\nGenerated-project documentation.",
     );
   });
 
@@ -275,36 +363,42 @@ describe("removePublishedPackages", () => {
   });
 
   it("should remove packages/config", () => {
-    removePublishedPackages(testDir);
+    prepareGeneratedProject(testDir);
     expect(existsSync(join(testDir, "packages", "config"))).toBe(false);
   });
 
   it("should remove packages/create-kingstack", () => {
-    removePublishedPackages(testDir);
+    prepareGeneratedProject(testDir);
     expect(existsSync(join(testDir, "packages", "create-kingstack"))).toBe(
       false,
     );
   });
 
   it("should remove packages/advanced-optimistic-store", () => {
-    removePublishedPackages(testDir);
+    prepareGeneratedProject(testDir);
     expect(
       existsSync(join(testDir, "packages", "advanced-optimistic-store")),
     ).toBe(false);
   });
 
+  it("should remove published component primitive source", () => {
+    prepareGeneratedProject(testDir);
+    expect(existsSync(join(testDir, "packages", "comment-tree"))).toBe(false);
+    expect(existsSync(join(testDir, "packages", "dnd-tree"))).toBe(false);
+  });
+
   it("should NOT remove packages/shared", () => {
-    removePublishedPackages(testDir);
+    prepareGeneratedProject(testDir);
     expect(existsSync(join(testDir, "packages", "shared"))).toBe(true);
   });
 
   it("should return count of removed packages", () => {
-    const count = removePublishedPackages(testDir);
-    expect(count).toBe(3);
+    const count = prepareGeneratedProject(testDir);
+    expect(count).toBe(5);
   });
 
-  it("should remove the local smoke-test helper", () => {
-    removePublishedPackages(testDir);
+  it("should remove maintainer-only scripts and dependencies", () => {
+    prepareGeneratedProject(testDir);
     expect(
       existsSync(join(testDir, "scripts", "test-create-kingstack.ts")),
     ).toBe(false);
@@ -312,24 +406,28 @@ describe("removePublishedPackages", () => {
       readFileSync(join(testDir, "package.json"), "utf-8"),
     );
     expect(pkg.scripts.test).toBe("vitest");
+    expect(pkg.scripts["build:release-packages"]).toBeUndefined();
     expect(pkg.scripts["test:create-kingstack"]).toBeUndefined();
     expect(pkg.scripts["backend:enable"]).toBe("bun scripts/enable-backend.ts");
+    expect(pkg.devDependencies["@changesets/cli"]).toBeUndefined();
+    expect(pkg.devDependencies.vitest).toBe("^3.0.0");
     expect(existsSync(join(testDir, "scripts", "enable-backend.ts"))).toBe(
       true,
     );
     const readme = readFileSync(join(testDir, "readme.md"), "utf-8");
-    expect(readme).not.toContain("scripts/test-create-kingstack");
     expect(readme).toContain("Generated-project documentation.");
   });
 
   it("should remove published workspace COPY lines from Dockerfiles", () => {
-    removePublishedPackages(testDir);
+    prepareGeneratedProject(testDir);
 
     const content = readFileSync(join(testDir, "Dockerfile"), "utf-8");
     expect(content).not.toContain("packages/config/package.json");
     expect(content).not.toContain(
       "packages/advanced-optimistic-store/package.json",
     );
+    expect(content).not.toContain("packages/comment-tree/package.json");
+    expect(content).not.toContain("packages/dnd-tree/package.json");
     expect(content).toContain("packages/shared/package.json");
   });
 });
@@ -410,7 +508,7 @@ describe("published AOS template conversion", () => {
   });
 
   it("produces an npm dependency with no local workspace coupling", () => {
-    removePublishedPackages(testDir);
+    prepareGeneratedProject(testDir);
     replaceNamespace(testDir, "my-app");
     replaceWorkspaceVersions(testDir);
 

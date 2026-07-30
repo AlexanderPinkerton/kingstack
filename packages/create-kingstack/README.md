@@ -55,16 +55,16 @@ npx create-kingstack --dir /tmp
 
 ## Options
 
-| Flag | Description |
-|------|-------------|
-| `-d, --dir <path>` | Base directory for the new project (default: current directory) |
-| `--draft` | Start Next.js only and skip local backend infrastructure |
-| `--full` | Start Supabase, run migrations, and launch the full stack |
-| `--port-base <port>` | Request a specific ten-port project block instead of automatic allocation |
-| `--template-dir <path>` | Copy a local dirty Git working tree instead of downloading `main` |
-| `--no-start` | Finish generation without starting a development server |
-| `-y, --yes` | Accept the default setup and automatic port selection |
-| `-h, --help` | Show help message |
+| Flag                    | Description                                                               |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `-d, --dir <path>`      | Base directory for the new project (default: current directory)           |
+| `--draft`               | Start Next.js only and skip local backend infrastructure                  |
+| `--full`                | Start Supabase, run migrations, and launch the full stack                 |
+| `--port-base <port>`    | Request a specific ten-port project block instead of automatic allocation |
+| `--template-dir <path>` | Copy a local dirty Git working tree instead of downloading `main`         |
+| `--no-start`            | Finish generation without starting a development server                   |
+| `-y, --yes`             | Accept the default setup and automatic port selection                     |
+| `-h, --help`            | Show help message                                                         |
 
 ## Automatic port allocation
 
@@ -80,7 +80,7 @@ directories are reclaimed after a short pending period.
 
 ## Requirements
 
-- **Node.js 20+**
+- **Node.js `>=24.18.0 <25`**
 - **Yarn** (installed automatically via corepack)
 - **Bun** (for running scripts)
 - **Docker** (full-stack setup only)
@@ -93,13 +93,23 @@ my-project/
 │   ├── next/          # Next.js frontend (allocated automatically)
 │   └── nest/          # NestJS backend (allocated automatically)
 ├── packages/
+│   ├── eslint-config/ # Project-owned ESLint configuration
+│   ├── ts-config/     # Project-owned TypeScript configuration
 │   ├── shared/        # Shared TypeScript code
 │   ├── prisma/        # Database schema & migrations
-│   └── ...
 ├── config/
 │   └── local.ts       # Your local configuration
 └── ...
 ```
+
+Reusable KingStack primitives are regular npm dependencies, not copied
+workspace source. This includes `@kingstack/config`,
+`@kingstack/advanced-optimistic-store`, `@kingstack/comment-tree`, and
+`@kingstack/dnd-tree`.
+
+The CLI uses an explicit template allowlist. Upstream release tooling,
+`create-kingstack` source, Changesets, and future unclassified packages are
+excluded from generated projects by default.
 
 ## After Creation
 

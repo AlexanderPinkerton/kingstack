@@ -31,7 +31,7 @@ import {
   cloneTemplate,
   replaceNamespace,
   replaceWorkspaceVersions,
-  removePublishedPackages,
+  prepareGeneratedProject,
 } from "./template";
 import {
   generateLocalConfig,
@@ -166,11 +166,11 @@ async function main() {
   success("Template downloaded");
 
   // ==========================================================================
-  // Step 2: Remove published packages
+  // Step 2: Prepare the generated-project boundary
   // ==========================================================================
-  step(2, totalSteps, "Removing published packages...");
-  const removedCount = removePublishedPackages(targetDir);
-  success(`Removed ${removedCount} packages that are published to npm`);
+  step(2, totalSteps, "Preparing generated project...");
+  prepareGeneratedProject(targetDir);
+  success("Excluded published-library source and maintainer tooling");
 
   // ==========================================================================
   // Step 3: Replace namespace

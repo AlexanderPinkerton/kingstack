@@ -1,6 +1,7 @@
 {
   "name": "@kingstack/shared",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Shared TypeScript types and code for kingstack apps",
   "type": "module",
   "main": "dist/index.js",

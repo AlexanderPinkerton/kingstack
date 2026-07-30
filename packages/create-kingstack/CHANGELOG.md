@@ -18,6 +18,13 @@
   projects to the complete local Supabase, Prisma, and NestJS workflow.
 - Leave Supabase's optional Edge Runtime disabled until a generated project
   adds Edge Functions.
+- Generate projects from an explicit allowlist so new upstream packages and
+  maintainer tooling cannot leak into application templates.
+- Install `@kingstack/comment-tree` and `@kingstack/dnd-tree` from npm rather
+  than copying their implementation source.
+- Install a dedicated application README in generated projects instead of
+  reusing the upstream ecosystem README.
+- Include the repository-wide MIT license in generated applications.
 
 ## 0.2.3
 

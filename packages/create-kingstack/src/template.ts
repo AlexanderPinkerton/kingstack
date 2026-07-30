@@ -20,6 +20,7 @@ import {
   PUBLISHED_PACKAGES,
   PACKAGES_TO_REMOVE,
   REPO_GIT_URL,
+  TEMPLATE_PATHS,
 } from "./constants";
 import { commandExists, error, runCommandWithRetry } from "./utils";
 
@@ -59,7 +60,7 @@ export function cloneTemplate(
   if (success) {
     // Remove .git folder - user will init their own repo
     rmSync(join(targetDir, ".git"), { recursive: true, force: true });
-    return true;
+    return projectTemplateDirectory(targetDir);
   }
 
   error("git clone failed after retries");
@@ -108,7 +109,10 @@ export function copyLocalTemplate(
     return false;
   }
 
-  const files = filesResult.stdout.toString("utf8").split("\0").filter(Boolean);
+  const files = filesResult.stdout
+    .toString("utf8")
+    .split("\0")
+    .filter((file) => file && isTemplateFile(file));
 
   if (files.length === 0) {
     error(`No template files were found in ${source}.`);
@@ -132,6 +136,58 @@ export function copyLocalTemplate(
     });
   }
 
+  return projectTemplateDirectory(target);
+}
+
+function normalizeTemplatePath(path: string): string {
+  return path.replaceAll("\\", "/").replace(/^\.\/+/, "");
+}
+
+export function isTemplateFile(path: string): boolean {
+  const normalized = normalizeTemplatePath(path);
+
+  return TEMPLATE_PATHS.some(
+    (templatePath) =>
+      normalized === templatePath || normalized.startsWith(`${templatePath}/`),
+  );
+}
+
+function pruneNonTemplateFiles(directory: string, root: string): void {
+  for (const entry of readdirSync(directory)) {
+    const path = join(directory, entry);
+    const stat = statSync(path);
+
+    if (stat.isDirectory()) {
+      pruneNonTemplateFiles(path, root);
+      if (readdirSync(path).length === 0) {
+        rmSync(path, { recursive: true, force: true });
+      }
+      continue;
+    }
+
+    const relativePath = normalizeTemplatePath(relative(root, path));
+    if (!isTemplateFile(relativePath)) {
+      rmSync(path, { force: true });
+    }
+  }
+}
+
+/**
+ * Reduce a KingStack source checkout to the deliberately supported generated
+ * project surface. Unknown future repository files are excluded by default.
+ */
+export function projectTemplateDirectory(targetDir: string): boolean {
+  const target = resolve(targetDir);
+  pruneNonTemplateFiles(target, target);
+
+  const generatedReadme = join(target, "template", "readme.md");
+  if (!existsSync(generatedReadme)) {
+    error("The generated-project README is missing from the template source.");
+    return false;
+  }
+
+  cpSync(generatedReadme, join(target, "readme.md"));
+  rmSync(join(target, "template"), { recursive: true, force: true });
   return true;
 }
 
@@ -285,9 +341,10 @@ export function replaceWorkspaceVersions(targetDir: string): number {
 }
 
 /**
- * Remove published packages from the template (they'll be installed from npm)
+ * Remove upstream-only source and release tooling from a projected template.
+ * Published KingStack libraries are installed from npm in generated projects.
  */
-export function removePublishedPackages(targetDir: string): number {
+export function prepareGeneratedProject(targetDir: string): number {
   let removedCount = 0;
 
   for (const packagePath of PACKAGES_TO_REMOVE) {
@@ -298,43 +355,37 @@ export function removePublishedPackages(targetDir: string): number {
     }
   }
 
-  // Contributor tooling depends on source packages that are removed from
-  // generated applications.
-  rmSync(join(targetDir, "scripts", "test-create-kingstack.ts"), {
-    force: true,
-  });
+  for (const maintainerPath of [
+    ".changeset",
+    ".github/workflows/release-changeset.yml",
+    "scripts/get-public-packages.ts",
+    "scripts/test-create-kingstack.ts",
+    "setup-guide.md",
+  ]) {
+    rmSync(join(targetDir, maintainerPath), {
+      recursive: true,
+      force: true,
+    });
+  }
 
   const rootPackagePath = join(targetDir, "package.json");
   if (existsSync(rootPackagePath)) {
     try {
       const rootPackage = JSON.parse(readFileSync(rootPackagePath, "utf-8"));
-      if (rootPackage.scripts?.["test:create-kingstack"]) {
-        delete rootPackage.scripts["test:create-kingstack"];
-        writeFileSync(
-          rootPackagePath,
-          JSON.stringify(rootPackage, null, 2) + "\n",
-          "utf-8",
-        );
+      for (const script of [
+        "build:release-packages",
+        "test:create-kingstack",
+      ]) {
+        delete rootPackage.scripts?.[script];
       }
+      delete rootPackage.devDependencies?.["@changesets/cli"];
+      writeFileSync(
+        rootPackagePath,
+        JSON.stringify(rootPackage, null, 2) + "\n",
+        "utf-8",
+      );
     } catch {
       // Namespace replacement will report malformed package files later.
-    }
-  }
-
-  const rootReadmePath = join(targetDir, "readme.md");
-  if (existsSync(rootReadmePath)) {
-    const contributorStart = "<!-- create-kingstack:contributor-only:start -->";
-    const contributorEnd = "<!-- create-kingstack:contributor-only:end -->";
-    const content = readFileSync(rootReadmePath, "utf-8");
-    const startIndex = content.indexOf(contributorStart);
-    const endIndex = content.indexOf(contributorEnd);
-
-    if (startIndex !== -1 && endIndex > startIndex) {
-      const nextContent =
-        content.slice(0, startIndex).trimEnd() +
-        "\n\n" +
-        content.slice(endIndex + contributorEnd.length).trimStart();
-      writeFileSync(rootReadmePath, nextContent, "utf-8");
     }
   }
 

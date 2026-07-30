@@ -1,6 +1,7 @@
 {
   "name": "@kingstack/ts-config",
   "version": "1.0.0",
+  "license": "MIT",
   "main": "base.json",
   "exports": {
     "./base.json": "./base.json",

@@ -42,14 +42,72 @@ export const SKIP_PATTERNS = [
 export const PUBLISHED_PACKAGES: Record<string, string> = {
   "@kingstack/config": "^0.1.4",
   "@kingstack/advanced-optimistic-store": "^0.1.0",
+  "@kingstack/comment-tree": "^0.2.2",
+  "@kingstack/dnd-tree": "^0.2.0",
 };
 
-// Packages/folders to completely remove from the template
+// Published libraries and maintainer tooling never ship as generated source.
+// The template projection excludes these paths; this list also provides a
+// defensive cleanup boundary for older or custom template sources.
 export const PACKAGES_TO_REMOVE = [
   "packages/config", // Published to npm
   "packages/advanced-optimistic-store", // Published to npm
+  "packages/comment-tree", // Published to npm
+  "packages/dnd-tree", // Published to npm
   "packages/create-kingstack", // This CLI itself
 ];
+
+// The generated project is an explicit projection of the source repository.
+// New repository files are maintainer-only unless deliberately added here.
+export const TEMPLATE_PATHS = [
+  ".dockerignore",
+  ".github/workflows/checks-dev.yml",
+  ".github/workflows/checks-prod.yml",
+  ".github/workflows/deploy-next-dev.yml",
+  ".github/workflows/deploy-next-prod.yml",
+  ".gitignore",
+  ".node-version",
+  ".nvmrc",
+  ".prettierignore",
+  ".prettierrc.json",
+  ".vscode",
+  ".yarn/releases",
+  ".yarnrc.yml",
+  "AGENTS.md",
+  "LICENSE",
+  "apps",
+  "config/example.ts",
+  "config/readme.md",
+  "config/schema.ts",
+  "docker-compose.yml",
+  "docs/ai-assistant-guide.md",
+  "docs/auth",
+  "docs/deployment",
+  "docs/frontend-drafts.md",
+  "docs/local-supabase-setup.md",
+  "docs/metadata",
+  "docs/scripts",
+  "docs/secrets",
+  "docs/state-management",
+  "docs/supabase",
+  "eslint.config.mjs",
+  "package.json",
+  "packages/eslint-config",
+  "packages/prisma",
+  "packages/shared",
+  "packages/ts-config",
+  "scripts/enable-backend.ts",
+  "scripts/setup-shadow-db.ts",
+  "scripts/supabase-check-config.ts",
+  "scripts/supabase-list-instances.ts",
+  "scripts/supabase-status.ts",
+  "supabase/.gitignore",
+  "supabase/config.toml",
+  "template/readme.md",
+  "tsconfig.json",
+  "turbo.jsonc",
+  "vercel.json",
+] as const;
 
 // File extensions to process for namespace replacement
 export const PROCESS_EXTENSIONS = [

@@ -1,6 +1,7 @@
 {
   "private": true,
   "name": "kingstack",
+  "license": "MIT",
   "type": "module",
   "workspaces": [
     "apps/*",

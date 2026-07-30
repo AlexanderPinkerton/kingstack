@@ -13,7 +13,8 @@
   "types": "dist/index.d.ts",
   "bin": "dist/index.js",
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

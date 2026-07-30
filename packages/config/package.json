@@ -23,7 +23,8 @@
     "test": "vitest run"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "dependencies": {
     "@iarna/toml": "^2.2.5",
