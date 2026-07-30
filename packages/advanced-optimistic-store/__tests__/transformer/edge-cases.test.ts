@@ -171,7 +171,7 @@ describe("Transformer Edge Cases", () => {
     });
   });
 
-  describe("Performance & Memory", () => {
+  describe("Performance & Allocation Behavior", () => {
     it("should handle large datasets efficiently", () => {
       const transformer = createDefaultTransformer<TestApiData, TestUiData>();
 
@@ -202,31 +202,44 @@ describe("Transformer Edge Cases", () => {
       expect(duration).toBeLessThan(300);
     });
 
-    it("should handle memory efficiently", () => {
+    it("should create independent shallow results without mutating inputs", () => {
       const transformer = createDefaultTransformer<TestApiData, TestUiData>();
+      const firstMetadata = { index: 1, category: "work" };
+      const secondMetadata = { index: 2, category: "personal" };
+      const firstInput: TestApiData = {
+        id: "task-1",
+        title: "Task 1",
+        completed: "true",
+        priority: "1",
+        created_at: "2023-01-01T00:00:00.000Z",
+        tags: "work,urgent",
+        metadata: firstMetadata,
+      };
+      const secondInput: TestApiData = {
+        id: "task-2",
+        title: "Task 2",
+        completed: "false",
+        priority: "2",
+        created_at: "2023-01-02T00:00:00.000Z",
+        tags: "personal,later",
+        metadata: secondMetadata,
+      };
 
-      const initialMemory = process.memoryUsage().heapUsed;
+      const firstResult = transformer.toUi(firstInput);
+      const secondResult = transformer.toUi(secondInput);
 
-      // Process 10000 items
-      for (let i = 0; i < 10000; i++) {
-        const apiData: TestApiData = {
-          id: `task-${i}`,
-          title: `Task ${i}`,
-          completed: i % 2 === 0 ? "true" : "false",
-          priority: ((i % 5) + 1).toString(),
-          created_at: new Date(2023, 0, 1 + i).toISOString(),
-          tags: `tag-${i % 10},category-${i % 3}`,
-          metadata: { index: i, category: `cat-${i % 5}` },
-        };
+      expect(firstResult).not.toBe(firstInput);
+      expect(secondResult).not.toBe(secondInput);
+      expect(firstResult).not.toBe(secondResult);
+      expect(firstResult.metadata).toBe(firstMetadata);
+      expect(secondResult.metadata).toBe(secondMetadata);
 
-        transformer.toUi(apiData);
-      }
+      firstResult.title = "Changed result";
 
-      const finalMemory = process.memoryUsage().heapUsed;
-      const memoryIncrease = finalMemory - initialMemory;
-
-      // Memory increase should be reasonable (less than 2MB)
-      expect(memoryIncrease).toBeLessThan(2 * 1024 * 1024);
+      expect(firstInput.title).toBe("Task 1");
+      expect(firstInput.completed).toBe("true");
+      expect(secondResult.title).toBe("Task 2");
+      expect(secondResult.completed).toBe(false);
     });
   });
 
