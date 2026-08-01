@@ -55,7 +55,7 @@ async function main() {
     }
     projectId = config.all.SUPABASE_PROJECT_REF; // In local mode, REF usually acts as ID/Name suffix
 
-    // If it's a "remote" ref (like 'iytsajmbf...') but we are in local environment type,
+    // If it's a "remote" ref (like 'iytsajmbf...') but we are in the local KingStack environment,
     // we might be looking for the local container name which usually follows the project_id in config.toml
     // But the user defines SUPABASE_PROJECT_ID in their schema for this.
     // Let's check SUPABASE_PROJECT_ID if available, else REF.

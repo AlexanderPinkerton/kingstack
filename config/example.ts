@@ -70,8 +70,9 @@ export const values = defineValues({
   GEMINI_API_KEY: "",
 
   // ============================================================================
-  // Runtime Logging
+  // Runtime Environment and Logging
   // ============================================================================
+  // local uses localhost URLs; development and production use hosted URLs.
   LOG_LEVEL: "debug",
   LOG_FORMAT: "pretty",
   KINGSTACK_ENVIRONMENT: "local",
@@ -92,11 +93,4 @@ export const values = defineValues({
   // Ecommerce: Inventory
   // ============================================================================
   NEXT_PUBLIC_INVENTORY_POOL_ID: "REPLACEME",
-
-  // ============================================================================
-  // Environment Type
-  // ============================================================================
-  // Set to "local" for http://localhost:PORT URLs
-  // Set to "remote" for https://DOMAIN URLs (no ports)
-  ENVIRONMENT_TYPE: "local",
 });

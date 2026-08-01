@@ -79,6 +79,22 @@ describe("generated project boundary", () => {
     expect(nestDockerfile).not.toContain("workspace @kingstack/logger build");
   });
 
+  it("uses one canonical environment setting", () => {
+    const schema = readFileSync(
+      join(generatedRoot, "config", "schema.ts"),
+      "utf8",
+    );
+    const example = readFileSync(
+      join(generatedRoot, "config", "example.ts"),
+      "utf8",
+    );
+
+    expect(schema).toContain('core.KINGSTACK_ENVIRONMENT === "local"');
+    expect(example).toContain('KINGSTACK_ENVIRONMENT: "local"');
+    expect(schema).not.toContain("ENVIRONMENT_TYPE");
+    expect(example).not.toContain("ENVIRONMENT_TYPE");
+  });
+
   it("excludes maintainer and release infrastructure", () => {
     for (const excludedPath of [
       ".changeset",

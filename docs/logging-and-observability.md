@@ -363,6 +363,11 @@ The initial environment contract should remain small:
 | `LOG_FORMAT` | `pretty` or `json`. | `pretty` locally, `json` elsewhere. |
 | `KINGSTACK_ENVIRONMENT` | `local`, `development`, or `production`. | Inferred from the runtime when omitted. |
 
+`KINGSTACK_ENVIRONMENT` is also the configuration system's canonical deployment
+classification: `local` generates localhost URLs, while `development` and
+`production` generate hosted URLs. It replaces the older, coarser
+`ENVIRONMENT_TYPE` switch.
+
 KingStack's configuration package is a build-time generator, not the
 applications' runtime configuration parser. Logging configuration therefore has
 two explicit validation layers:

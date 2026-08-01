@@ -106,11 +106,17 @@ Each environment has its own customized values file. These files import `defineV
 import { defineValues } from "@kingstack/config";
 
 export const values = defineValues({
+  KINGSTACK_ENVIRONMENT: "local",
   SUPABASE_PROJECT_ID: "kingstack",
   SUPABASE_HOST: "localhost",
   // ...
 });
 ```
+
+`KINGSTACK_ENVIRONMENT` is the canonical environment setting. Use `local` for
+localhost URLs, `development` for hosted non-production infrastructure, and
+`production` for live infrastructure. The same value is emitted to application
+environment files for runtime logging metadata and output-safety checks.
 
 ## ✨ Key Benefits
 

@@ -142,15 +142,9 @@ export const schema = defineSchema({
       description: "Runtime log format: json or pretty (pretty is local-only)",
     },
     KINGSTACK_ENVIRONMENT: {
-      default: "",
-      description: "Runtime environment: local, development, or production",
-    },
-
-    // Environment Type (determines URL format)
-    ENVIRONMENT_TYPE: {
       default: "local",
       description:
-        "Environment type: 'local' (http://localhost:PORT) or 'remote' (https://DOMAIN)",
+        "KingStack environment: local, development, or production; also determines local or remote URL generation",
     },
   },
 
@@ -158,8 +152,9 @@ export const schema = defineSchema({
   // Computed Values (Derived from Core Configuration)
   // ============================================================================
   computed: (core) => {
-    // Determine if this is a local environment
-    const isLocal = core.ENVIRONMENT_TYPE === "local";
+    // Local uses localhost and explicit ports. Development and production use
+    // hosted HTTPS endpoints.
+    const isLocal = core.KINGSTACK_ENVIRONMENT === "local";
 
     // Supabase URLs (different patterns for local vs remote)
     const supabaseApiUrl = isLocal
