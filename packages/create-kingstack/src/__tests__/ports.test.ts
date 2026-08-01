@@ -142,5 +142,7 @@ describe("smart port allocation", () => {
     expect(config).toContain('NEXT_PORT: "17420"');
     expect(config).toContain('SUPABASE_API_PORT: "17423"');
     expect(config).toContain('SUPABASE_EDGE_RUNTIME_INSPECTOR_PORT: "17428"');
+    expect(config).toContain('KINGSTACK_ENVIRONMENT: "local"');
+    expect(config).not.toContain("ENVIRONMENT_TYPE");
   });
 });

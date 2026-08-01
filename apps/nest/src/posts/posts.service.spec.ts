@@ -1,13 +1,18 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { PostsService } from "./posts.service";
+import { APP_LOGGER } from "../logging";
+import { createNoopLogger } from "@kingstack/logger/testing";
 
 describe("PostsService", () => {
   let service: PostsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [PostsService],
+      providers: [
+        PostsService,
+        { provide: APP_LOGGER, useValue: createNoopLogger() },
+      ],
     }).compile();
 
     service = module.get<PostsService>(PostsService);

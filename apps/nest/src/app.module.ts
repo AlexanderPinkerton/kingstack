@@ -9,9 +9,11 @@ import { PostsModule } from "./posts/posts.module";
 import { TodosModule } from "./todos/todos.module";
 import { CheckboxesModule } from "./checkboxes/checkboxes.module";
 import { RealtimeModule } from "./realtime/realtime.module";
+import { LoggingModule } from "./logging";
 
 @Module({
   imports: [
+    LoggingModule,
     AuthModule,
     PrismaModule,
     ConfigModule.forRoot({ isGlobal: true }),

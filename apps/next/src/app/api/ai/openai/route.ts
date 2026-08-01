@@ -11,6 +11,7 @@ import {
 import { openai } from "@ai-sdk/openai";
 
 import { getModel, getDefaultModelForProvider } from "../models";
+import { createRequestLogger } from "@/lib/logger";
 
 // Allow up to 2 minutes for image generation
 export const maxDuration = 120;
@@ -25,6 +26,7 @@ type ChatMetadata = {
 export type ChatUIMessage = UIMessage<ChatMetadata>;
 
 export async function POST(request: NextRequest) {
+  const logger = createRequestLogger(request, "OpenAiRoute");
   try {
     const body = await request.json();
     const { prompt, modelId, type = "text", size, quality, messages } = body;
@@ -144,7 +146,7 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    console.log("Error calling OpenAI:", error);
+    logger.error("ai.openai_request_failed", { error });
 
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }

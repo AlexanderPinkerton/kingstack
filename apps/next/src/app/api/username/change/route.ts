@@ -2,8 +2,10 @@ import { type NextRequest } from "next/server";
 import { UsernameGenerator } from "@kingstack/shared";
 import prisma from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/serverClient";
+import { createRequestLogger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  const logger = createRequestLogger(request, "UsernameChangeRoute");
   try {
     const supabase = await createClient();
     const jwt = request.headers.get("Authorization")?.replace("Bearer ", "");
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Username change error:", error);
+    logger.error("username.change_failed", { error });
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

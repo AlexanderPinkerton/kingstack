@@ -130,11 +130,21 @@ export const schema = defineSchema({
       description: "Google Gemini API key",
     },
 
-    // Environment Type (determines URL format)
-    ENVIRONMENT_TYPE: {
+    // Runtime logging. The config generator declares these values; each
+    // application validates them again when its logger starts.
+    LOG_LEVEL: {
+      default: "info",
+      description:
+        "Minimum runtime log level: trace, debug, info, warn, error, fatal, or silent",
+    },
+    LOG_FORMAT: {
+      default: "json",
+      description: "Runtime log format: json or pretty (pretty is local-only)",
+    },
+    KINGSTACK_ENVIRONMENT: {
       default: "local",
       description:
-        "Environment type: 'local' (http://localhost:PORT) or 'remote' (https://DOMAIN)",
+        "KingStack environment: local, development, or production; also determines local or remote URL generation",
     },
   },
 
@@ -142,8 +152,9 @@ export const schema = defineSchema({
   // Computed Values (Derived from Core Configuration)
   // ============================================================================
   computed: (core) => {
-    // Determine if this is a local environment
-    const isLocal = core.ENVIRONMENT_TYPE === "local";
+    // Local uses localhost and explicit ports. Development and production use
+    // hosted HTTPS endpoints.
+    const isLocal = core.KINGSTACK_ENVIRONMENT === "local";
 
     // Supabase URLs (different patterns for local vs remote)
     const supabaseApiUrl = isLocal
@@ -243,6 +254,11 @@ export const schema = defineSchema({
         "ANTHROPIC_API_KEY",
         "GEMINI_API_KEY",
 
+        // Runtime logging
+        "LOG_LEVEL",
+        "LOG_FORMAT",
+        "KINGSTACK_ENVIRONMENT",
+
         // Cookie name for session isolation
         "NEXT_PUBLIC_SUPABASE_COOKIE_NAME",
       ],
@@ -268,6 +284,11 @@ export const schema = defineSchema({
         "SUPABASE_DB_DIRECT_URL",
         "SUPABASE_DB_PASSWORD",
         "SUPA_JWT_SECRET",
+
+        // Runtime logging
+        "LOG_LEVEL",
+        "LOG_FORMAT",
+        "KINGSTACK_ENVIRONMENT",
       ],
       aliases: {
         // Map NEST_PORT to PORT for this project
@@ -333,6 +354,9 @@ export const schema = defineSchema({
         "SUPABASE_SERVICE_ROLE_KEY",
         "SUPABASE_DB_POOL_URL",
         "SUPABASE_DB_DIRECT_URL",
+        "LOG_LEVEL",
+        "LOG_FORMAT",
+        "KINGSTACK_ENVIRONMENT",
       ],
     },
   },

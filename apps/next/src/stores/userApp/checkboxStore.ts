@@ -10,6 +10,9 @@ import {
 import type { QueryClient } from "@tanstack/react-query";
 import { StoreDemand } from "@/lib/store-lifecycle";
 import type { RealtimeSource } from "@/lib/realtime-manager";
+import { browserLogger } from "@/lib/browser-logger";
+
+const logger = browserLogger.child({ component: "CheckboxStore" });
 
 // ---------- Types ----------
 
@@ -322,7 +325,7 @@ export class RealtimeCheckboxStore {
         );
       }
     } catch (error) {
-      console.error("Failed to initialize checkboxes:", error);
+      logger.error("checkboxes.initialize_failed", { error });
       throw error;
     }
   }

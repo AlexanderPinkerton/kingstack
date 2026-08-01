@@ -1,8 +1,10 @@
 import { type NextRequest } from "next/server";
 import { UsernameGenerator } from "@kingstack/shared";
 import prisma from "@/lib/prisma";
+import { createRequestLogger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  const logger = createRequestLogger(request, "UsernameValidateRoute");
   try {
     const { username } = await request.json();
 
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ available: true }, { status: 200 });
   } catch (error) {
-    console.error("Username validation error:", error);
+    logger.error("username.validation_failed", { error });
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

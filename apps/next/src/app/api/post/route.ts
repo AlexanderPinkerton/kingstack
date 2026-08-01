@@ -3,16 +3,18 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 import { getUserAuthDetails } from "@/lib/admin-utils";
+import { createRequestLogger } from "@/lib/logger";
 
 const prisma: PrismaClient = new PrismaClient();
 
 export async function GET(request: NextRequest) {
+  const logger = createRequestLogger(request, "PostRoute");
   try {
     // Get the session JWT token from the request headers
     const jwt =
       request.headers.get("Authorization")?.replace("Bearer ", "") || null;
 
-    const authDetails = await getUserAuthDetails(jwt);
+    const authDetails = await getUserAuthDetails(jwt, logger);
 
     if (!authDetails.isAuthenticated) {
       return NextResponse.json(
@@ -29,19 +31,20 @@ export async function GET(request: NextRequest) {
 
     return Response.json(posts, { status: 200 });
   } catch (error) {
-    console.log(error);
+    logger.error("posts.fetch_failed", { error });
 
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
+  const logger = createRequestLogger(request, "PostRoute");
   try {
     // Get the session JWT token from the request headers
     const jwt =
       request.headers.get("Authorization")?.replace("Bearer ", "") || null;
 
-    const authDetails = await getUserAuthDetails(jwt);
+    const authDetails = await getUserAuthDetails(jwt, logger);
 
     if (!authDetails.isAuthenticated || !authDetails.userId) {
       return NextResponse.json(
@@ -70,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     return Response.json(post, { status: 201 });
   } catch (error) {
-    console.log("Error creating post:", error);
+    logger.error("post.create_failed", { error });
 
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }

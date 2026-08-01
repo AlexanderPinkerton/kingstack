@@ -398,12 +398,16 @@ export function prepareGeneratedProject(targetDir: string): number {
 
   for (const dockerfile of dockerfiles) {
     const content = readFileSync(dockerfile, "utf-8");
+    const publishedPackageNames = Object.keys(PUBLISHED_PACKAGES);
     const nextContent = content
       .split("\n")
       .filter(
         (line) =>
           !PACKAGES_TO_REMOVE.some((packagePath) =>
             line.includes(`${packagePath}/`),
+          ) &&
+          !publishedPackageNames.some((packageName) =>
+            line.includes(`workspace ${packageName} `),
           ),
       )
       .join("\n");

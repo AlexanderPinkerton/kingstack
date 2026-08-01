@@ -1,5 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import type { AppLogger } from "@kingstack/logger";
 import { PrismaService } from "../prisma/prisma.service";
+import { APP_LOGGER } from "../logging";
 
 export interface Checkbox {
   id: string;
@@ -11,9 +13,14 @@ export interface Checkbox {
 
 @Injectable()
 export class CheckboxesService {
-  private readonly logger = new Logger(CheckboxesService.name);
+  private readonly logger: AppLogger;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(APP_LOGGER) logger: AppLogger,
+  ) {
+    this.logger = logger.child({ component: CheckboxesService.name });
+  }
 
   async findAll(): Promise<Checkbox[]> {
     try {
@@ -25,7 +32,7 @@ export class CheckboxesService {
 
       return checkboxes;
     } catch (error) {
-      this.logger.error("Error in findAll:", error);
+      this.logger.error("checkboxes.list_failed", { error });
       throw error;
     }
   }
@@ -39,12 +46,13 @@ export class CheckboxesService {
         data: createCheckboxDto,
       });
 
-      this.logger.log(
-        `Created checkbox: ${checkbox.id} at index ${checkbox.index}`,
-      );
+      this.logger.info("checkbox.created", {
+        checkboxId: checkbox.id,
+        index: checkbox.index,
+      });
       return checkbox;
     } catch (error) {
-      this.logger.error("Error in create:", error);
+      this.logger.error("checkbox.create_failed", { error });
       throw error;
     }
   }
@@ -59,10 +67,13 @@ export class CheckboxesService {
         data: updateCheckboxDto,
       });
 
-      this.logger.log(`Updated checkbox: ${id}`);
+      this.logger.info("checkbox.updated", { checkboxId: id });
       return checkbox;
     } catch (error) {
-      this.logger.error("Error in update:", error);
+      this.logger.error("checkbox.update_failed", {
+        context: { checkboxId: id },
+        error,
+      });
       throw error;
     }
   }
@@ -73,9 +84,12 @@ export class CheckboxesService {
         where: { id },
       });
 
-      this.logger.log(`Deleted checkbox: ${id}`);
+      this.logger.info("checkbox.deleted", { checkboxId: id });
     } catch (error) {
-      this.logger.error("Error in remove:", error);
+      this.logger.error("checkbox.delete_failed", {
+        context: { checkboxId: id },
+        error,
+      });
       throw error;
     }
   }
@@ -97,13 +111,18 @@ export class CheckboxesService {
         data: checkboxes,
       });
 
-      this.logger.log(`Initialized ${createdCheckboxes.count} checkboxes`);
+      this.logger.info("checkboxes.initialized", {
+        count: createdCheckboxes.count,
+      });
       return {
         message: `Successfully initialized ${createdCheckboxes.count} checkboxes`,
         count: createdCheckboxes.count,
       };
     } catch (error) {
-      this.logger.error("Error in initializeCheckboxes:", error);
+      this.logger.error("checkboxes.initialize_failed", {
+        context: { requestedCount: count },
+        error,
+      });
       throw error;
     }
   }

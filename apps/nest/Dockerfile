@@ -26,6 +26,7 @@ COPY packages/advanced-optimistic-store/package.json packages/advanced-optimisti
 COPY packages/comment-tree/package.json packages/comment-tree/package.json
 COPY packages/create-kingstack/package.json packages/create-kingstack/package.json
 COPY packages/dnd-tree/package.json packages/dnd-tree/package.json
+COPY packages/logger/package.json packages/logger/package.json
 # └─ if you have more workspaces, repeat: COPY packages/foo/package.json packages/foo/package.json
 
 # 4) Install only Nest and its workspace dependencies with vendored Yarn.
@@ -39,6 +40,7 @@ COPY . .
 RUN node .yarn/releases/yarn-4.10.2.cjs workspace @kingstack/prisma prisma generate
 
 # 👇 Build the nestjs app
+RUN node .yarn/releases/yarn-4.10.2.cjs workspace @kingstack/logger build
 RUN node .yarn/releases/yarn-4.10.2.cjs workspace @kingstack/nest build
 
 # Remove build and test tooling before copying dependencies into the runtime image.
@@ -55,6 +57,8 @@ WORKDIR /app
 
 COPY --from=build /app/apps/nest/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages/logger/package.json ./packages/logger/package.json
+COPY --from=build /app/packages/logger/dist ./packages/logger/dist
 COPY --from=build /app/apps/nest/package.json ./
 
 CMD ["node", "dist/main"]

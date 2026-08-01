@@ -84,6 +84,12 @@ export const values = defineValues({
     ANTHROPIC_API_KEY: "",
     GEMINI_API_KEY: "",
 
+    // Runtime Environment and Logging
+    // local uses localhost URLs; development and production use hosted URLs.
+    LOG_LEVEL: "debug",
+    LOG_FORMAT: "pretty",
+    KINGSTACK_ENVIRONMENT: "local",
+
     // Stripe
     STRIPE_PUBLIC_KEY: "",
     STRIPE_SECRET_KEY: "",
@@ -95,8 +101,6 @@ export const values = defineValues({
     // Ecommerce
     NEXT_PUBLIC_INVENTORY_POOL_ID: "",
 
-    // Environment Type
-    ENVIRONMENT_TYPE: "local",
 });
 `;
   writeFileSync(join(targetDir, "config", "local.ts"), configContent, "utf-8");

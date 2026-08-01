@@ -52,8 +52,6 @@ export class AppController {
     // Example of using AdminService directly in a controller
     const isAdmin = await this.adminService.isAdmin(email);
 
-    console.log("isAdmin", isAdmin);
-
     return {
       isAdmin,
       userEmail: email,

@@ -1,8 +1,10 @@
 import { type NextRequest } from "next/server";
 import { UsernameGenerator } from "@kingstack/shared";
 import prisma from "@/lib/prisma";
+import { createRequestLogger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
+  const logger = createRequestLogger(request, "UsernameSuggestionsRoute");
   try {
     const { searchParams } = new URL(request.url);
     const count = parseInt(searchParams.get("count") || "5", 10);
@@ -55,7 +57,7 @@ export async function GET(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Username suggestions error:", error);
+    logger.error("username.suggestions_failed", { error });
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

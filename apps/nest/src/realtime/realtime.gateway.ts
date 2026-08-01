@@ -9,8 +9,10 @@ import {
 } from "@nestjs/websockets";
 import { Socket, Server } from "socket.io";
 import { JwtService } from "@nestjs/jwt";
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import type { AppLogger, LogContext } from "@kingstack/logger";
+import { APP_LOGGER } from "../logging";
 
 interface RegisterPayload {
   token: string;
@@ -30,7 +32,7 @@ interface UserSocketMap {
 export class RealtimeGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  private logger = new Logger("RealtimeGateway");
+  private readonly logger: AppLogger;
   private userSockets: Map<string, UserSocketMap> = new Map();
   private supabase: SupabaseClient;
   private subscriptionChannel: any = null;
@@ -38,22 +40,26 @@ export class RealtimeGateway
   private readonly supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   private readonly authSecret = process.env.SUPA_JWT_SECRET!;
 
-  constructor(private jwtService: JwtService) {
+  constructor(
+    private readonly jwtService: JwtService,
+    @Inject(APP_LOGGER) logger: AppLogger,
+  ) {
+    this.logger = logger.child({ component: RealtimeGateway.name });
     this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
     void this.connectSupabase();
   }
 
   afterInit(_server: Server) {
-    this.logger.log("WebSocket Gateway Initialized");
+    this.logger.info("realtime.gateway_initialized");
   }
 
   handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
+    this.socketLogger(client).info("realtime.client_connected");
   }
 
   handleDisconnect(client: Socket) {
     this.removeSocketFromMap(client);
-    this.logger.log(`Client disconnected: ${client.id}`);
+    this.socketLogger(client).info("realtime.client_disconnected");
   }
 
   @SubscribeMessage("register")
@@ -62,7 +68,7 @@ export class RealtimeGateway
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const decoded: any = this.jwtService.verify(data.token, {
+      const decoded = this.jwtService.verify<{ sub: string }>(data.token, {
         secret: this.authSecret,
       });
 
@@ -73,14 +79,16 @@ export class RealtimeGateway
         this.userSockets.set(userId, userSocketMap);
       }
       userSocketMap[data.browserId] = client;
-      this.logger.log(
-        `Registered socket for user ${userId} and browser ${data.browserId}`,
-      );
       client.data.userId = userId;
       client.data.browserId = data.browserId;
+      this.socketLogger(client).info("realtime.client_registered", {
+        browserId: data.browserId,
+      });
       return { status: "ok" };
     } catch (err) {
-      this.logger.error("JWT verification failed", err);
+      this.socketLogger(client).error("realtime.jwt_verification_failed", {
+        error: err,
+      });
       client.disconnect(true);
       return { status: "error", message: "Invalid token" };
     }
@@ -91,8 +99,10 @@ export class RealtimeGateway
     @MessageBody() data: { browserId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    this.logger.log(`Registered public socket for browser ${data.browserId}`);
     client.data.browserId = data.browserId;
+    this.socketLogger(client).info("realtime.public_client_registered", {
+      browserId: data.browserId,
+    });
     return { status: "ok" };
   }
 
@@ -101,14 +111,15 @@ export class RealtimeGateway
       for (const [browserId, socket] of Object.entries(userSocketMap)) {
         if (socket.id === client.id) {
           delete userSocketMap[browserId];
-          this.logger.log(
-            `Removed socket for user ${userId} and browser ${browserId}`,
-          );
+          this.socketLogger(client).debug("realtime.socket_removed", {
+            userId,
+            browserId,
+          });
         }
       }
       if (Object.keys(userSocketMap).length === 0) {
         this.userSockets.delete(userId);
-        this.logger.log(`Removed all sockets for user ${userId}`);
+        this.logger.debug("realtime.user_sockets_removed", { userId });
       }
     }
   }
@@ -118,16 +129,14 @@ export class RealtimeGateway
       await this.subscriptionChannel.unsubscribe();
     }
 
-    this.logger.log(
-      `Attempting to connect to Supabase with URL: ${this.supabaseUrl}`,
-    );
+    this.logger.info("realtime.supabase_connecting");
 
     try {
       // First verify we can access the database
       const { error } = await this.supabase.from("post").select("id").limit(1);
 
       if (error) {
-        this.logger.error("Error accessing database:", error);
+        this.logger.error("realtime.database_access_failed", { error });
         return;
       }
 
@@ -152,20 +161,20 @@ export class RealtimeGateway
           (payload: any) => this.handleCheckboxRealtime(payload),
         )
         .subscribe((status: any) => {
-          this.logger.log(`Supabase channel status: ${status}`);
+          this.logger.info("realtime.channel_status_changed", {
+            status: String(status),
+          });
           if (status === "CHANNEL_ERROR") {
-            this.logger.error(
-              "Channel error occurred. Attempting to reconnect...",
-            );
+            this.logger.error("realtime.channel_failed");
             setTimeout(() => void this.connectSupabase(), 5000);
           }
         });
 
       this.subscriptionChannel.on("error", (error: any) => {
-        this.logger.error("Supabase subscription error details:", error);
+        this.logger.error("realtime.subscription_failed", { error });
       });
     } catch (error) {
-      this.logger.error("Error setting up Supabase subscription:", error);
+      this.logger.error("realtime.subscription_setup_failed", { error });
     }
   }
 
@@ -175,20 +184,25 @@ export class RealtimeGateway
       const eventType = payload.eventType;
 
       if (!post) {
-        this.logger.log("No post data in payload");
+        this.logger.warn("realtime.post_payload_missing");
         return;
       }
 
-      this.logger.log(
-        `Post realtime event: ${eventType} - ${post.id} - ${post.title} - published: ${post.published}`,
-      );
+      this.logger.debug("realtime.post_event_received", {
+        eventType: String(eventType),
+        postId: String(post.id),
+        published: Boolean(post.published),
+      });
 
       // For INSERT and UPDATE events, only broadcast if the post is published
       if (
         (eventType === "INSERT" || eventType === "UPDATE") &&
         post.published === true
       ) {
-        this.logger.log(`Broadcasting post update: ${post.id} - ${post.title}`);
+        this.logger.debug("realtime.post_broadcast_started", {
+          postId: String(post.id),
+          eventType: String(eventType),
+        });
 
         // Send to all connected clients
         this.broadcastToAllClients({
@@ -198,7 +212,10 @@ export class RealtimeGateway
         });
       } else if (eventType === "DELETE") {
         // For DELETE events, always broadcast regardless of published status
-        this.logger.log(`Broadcasting post deletion: ${post.id}`);
+        this.logger.debug("realtime.post_broadcast_started", {
+          postId: String(post.id),
+          eventType: String(eventType),
+        });
 
         this.broadcastToAllClients({
           type: "post_update",
@@ -206,12 +223,13 @@ export class RealtimeGateway
           post: post,
         });
       } else {
-        this.logger.log(
-          `Post ${post.id} is not published or event is not relevant, skipping broadcast`,
-        );
+        this.logger.debug("realtime.post_broadcast_skipped", {
+          postId: String(post.id),
+          eventType: String(eventType),
+        });
       }
     } catch (err) {
-      this.logger.error("Error handling post realtime update:", err);
+      this.logger.error("realtime.post_event_failed", { error: err });
     }
   }
 
@@ -221,13 +239,16 @@ export class RealtimeGateway
       const eventType = payload.eventType;
 
       if (!checkbox) {
-        this.logger.log("No checkbox data in payload");
+        this.logger.warn("realtime.checkbox_payload_missing");
         return;
       }
 
-      this.logger.log(
-        `Checkbox realtime event: ${eventType} - ${checkbox.id} - index: ${checkbox.index} - checked: ${checkbox.checked}`,
-      );
+      this.logger.debug("realtime.checkbox_event_received", {
+        eventType: String(eventType),
+        checkboxId: String(checkbox.id),
+        index: Number(checkbox.index),
+        checked: Boolean(checkbox.checked),
+      });
 
       // Broadcast all checkbox events to all clients
       this.broadcastToAllClients({
@@ -236,11 +257,12 @@ export class RealtimeGateway
         checkbox: checkbox,
       });
 
-      this.logger.log(
-        `Broadcasted checkbox update: ${checkbox.id} - index: ${checkbox.index}`,
-      );
+      this.logger.debug("realtime.checkbox_broadcast_completed", {
+        checkboxId: String(checkbox.id),
+        eventType: String(eventType),
+      });
     } catch (err) {
-      this.logger.error("Error handling checkbox realtime update:", err);
+      this.logger.error("realtime.checkbox_event_failed", { error: err });
     }
   }
 
@@ -249,14 +271,26 @@ export class RealtimeGateway
 
     for (const [userId, userSocketMap] of this.userSockets.entries()) {
       for (const [browserId, socket] of Object.entries(userSocketMap)) {
-        this.logger.log(
-          `Sending update to user ${userId}, browser ${browserId}`,
-        );
+        this.logger.trace("realtime.client_emit", { userId, browserId });
         socket.emit(payload.type, payload);
         totalClients++;
       }
     }
 
-    this.logger.log(`Broadcasted ${payload.type} to ${totalClients} clients`);
+    this.logger.info("realtime.broadcast_completed", {
+      eventType: String(payload.type),
+      clientCount: totalClients,
+    });
+  }
+
+  private socketLogger(client: Socket): AppLogger {
+    const bindings: LogContext = { connectionId: client.id };
+    if (typeof client.data.userId === "string") {
+      return this.logger.child({
+        ...bindings,
+        userId: client.data.userId,
+      });
+    }
+    return this.logger.child(bindings);
   }
 }
