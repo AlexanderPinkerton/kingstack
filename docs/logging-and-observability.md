@@ -315,6 +315,10 @@ logger will not pay an ISO formatting cost for every record.
 
 - Default to `debug` and above.
 - Use a pretty-print transport intended only for development.
+- Keep routine pretty records on one line, promote component context beside the
+  event name, and retain multiline error stacks.
+- Hide repeated service and environment fields from pretty presentation only;
+  preserve them in the underlying structured record and all JSON output.
 - Keep the same fields and event names as production.
 - Allow JSON output locally for debugging ingestion problems.
 - Keep `pino-pretty` in application development dependencies and make the
@@ -370,6 +374,10 @@ two explicit validation layers:
 2. parse and validate the resulting `process.env` values inside the logger at
    runtime, failing startup on invalid values rather than silently selecting an
    unexpected level or format.
+
+Nest constructs its logger while application modules are imported, before
+`ConfigModule.forRoot()` executes. Its logging bootstrap therefore loads
+`apps/nest/.env` through `dotenv/config` before creating the Pino runtime.
 
 All three keys must be declared with `default:`, never `required: true`.
 `config/local.ts`, `config/development.ts`, and `config/production.ts` are

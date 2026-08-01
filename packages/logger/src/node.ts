@@ -14,6 +14,16 @@ import {
 
 export type LogFormat = "json" | "pretty";
 
+export const DEFAULT_PRETTY_OPTIONS = {
+  colorize: true,
+  ignore: "pid,hostname,service,environment,component,context",
+  messageFormat:
+    "{if component}[{component}] {end}{if context}[{context}] {end}{event}",
+  messageKey: "event",
+  singleLine: true,
+  translateTime: "SYS:HH:MM:ss.l",
+} as const;
+
 export const DEFAULT_REDACT_PATHS = [
   "authorization",
   "Authorization",
@@ -109,12 +119,7 @@ export function createNodeLogger(
   if (format === "pretty") {
     pinoOptions.transport = {
       target: "pino-pretty",
-      options: {
-        colorize: true,
-        ignore: "pid,hostname",
-        messageKey: "event",
-        translateTime: "SYS:standard",
-      },
+      options: DEFAULT_PRETTY_OPTIONS,
     };
   }
 

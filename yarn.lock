@@ -2780,6 +2780,7 @@ __metadata:
     "@types/node": "npm:^22.10.7"
     "@types/passport-jwt": "npm:^4.0.1"
     "@types/supertest": "npm:^6.0.2"
+    dotenv: "npm:16.4.7"
     eslint: "npm:10.8.0"
     nestjs-pino: "npm:^4.6.1"
     passport: "npm:^0.7.0"

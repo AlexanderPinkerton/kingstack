@@ -1,7 +1,8 @@
 import { Writable } from "node:stream";
+import pinoPretty from "pino-pretty";
 import { describe, expect, it, vi } from "vitest";
 import { createBrowserLogger } from "../src/browser";
-import { createNodeLogger } from "../src/node";
+import { DEFAULT_PRETTY_OPTIONS, createNodeLogger } from "../src/node";
 import { createCapturingLogger, createNoopLogger } from "../src/testing";
 import { createLazyLogger } from "../src/types";
 
@@ -43,6 +44,28 @@ describe("node logger", () => {
       count: 2,
     });
     expect(typeof records[0].time).toBe("number");
+  });
+
+  it("formats routine pretty logs as compact single-line records", () => {
+    const format = pinoPretty.prettyFactory({
+      ...DEFAULT_PRETTY_OPTIONS,
+      colorize: false,
+      translateTime: false,
+    });
+
+    const output = format({
+      level: 30,
+      service: "nest",
+      environment: "local",
+      component: "Bootstrap",
+      event: "cors.configured",
+      mode: "flexible",
+    });
+
+    expect(output.trim()).toBe(
+      'INFO: [Bootstrap] cors.configured {"mode":"flexible"}',
+    );
+    expect(output.trim().split("\n")).toHaveLength(1);
   });
 
   it("serializes errors and redacts common secret fields", () => {

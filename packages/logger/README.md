@@ -35,3 +35,8 @@ logger.error("invoice.processing_failed", {
 Context values are deliberately limited to scalars and scalar arrays. Pass
 errors through the tagged `error` field so Pino preserves their stack, and call
 `runtime.flush()` during graceful shutdown.
+
+Local `pretty` output uses compact timestamps and keeps routine records on one
+line. The service and environment remain present in JSON output, but are hidden
+from local presentation; component or Nest context is promoted beside the event
+name. Errors remain multiline so their stack traces stay readable.

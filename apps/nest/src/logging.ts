@@ -1,3 +1,8 @@
+// The logger is constructed while AppModule imports are evaluated, before
+// ConfigModule.forRoot() runs. Load the application env first so logging
+// configuration participates in that initial construction.
+import "dotenv/config";
+
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
