@@ -44,6 +44,7 @@ export const PUBLISHED_PACKAGES: Record<string, string> = {
   "@kingstack/advanced-optimistic-store": "^0.1.0",
   "@kingstack/comment-tree": "^0.2.2",
   "@kingstack/dnd-tree": "^0.2.0",
+  "@kingstack/logger": "^0.1.0",
 };
 
 // Published libraries and maintainer tooling never ship as generated source.
@@ -54,6 +55,7 @@ export const PACKAGES_TO_REMOVE = [
   "packages/advanced-optimistic-store", // Published to npm
   "packages/comment-tree", // Published to npm
   "packages/dnd-tree", // Published to npm
+  "packages/logger", // Published to npm
   "packages/create-kingstack", // This CLI itself
 ];
 

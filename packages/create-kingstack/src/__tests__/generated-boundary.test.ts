@@ -43,6 +43,7 @@ describe("generated project boundary", () => {
       "config",
       "create-kingstack",
       "dnd-tree",
+      "logger",
     ]) {
       expect(existsSync(join(generatedRoot, "packages", excludedPackage))).toBe(
         false,
@@ -63,7 +64,19 @@ describe("generated project boundary", () => {
     ).toBe("^0.1.0");
     expect(nextPackage.dependencies["@kingstack/comment-tree"]).toBe("^0.2.2");
     expect(nextPackage.dependencies["@kingstack/dnd-tree"]).toBe("^0.2.0");
+    expect(nextPackage.dependencies["@kingstack/logger"]).toBe("^0.1.0");
+    const nestPackage = JSON.parse(
+      readFileSync(join(generatedRoot, "apps", "nest", "package.json"), "utf8"),
+    );
+    expect(nestPackage.dependencies["@kingstack/logger"]).toBe("^0.1.0");
     expect(rootPackage.devDependencies["@kingstack/config"]).toBe("^0.1.4");
+
+    const nestDockerfile = readFileSync(
+      join(generatedRoot, "apps", "nest", "Dockerfile"),
+      "utf8",
+    );
+    expect(nestDockerfile).not.toContain("packages/logger");
+    expect(nestDockerfile).not.toContain("workspace @kingstack/logger build");
   });
 
   it("excludes maintainer and release infrastructure", () => {

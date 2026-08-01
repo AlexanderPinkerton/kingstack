@@ -3,6 +3,9 @@ import { useRouter } from "next/navigation";
 import { comparer, reaction } from "mobx";
 import { useRootStore } from "@/hooks/useRootStore";
 import { fetchWithAuth } from "@/lib/utils";
+import { browserLogger } from "@/lib/browser-logger";
+
+const logger = browserLogger.child({ component: "useAdminGuard" });
 
 export interface UseAdminGuardOptions {
   /**
@@ -91,7 +94,7 @@ export default function useAdminGuard(options?: UseAdminGuardOptions) {
         }
       } catch (error) {
         if (isCancelled) return;
-        console.error("Error checking admin status:", error);
+        logger.error("admin.status_check_failed", { error });
         setIsChecking(false);
         router.replace("/home");
         return;

@@ -84,6 +84,11 @@ export const values = defineValues({
     ANTHROPIC_API_KEY: "",
     GEMINI_API_KEY: "",
 
+    // Runtime Logging
+    LOG_LEVEL: "debug",
+    LOG_FORMAT: "pretty",
+    KINGSTACK_ENVIRONMENT: "local",
+
     // Stripe
     STRIPE_PUBLIC_KEY: "",
     STRIPE_SECRET_KEY: "",

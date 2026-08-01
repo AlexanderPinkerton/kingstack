@@ -49,6 +49,8 @@ const fakeAuthDetails = {
 
 function mockRequest(headers: Record<string, string> = {}) {
   return {
+    method: "GET",
+    url: "http://localhost/api/post",
     headers: {
       get: (key: string) => headers[key],
     },
@@ -84,7 +86,10 @@ describe("GET /api/post", () => {
 
     expect(res.status).toBe(200);
     expect(json).toEqual(fakePosts);
-    expect(getUserAuthDetails).toHaveBeenCalledWith("mocktoken");
+    expect(getUserAuthDetails).toHaveBeenCalledWith(
+      "mocktoken",
+      expect.anything(),
+    );
     expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
   });
 
@@ -101,7 +106,10 @@ describe("GET /api/post", () => {
 
     expect(res.status).toBe(401);
     expect(json).toEqual({ error: "Invalid user data" });
-    expect(getUserAuthDetails).toHaveBeenCalledWith("invalidtoken");
+    expect(getUserAuthDetails).toHaveBeenCalledWith(
+      "invalidtoken",
+      expect.anything(),
+    );
     expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
   });
 
@@ -112,7 +120,7 @@ describe("GET /api/post", () => {
 
     expect(res.status).toBe(401);
     expect(json).toEqual({ error: "No JWT token provided" });
-    expect(getUserAuthDetails).toHaveBeenCalledWith(null);
+    expect(getUserAuthDetails).toHaveBeenCalledWith(null, expect.anything());
     expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
   });
 
@@ -128,7 +136,10 @@ describe("GET /api/post", () => {
 
     expect(res.status).toBe(401);
     expect(json).toEqual({ error: "Invalid user data" });
-    expect(getUserAuthDetails).toHaveBeenCalledWith("InvalidFormat");
+    expect(getUserAuthDetails).toHaveBeenCalledWith(
+      "InvalidFormat",
+      expect.anything(),
+    );
     expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
   });
 
@@ -145,7 +156,10 @@ describe("GET /api/post", () => {
 
     expect(res.status).toBe(200);
     expect(json).toEqual([]);
-    expect(getUserAuthDetails).toHaveBeenCalledWith("mocktoken");
+    expect(getUserAuthDetails).toHaveBeenCalledWith(
+      "mocktoken",
+      expect.anything(),
+    );
     expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
   });
 
@@ -163,7 +177,10 @@ describe("GET /api/post", () => {
 
     expect(res.status).toBe(500);
     expect(json).toEqual({ error: "Internal server error" });
-    expect(getUserAuthDetails).toHaveBeenCalledWith("mocktoken");
+    expect(getUserAuthDetails).toHaveBeenCalledWith(
+      "mocktoken",
+      expect.anything(),
+    );
     expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
   });
 
@@ -180,7 +197,10 @@ describe("GET /api/post", () => {
 
     expect(res.status).toBe(401);
     expect(json).toEqual({ error: "Supabase auth error" });
-    expect(getUserAuthDetails).toHaveBeenCalledWith("mocktoken");
+    expect(getUserAuthDetails).toHaveBeenCalledWith(
+      "mocktoken",
+      expect.anything(),
+    );
     expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
   });
 
@@ -199,6 +219,7 @@ describe("GET /api/post", () => {
     expect(res.status).toBe(200);
     expect(getUserAuthDetails).toHaveBeenCalledWith(
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      expect.anything(),
     );
   });
 
@@ -215,7 +236,10 @@ describe("GET /api/post", () => {
 
     expect(res.status).toBe(200);
     expect(json).toBeNull();
-    expect(getUserAuthDetails).toHaveBeenCalledWith("mocktoken");
+    expect(getUserAuthDetails).toHaveBeenCalledWith(
+      "mocktoken",
+      expect.anything(),
+    );
     expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
   });
 });

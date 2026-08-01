@@ -1,6 +1,6 @@
 # Logging and observability architecture
 
-Status: Proposed  
+Status: Phase 1 implemented
 Last reviewed: 2026-08-01
 
 ## Decision summary
@@ -118,7 +118,7 @@ tracing, service-level metrics, or centralized export.
 
 ## Package boundary
 
-The proposed `packages/logger` workspace will expose runtime-specific entry
+The `packages/logger` workspace exposes runtime-specific entry
 points so browser code cannot accidentally bundle Node.js dependencies:
 
 ```text
@@ -128,10 +128,9 @@ points so browser code cannot accidentally bundle Node.js dependencies:
 @kingstack/logger/testing     No-op and record-capturing test loggers
 ```
 
-NestJS integration may live in an additional `@kingstack/logger/nest` export or
-in a thin `LoggingModule` inside `apps/nest`. It should reuse the package's
-configuration and field conventions rather than create a second logging
-system.
+NestJS integration lives in a thin `LoggingModule` inside `apps/nest`. It reuses
+the package's configuration and field conventions rather than creating a
+second logging system.
 
 The package must not depend on React, Next.js, application stores, Prisma, or
 domain modules.
@@ -140,7 +139,7 @@ These four entry points are the first subpath `exports` map among KingStack's
 published packages. `@kingstack/advanced-optimistic-store`, `@kingstack/comment-tree`,
 and `@kingstack/dnd-tree` each publish a single `"."` entry, and
 `@kingstack/config` has no `exports` field at all. Build layout, type
-resolution, and the `browser`/`node` export conditions must therefore be
+resolution, and the browser/Node subpaths must therefore be
 verified against a real `node_modules` consumer rather than a workspace
 symlink, which resolves more permissively.
 
@@ -166,15 +165,15 @@ its own logging policy in application source it owns.
 
 ### Project-owned configuration
 
-`apps/nest` has no `@kingstack/*` runtime dependencies and the two applications
-share no runtime workspace package, so logging policy is expressed per
-application rather than in one shared module:
+The logger is the only runtime package shared by both applications for this
+concern. Logging policy is still expressed per application rather than in a
+second project-owned shared module:
 
 ```text
 @kingstack/logger                 published engine, contract, adapters, defaults
 apps/next/src/lib/logger.ts       project-owned: service name, extra redaction paths
-apps/nest/src/logger.ts           project-owned: service name, extra redaction paths
-config/schema.ts                  project-owned: LOG_LEVEL and LOG_FORMAT declarations
+apps/nest/src/logging.ts          project-owned: Nest, Fastify, and service policy
+config/schema.ts                  project-owned: logging environment declarations
 ```
 
 Each bootstrap file calls the package's factory with project inputs. The
@@ -211,8 +210,14 @@ interface AppLogger {
   debug(event: string, context?: LogContext): void;
   info(event: string, context?: LogContext): void;
   warn(event: string, context?: LogContext): void;
-  error(event: string, context?: LogContext, error?: unknown): void;
-  fatal(event: string, context?: LogContext, error?: unknown): void;
+  error(
+    event: string,
+    details?: { context?: LogContext; error?: unknown },
+  ): void;
+  fatal(
+    event: string,
+    details?: { context?: LogContext; error?: unknown },
+  ): void;
   child(bindings: LogContext): AppLogger;
   isLevelEnabled(level: LogLevel): boolean;
 }
@@ -227,11 +232,11 @@ scalars. Callers cannot spread a request, session, store, user, or domain object
 into a record without an explicit type escape. `isLevelEnabled` allows callers
 to avoid expensive context construction for disabled levels.
 
-The error argument is last and optional so that a mistaken
-`logger.error("event", error)` is a type error rather than a silently accepted
-context object. The cost is that an error event carrying no context is written
-`logger.error("event", {}, error)`. Use `{}` rather than `undefined` as the
-convention.
+Error and fatal details use a tagged object so throwable and context-only events
+are both ergonomic while `logger.error("event", error)` remains a type error.
+For example, use
+`logger.error("post.create_failed", { context: { postId }, error })` or
+`logger.error("realtime.channel_failed")`.
 
 Because `LogContext` is an index-signature type, TypeScript will not accept a
 value declared through a separate interface. Shared bindings should be typed as
@@ -248,7 +253,7 @@ The first argument is a stable event name, not a complete prose sentence:
 ```ts
 logger.info("checkbox.updated", { checkboxId });
 logger.warn("realtime.subscription_delayed", { channel, durationMs });
-logger.error("username.change_failed", { userId }, error);
+logger.error("username.change_failed", { context: { userId }, error });
 ```
 
 Event names use lowercase dot-separated identifiers. Human explanation belongs
@@ -312,10 +317,10 @@ logger will not pay an ISO formatting cost for every record.
 - Use a pretty-print transport intended only for development.
 - Keep the same fields and event names as production.
 - Allow JSON output locally for debugging ingestion problems.
-- Keep `pino-pretty` in development dependencies and make the pretty-transport
-  branch unreachable when running on Vercel or in a production runtime. Pino
-  transports use worker threads and must not be initialized in a serverless
-  function.
+- Keep `pino-pretty` in application development dependencies and make the
+  pretty-transport branch unreachable when running on Vercel or in a production
+  runtime. Pino transports use worker threads and must not be initialized in a
+  serverless function.
 
 ### Tests
 
@@ -352,19 +357,21 @@ The initial environment contract should remain small:
 | --- | --- | --- |
 | `LOG_LEVEL` | Minimum emitted level. | `debug` locally, `info` in production, `silent` in tests. |
 | `LOG_FORMAT` | `pretty` or `json`. | `pretty` locally, `json` elsewhere. |
+| `KINGSTACK_ENVIRONMENT` | `local`, `development`, or `production`. | Inferred from the runtime when omitted. |
 
 KingStack's configuration package is a build-time generator, not the
 applications' runtime configuration parser. Logging configuration therefore has
 two explicit validation layers:
 
-1. declare `LOG_LEVEL` and `LOG_FORMAT` in `config/schema.ts` and add both keys
+1. declare `LOG_LEVEL`, `LOG_FORMAT`, and `KINGSTACK_ENVIRONMENT` in
+   `config/schema.ts` and add all three keys
    to the `next` and `nest` entries of its `envfiles` map, so the generator
    writes them into `apps/next/.env` and `apps/nest/.env`; and
 2. parse and validate the resulting `process.env` values inside the logger at
    runtime, failing startup on invalid values rather than silently selecting an
    unexpected level or format.
 
-Both keys must be declared with `default:`, never `required: true`.
+All three keys must be declared with `default:`, never `required: true`.
 `config/local.ts`, `config/development.ts`, and `config/production.ts` are
 gitignored per-environment inputs that already exist in every checkout and
 deployment. A required key with no default would break `king-config generate`
@@ -378,18 +385,21 @@ development configuration target unless the configuration system later adds a
 first-class preview target. Test behavior is selected by the test runtime and
 does not add a fourth deployment target to production records.
 
-`LOG_FORMAT=pretty` is invalid when `NODE_ENV=production` or when the Vercel
-runtime marker is present. This must be enforced even if a remote environment is
-misconfigured; merely defaulting to JSON is insufficient.
+`LOG_FORMAT=pretty` is invalid unless the resolved KingStack environment is
+`local`, and it is always invalid when the Vercel runtime marker is present.
+This must be enforced even if a remote environment is misconfigured; merely
+defaulting to JSON is insufficient. Next initializes its logger lazily so a
+local `next build` does not start the worker-thread pretty transport.
 
 Destination credentials are deliberately absent until a destination has been
 selected. Application code must never know exporter or vendor credentials.
 
 ## Request correlation
 
-NestJS runs on `FastifyAdapter`. Fastify already creates a request ID and exposes
-`requestIdHeader` and `genReqId` configuration. KingStack should configure these
-at the adapter boundary rather than build a second request-ID subsystem:
+NestJS runs on `FastifyAdapter`. Fastify creates the canonical request ID through
+its `requestIdHeader` and `genReqId` configuration. The resolver also writes the
+ID onto the raw Node request before Nest middleware runs, allowing `pino-http`
+to reuse that exact value rather than generate a second ID:
 
 1. accept a syntactically valid `x-request-id` only from trusted infrastructure;
 2. otherwise generate a collision-resistant ID instead of relying on Fastify's
@@ -402,9 +412,8 @@ HTTP logging has exactly one owner. KingStack will keep Fastify's built-in Pino
 logger disabled and let `nestjs-pino`/`pino-http` own automatic HTTP records,
 Nest system logs, and AsyncLocalStorage request context. It will not enable a
 second logger in `FastifyAdapter`, and it will not use `useExisting: true`.
-Implementation tests must prove that Fastify's request ID and the ID bound by
-`pino-http` agree; the shared resolver/configuration should not generate two IDs
-for the same request.
+Implementation tests must prove that Fastify's request ID, the response header,
+and the ID bound by `pino-http` agree.
 
 Automatic request completion records should capture method, route template,
 status, and duration without capturing bodies, authorization headers, or raw
@@ -434,7 +443,10 @@ it does not remain the lifetime correlation identity for the socket.
 Errors must be passed as errors, not interpolated into strings:
 
 ```ts
-logger.error("post.create_failed", { postId }, error);
+logger.error("post.create_failed", {
+  context: { postId },
+  error,
+});
 ```
 
 The adapter is responsible for normalizing `unknown`, preserving stacks for
@@ -526,29 +538,30 @@ tracing milestone rather than being coupled to the logger package.
 ### Phase 1: end-to-end logger delivery
 
 Deliver the package, both application integrations, browser cleanup, template
-projection, and enforcement as one change. This avoids maintaining temporary
-interfaces between partially migrated runtimes. "One change" constrains what
-ships together, not how the work is split for review; internal sequencing is
-fine provided no partially migrated state reaches `main`.
+projection, and enforcement as one change. Internal sequencing and a temporarily
+uninstallable generated projection are acceptable because KingStack currently
+has no external template users. The usable release still publishes the logger
+before publishing the generator version that references it.
 
 The package is consumed inside this monorepo through `workspace:*` regardless
 of publication, so the first publish is an additional step rather than a
 different design. Sequencing it after the in-repo migration means the contract
 is validated against real call sites before any external consumer pins a
-version. It must still land before the next `create-kingstack` release, so that
-no generated project is ever produced without the package available on npm.
+version. The source template's install smoke test may fail between merge and
+publication; that is an explicitly accepted development-time constraint, not a
+second architecture.
 
 Package and configuration:
 
 - Add `packages/logger` with shared, Node.js, browser, and testing entry
   points, parameterized so that redaction paths, base fields, and service name
   are inputs rather than source edits.
-- Keep Pino in the package's runtime dependencies and `pino-pretty` in its
-  development dependencies.
+- Keep Pino in the package's runtime dependencies. Expose `pino-pretty` as an
+  optional peer and install it as an application development dependency only.
 - Implement runtime configuration validation, standard fields, level checks,
   error serialization, redaction, and fatal/shutdown flushing.
-- Declare `LOG_LEVEL` and `LOG_FORMAT` in `config/schema.ts` using `default:`,
-  and add both to the `next` and `nest` `envfiles` key lists.
+- Declare all three logging environment values in `config/schema.ts` using
+  `default:`, and add them to the `next` and `nest` `envfiles` key lists.
 - Add unit tests for levels, child context, error and context-only error events,
   fatal behavior, and secret redaction.
 - Verify the subpath `exports` map resolves correctly from a real
@@ -556,9 +569,9 @@ Package and configuration:
 
 Publication and template projection:
 
-- Set `private: false` so `scripts/get-public-packages.ts` includes the package
-  in `build:release-packages`, and publish through the existing changeset
-  release workflow.
+- Leave the package public (`private` unset or `false`) so
+  `scripts/get-public-packages.ts` includes it in `build:release-packages`, and
+  publish through the existing changeset release workflow.
 - Add `"@kingstack/logger"` to `PUBLISHED_PACKAGES` with the published version
   and to `PACKAGES_TO_REMOVE`; leave `TEMPLATE_PATHS` unchanged.
 - Add projection tests asserting that `@kingstack/logger` survives namespace
@@ -579,7 +592,7 @@ NestJS and Fastify:
 
 Next.js and browser:
 
-- Add the project-owned `apps/next/src/lib/logger.ts` and `apps/nest/src/logger.ts`
+- Add the project-owned `apps/next/src/lib/logger.ts` and `apps/nest/src/logging.ts`
   bootstrap files and import from them rather than constructing loggers ad hoc.
 - Use the Node.js entry point in route handlers and server utilities and the
   browser entry point in Client Components.
@@ -608,9 +621,10 @@ Exit conditions:
 - Pino and its transport code remain outside browser and serverless bundles;
 - runtime application source has no unapproved direct console usage;
 - production browser builds suppress routine diagnostics; and
-- the full `test:create-kingstack` smoke test produces a project that has no
-  `packages/logger` directory, resolves `@kingstack/logger` from npm, installs
-  successfully, and passes its typecheck and test verification; and
+- after `@kingstack/logger` is published, the full `test:create-kingstack` smoke
+  test produces a project that has no `packages/logger` directory, resolves
+  `@kingstack/logger` from npm, installs successfully, and passes its typecheck
+  and test verification; and
 - no logging policy in the generated project requires editing package source.
 
 ### Phase 2: OpenTelemetry tracing and metrics

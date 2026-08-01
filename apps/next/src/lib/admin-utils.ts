@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/serverClient";
 import prisma from "@/lib/prisma";
+import { serverLogger } from "@/lib/logger";
+import type { AppLogger } from "@kingstack/logger";
+
+const logger = serverLogger.child({ component: "AdminUtils" });
 
 export interface UserAuthDetails {
   isAuthenticated: boolean;
@@ -16,6 +20,7 @@ export interface UserAuthDetails {
  */
 export async function getUserAuthDetails(
   jwt: string | null,
+  requestLogger: AppLogger = logger,
 ): Promise<UserAuthDetails> {
   try {
     if (!jwt) {
@@ -38,9 +43,7 @@ export async function getUserAuthDetails(
     // Check if user email exists in admin_emails table
     // Verify prisma client has the admin_emails model
     if (!prisma.admin_emails) {
-      console.error(
-        "Prisma client does not have admin_emails model. Please regenerate Prisma client.",
-      );
+      requestLogger.error("admin.prisma_model_missing");
       return {
         isAuthenticated: true,
         userId: userData.user.id,
@@ -62,7 +65,7 @@ export async function getUserAuthDetails(
       isAdmin: !!adminRecord,
     };
   } catch (error) {
-    console.error("Error getting user auth details:", error);
+    requestLogger.error("admin.auth_details_failed", { error });
     return {
       isAuthenticated: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -75,8 +78,11 @@ export async function getUserAuthDetails(
  * @param jwt - JWT token from Authorization header
  * @returns Promise<{ isAdmin: boolean; userEmail?: string; error?: string }>
  */
-export async function checkAdminStatus(jwt: string | null) {
-  const authDetails = await getUserAuthDetails(jwt);
+export async function checkAdminStatus(
+  jwt: string | null,
+  requestLogger: AppLogger = logger,
+) {
+  const authDetails = await getUserAuthDetails(jwt, requestLogger);
 
   if (!authDetails.isAuthenticated) {
     return {

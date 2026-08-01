@@ -16,6 +16,9 @@ import { Button } from "@/components/ui/button";
 import { useRootStore } from "@/hooks/useRootStore";
 import { observer } from "mobx-react-lite";
 import { createClient } from "@/lib/supabase/browserClient";
+import { browserLogger } from "@/lib/browser-logger";
+
+const logger = browserLogger.child({ component: "AvatarMenu" });
 
 interface AvatarMenuProps {
   className?: string;
@@ -32,7 +35,7 @@ export const AvatarMenu = observer(function AvatarMenu({
     const supabase = createClient();
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error("Error signing out:", error);
+      logger.error("auth.sign_out_failed", { error });
     }
   }, []);
 

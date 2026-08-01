@@ -4,6 +4,9 @@ import { useState, useEffect, useMemo } from "react";
 import { Download, Copy, RotateCcw, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NeonCard } from "@/components/ui/neon-card";
+import { browserLogger } from "@/lib/browser-logger";
+
+const logger = browserLogger.child({ component: "ThemeBuilder" });
 
 const THEMES = [
   { key: "", label: "Neon Cyan/Purple (Default)" },
@@ -126,8 +129,11 @@ function colorToHex(colorValue: string): string {
     // Convert RGB to hex
     const hex = `#${[r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("")}`;
     return hex;
-  } catch (e) {
-    console.warn("Failed to convert color to hex:", e, colorValue);
+  } catch (error) {
+    logger.warn("theme.color_conversion_failed", {
+      colorValue,
+      reason: error instanceof Error ? error.message : "unknown",
+    });
   }
 
   return "#ffffff";

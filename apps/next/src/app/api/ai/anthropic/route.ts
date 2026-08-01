@@ -9,6 +9,7 @@ import {
 } from "ai";
 
 import { getModel, getDefaultModelForProvider } from "../models";
+import { createRequestLogger } from "@/lib/logger";
 
 export const maxDuration = 30;
 
@@ -22,6 +23,7 @@ type ChatMetadata = {
 export type ChatUIMessage = UIMessage<ChatMetadata>;
 
 export async function POST(request: NextRequest) {
+  const logger = createRequestLogger(request, "AnthropicRoute");
   try {
     const body = await request.json();
     const { prompt, modelId, messages } = body;
@@ -111,7 +113,7 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    console.log("Error calling Anthropic:", error);
+    logger.error("ai.anthropic_request_failed", { error });
 
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }

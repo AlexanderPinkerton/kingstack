@@ -14,11 +14,7 @@ export default observer(function Page() {
   const rootStore = useRootStore();
 
   useEffect(() => {
-    console.log("Login useEffect", rootStore);
-
     if (rootStore.session) {
-      console.log("Session found", rootStore.session);
-
       router.replace("/home");
     }
   }, [rootStore.session, rootStore, router]);

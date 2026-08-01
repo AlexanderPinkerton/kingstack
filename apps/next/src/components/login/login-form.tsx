@@ -15,6 +15,9 @@ import {
 } from "@/lib/supabase/browserClient";
 import { UsernameGenerator } from "@kingstack/shared";
 import { APPNAME } from "@kingstack/shared";
+import { browserLogger } from "@/lib/browser-logger";
+
+const logger = browserLogger.child({ component: "LoginForm" });
 
 export function LoginForm({
   className,
@@ -60,7 +63,7 @@ export function LoginForm({
         setUsernameError(data.error || "Username is not available");
       }
     } catch (error) {
-      console.error("Username validation error:", error);
+      logger.error("username.validation_failed", { error });
       setUsernameError("Error checking username availability");
     }
   }, []);

@@ -27,4 +27,18 @@ export default defineConfig(
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  {
+    name: "kingstack/next-runtime-logging",
+    files: ["src/**/*.{js,jsx,ts,tsx}"],
+    rules: {
+      "no-console": "error",
+    },
+  },
+  {
+    name: "kingstack/logger-console-adapters",
+    files: ["src/lib/browser-logger.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
 );

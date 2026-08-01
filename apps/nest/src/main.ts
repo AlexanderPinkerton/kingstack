@@ -1,15 +1,42 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
+import { Logger as NestPinoLogger } from "nestjs-pino";
+import {
+  bootstrapLogger,
+  flushLogs,
+  getOrCreateRequestId,
+  REQUEST_ID_HEADER,
+} from "./logging";
 
 import {
   FastifyAdapter,
   NestFastifyApplication,
 } from "@nestjs/platform-fastify";
+import type {
+  FastifyReply,
+  FastifyRequest,
+  HookHandlerDoneFunction,
+} from "fastify";
 
 async function bootstrap() {
   const adapter = new FastifyAdapter({
     bodyLimit: 1048576, // 1MB
+    requestIdHeader: REQUEST_ID_HEADER,
+    genReqId: getOrCreateRequestId,
   });
+  adapter
+    .getInstance()
+    .addHook(
+      "onRequest",
+      (
+        request: FastifyRequest,
+        reply: FastifyReply,
+        done: HookHandlerDoneFunction,
+      ) => {
+        reply.header(REQUEST_ID_HEADER, request.id);
+        done();
+      },
+    );
 
   // Enable rawBody for Stripe webhook signature verification
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -17,8 +44,11 @@ async function bootstrap() {
     adapter,
     {
       rawBody: true,
+      bufferLogs: true,
     },
   );
+
+  app.useLogger(app.get(NestPinoLogger));
 
   // Hybrid CORS configuration:
   // - Production: Strict CORS (only production frontend URL)
@@ -26,10 +56,10 @@ async function bootstrap() {
   const isProduction = process.env.NODE_ENV === "production";
   const frontendUrl = process.env.NEXT_URL; // e.g., http://localhost:3069 or https://yourdomain.com
 
-  console.log(
-    `🔒 CORS mode: ${isProduction ? "production (strict)" : "dev/staging (flexible)"}`,
-  );
-  console.log(`   Frontend URL: ${frontendUrl}`);
+  bootstrapLogger.info("cors.configured", {
+    mode: isProduction ? "strict" : "flexible",
+    frontendUrl,
+  });
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -78,12 +108,15 @@ async function bootstrap() {
   // Bind this port to all available network interfaces, not just localhost.
   // Kingtip: Inside Docker or any containerized environment: always use '0.0.0.0' instead of 'localhost'
 
-  console.log("Starting server on port", process.env.PORT ?? 3000);
+  const port = process.env.PORT ?? 3000;
+  bootstrapLogger.info("server.starting", { port });
 
-  await app.listen(process.env.PORT ?? 3000, "0.0.0.0");
+  await app.listen(port, "0.0.0.0");
+  bootstrapLogger.info("server.started", { port });
 }
 
-bootstrap().catch((error: unknown) => {
-  console.error("Failed to start the NestJS server:", error);
+void bootstrap().catch(async (error: unknown) => {
+  bootstrapLogger.fatal("server.start_failed", { error });
+  await flushLogs();
   process.exitCode = 1;
 });

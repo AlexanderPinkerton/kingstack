@@ -104,6 +104,7 @@ describe("template allowlist", () => {
     ).toBe(false);
     expect(isTemplateFile("packages/comment-tree/src/index.ts")).toBe(false);
     expect(isTemplateFile("packages/dnd-tree/src/index.ts")).toBe(false);
+    expect(isTemplateFile("packages/logger/src/index.ts")).toBe(false);
     expect(isTemplateFile("packages/create-kingstack/src/index.ts")).toBe(
       false,
     );
@@ -261,6 +262,22 @@ describe("replaceWorkspaceVersions", () => {
     expect(pkg.dependencies["@kingstack/dnd-tree"]).toBe("^0.2.0");
   });
 
+  it("should replace the logger workspace version with its npm version", () => {
+    const pkgPath = join(testDir, "package.json");
+    writeFileSync(
+      pkgPath,
+      JSON.stringify({
+        name: "test",
+        dependencies: { "@kingstack/logger": "workspace:*" },
+      }),
+    );
+
+    replaceWorkspaceVersions(testDir);
+
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+    expect(pkg.dependencies["@kingstack/logger"]).toBe("^0.1.0");
+  });
+
   it("should not modify non-published packages", () => {
     const pkgPath = join(testDir, "package.json");
     writeFileSync(
@@ -302,6 +319,7 @@ describe("prepareGeneratedProject", () => {
     mkdirSync(join(testDir, "packages", "dnd-tree"), {
       recursive: true,
     });
+    mkdirSync(join(testDir, "packages", "logger"), { recursive: true });
     mkdirSync(join(testDir, "packages", "shared"), { recursive: true });
     writeFileSync(join(testDir, "packages", "config", "package.json"), "{}");
     writeFileSync(
@@ -317,6 +335,7 @@ describe("prepareGeneratedProject", () => {
       "{}",
     );
     writeFileSync(join(testDir, "packages", "dnd-tree", "package.json"), "{}");
+    writeFileSync(join(testDir, "packages", "logger", "package.json"), "{}");
     writeFileSync(join(testDir, "packages", "shared", "package.json"), "{}");
     writeFileSync(
       join(testDir, "Dockerfile"),
@@ -325,6 +344,8 @@ describe("prepareGeneratedProject", () => {
         "COPY packages/advanced-optimistic-store/package.json packages/advanced-optimistic-store/package.json",
         "COPY packages/comment-tree/package.json packages/comment-tree/package.json",
         "COPY packages/dnd-tree/package.json packages/dnd-tree/package.json",
+        "COPY packages/logger/package.json packages/logger/package.json",
+        "RUN yarn workspace @kingstack/logger build",
         "COPY packages/shared/package.json packages/shared/package.json",
       ].join("\n"),
     );
@@ -387,6 +408,11 @@ describe("prepareGeneratedProject", () => {
     expect(existsSync(join(testDir, "packages", "dnd-tree"))).toBe(false);
   });
 
+  it("should remove published logger source", () => {
+    prepareGeneratedProject(testDir);
+    expect(existsSync(join(testDir, "packages", "logger"))).toBe(false);
+  });
+
   it("should NOT remove packages/shared", () => {
     prepareGeneratedProject(testDir);
     expect(existsSync(join(testDir, "packages", "shared"))).toBe(true);
@@ -394,7 +420,7 @@ describe("prepareGeneratedProject", () => {
 
   it("should return count of removed packages", () => {
     const count = prepareGeneratedProject(testDir);
-    expect(count).toBe(5);
+    expect(count).toBe(6);
   });
 
   it("should remove maintainer-only scripts and dependencies", () => {
@@ -428,6 +454,8 @@ describe("prepareGeneratedProject", () => {
     );
     expect(content).not.toContain("packages/comment-tree/package.json");
     expect(content).not.toContain("packages/dnd-tree/package.json");
+    expect(content).not.toContain("packages/logger/package.json");
+    expect(content).not.toContain("workspace @kingstack/logger build");
     expect(content).toContain("packages/shared/package.json");
   });
 });
