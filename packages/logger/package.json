@@ -1,6 +1,6 @@
 {
   "name": "@kingstack/logger",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Structured, runtime-safe logging for KingStack applications",
   "license": "MIT",
   "type": "module",

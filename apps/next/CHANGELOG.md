@@ -1,5 +1,12 @@
 # @kingstack/next
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [42ac1fe]
+  - @kingstack/logger@0.1.0
+
 ## 0.0.5
 
 ### Patch Changes
