@@ -1,6 +1,6 @@
 {
   "name": "@kingstack/nest",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "alexanderpinkerton.business@gmail.com",
   "description": "NestJS backend for KingStack",
   "keywords": [
