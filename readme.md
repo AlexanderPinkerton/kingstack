@@ -364,6 +364,7 @@ Start with the [deployment guide](./docs/deployment/README.md) and
 
 ## Documentation
 
+- [Logging and observability](./docs/logging-and-observability.md)
 - [Frontend drafts](./docs/frontend-drafts.md)
 - [State management](./docs/state-management/README.md)
 - [Authentication](./docs/auth/README.md)
