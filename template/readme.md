@@ -237,9 +237,11 @@ running NestJS in Docker on DigitalOcean. The CLI can provision a tagged
 Ubuntu Droplet or deploy to one or more existing tagged hosts:
 
 ```bash
-yarn deploy:nest provision production --region nyc3
-yarn deploy:nest deploy production
+yarn deploy:nest provision production --region nyc3 --deploy
 ```
+
+Provisioning and deployment can also be run separately. Add
+`--without-database` when the target database is not ready yet.
 
 Nest deployments apply Prisma production migrations, verify a candidate
 container before cutover, optionally configure Caddy from the hosted Nest URL,

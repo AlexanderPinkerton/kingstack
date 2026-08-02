@@ -179,10 +179,21 @@ describe("generated project boundary", () => {
     ]);
     expect(
       readdirSync(join(generatedRoot, "scripts", "deploy")).sort(),
+    ).toEqual(["nest-digitalocean", "nest-digitalocean.ts"]);
+    expect(
+      readdirSync(
+        join(generatedRoot, "scripts", "deploy", "nest-digitalocean"),
+      ).sort(),
     ).toEqual([
-      "nest-digitalocean-core.ts",
-      "nest-digitalocean.test.ts",
-      "nest-digitalocean.ts",
+      "commands.ts",
+      "deploy.ts",
+      "deployment.test.ts",
+      "digitalocean.ts",
+      "host-scripts.ts",
+      "options.ts",
+      "project-config.ts",
+      "provision.ts",
+      "remote-host.ts",
     ]);
 
     const rootPackage = JSON.parse(

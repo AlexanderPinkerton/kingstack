@@ -18,6 +18,15 @@ yarn deploy:nest deploy production
 Provisioning and deployment are separate so an ordinary release can never
 silently create billable infrastructure.
 
+For a first deployment, run both phases with one confirmation:
+
+```bash
+yarn deploy:nest provision production --region nyc3 --deploy
+```
+
+This deploys only the newly provisioned or explicitly reused host. It does not
+redeploy every other host carrying the same fleet tag.
+
 ### Prerequisites
 
 - Docker running locally for full image deployments.
@@ -26,6 +35,10 @@ silently create billable infrastructure.
 - A `config/<environment>.ts` file containing the hosted Supabase and
   application values.
 - At least one SSH public key uploaded to DigitalOcean.
+
+Hosted configurations must use `LOG_FORMAT: "json"`. Pretty logging is
+local-only, and the deployment preflight rejects it before building an image or
+changing cloud resources.
 
 The script resolves KingStack configuration in memory. It does not rewrite
 `supabase/config.toml`, and it never includes `.env` files in the Docker build.
@@ -73,6 +86,7 @@ Useful options:
 --ssh-key <value>     Choose an SSH key by ID, fingerprint, or name
 --ssh-source <cidr>   Restrict SSH; repeat for multiple source networks
 --backups             Enable billable DigitalOcean backups
+--deploy              Deploy to this host after provisioning
 --dry-run             Resolve and print the plan without changing resources
 --yes                 Skip the interactive confirmation
 ```
@@ -133,6 +147,30 @@ yarn deploy:nest deploy production --env-only
 
 This reuses each host's current image and skips the Docker build, upload, and
 database migration.
+
+If the database exists but migrations are managed separately, skip only the
+migration phase:
+
+```bash
+yarn deploy:nest deploy development --skip-migrations
+```
+
+If the project has no reachable database yet, explicitly disable the startup
+connection as well:
+
+```bash
+yarn deploy:nest deploy development --without-database
+
+# Or during first-time provisioning:
+yarn deploy:nest provision development --region nyc3 \
+  --deploy \
+  --without-database
+```
+
+`--without-database` also skips migrations. The base Nest service can start,
+but database-backed endpoints remain unavailable until a database is
+configured and the application is redeployed without this flag. Skipping only
+migrations transfers responsibility for schema compatibility to the operator.
 
 Inspect a release without changing Docker, the database, DigitalOcean, or a
 remote host:

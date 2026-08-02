@@ -19,7 +19,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit -p tsconfig.json && turbo run typecheck",
     "test": "yarn test:deploy && turbo run test",
-    "test:deploy": "bun test scripts/deploy/nest-digitalocean.test.ts",
+    "test:deploy": "bun test scripts/deploy/nest-digitalocean/deployment.test.ts",
     "test:create-kingstack": "bun scripts/test-create-kingstack.ts",
     "backend:enable": "bun scripts/enable-backend.ts",
     "local": "yarn env:local && yarn supabase:start",

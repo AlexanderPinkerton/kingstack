@@ -1,21 +1,26 @@
 import { describe, expect, it } from "bun:test";
+import { buildFirewallRules, selectDeploymentTargets } from "./digitalocean.js";
 import {
-  buildFirewallRules,
-  getDefaultTag,
-  parseCliArgs,
-  parsePort,
   renderBootstrapScript,
   renderCaddyApplyScript,
   renderCaddyFragment,
   renderCaddyInstallScript,
   renderCloudInit,
-  renderEnvFile,
   renderRemoteDeployScript,
+} from "./host-scripts.js";
+import {
+  getDefaultTag,
+  parseCliArgs,
+  parsePort,
   resolveDomain,
   sanitizeSlug,
-  selectDeploymentTargets,
   validateRequiredOptions,
-} from "./nest-digitalocean-core.js";
+} from "./options.js";
+import {
+  renderEnvFile,
+  renderNestDeploymentEnv,
+  validateHostedNestConfig,
+} from "./project-config.js";
 
 describe("DigitalOcean Nest deployment CLI", () => {
   it("parses provision and deploy options", () => {
@@ -28,6 +33,9 @@ describe("DigitalOcean Nest deployment CLI", () => {
         "--ssh-source",
         "192.0.2.4/32",
         "--backups",
+        "--deploy",
+        "--skip-migrations",
+        "--without-database",
       ]),
     ).toMatchObject({
       command: "provision",
@@ -35,6 +43,9 @@ describe("DigitalOcean Nest deployment CLI", () => {
       region: "nyc3",
       sshSources: ["192.0.2.4/32"],
       backups: true,
+      deployAfterProvision: true,
+      skipMigrations: true,
+      withoutDatabase: true,
       size: "s-1vcpu-1gb",
     });
 
@@ -81,6 +92,18 @@ describe("DigitalOcean Nest deployment CLI", () => {
     expect(() =>
       validateRequiredOptions(parseCliArgs(["provision", "production"])),
     ).toThrow("requires --region");
+    expect(() =>
+      parseCliArgs(["provision", "production", "--skip-migrations"]),
+    ).toThrow("requires --deploy");
+    expect(() => parseCliArgs(["deploy", "production", "--deploy"])).toThrow(
+      "only valid with the provision command",
+    );
+    expect(() =>
+      parseCliArgs(["deploy", "production", "--env-only", "--skip-migrations"]),
+    ).toThrow("already skips migrations");
+    expect(() =>
+      parseCliArgs(["provision", "production", "--without-database"]),
+    ).toThrow("requires --deploy");
   });
 
   it("derives stable project and tag names", () => {
@@ -118,6 +141,22 @@ describe("DigitalOcean Nest deployment CLI", () => {
     expect(() =>
       renderEnvFile({ SECRET: "line-one\nline-two" }, { keys: ["SECRET"] }),
     ).toThrow("cannot contain a newline");
+  });
+
+  it("rejects local-only pretty logging before a hosted deployment", () => {
+    expect(() =>
+      validateHostedNestConfig({ LOG_FORMAT: "pretty" }, "development"),
+    ).toThrow('Hosted Nest deployments require LOG_FORMAT="json"');
+    expect(() =>
+      validateHostedNestConfig({ LOG_FORMAT: "json" }, "development"),
+    ).not.toThrow();
+  });
+
+  it("can disable the eager Prisma connection in the deployed environment", () => {
+    expect(renderNestDeploymentEnv("PORT=3075\n", false)).toBe("PORT=3075\n");
+    expect(renderNestDeploymentEnv("PORT=3075\n", true)).toBe(
+      "PORT=3075\nPRISMA_CONNECT_ON_START=false\n",
+    );
   });
 
   it("selects active tagged droplets or exact requested droplets", () => {

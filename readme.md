@@ -304,9 +304,11 @@ Provision the first tagged Docker host, then deploy the selected hosted
 configuration:
 
 ```bash
-yarn deploy:nest provision production --region nyc3
-yarn deploy:nest deploy production
+yarn deploy:nest provision production --region nyc3 --deploy
 ```
+
+Provisioning and deployment can also be run separately for later fleet work.
+Use `--without-database` when the target database is not ready yet.
 
 The deploy command builds locally, applies Prisma production migrations,
 streams the image over SSH, verifies a candidate container, and optionally
