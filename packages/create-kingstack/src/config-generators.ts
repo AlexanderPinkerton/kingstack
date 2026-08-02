@@ -47,8 +47,8 @@ export const values = defineValues({
     SUPABASE_PROJECT_ID: "${projectName}-local",
 
     // Application URLs
-    NEXT_URL: "localhost",
-    NEST_URL: "localhost",
+    NEXT_HOST: "localhost",
+    NEST_HOST: "localhost",
 
     // Application Ports
     NEXT_PORT: "${ports.next}",

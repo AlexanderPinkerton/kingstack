@@ -232,9 +232,18 @@ yarn supabase:stop      # Stop this project's Supabase services
 
 ## Deployment
 
-The project contains GitHub Actions workflows, typed deployment
-configuration, Prisma deployment migrations, and Vercel commands for the
-Next.js application.
+The project contains Vercel workflows for Next.js and a deployment CLI for
+running NestJS in Docker on DigitalOcean. The CLI can provision a tagged
+Ubuntu Droplet or deploy to one or more existing tagged hosts:
+
+```bash
+yarn deploy:nest provision production --region nyc3
+yarn deploy:nest deploy production
+```
+
+Nest deployments apply Prisma production migrations, verify a candidate
+container before cutover, optionally configure Caddy from the hosted Nest URL,
+and restore the previous container when verification fails.
 
 Production Supabase credentials belong in deployment environment
 configuration, not `config/local.ts`.

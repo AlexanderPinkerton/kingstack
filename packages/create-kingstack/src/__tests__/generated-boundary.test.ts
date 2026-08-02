@@ -170,11 +170,31 @@ describe("generated project boundary", () => {
       "deploy-next-prod.yml",
     ]);
     expect(readdirSync(join(generatedRoot, "scripts")).sort()).toEqual([
+      "deploy",
       "enable-backend.ts",
       "setup-shadow-db.ts",
       "supabase-check-config.ts",
       "supabase-list-instances.ts",
       "supabase-status.ts",
     ]);
+    expect(
+      readdirSync(join(generatedRoot, "scripts", "deploy")).sort(),
+    ).toEqual([
+      "nest-digitalocean-core.ts",
+      "nest-digitalocean.test.ts",
+      "nest-digitalocean.ts",
+    ]);
+
+    const rootPackage = JSON.parse(
+      readFileSync(join(generatedRoot, "package.json"), "utf8"),
+    );
+    expect(rootPackage.scripts["deploy:nest"]).toBe(
+      "bun scripts/deploy/nest-digitalocean.ts",
+    );
+    expect(rootPackage.scripts["prisma:deploy"]).toContain("migrate deploy");
+    expect(rootPackage.devDependencies["@types/bun"]).toBeDefined();
+    expect(
+      readFileSync(join(generatedRoot, "tsconfig.json"), "utf8"),
+    ).toContain('"types": ["node", "bun"]');
   });
 });

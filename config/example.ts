@@ -16,8 +16,8 @@ export const values = defineValues({
   // ============================================================================
   // Application URLs (defaults are usually fine for local development)
   // ============================================================================
-  NEXT_URL: "localhost",
-  NEST_URL: "localhost",
+  NEXT_HOST: "localhost",
+  NEST_HOST: "localhost",
 
   // ============================================================================
   // Application Ports Configuration

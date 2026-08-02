@@ -99,6 +99,7 @@ export const TEMPLATE_PATHS = [
   "packages/shared",
   "packages/ts-config",
   "scripts/enable-backend.ts",
+  "scripts/deploy",
   "scripts/setup-shadow-db.ts",
   "scripts/supabase-check-config.ts",
   "scripts/supabase-list-instances.ts",

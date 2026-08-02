@@ -298,6 +298,20 @@ projects, including stopped projects. Reservations live in:
 Use the URLs printed by the CLI or `backend:enable`; do not assume a shared
 hard-coded port across KingStack projects.
 
+### Deploy NestJS to DigitalOcean
+
+Provision the first tagged Docker host, then deploy the selected hosted
+configuration:
+
+```bash
+yarn deploy:nest provision production --region nyc3
+yarn deploy:nest deploy production
+```
+
+The deploy command builds locally, applies Prisma production migrations,
+streams the image over SSH, verifies a candidate container, and optionally
+configures Caddy. See the [deployment guide](./docs/deployment/README.md).
+
 ### Configuration
 
 `config/local.ts` is the local source of truth. The generator creates it with
