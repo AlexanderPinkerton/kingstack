@@ -17,7 +17,7 @@ describe("PrismaService", () => {
   it("connects during startup by default", async () => {
     delete process.env.PRISMA_CONNECT_ON_START;
     const service = new PrismaService(createCapturingLogger().logger);
-    const connect = vi.spyOn(service, "$connect").mockResolvedValue();
+    const connect = vi.spyOn(service, "$connect").mockResolvedValue(undefined);
 
     await service.onModuleInit();
 
@@ -28,7 +28,7 @@ describe("PrismaService", () => {
     process.env.PRISMA_CONNECT_ON_START = "false";
     const capture = createCapturingLogger();
     const service = new PrismaService(capture.logger);
-    const connect = vi.spyOn(service, "$connect").mockResolvedValue();
+    const connect = vi.spyOn(service, "$connect").mockResolvedValue(undefined);
 
     await service.onModuleInit();
 
