@@ -139,6 +139,7 @@ export function printHelp(): void {
 
   ${pc.bold("Usage:")}
     npx create-kingstack [project-name] [options]
+    create-kingstack ports <command>
 
   ${pc.bold("Options:")}
     -d, --dir <path>   Base directory for the new project (default: current directory)
@@ -159,6 +160,7 @@ export function printHelp(): void {
     npx create-kingstack my-app --draft --no-start --yes
     npx create-kingstack my-app --dir ~/Projects
     npx create-kingstack --dir ~/Projects
+    yarn dlx @kingstack/create-kingstack ports status
     bun src/index.ts test-app --dir ~/Desktop
 
   ${pc.bold("Interactive mode:")}

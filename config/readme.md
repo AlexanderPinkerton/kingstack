@@ -1,142 +1,85 @@
 # Configuration Management
 
-KingStack uses **@kingstack/config**, a powerful **TypeScript-based configuration system** that provides type safety, computed values, centralized configuration, and automatic generation of both `.env` files and config files.
+KingStack uses `@kingstack/config` as its configuration source of truth.
 
-## 🎯 Quick Start
+## What to edit
 
-### 1. Create Your Environment File
+- `config/schema.ts`: available inputs, defaults, validation, computed values, environments, and output mappings.
+- `config/<environment>.ts`: values that differ for one environment.
+- Generated `.env` and TOML files: never edit directly.
+
+If you are adding or removing a key, change the schema first. The checker will then tell you exactly which environment value files and output mappings require attention.
+
+## Daily commands
+
+```bash
+# List known environments and missing value files
+bun king-config env list
+
+# Validate one environment or all environments; values stay redacted
+bun king-config check local
+bun king-config check --all
+
+# Inspect stale generated files without changing them
+bun king-config diff local
+
+# Generate after validation
+yarn env:local
+```
+
+`generate` completely regenerates managed `.env` files, so removed keys disappear after generation. Existing output files receive a `.previous` backup.
+
+## Initial local setup
 
 ```bash
 cp config/example.ts config/local.ts
+bun king-config check local
+yarn env:local
 ```
 
-Edit `config/local.ts` and customize the values for your local environment.
+The example uses local Supabase development credentials. Hosted credentials belong only in ignored environment value files or a secret manager.
 
-### 2. Generate Configuration
+## Adding staging or another environment
 
-Use the `king-config` CLI to generate your environment:
+Environment names are not hardcoded in the CLI. Register the environment in `config/schema.ts`:
 
-```bash
-yarn env:local          # Generate from config/local.ts
-# or
-yarn env:development    # Generate from config/development.ts
-yarn env:production     # Generate from config/production.ts
+```typescript
+import { EnvironmentMode } from "@kingstack/config";
+
+environments: {
+  local: { mode: EnvironmentMode.Local, sync: false },
+  development: { mode: EnvironmentMode.Hosted, sync: true },
+  staging: { mode: EnvironmentMode.Hosted, sync: true },
+  production: { mode: EnvironmentMode.Hosted, sync: true },
+}
 ```
 
-This single command generates:
-- ✅ `.env` files for all projects
-- ✅ Updates `supabase/config.toml` with ports and project_id
-
-### 3. Sync Deployment Secrets
-
-Sync your configuration to GitHub Actions and Vercel:
+Then scaffold and validate its values:
 
 ```bash
-# Dry run to see what will happen
+bun king-config env init staging
+bun king-config check staging
+bun king-config generate staging
+bun king-config sync --env staging --dry-run
+```
+
+The environment name comes from the CLI argument. Do not add `KINGSTACK_ENVIRONMENT` to `config/staging.ts`; the schema derives it automatically.
+
+## Schema sections
+
+- `environments`: canonical names, local/hosted behavior, and synchronization eligibility.
+- `core`: values supplied by an environment file, including defaults and validation.
+- `computed`: values derived from resolved core values and environment context.
+- `envfiles`: generated `.env` destinations. Aliases map source key to output key.
+- `configs`: mappings into structured configuration files such as TOML.
+- `services`: keys synchronized to GitHub or Vercel.
+
+## Synchronizing deployment values
+
+```bash
 yarn deploy:sync-secrets:dry-run
-
-# Sync to development
 yarn deploy:sync-secrets:dev
-
-# Sync to production
 yarn deploy:sync-secrets:prod
 ```
 
-## 📁 Directory Structure
-
-```
-config/
-├── schema.ts          # Schema definition (checked in)
-├── example.ts         # Example values template (checked in)
-├── local.ts           # Your local environment values (gitignored)
-├── development.ts     # Development environment values (gitignored)
-└── production.ts      # Production environment values (gitignored)
-```
-
-> **Note:** The core logic now lives in the `@kingstack/config` package. This directory only contains your configuration data.
-
-## 🔧 How It Works
-
-### 1. Schema Definition (`schema.ts`)
-
-The schema defines four things:
-
-**Core Configuration** - The input values you provide:
-```typescript
-core: {
-  SUPABASE_PROJECT_ID: { default: "kingstack" },
-  SUPABASE_HOST: { required: true },
-}
-```
-
-**Computed Values** - Values automatically derived from core configuration:
-```typescript
-computed: (core) => ({
-  // Automatically build database connection strings
-  SUPABASE_DB_POOL_URL: `postgresql://${core.SUPABASE_DB_USER}:${core.SUPABASE_DB_PASSWORD}@...`,
-})
-```
-
-**Environment File Mappings** - Which values go to which `.env` files:
-```typescript
-envfiles: {
-  next: { path: "apps/next/.env", keys: ["NEXT_PUBLIC_SUPABASE_URL", ...] },
-  nest: { path: "apps/nest/.env", keys: ["SUPABASE_DB_POOL_URL", ...] },
-}
-```
-
-**Service Mappings** - Which values sync to external services:
-```typescript
-services: {
-  github: {
-    keys: ["SUPABASE_DB_DIRECT_URL", "VERCEL_TOKEN"]
-  },
-  vercel: {
-    keys: ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]
-  }
-}
-```
-
-### 2. Environment Values (`[env].ts`)
-
-Each environment has its own customized values file. These files import `defineValues` from `@kingstack/config`.
-
-```typescript
-// config/local.ts
-import { defineValues } from "@kingstack/config";
-
-export const values = defineValues({
-  KINGSTACK_ENVIRONMENT: "local",
-  SUPABASE_PROJECT_ID: "kingstack",
-  SUPABASE_HOST: "localhost",
-  // ...
-});
-```
-
-`KINGSTACK_ENVIRONMENT` is the canonical environment setting. Use `local` for
-localhost URLs, `development` for hosted non-production infrastructure, and
-`production` for live infrastructure. The same value is emitted to application
-environment files for runtime logging metadata and output-safety checks.
-
-## ✨ Key Benefits
-
-### Single Source of Truth
-Define configuration **once** in `config/[env].ts`. The system generates everything else.
-
-### Type Safety
-TypeScript validates your configuration at compile time.
-
-### Validation
-Missing required values are caught before runtime.
-
-### Centralized
-All configuration for an environment in one file, not scattered across multiple `.env` files.
-
-### Automated Cloud Sync
-Keep your GitHub Actions secrets and Vercel environment variables in sync with your codebase using `king-config sync`.
-
-## 📦 Package Info
-
-This system is powered by the `@kingstack/config` package.
-- **CLI**: `king-config`
-- **Exports**: `defineSchema`, `defineValues`, `resolveConfig`
+Without `--env`, sync processes every schema environment marked `sync: true`. Dry-run performs no writes and reports counts only.

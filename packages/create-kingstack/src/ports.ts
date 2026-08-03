@@ -31,7 +31,7 @@ const REGISTRY_LOCK_RETRIES = 100;
 
 export type PortProbe = (port: number) => Promise<boolean>;
 
-interface PortAllocationRecord {
+export interface PortAllocationRecord {
   projectName: string;
   projectPath: string;
   setup?: "draft" | "full";
@@ -59,6 +59,11 @@ export interface ProjectPortAllocation {
   basePort: number;
   ports: PortAssignments;
   registryPath: string;
+}
+
+export interface PortRegistryOptions {
+  registryPath?: string;
+  now?: Date;
 }
 
 export function getPortRegistryPath(): string {
@@ -205,6 +210,82 @@ function keepAllocation(allocation: PortAllocationRecord, now: Date): boolean {
   );
 }
 
+function resolveRegistryPath(registryPath?: string): string {
+  return resolve(registryPath ?? getPortRegistryPath());
+}
+
+export function listProjectPortAllocations(
+  options: PortRegistryOptions = {},
+): PortAllocationRecord[] {
+  const now = options.now ?? new Date();
+  return loadRegistry(resolveRegistryPath(options.registryPath))
+    .allocations.filter((allocation) => keepAllocation(allocation, now))
+    .map((allocation) => ({
+      ...allocation,
+      ports: { ...allocation.ports },
+    }));
+}
+
+export async function replaceProjectPortAllocation(
+  targetDir: string,
+  allocation: PortAllocationRecord | undefined,
+  options: PortRegistryOptions = {},
+): Promise<void> {
+  const now = options.now ?? new Date();
+  const projectPath = resolve(targetDir);
+  const registryPath = resolveRegistryPath(options.registryPath);
+  const releaseRegistryLock = await acquireRegistryLock(registryPath);
+
+  try {
+    const allocations = loadRegistry(registryPath).allocations.filter(
+      (candidate) =>
+        resolve(candidate.projectPath) !== projectPath &&
+        keepAllocation(candidate, now),
+    );
+    if (allocation) {
+      allocations.push({
+        ...allocation,
+        projectPath,
+        ports: { ...allocation.ports },
+      });
+    }
+    saveRegistry(registryPath, {
+      version: REGISTRY_VERSION,
+      allocations,
+    });
+  } finally {
+    releaseRegistryLock();
+  }
+}
+
+export async function releaseProjectPorts(
+  targetDir: string,
+  options: PortRegistryOptions = {},
+): Promise<boolean> {
+  const now = options.now ?? new Date();
+  const projectPath = resolve(targetDir);
+  const registryPath = resolveRegistryPath(options.registryPath);
+  const releaseRegistryLock = await acquireRegistryLock(registryPath);
+
+  try {
+    const current = loadRegistry(registryPath).allocations.filter(
+      (allocation) => keepAllocation(allocation, now),
+    );
+    const allocations = current.filter(
+      (allocation) => resolve(allocation.projectPath) !== projectPath,
+    );
+    if (allocations.length === current.length) return false;
+
+    saveRegistry(registryPath, {
+      version: REGISTRY_VERSION,
+      allocations,
+    });
+    return true;
+  } finally {
+    releaseRegistryLock();
+  }
+}
+
 async function unavailablePorts(
   candidates: number[],
   reservedPorts: Set<number>,
@@ -230,7 +311,7 @@ export async function allocateProjectPorts(
     now = new Date(),
   } = options;
   const targetDir = resolve(options.targetDir);
-  const registryPath = resolve(options.registryPath ?? getPortRegistryPath());
+  const registryPath = resolveRegistryPath(options.registryPath);
   const releaseRegistryLock = await acquireRegistryLock(registryPath);
 
   try {

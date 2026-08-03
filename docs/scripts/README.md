@@ -38,13 +38,48 @@ yarn env:production
 yarn env:current
 ```
 
+### Parallel Feature Work
+
+Create a branch in an isolated Git worktree without changing the current
+checkout:
+
+```bash
+yarn workbranch feature/config-checks
+```
+
+By default, the new branch starts at the current `HEAD`. Choose another base,
+resume an existing local or known remote-tracking branch, or install dependencies
+immediately:
+
+```bash
+yarn workbranch feature/config-checks --from origin/main
+yarn workbranch feature/config-checks --resume
+yarn workbranch feature/config-checks --install
+```
+
+Worktrees are grouped beside the repository under
+`<repository>-worktrees/<branch-slug>`. The command prints the exact path and
+safe cleanup commands when it finishes.
+
+The command does not fetch automatically. Fetch first when you need a newly
+created or updated remote branch.
+
+Git worktrees isolate tracked files, the branch, Git index, and build output.
+They do not isolate ignored local configuration, ports, running containers,
+databases, or external services. Initialize `config/local.ts` in a new worktree
+when needed and assign unique runtime resources before running multiple copies
+of the application concurrently. The command never copies secrets or starts
+services automatically.
+
 ### Script Structure
 
 All scripts are in the `scripts/` directory:
 
 ```
 scripts/
-└── swap-env.ts          # Environment file swapping
+├── swap-env.ts                 # Environment file swapping
+└── utils/
+    └── create-workbranch.ts    # Isolated branch and worktree creation
 ```
 
 ## Writing Scripts

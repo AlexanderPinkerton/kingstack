@@ -2664,7 +2664,6 @@ __metadata:
     eslint: "npm:10.8.0"
     typescript: "npm:5.9.3"
     vitest: "npm:^1.2.0"
-    zod: "npm:^3.22.4"
   bin:
     king-config: dist/cli/index.js
   languageName: unknown
@@ -5898,6 +5897,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/bun@npm:^1.3.14":
+  version: 1.3.14
+  resolution: "@types/bun@npm:1.3.14"
+  dependencies:
+    bun-types: "npm:1.3.14"
+  checksum: 10c0/5531e17062f48da00d7d1e70bae8252fb5b61f6d699505ace74e60a1cecbafd624cc9d1694500857f261822c00e75fcbad9269f91adee790d6240875d46bb3f9
+  languageName: node
+  linkType: hard
+
 "@types/bun@npm:latest":
   version: 1.3.5
   resolution: "@types/bun@npm:1.3.5"
@@ -7977,6 +7985,15 @@ __metadata:
     base64-js: "npm:^1.3.1"
     ieee754: "npm:^1.1.13"
   checksum: 10c0/27cac81cff434ed2876058d72e7c4789d11ff1120ef32c9de48f59eab58179b66710c488987d295ae89a228f835fc66d088652dffeb8e3ba8659f80eb091d55e
+  languageName: node
+  linkType: hard
+
+"bun-types@npm:1.3.14":
+  version: 1.3.14
+  resolution: "bun-types@npm:1.3.14"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/5aef8b13d6a0c0f218b5995aa74148c6a2536639a94560bbc80ee1b50a6ce05f011c93052340c7bf3469b9705af70737ff9d5cd7eb8ebbd49dbb8f55ed3eaeaf
   languageName: node
   linkType: hard
 
@@ -11598,6 +11615,7 @@ __metadata:
     "@iarna/toml": "npm:^2.2.5"
     "@kingstack/config": "workspace:*"
     "@kingstack/eslint-config": "workspace:*"
+    "@types/bun": "npm:^1.3.14"
     "@types/node": "npm:^24.10.1"
     "@types/pg": "npm:^8.15.4"
     eslint: "npm:10.8.0"
@@ -16762,13 +16780,6 @@ __metadata:
   version: 3.22.4
   resolution: "zod@npm:3.22.4"
   checksum: 10c0/7578ab283dac0eee66a0ad0fc4a7f28c43e6745aadb3a529f59a4b851aa10872b3890398b3160f257f4b6817b4ce643debdda4fb21a2c040adda7862cab0a587
-  languageName: node
-  linkType: hard
-
-"zod@npm:^3.22.4":
-  version: 3.25.76
-  resolution: "zod@npm:3.25.76"
-  checksum: 10c0/5718ec35e3c40b600316c5b4c5e4976f7fee68151bc8f8d90ec18a469be9571f072e1bbaace10f1e85cf8892ea12d90821b200e980ab46916a6166a4260a983c
   languageName: node
   linkType: hard
 

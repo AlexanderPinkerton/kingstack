@@ -2,6 +2,7 @@
   "extends": "./packages/ts-config/node.json",
   "compilerOptions": {
     "noEmit": true,
+    "types": ["node", "bun"],
     "paths": {
       "@kingstack/config": ["./packages/config/src/index.ts"]
     }

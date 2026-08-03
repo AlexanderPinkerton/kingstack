@@ -17,6 +17,10 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24.18.0
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
       - name: Cache Yarn
         uses: actions/cache@v5
         with:

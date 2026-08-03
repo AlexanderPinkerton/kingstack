@@ -69,7 +69,7 @@ describe("generated project boundary", () => {
       readFileSync(join(generatedRoot, "apps", "nest", "package.json"), "utf8"),
     );
     expect(nestPackage.dependencies["@kingstack/logger"]).toBe("^0.1.0");
-    expect(rootPackage.devDependencies["@kingstack/config"]).toBe("^0.1.4");
+    expect(rootPackage.devDependencies["@kingstack/config"]).toBe("^0.2.0");
 
     const nestDockerfile = readFileSync(
       join(generatedRoot, "apps", "nest", "Dockerfile"),
@@ -89,8 +89,9 @@ describe("generated project boundary", () => {
       "utf8",
     );
 
-    expect(schema).toContain('core.KINGSTACK_ENVIRONMENT === "local"');
-    expect(example).toContain('KINGSTACK_ENVIRONMENT: "local"');
+    expect(schema).toContain("environment.mode === EnvironmentMode.Local");
+    expect(schema).toContain("KINGSTACK_ENVIRONMENT: environment.environment");
+    expect(example).not.toContain("KINGSTACK_ENVIRONMENT:");
     expect(schema).not.toContain("ENVIRONMENT_TYPE");
     expect(example).not.toContain("ENVIRONMENT_TYPE");
   });
@@ -170,11 +171,42 @@ describe("generated project boundary", () => {
       "deploy-next-prod.yml",
     ]);
     expect(readdirSync(join(generatedRoot, "scripts")).sort()).toEqual([
+      "deploy",
       "enable-backend.ts",
       "setup-shadow-db.ts",
       "supabase-check-config.ts",
       "supabase-list-instances.ts",
       "supabase-status.ts",
     ]);
+    expect(
+      readdirSync(join(generatedRoot, "scripts", "deploy")).sort(),
+    ).toEqual(["nest-digitalocean", "nest-digitalocean.ts"]);
+    expect(
+      readdirSync(
+        join(generatedRoot, "scripts", "deploy", "nest-digitalocean"),
+      ).sort(),
+    ).toEqual([
+      "commands.ts",
+      "deploy.ts",
+      "deployment.test.ts",
+      "digitalocean.ts",
+      "host-scripts.ts",
+      "options.ts",
+      "project-config.ts",
+      "provision.ts",
+      "remote-host.ts",
+    ]);
+
+    const rootPackage = JSON.parse(
+      readFileSync(join(generatedRoot, "package.json"), "utf8"),
+    );
+    expect(rootPackage.scripts["deploy:nest"]).toBe(
+      "bun scripts/deploy/nest-digitalocean.ts",
+    );
+    expect(rootPackage.scripts["prisma:deploy"]).toContain("migrate deploy");
+    expect(rootPackage.devDependencies["@types/bun"]).toBeDefined();
+    expect(
+      readFileSync(join(generatedRoot, "tsconfig.json"), "utf8"),
+    ).toContain('"types": ["node", "bun"]');
   });
 });

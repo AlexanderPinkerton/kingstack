@@ -78,6 +78,40 @@ avoids both listening ports and blocks belonging to other generated projects,
 including projects that are currently stopped. Entries for missing project
 directories are reclaimed after a short pending period.
 
+### Existing project port management
+
+Run the latest utility from any directory inside an existing KingStack project:
+
+```bash
+# Compare config/local.ts with the machine registry and listening ports
+yarn dlx @kingstack/create-kingstack ports status
+
+# Register an existing project that already uses a standard ten-port block
+yarn dlx @kingstack/create-kingstack ports register
+
+# Move a legacy or existing project to a newly selected standard block
+yarn dlx @kingstack/create-kingstack ports assign
+
+# Request a particular block
+yarn dlx @kingstack/create-kingstack ports assign --port-base 17420
+
+# Inspect all active machine-local allocations
+yarn dlx @kingstack/create-kingstack ports list
+
+# Release this project's claim without changing its config
+yarn dlx @kingstack/create-kingstack ports release
+```
+
+`ports assign` updates only the known port properties in `config/local.ts`,
+preserving every other local value, and then runs `yarn env:local` to regenerate
+application environment files and `supabase/config.toml`. A legacy project with
+split port ranges must use `ports assign`; `ports register` accepts only the
+current contiguous layout.
+
+The registry is machine-local and is not a runtime source of configuration.
+After assignment, `config/local.ts` remains the project source of truth. Stop or
+restart running services so they load reassigned ports.
+
 ## Requirements
 
 - **Node.js `>=24.18.0 <25`**

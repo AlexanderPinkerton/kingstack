@@ -42,13 +42,20 @@ import {
 import { getSetupProfile } from "./setup";
 import { PORT_BLOCK_SIZE } from "./constants";
 import { allocateProjectPorts } from "./ports";
+import { runPortCli } from "./port-cli";
 
 // ============================================================================
 // Main
 // ============================================================================
 
 async function main() {
-  const args = parseArgs();
+  const rawArgs = process.argv.slice(2);
+  if (rawArgs[0] === "ports") {
+    process.exitCode = await runPortCli(rawArgs.slice(1));
+    return;
+  }
+
+  const args = parseArgs(rawArgs);
 
   if (args.help) {
     printHelp();

@@ -40,10 +40,11 @@ apps/next/public/fonts/
 
 **/.env.*
 
-# Configuration: ignore environment-specific value files
-config/local.ts
-config/development.ts
-config/production.ts
+# Configuration: ignore every environment-specific values file
+config/*.ts
+!config/schema.ts
+!config/example.ts
+!config/utils.ts
 
 # Keep these checked in:
 # - config/schema.ts (schema definition)
