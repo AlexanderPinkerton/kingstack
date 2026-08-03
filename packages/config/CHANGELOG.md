@@ -1,5 +1,11 @@
 # @kingstack/config
 
+## 0.2.0
+
+### Minor Changes
+
+- c5c128e: Add first-class environment metadata and modes, standalone schema initialization, context-aware validation, strict stale-key and output-mapping checks, redacted configuration coverage and drift commands, and environment listing/scaffolding. Update generated KingStack projects to use the new environment-aware config package.
+
 ## 0.1.5
 
 ### Patch Changes
