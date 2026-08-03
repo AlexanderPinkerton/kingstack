@@ -5,55 +5,23 @@ import {
   ArrowUpRight,
   Boxes,
   Check,
-  Cloud,
   Container,
   Crown,
   FileCode2,
   KeyRound,
-  Server,
   Terminal,
 } from "lucide-react";
+import { FoundationConsole } from "@/components/landing/foundation-console";
 import { InstallCommand } from "@/components/landing/install-command";
 import { StackShowcase } from "@/components/landing/stack-showcase";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createMetadata({
-  title: "Full-stack TypeScript starter — Next.js, NestJS, Supabase, Prisma",
+  title: "Full-stack TypeScript framework — Next.js, NestJS, Supabase, Prisma",
   description:
-    "KingStack generates a complete TypeScript monorepo: Next.js, NestJS on Fastify, Supabase, Prisma, and optimistic state. Deploy the frontend, the API, or both — no vendor lock-in.",
+    "KingStack is the one-person TypeScript framework: a generated Next.js, NestJS, Supabase, and Prisma monorepo with auth, realtime, and optimistic state.",
   canonical: "/",
 });
-
-const runtimes = [
-  {
-    icon: Cloud,
-    label: "Runtime 01",
-    name: "Next.js",
-    role: "Frontend and serverless backend",
-    description:
-      "For most features, this is the whole backend. Pages and API routes ship together, and nothing has to stay running between requests.",
-    points: [
-      "Pages and API routes in one app",
-      "Authentication already wired in",
-      "Runs anywhere Node runs",
-    ],
-    accent: "lime",
-  },
-  {
-    icon: Server,
-    label: "Runtime 02",
-    name: "NestJS on Fastify",
-    role: "Persistent backend",
-    description:
-      "For everything a serverless function can’t do — connections that stay open, work that runs on a schedule, jobs that outlive the request that started them.",
-    points: [
-      "Realtime, cron, and background jobs",
-      "The same authentication, enforced server-side",
-      "Ships as a container",
-    ],
-    accent: "violet",
-  },
-] as const;
 
 const comparison = [
   { label: "Create with", draft: "--draft", full: "--full" },
@@ -67,31 +35,31 @@ const comparison = [
 const qualityOfLife = [
   {
     icon: FileCode2,
-    name: "Environment config you declare once",
+    name: "Configuration you can verify",
     description:
-      "Every value lives in one typed schema. The env files are generated, so the key you added for staging can’t go missing.",
+      "Typed configuration generates each environment. The matching check command catches missing values before the app starts.",
     commands: ["yarn env:local", "yarn config:check:local"],
   },
   {
     icon: Boxes,
-    name: "One TypeScript and lint setup",
+    name: "Shared TypeScript and lint rules",
     description:
       "Shared presets for the whole monorepo. A new workspace extends them instead of copying them.",
     commands: ["yarn typecheck", "yarn lint:fix"],
   },
   {
     icon: Terminal,
-    name: "Tooling written in TypeScript",
+    name: "Project tooling you can edit",
     description:
-      "Deploys, status checks, and project scripts are TypeScript you can read and change — not accumulated shell nobody wants to touch.",
+      "Deployments, status checks, and repository automation are ordinary TypeScript you can read, debug, and change.",
     commands: ["yarn supabase:status", "yarn workbranch"],
   },
   {
     icon: Check,
-    name: "Projects that stay out of each other’s way",
+    name: "Reserved ports for every project",
     description:
-      "Every project reserves its own port block, so several run side by side. One command runs the tests for all of them.",
-    commands: ["yarn test"],
+      "Each project receives its own ten-port block, so its local services can run beside other KingStack projects without collisions.",
+    commands: ["yarn dlx @kingstack/create-kingstack ports list"],
   },
 ] as const;
 
@@ -117,7 +85,7 @@ const deployTargets = [
   {
     surface: "Secrets",
     detail:
-      "Push the values you already declared to the platforms that need them, with a dry run first.",
+      "Push values from typed configuration to the platforms that need them, with a dry run first.",
     command: "yarn deploy:sync-secrets",
   },
 ] as const;
@@ -152,10 +120,10 @@ export default function LandingPage() {
             aria-label="Page sections"
           >
             <a
-              href="#architecture"
+              href="#foundation"
               className="transition-colors hover:text-white"
             >
-              Architecture
+              Foundation
             </a>
             <a href="#stack" className="transition-colors hover:text-white">
               The stack
@@ -179,21 +147,24 @@ export default function LandingPage() {
 
         <section className="relative z-10 mx-auto max-w-7xl px-5 pb-20 pt-14 sm:px-8 sm:pt-20 lg:px-10 lg:pb-28">
           <div className="max-w-4xl">
+            <p className="mb-6 text-xs font-medium uppercase tracking-[0.2em] text-[#d8ff70]">
+              The one-person framework for TypeScript
+            </p>
+
             <h1 className="text-[clamp(2.75rem,6.5vw,5.75rem)] font-semibold leading-[0.92] tracking-[-0.055em]">
-              The full-stack TypeScript
+              Ship the whole product
               <br />
-              starter you don’t
               <span className="font-gambetta font-normal italic tracking-[-0.04em] text-[#d8ff70]">
-                {" "}
-                outgrow.
+                by yourself.
               </span>
             </h1>
 
             <p className="mt-8 max-w-2xl text-lg leading-8 text-white/60 sm:text-xl sm:leading-9">
-              Next.js, NestJS on Fastify, Supabase, and Prisma in one generated
-              monorepo — with authentication, realtime, optimistic state, and
-              deployment already wired together. Start frontend-only in seconds
-              and turn the backend on when the idea earns it.
+              Rails proved one person could ship a real product. KingStack is
+              that bet in TypeScript — Next.js, NestJS on Fastify, Supabase, and
+              Prisma in one generated monorepo. Authentication, realtime,
+              optimistic state, and deployment tooling are present from the
+              first run, so you can start with product code.
             </p>
 
             <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -244,90 +215,32 @@ export default function LandingPage() {
       </section>
 
       <section
-        id="architecture"
+        id="foundation"
         className="mx-auto max-w-7xl scroll-mt-16 px-5 py-24 sm:px-8 sm:py-32 lg:px-10"
       >
         <div className="grid gap-8 lg:grid-cols-2 lg:items-end">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#d8ff70]">
-              Architecture
+              Already taken care of
             </p>
             <h2 className="mt-5 max-w-xl text-4xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl">
-              Two runtimes. Use one,
+              You bring the idea.
               <span className="block font-gambetta font-normal italic text-white/45">
-                or both.
+                The rest is handled.
               </span>
             </h2>
           </div>
           <p className="max-w-xl self-end text-lg leading-8 text-white/55">
-            Most projects don’t need a dedicated API server on day one, and some
-            never will. You get both in one repository, so that decision stays
-            reversible instead of structural.
+            A generated project opens with auth, data access, realtime, logging,
+            and environment config working as parts of the same codebase.
+            Deployment scripts ship with it. You can begin at the feature layer
+            instead of assembling the foundation first.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-5 lg:grid-cols-2">
-          {runtimes.map((runtime) => {
-            const Icon = runtime.icon;
-            const isLime = runtime.accent === "lime";
+        <FoundationConsole />
 
-            return (
-              <article
-                key={runtime.name}
-                className={`flex flex-col rounded-[1.75rem] border p-7 sm:p-9 ${
-                  isLime
-                    ? "border-[#d8ff70]/25 bg-[#d8ff70]/[0.06]"
-                    : "border-[#8d7cff]/30 bg-[#8d7cff]/[0.08]"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <span className="font-mono text-xs text-white/35">
-                    {runtime.label}
-                  </span>
-                  <span
-                    className={`grid size-10 place-items-center rounded-xl border bg-black/20 ${
-                      isLime
-                        ? "border-[#d8ff70]/25 text-[#d8ff70]"
-                        : "border-[#8d7cff]/30 text-[#bdb5ff]"
-                    }`}
-                  >
-                    <Icon className="size-4" aria-hidden="true" />
-                  </span>
-                </div>
-
-                <h3 className="mt-6 text-3xl font-medium tracking-[-0.04em]">
-                  {runtime.name}
-                </h3>
-                <p
-                  className={`mt-2 text-sm font-medium uppercase tracking-[0.14em] ${
-                    isLime ? "text-[#d8ff70]" : "text-[#bdb5ff]"
-                  }`}
-                >
-                  {runtime.role}
-                </p>
-                <p className="mt-5 leading-7 text-white/55">
-                  {runtime.description}
-                </p>
-
-                <ul className="mt-7 space-y-3 border-t border-white/10 pt-6 text-sm">
-                  {runtime.points.map((point) => (
-                    <li key={point} className="flex items-start gap-3">
-                      <Check
-                        className={`mt-0.5 size-4 shrink-0 ${
-                          isLime ? "text-[#d8ff70]" : "text-[#bdb5ff]"
-                        }`}
-                        aria-hidden="true"
-                      />
-                      <span className="text-white/70">{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            );
-          })}
-        </div>
-
-        <div className="mt-5 grid gap-5 md:grid-cols-2">
+        <div className="mt-14 grid gap-5 md:grid-cols-2">
           <article className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-7 sm:p-9">
             <span className="grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[0.05] text-[#d8ff70]">
               <KeyRound className="size-4" aria-hidden="true" />
@@ -336,9 +249,9 @@ export default function LandingPage() {
               One identity, both runtimes
             </h3>
             <p className="mt-4 leading-7 text-white/50">
-              Sign-in, sessions, and role checks are configured once. Whichever
-              runtime serves the request already knows who the user is — you
-              never build the same auth twice.
+              Supabase issues the session; Next.js and NestJS validate the same
+              token and enforce the same role model. A feature can use either
+              runtime without introducing a second identity layer.
             </p>
           </article>
 
@@ -347,53 +260,14 @@ export default function LandingPage() {
               <Container className="size-4" aria-hidden="true" />
             </span>
             <h3 className="mt-5 text-2xl font-medium tracking-[-0.035em]">
-              Shared code, not a generated client
+              One schema, both runtimes
             </h3>
             <p className="mt-4 leading-7 text-white/50">
-              Both apps sit in one repository and share the same schema, types,
-              and tooling. Change the data model and both sides fail to compile
-              in the same commit, instead of drifting until production notices.
+              The Prisma schema, generated types, and migrations live with the
+              applications they support. A model change reaches both sides in
+              the same commit, where TypeScript can catch drift before runtime.
             </p>
           </article>
-        </div>
-
-        <div className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-7 sm:p-9">
-          <div className="grid gap-6 lg:grid-cols-[0.4fr_1fr] lg:items-center">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#d8ff70]">
-                Deployment shapes
-              </p>
-              <h3 className="mt-3 text-2xl font-medium tracking-[-0.035em]">
-                Ship what you actually use
-              </h3>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {[
-                {
-                  title: "Next only",
-                  body: "No container, no server to keep alive.",
-                },
-                {
-                  title: "Nest only",
-                  body: "An API for a mobile client or another frontend.",
-                },
-                {
-                  title: "Both",
-                  body: "Serverless at the edge, long-running work behind it.",
-                },
-              ].map((shape) => (
-                <div
-                  key={shape.title}
-                  className="rounded-xl border border-white/10 bg-[#0d0e11] p-4"
-                >
-                  <p className="text-sm font-medium">{shape.title}</p>
-                  <p className="mt-2 text-sm leading-6 text-white/45">
-                    {shape.body}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
 
@@ -404,15 +278,15 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32 lg:px-10">
           <div className="max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#a89cff]">
-              The rest of the stack
+              Why this stack
             </p>
             <h2 className="mt-5 text-4xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl">
-              Chosen on purpose, not by default.
+              Familiar tools with clear boundaries.
             </h2>
             <p className="mt-6 text-lg leading-8 text-white/55">
-              Every dependency here is one you would have reached for anyway.
-              The difference is that they already work together, with a real
-              example for the parts that are usually hardest to get right.
+              KingStack does not hide these tools behind a proprietary API. Each
+              one owns a distinct concern, and the generated repository includes
+              concrete examples of the integration points.
             </p>
           </div>
 
@@ -428,13 +302,13 @@ export default function LandingPage() {
                 Two ways to start
               </p>
               <h2 className="mt-5 max-w-xl text-4xl font-semibold leading-[1.04] tracking-[-0.05em] sm:text-5xl">
-                Skip Docker today. Add it Thursday.
+                Start frontend-only. Add the backend when you need it.
               </h2>
             </div>
             <p className="max-w-xl self-end text-lg leading-8 text-black/55">
-              Both options generate the same codebase — draft mode isn’t a
-              reduced template and it doesn’t delete the backend. What you build
-              without a database keeps working once there is one.
+              Both options generate the same source tree. Draft mode uses an
+              in-memory repository and leaves backend services stopped; enabling
+              them changes the adapter, not the store or UI you built.
             </p>
           </div>
 
@@ -497,19 +371,14 @@ export default function LandingPage() {
       <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32 lg:px-10">
         <div className="max-w-3xl">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#d8ff70]">
-            Quality of life
+            Repository upkeep
           </p>
           <h2 className="mt-5 text-4xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl">
-            The setup work is
-            <span className="font-gambetta font-normal italic text-white/45">
-              {" "}
-              already done.
-            </span>
+            A codebase you can keep understanding.
           </h2>
           <p className="mt-6 text-lg leading-8 text-white/55">
-            The parts of a monorepo that quietly rot — environment files, four
-            copies of a tsconfig, scripts nobody understands — are already
-            handled.
+            Shared configuration, readable project tooling, and isolated local
+            services keep routine work predictable as the repository grows.
           </p>
         </div>
 
@@ -581,9 +450,9 @@ export default function LandingPage() {
               </h2>
             </div>
             <p className="max-w-xl self-end text-lg leading-8 text-white/55">
-              Nothing here runs on a proprietary platform. A standard build, a
-              standard container, and a standard Postgres database — three
-              things every host already knows how to run.
+              Frontend, API, and database keep their native deployment shapes: a
+              Next.js build, a container, and PostgreSQL. Use the included
+              targets or take each surface to another host.
             </p>
           </div>
 
@@ -664,11 +533,8 @@ export default function LandingPage() {
           <span className="font-semibold">KingStack</span>
         </div>
         <div className="flex gap-5">
-          <a
-            href="#architecture"
-            className="transition-colors hover:text-white"
-          >
-            Architecture
+          <a href="#foundation" className="transition-colors hover:text-white">
+            Foundation
           </a>
           <Link href="/app" className="transition-colors hover:text-white">
             Demo

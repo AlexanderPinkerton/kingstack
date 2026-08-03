@@ -28,72 +28,72 @@ const layers: StackLayer[] = [
     role: "Interface layer",
     accent: "#8ee8ff",
     icon: Palette,
-    why: "Accessible components that live in your repository, so you can edit them instead of working around them.",
+    why: "Accessible primitives and utility CSS give you a UI system you own, without adding a component platform.",
     detail:
-      "Every surface in the demo is built from it, including the admin tables and the live theme editor. The components sit in your repository, so restyling means editing them rather than overriding them.",
+      "The demo uses that system for its auth flows, admin tables, dialogs, and live theme editor. Components live beside the application code they serve.",
   },
   {
     name: "TanStack Query + MobX",
     role: "Client and server state",
     accent: "#d8ff70",
     icon: Zap,
-    why: "Server cache and client state stay separate concerns. Optimistic updates and rollback are solved once, not rebuilt per feature.",
+    why: "TanStack Query owns the server cache while MobX owns client-side domain state. Each kind of state has one clear home.",
     detail:
-      "The posts example runs through it end to end — create, edit, filter, reconcile. You can watch an optimistic update roll back on failure before writing any of your own.",
+      "The posts example covers create, edit, filter, reconciliation, and rollback through the same repository-backed store used by real features.",
   },
   {
     name: "Vercel AI SDK",
     role: "Model access",
     accent: "#ff9c6e",
     icon: Sparkles,
-    why: "Anthropic, OpenAI, and Google behind one streaming interface. Changing models is a configuration change.",
+    why: "A consistent streaming interface keeps provider-specific clients at the route boundary. Switching models does not change the chat UI.",
     detail:
-      "The chat route streams from Anthropic, OpenAI, or Google behind a single interface, with model switching and image input already wired up.",
+      "The chat route supports Anthropic, OpenAI, and Google for text, plus image generation through OpenAI.",
   },
   {
     name: "Socket.IO",
     role: "Realtime transport",
     accent: "#8d7cff",
     icon: Radio,
-    why: "One realtime transport on both ends. Multi-user updates become a feature you turn on rather than a project.",
+    why: "A persistent gateway is available when an update must reach another client, without forcing every request through the long-running API.",
     detail:
-      "A gateway on the API pushes changes to every connected client. The realtime example keeps two browser windows in sync while optimistic updates reconcile against what the server confirms.",
+      "The realtime example broadcasts confirmed changes from NestJS and reconciles them with optimistic updates in two browser windows.",
   },
   {
     name: "Pino",
     role: "Structured logging",
     accent: "#8ee8ff",
     icon: ScrollText,
-    why: "Structured logs in both runtimes through one shared logger, so requests are traceable instead of guessed at.",
+    why: "Structured JSON keeps request context searchable across runtimes and environments.",
     detail:
-      "The API logs every request with context and the frontend ships a matching logger. Output has the same shape locally and in production, so the thing you debug at home is the thing you read in the dashboard.",
+      "The API request logger and frontend logger share one package and field shape, with local pretty-printing kept outside production output.",
   },
   {
     name: "Prisma",
     role: "Schema and migrations",
     accent: "#d8ff70",
     icon: GitBranch,
-    why: "One schema defines the database and the types both runtimes compile against. Migrations are versioned and reviewable.",
+    why: "Schema changes and migrations are reviewed as code, while generated types catch drift before runtime.",
     detail:
-      "The schema package is the source of truth for the data model. Both apps generate their client from it, and the same versioned migrations run locally and in production.",
+      "The shared schema package generates the Prisma client used by both apps. Its versioned migrations run against local and hosted PostgreSQL.",
   },
   {
     name: "Supabase",
     role: "Database, auth, and storage",
     accent: "#ff9c6e",
     icon: Database,
-    why: "Database, authentication, storage, and realtime from one service instead of four you integrate yourself. Underneath it is ordinary Postgres, so you are never stuck.",
+    why: "PostgreSQL, authentication, and storage share one local and hosted service, while the database boundary remains standard Postgres.",
     detail:
-      "Boots as a local Docker stack in one command and runs unchanged in hosted environments. It provides the Postgres instance behind Prisma, the sessions both runtimes trust, and file storage.",
+      "Full mode starts Supabase locally in Docker. Hosted projects provide the same database, sessions, and file storage through environment-specific configuration.",
   },
   {
     name: "Turborepo",
     role: "Build orchestration",
     accent: "#8d7cff",
     icon: Boxes,
-    why: "A cached task graph across the monorepo. Only what changed gets rebuilt.",
+    why: "A shared task graph keeps workspace commands consistent and avoids repeating work that is still current.",
     detail:
-      "Build, lint, typecheck, and test are one command at the root. The cache means a change in the frontend does not rebuild the API, and CI reruns only what actually moved.",
+      "Build, lint, typecheck, and test run from the repository root. Turborepo orders dependencies and scopes repeated work to affected packages.",
   },
 ];
 
@@ -144,6 +144,7 @@ export function StackShowcase() {
             {layers.map((layer, index) => {
               const isActive = active === index;
               const isMuted = active !== null && !isActive;
+              const isAboveActive = active !== null && index < active;
               const seat = layers.length - 1 - index;
               const restZ = seat * REST_GAP - restDepth / 2;
               const visualZ = seat * gap - depth / 2 + (isActive ? LIFT : 0);
@@ -173,7 +174,7 @@ export function StackShowcase() {
                     }}
                   >
                     <span
-                      className="pointer-events-none absolute transition-transform duration-500 ease-out motion-reduce:transition-none"
+                      className="pointer-events-none absolute transition-[transform,opacity] duration-500 ease-out motion-reduce:transition-none"
                       style={{
                         width: SLAB,
                         height: SLAB,
@@ -183,6 +184,7 @@ export function StackShowcase() {
                         marginTop: -SLAB / 2,
                         transformStyle: "preserve-3d",
                         transform: `translateZ(${shift}px)`,
+                        opacity: isAboveActive ? 0.1 : 1,
                       }}
                     >
                       {Array.from({ length: SLICE_COUNT }).map((_, slice) => (
@@ -291,9 +293,8 @@ export function StackShowcase() {
                 Take the stack apart.
               </h3>
               <p className="mt-5 leading-7 text-white/50">
-                Hover or tab through a layer to see what it does and how this
-                project already uses it. Nothing here is a placeholder waiting
-                for you to wire it up.
+                Hover or tab through a layer to see the job it owns and the
+                concrete implementation included in the generated repository.
               </p>
               <ul className="mt-8 flex flex-wrap gap-2">
                 {layers.map((layer) => (

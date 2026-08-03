@@ -19,6 +19,9 @@ CONTRIBUTION RULES:
 - Keep the hot path in pure TypeScript, let MobX handle reactivity, and only use React for rendering.
 - React Hooks should only be thin bridges that wire services together on mount and return stable references for JSX.
 
+UI DESIGN:
+- Always refer to the brandkit and design system to ensure consistency.
+
 CONTRIBUTION GUIDELINES:
 - Detailed standards live in `contribution-standards/`.
 - Start with `contribution-standards/readme.md`.
