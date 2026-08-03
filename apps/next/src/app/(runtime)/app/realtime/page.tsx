@@ -11,12 +11,10 @@ export default function RealtimePage() {
     <>
       <AppPageHeader
         eyebrow="Full-runtime example"
-        title="Realtime synchronization"
-        description="Open this page in multiple sessions to exercise optimistic feedback, server events, reconciliation, and rollback together."
+        title="Realtime collaboration"
+        description="Compare two isolated clients on one screen while optimistic writes, server events, presence, reconciliation, and cleanup work together."
       />
-      <section className="rounded-[2rem] border border-white/10 bg-[#111216]/85 p-4 shadow-2xl shadow-black/20 sm:p-8">
-        <RealtimeCheckboxes />
-      </section>
+      <RealtimeCheckboxes />
     </>
   );
 }

@@ -105,6 +105,51 @@ describe("RealtimeManager", () => {
     expect(socketFactory).toHaveBeenCalledOnce();
   });
 
+  it("publishes domain events through the active socket", () => {
+    const socket = new FakeSocket();
+    const manager = new RealtimeManager({
+      browserId: "browser-a",
+      socketFactory: () => socket.asSocket(),
+    });
+
+    manager.setup("token-a");
+    manager.publishLatest("checkbox_presence", {
+      action: "focus",
+      participant: { id: "a", name: "Ada", tone: "lime" },
+      checkboxIndex: 3,
+    });
+    expect(socket.emitted).not.toContainEqual(
+      expect.objectContaining({ event: "checkbox_presence" }),
+    );
+
+    socket.connected = true;
+    socket.trigger("connect");
+
+    expect(socket.emitted).toEqual([
+      {
+        event: "register",
+        args: [{ token: "token-a", browserId: "browser-a" }],
+      },
+      {
+        event: "checkbox_presence",
+        args: [
+          {
+            action: "focus",
+            participant: { id: "a", name: "Ada", tone: "lime" },
+            checkboxIndex: 3,
+          },
+        ],
+      },
+    ]);
+
+    socket.connected = false;
+    socket.trigger("disconnect", "transport close");
+    socket.connected = true;
+    socket.trigger("connect");
+
+    expect(socket.emitted.slice(-2)).toEqual(socket.emitted.slice(0, 2));
+  });
+
   it("exposes transport lifecycle and connection errors", () => {
     const socket = new FakeSocket();
     const manager = new RealtimeManager({
@@ -155,5 +200,6 @@ describe("RealtimeManager", () => {
     expect(() => manager.subscribe("event", () => undefined)).toThrow(
       "disposed",
     );
+    expect(() => manager.publishLatest("event", {})).toThrow("disposed");
   });
 });

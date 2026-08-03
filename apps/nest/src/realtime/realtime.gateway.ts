@@ -19,6 +19,78 @@ interface RegisterPayload {
   browserId: string;
 }
 
+type CheckboxPresenceTone = "lime" | "violet";
+type CheckboxPresenceAction = "join" | "focus" | "idle" | "leave";
+
+interface CheckboxPresenceParticipant {
+  id: string;
+  name: string;
+  tone: CheckboxPresenceTone;
+}
+
+interface CheckboxPresencePayload {
+  action?: CheckboxPresenceAction;
+  participant?: CheckboxPresenceParticipant;
+  checkboxIndex?: number | null;
+}
+
+interface NormalizedCheckboxPresencePayload {
+  action: CheckboxPresenceAction;
+  participant: CheckboxPresenceParticipant;
+  checkboxIndex: number | null;
+}
+
+interface CheckboxPresenceState {
+  participant: CheckboxPresenceParticipant;
+  checkboxIndex: number | null;
+}
+
+export function normalizeCheckboxPresencePayload(
+  payload: CheckboxPresencePayload | null | undefined,
+): NormalizedCheckboxPresencePayload | null {
+  const participant = payload?.participant;
+  const name =
+    typeof participant?.name === "string" ? participant.name.trim() : "";
+  const action = payload?.action;
+  const checkboxIndex = payload?.checkboxIndex;
+  const hasValidFocusIndex =
+    typeof checkboxIndex === "number" &&
+    Number.isInteger(checkboxIndex) &&
+    checkboxIndex >= 0 &&
+    checkboxIndex < 200;
+  const hasValidIdleIndex = checkboxIndex === null;
+
+  if (
+    !participant ||
+    typeof participant.id !== "string" ||
+    participant.id.length === 0 ||
+    participant.id.length > 100 ||
+    !name ||
+    name.length > 40 ||
+    (participant.tone !== "lime" && participant.tone !== "violet") ||
+    (action !== "join" &&
+      action !== "focus" &&
+      action !== "idle" &&
+      action !== "leave") ||
+    (action === "focus" ? !hasValidFocusIndex : !hasValidIdleIndex)
+  ) {
+    return null;
+  }
+
+  return {
+    action,
+    participant: {
+      id: participant.id,
+      name,
+      tone: participant.tone,
+    },
+    checkboxIndex:
+      action === "focus" && typeof checkboxIndex === "number"
+        ? checkboxIndex
+        : null,
+  };
+}
+
 interface UserSocketMap {
   [browserId: string]: Socket;
 }
@@ -34,6 +106,10 @@ export class RealtimeGateway
 {
   private readonly logger: AppLogger;
   private userSockets: Map<string, UserSocketMap> = new Map();
+  private readonly checkboxPresenceBySocket = new Map<
+    string,
+    CheckboxPresenceState
+  >();
   private supabase: SupabaseClient;
   private subscriptionChannel: any = null;
   private readonly supabaseUrl = process.env.SUPABASE_API_URL!;
@@ -58,7 +134,18 @@ export class RealtimeGateway
   }
 
   handleDisconnect(client: Socket) {
+    const presence = this.checkboxPresenceBySocket.get(client.id);
+    this.checkboxPresenceBySocket.delete(client.id);
     this.removeSocketFromMap(client);
+
+    if (presence) {
+      this.broadcastToAllClients({
+        type: "checkbox_presence",
+        action: "leave",
+        participant: presence.participant,
+        checkboxIndex: null,
+      });
+    }
     this.socketLogger(client).info("realtime.client_disconnected");
   }
 
@@ -104,6 +191,87 @@ export class RealtimeGateway
       browserId: data.browserId,
     });
     return { status: "ok" };
+  }
+
+  @SubscribeMessage("checkbox_presence")
+  handleCheckboxPresence(
+    @MessageBody() payload: CheckboxPresencePayload,
+    @ConnectedSocket() client: Socket,
+  ) {
+    if (!client.data.userId) {
+      this.socketLogger(client).warn("realtime.presence_unregistered");
+      return {
+        status: "error",
+        message: "Register before publishing presence",
+      };
+    }
+
+    const presence = normalizeCheckboxPresencePayload(payload);
+    if (!presence) {
+      this.socketLogger(client).warn("realtime.presence_invalid");
+      return { status: "error", message: "Invalid presence payload" };
+    }
+
+    const previousPresence = this.checkboxPresenceBySocket.get(client.id);
+    if (
+      previousPresence &&
+      previousPresence.participant.id !== presence.participant.id
+    ) {
+      this.broadcastToAllClients({
+        type: "checkbox_presence",
+        action: "leave",
+        participant: previousPresence.participant,
+        checkboxIndex: null,
+      });
+    }
+
+    const isNewParticipant =
+      !previousPresence ||
+      previousPresence.participant.id !== presence.participant.id;
+
+    if (presence.action === "leave") {
+      this.checkboxPresenceBySocket.delete(client.id);
+    } else {
+      if (isNewParticipant) {
+        this.sendCheckboxPresenceRoster(client);
+      }
+      this.checkboxPresenceBySocket.set(client.id, {
+        participant: presence.participant,
+        checkboxIndex: presence.checkboxIndex,
+      });
+    }
+
+    this.broadcastToAllClients({
+      type: "checkbox_presence",
+      action: presence.action,
+      participant: presence.participant,
+      checkboxIndex: presence.checkboxIndex,
+    });
+    this.socketLogger(client).debug("realtime.checkbox_presence_broadcast", {
+      action: presence.action,
+      participantId: presence.participant.id,
+      checkboxIndex: presence.checkboxIndex,
+    });
+
+    return { status: "ok" };
+  }
+
+  private sendCheckboxPresenceRoster(client: Socket): void {
+    client.emit("checkbox_presence", {
+      type: "checkbox_presence",
+      action: "reset",
+    });
+
+    this.checkboxPresenceBySocket.forEach((presence, socketId) => {
+      if (socketId === client.id) return;
+
+      client.emit("checkbox_presence", {
+        type: "checkbox_presence",
+        action: presence.checkboxIndex === null ? "join" : "focus",
+        participant: presence.participant,
+        checkboxIndex: presence.checkboxIndex,
+      });
+    });
   }
 
   private removeSocketFromMap(client: Socket) {

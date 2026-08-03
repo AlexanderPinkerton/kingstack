@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { SupabaseSession } from "@/lib/session-manager";
-import type { RealtimeSource } from "@/lib/realtime-manager";
+import type { RealtimeTransport } from "@/lib/realtime-manager";
 import { createHttpPostRepository } from "@/repositories/posts/http-post-repository";
 import { AdvancedPostStore } from "./postStore";
 import { RealtimeCheckboxStore } from "./checkboxStore";
@@ -10,7 +10,7 @@ import { PublicTodoStore } from "./publicTodoStore";
 interface UserStoreManagerOptions {
   queryClient: QueryClient;
   browserId: string;
-  realtimeSource: RealtimeSource;
+  realtimeSource: RealtimeTransport;
 }
 
 /**
