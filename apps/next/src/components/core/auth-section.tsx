@@ -94,7 +94,7 @@ export function AuthSection() {
                 <span>Type-safe auth utilities</span>
               </li>
             </ul>
-            <Link href="/home">
+            <Link href="/app">
               <Button className="w-full bg-cyan-500/10 border-2 border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400 hover:text-cyan-200 font-semibold">
                 Go to User App
               </Button>

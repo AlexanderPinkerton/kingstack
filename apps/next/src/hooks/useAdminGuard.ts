@@ -76,9 +76,9 @@ export default function useAdminGuard(options?: UseAdminGuardOptions) {
         if (isCancelled) return;
 
         if (!response.ok) {
-          // Not an admin, redirect to home
+          // Not an admin, redirect to the application
           setIsChecking(false);
-          router.replace("/home");
+          router.replace("/app");
           return;
         }
 
@@ -89,14 +89,14 @@ export default function useAdminGuard(options?: UseAdminGuardOptions) {
           setIsAdmin(true);
         } else {
           setIsChecking(false);
-          router.replace("/home");
+          router.replace("/app");
           return;
         }
       } catch (error) {
         if (isCancelled) return;
         logger.error("admin.status_check_failed", { error });
         setIsChecking(false);
-        router.replace("/home");
+        router.replace("/app");
         return;
       } finally {
         if (!isCancelled) {

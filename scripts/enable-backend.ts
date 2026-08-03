@@ -129,9 +129,7 @@ function printSuccess(): void {
   const nestUrl = readEnvValue(nextEnv, "NEXT_PUBLIC_NEST_BACKEND_URL");
   const supabaseUrl = readEnvValue(nextEnv, "NEXT_PUBLIC_SUPABASE_URL");
   const nestPort = readEnvValue(nestEnv, "PORT");
-  const appUrl = nextPort
-    ? `http://localhost:${nextPort}/full-stack`
-    : "/full-stack";
+  const appUrl = nextPort ? `http://localhost:${nextPort}/app` : "/app";
 
   console.log();
   console.log("✓ KingStack backend is enabled.");

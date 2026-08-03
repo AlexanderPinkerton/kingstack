@@ -7,9 +7,11 @@ or Postgres while preserving the production state-management pattern.
 yarn dev:frontend
 ```
 
-Open [http://localhost:6666](http://localhost:6666) to choose between the
-backend-free and full-stack paths. The draft index is `/drafts`, and the
-advanced posts example is available at `/drafts/posts`.
+Open [http://localhost:6666](http://localhost:6666) for the KingStack workflow
+guide. The advanced posts reference is available at `/drafts/posts`. It is
+intentionally absent from the primary navigation because it exists for agents
+and contributors studying the in-memory repository pattern, not as an
+application destination.
 
 ## Architecture
 
@@ -43,7 +45,8 @@ client.
 3. Add an in-memory adapter that implements the same contract.
 4. Inject the repository into the domain store.
 5. Keep reusable UI dependent on the domain store rather than `RootStore`.
-6. Compose the in-memory repository, real store, and shared UI under `/drafts`.
+6. Compose the in-memory repository, real store, and shared UI in a no-index
+   reference route outside the `(runtime)` route group.
 
 Keep fixtures next to their draft route. In-memory data should reset on reload;
 if a prototype needs persistence across reloads, add a local-storage or

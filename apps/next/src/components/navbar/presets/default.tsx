@@ -2,9 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
+import { Crown } from "lucide-react";
 import { Navbar } from "../navbar";
 import type { NavLink, CTA } from "../types";
-import { GradientText } from "@/components/ui/gradient-text";
 
 import { AvatarMenu } from "../custom/avatar-menu";
 
@@ -39,12 +39,13 @@ export function DefaultNavbar({
   const logo = mounted ? (
     <Link
       href="/"
-      className="flex items-center transition-opacity hover:opacity-80"
+      className="flex items-center gap-3 font-semibold tracking-[-0.02em] transition-opacity hover:opacity-80"
       aria-label="Go to home page"
     >
-      <GradientText>
-        <span className="text-2xl font-bold">KingStack</span>
-      </GradientText>
+      <span className="grid size-9 place-items-center rounded-full border border-white/15 bg-white/[0.06]">
+        <Crown className="size-4 text-[#d8ff70]" aria-hidden="true" />
+      </span>
+      <span className="text-lg text-[#f5f2e8]">KingStack</span>
     </Link>
   ) : null;
 
@@ -85,7 +86,7 @@ export function DefaultNavbar({
       navLinks={finalNavLinks}
       ctas={finalCtas}
       className={className}
-      transparent={true} // Marketing navbars are often transparent
+      transparent={false}
       specialtyComponents={finalSpecialtyComponents}
     />
   );

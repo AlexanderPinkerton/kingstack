@@ -17,11 +17,14 @@ Run Next.js without Docker, Supabase, NestJS, or PostgreSQL:
 yarn dev:frontend
 ```
 
-Open the URL printed by Next.js. The root page links to:
+Open the URL printed by Next.js. The root page explains the draft and full-stack
+workflows. The authenticated application and its backend-connected examples
+live at `/app`.
 
-- `/drafts` for the backend-free examples;
-- `/drafts/posts` for the advanced optimistic-store example; and
-- `/full-stack` for the backend-connected showcase.
+The advanced in-memory repository reference remains available at
+`/drafts/posts`, but it is intentionally documented instead of linked from the
+primary application navigation. See [Frontend drafts](./docs/frontend-drafts.md)
+before using it as a pattern.
 
 Draft routes use the same domain stores and UI patterns as backend-connected
 features. They inject in-memory repositories and do not initialize the

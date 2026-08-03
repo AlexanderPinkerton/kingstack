@@ -147,12 +147,16 @@ excluded from generated projects by default.
 
 ## After Creation
 
-The browser opens the generated project's root gateway. From there:
+The browser opens the generated project's root guide. It explains the two
+development workflows:
 
-- **Frontend drafts** run without Supabase or NestJS and use in-memory
-  repositories with the production store pattern.
-- **Full-stack showcase** initializes the Supabase-backed runtime and uses the
-  configured NestJS and database services.
+- **Frontend drafts** run without Supabase or NestJS and use documented
+  in-memory repository patterns.
+- **The application** lives at `/app`, initializes the Supabase-backed runtime,
+  and uses the configured NestJS and database services.
+
+The no-index `/drafts/posts` route is retained as an agent-facing implementation
+reference and is intentionally absent from the primary navigation.
 
 If you initially choose draft setup, connect the backend later with:
 

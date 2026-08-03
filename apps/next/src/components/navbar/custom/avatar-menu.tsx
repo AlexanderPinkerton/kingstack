@@ -44,7 +44,7 @@ export const AvatarMenu = observer(function AvatarMenu({
     return (
       <Button
         onClick={() => (window.location.href = "/login")}
-        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0"
+        className="border-0 bg-[#d8ff70] text-[#11130d] hover:bg-[#e3ff98]"
       >
         Login
       </Button>

@@ -63,28 +63,30 @@ export function DraftPostsClient() {
 
   return (
     <QueryClientProvider client={runtime.queryClient}>
-      <main className="min-h-screen bg-gradient-to-b from-black to-slate-900 px-4 py-12 text-white sm:px-6 lg:px-8">
+      <main className="min-h-screen bg-[#090a0c] px-4 py-12 text-[#f5f2e8] selection:bg-[#d8ff70] selection:text-[#11130d] sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8">
             <Link
-              href="/drafts"
-              className="text-sm text-slate-400 transition hover:text-white"
+              href="/"
+              className="text-sm text-white/45 transition hover:text-white"
             >
-              ← All frontend drafts
+              ← KingStack guide
             </Link>
             <div className="mt-5 flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
-                <div className="mb-3 inline-flex rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+                <div className="mb-3 inline-flex rounded-full border border-[#d8ff70]/25 bg-[#d8ff70]/[0.07] px-3 py-1 text-xs font-medium text-[#d8ff70]">
                   In-memory repository · no Supabase or Nest required
                 </div>
-                <h1 className="text-4xl font-bold">Advanced posts draft</h1>
-                <p className="mt-3 max-w-3xl text-slate-300">
+                <h1 className="text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
+                  Advanced posts draft
+                </h1>
+                <p className="mt-3 max-w-3xl leading-7 text-white/55">
                   This is the production post UI, transformer, MobX view model,
                   TanStack Query lifecycle, and optimistic mutation pipeline.
                   Only its repository adapter is different.
                 </p>
               </div>
-              <p className="max-w-xs text-sm text-slate-400">
+              <p className="max-w-xs text-sm text-white/40">
                 Data resets when this page reloads.
               </p>
             </div>
