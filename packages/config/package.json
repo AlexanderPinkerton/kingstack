@@ -1,7 +1,7 @@
 {
   "name": "@kingstack/config",
   "author": "Alexander Pinkerton <alexanderpinkerton.business@gmail.com>",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "license": "MIT",
   "description": "TypeScript configuration management and environment generation",
   "repository": {

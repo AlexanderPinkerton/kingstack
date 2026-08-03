@@ -1,5 +1,15 @@
 # @kingstack/create-kingstack
 
+## 0.5.0
+
+### Minor Changes
+
+- c263789: Add existing-project port status, listing, registration, reassignment, and release commands. Reassignment moves legacy configurations to a safe contiguous block while preserving non-port local values and regenerating derived environment files.
+
+### Patch Changes
+
+- c5c128e: Add first-class environment metadata and modes, standalone schema initialization, context-aware validation, strict stale-key and output-mapping checks, redacted configuration coverage and drift commands, and environment listing/scaffolding. Update generated KingStack projects to use the new environment-aware config package.
+
 ## 0.4.0
 
 ### Minor Changes
