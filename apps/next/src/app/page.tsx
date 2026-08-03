@@ -8,19 +8,13 @@ import {
   Cloud,
   Container,
   Crown,
-  Database,
   FileCode2,
-  GitBranch,
   KeyRound,
-  Palette,
-  Radio,
   Server,
-  ShieldCheck,
-  Sparkles,
   Terminal,
-  Zap,
 } from "lucide-react";
 import { InstallCommand } from "@/components/landing/install-command";
+import { StackShowcase } from "@/components/landing/stack-showcase";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createMetadata({
@@ -58,49 +52,6 @@ const runtimes = [
       "Ships as a container",
     ],
     accent: "violet",
-  },
-] as const;
-
-const stack = [
-  {
-    icon: Database,
-    name: "Supabase",
-    why: "Database, authentication, storage, and realtime from one service instead of four you integrate yourself. Underneath it is ordinary Postgres, so you are never stuck.",
-  },
-  {
-    icon: GitBranch,
-    name: "Prisma",
-    why: "One schema defines the database and the types both runtimes compile against. Migrations are versioned and reviewable.",
-  },
-  {
-    icon: Zap,
-    name: "TanStack Query + MobX",
-    why: "Server cache and client state stay separate concerns. Optimistic updates and rollback are solved once, not rebuilt per feature.",
-  },
-  {
-    icon: Palette,
-    name: "Tailwind + Radix",
-    why: "Accessible components that live in your repository, so you can edit them instead of working around them.",
-  },
-  {
-    icon: Radio,
-    name: "Socket.IO",
-    why: "One realtime transport on both ends. Multi-user updates become a feature you turn on rather than a project.",
-  },
-  {
-    icon: Sparkles,
-    name: "Vercel AI SDK",
-    why: "Anthropic, OpenAI, and Google behind one streaming interface. Changing models is a configuration change.",
-  },
-  {
-    icon: ShieldCheck,
-    name: "Zod",
-    why: "Validation wherever data crosses a boundary, so your types describe what actually arrives.",
-  },
-  {
-    icon: Boxes,
-    name: "Turborepo",
-    why: "A cached task graph across the monorepo. Only what changed gets rebuilt.",
   },
 ] as const;
 
@@ -465,28 +416,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="mt-16 grid gap-px overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/10 sm:grid-cols-2">
-            {stack.map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <article
-                  key={item.name}
-                  className="bg-[#0d0e11] p-7 transition-colors hover:bg-[#111317] sm:p-8"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-[#d8ff70]">
-                      <Icon className="size-4" aria-hidden="true" />
-                    </span>
-                    <h3 className="text-lg font-medium tracking-[-0.02em]">
-                      {item.name}
-                    </h3>
-                  </div>
-                  <p className="mt-4 leading-7 text-white/45">{item.why}</p>
-                </article>
-              );
-            })}
-          </div>
+          <StackShowcase />
         </div>
       </section>
 
