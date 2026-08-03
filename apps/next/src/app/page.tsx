@@ -5,14 +5,20 @@ import {
   ArrowUpRight,
   Boxes,
   Check,
+  Cloud,
+  Container,
   Crown,
   Database,
+  FileCode2,
   GitBranch,
-  Layers3,
+  KeyRound,
+  Palette,
   Radio,
   Server,
   ShieldCheck,
-  Wrench,
+  Sparkles,
+  Terminal,
+  Zap,
 } from "lucide-react";
 import { InstallCommand } from "@/components/landing/install-command";
 import { createMetadata } from "@/lib/metadata";
@@ -20,58 +26,81 @@ import { createMetadata } from "@/lib/metadata";
 export const metadata: Metadata = createMetadata({
   title: "Full-stack TypeScript starter — Next.js, NestJS, Supabase, Prisma",
   description:
-    "KingStack generates a complete TypeScript monorepo: Next.js, NestJS on Fastify, Supabase, Prisma, and optimistic state. Start frontend-only and turn the backend on when you need it.",
+    "KingStack generates a complete TypeScript monorepo: Next.js, NestJS on Fastify, Supabase, Prisma, and optimistic state. Deploy the frontend, the API, or both — no vendor lock-in.",
   canonical: "/",
 });
 
-const stack = [
+const runtimes = [
   {
-    icon: Layers3,
-    name: "Next.js + React",
-    detail:
-      "App Router frontend, server components, and route handlers for anything that belongs at the edge.",
+    icon: Cloud,
+    label: "Runtime 01",
+    name: "Next.js",
+    role: "Frontend and serverless backend",
+    description:
+      "For most features, this is the whole backend. Pages and API routes ship together, and nothing has to stay running between requests.",
+    points: [
+      "Pages and API routes in one app",
+      "Authentication already wired in",
+      "Runs anywhere Node runs",
+    ],
+    accent: "lime",
   },
   {
     icon: Server,
+    label: "Runtime 02",
     name: "NestJS on Fastify",
-    detail:
-      "The persistent API: REST controllers, WebSocket gateways, cron jobs, and background workers.",
+    role: "Persistent backend",
+    description:
+      "For everything a serverless function can’t do — connections that stay open, work that runs on a schedule, jobs that outlive the request that started them.",
+    points: [
+      "Realtime, cron, and background jobs",
+      "The same authentication, enforced server-side",
+      "Ships as a container",
+    ],
+    accent: "violet",
   },
+] as const;
+
+const stack = [
   {
     icon: Database,
     name: "Supabase",
-    detail:
-      "PostgreSQL, authentication, storage, and realtime — running locally in Docker, hosted in production.",
+    why: "Database, authentication, storage, and realtime from one service instead of four you integrate yourself. Underneath it is ordinary Postgres, so you are never stuck.",
   },
   {
     icon: GitBranch,
     name: "Prisma",
-    detail:
-      "Schema modeling, versioned migrations, and typed database access on the server.",
+    why: "One schema defines the database and the types both runtimes compile against. Migrations are versioned and reviewable.",
+  },
+  {
+    icon: Zap,
+    name: "TanStack Query + MobX",
+    why: "Server cache and client state stay separate concerns. Optimistic updates and rollback are solved once, not rebuilt per feature.",
+  },
+  {
+    icon: Palette,
+    name: "Tailwind + Radix",
+    why: "Accessible components that live in your repository, so you can edit them instead of working around them.",
   },
   {
     icon: Radio,
-    name: "Optimistic state",
-    detail:
-      "MobX and TanStack Query wired through @kingstack/advanced-optimistic-store for mutations, reconciliation, and rollback.",
+    name: "Socket.IO",
+    why: "One realtime transport on both ends. Multi-user updates become a feature you turn on rather than a project.",
   },
   {
-    icon: Boxes,
-    name: "Turborepo monorepo",
-    detail:
-      "Yarn workspaces with shared types, so the frontend and backend cannot drift out of sync.",
+    icon: Sparkles,
+    name: "Vercel AI SDK",
+    why: "Anthropic, OpenAI, and Google behind one streaming interface. Changing models is a configuration change.",
   },
   {
     icon: ShieldCheck,
-    name: "Auth and access control",
-    detail:
-      "Session handling, route guards, role checks, and row-level security defaults on the database.",
+    name: "Zod",
+    why: "Validation wherever data crosses a boundary, so your types describe what actually arrives.",
   },
   {
-    icon: Wrench,
-    name: "Tooling that stays quiet",
-    detail:
-      "TypeScript, ESLint, Prettier, Vitest, and Bun configured once at the root of the workspace.",
+    icon: Boxes,
+    name: "Turborepo",
+    why: "A cached task graph across the monorepo. Only what changed gets rebuilt.",
   },
 ] as const;
 
@@ -84,31 +113,61 @@ const comparison = [
   { label: "Store and UI pattern", draft: "Identical", full: "Identical" },
 ] as const;
 
-const operations = [
+const qualityOfLife = [
   {
-    command: "yarn env:local",
+    icon: FileCode2,
+    name: "Environment config you declare once",
     description:
-      "Generate typed, validated environment config for local, development, and production.",
+      "Every value lives in one typed schema. The env files are generated, so the key you added for staging can’t go missing.",
+    commands: ["yarn env:local", "yarn config:check:local"],
   },
   {
-    command: "yarn prisma:migrate",
+    icon: Boxes,
+    name: "One TypeScript and lint setup",
     description:
-      "Create and apply schema migrations against your local PostgreSQL instance.",
+      "Shared presets for the whole monorepo. A new workspace extends them instead of copying them.",
+    commands: ["yarn typecheck", "yarn lint:fix"],
   },
   {
-    command: "yarn backend:enable",
+    icon: Terminal,
+    name: "Tooling written in TypeScript",
     description:
-      "Turn a frontend draft into the full stack: services, config, and migrations.",
+      "Deploys, status checks, and project scripts are TypeScript you can read and change — not accumulated shell nobody wants to touch.",
+    commands: ["yarn supabase:status", "yarn workbranch"],
   },
   {
-    command: "yarn deploy:sync-secrets",
+    icon: Check,
+    name: "Projects that stay out of each other’s way",
     description:
-      "Push the config you already declared to Vercel and DigitalOcean as real secrets.",
+      "Every project reserves its own port block, so several run side by side. One command runs the tests for all of them.",
+    commands: ["yarn test"],
+  },
+] as const;
+
+const deployTargets = [
+  {
+    surface: "Frontend",
+    detail:
+      "A stock Next build. One command ships it to Vercel, or take it to any host that runs Node.",
+    command: "yarn vercel:prod",
   },
   {
+    surface: "API",
+    detail:
+      "One command provisions, deploys, health checks, and rolls back. It’s a container, so it runs anywhere containers do.",
     command: "yarn deploy:nest",
-    description:
-      "Build, deploy, health check, and roll back the API without hand-written glue.",
+  },
+  {
+    surface: "Database",
+    detail:
+      "Hosted Supabase or any Postgres you like. The same migrations apply either way.",
+    command: "yarn prisma:deploy",
+  },
+  {
+    surface: "Secrets",
+    detail:
+      "Push the values you already declared to the platforms that need them, with a dry run first.",
+    command: "yarn deploy:sync-secrets",
   },
 ] as const;
 
@@ -141,20 +200,17 @@ export default function LandingPage() {
             className="hidden items-center gap-7 text-sm text-white/55 md:flex"
             aria-label="Page sections"
           >
-            <a href="#stack" className="transition-colors hover:text-white">
-              The stack
-            </a>
             <a
               href="#architecture"
               className="transition-colors hover:text-white"
             >
               Architecture
             </a>
-            <a
-              href="#operations"
-              className="transition-colors hover:text-white"
-            >
-              Operations
+            <a href="#stack" className="transition-colors hover:text-white">
+              The stack
+            </a>
+            <a href="#deploy" className="transition-colors hover:text-white">
+              Deploy
             </a>
           </nav>
 
@@ -240,85 +296,153 @@ export default function LandingPage() {
         id="architecture"
         className="mx-auto max-w-7xl scroll-mt-16 px-5 py-24 sm:px-8 sm:py-32 lg:px-10"
       >
-        <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16">
+        <div className="grid gap-8 lg:grid-cols-2 lg:items-end">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#d8ff70]">
-              Why the draft isn’t throwaway
+              Architecture
             </p>
-            <h2 className="mt-5 text-4xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl">
-              One contract, two adapters.
+            <h2 className="mt-5 max-w-xl text-4xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl">
+              Two runtimes. Use one,
+              <span className="block font-gambetta font-normal italic text-white/45">
+                or both.
+              </span>
             </h2>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-white/55">
-              Domain stores depend on a repository contract instead of importing
-              a database client. Swap the adapter and the same feature runs on
-              in-memory fixtures or on PostgreSQL through NestJS.
-            </p>
-            <p className="mt-5 max-w-xl leading-7 text-white/45">
-              That means the frontend-only draft already exercises the real MobX
-              projections, TanStack Query lifecycle, optimistic mutations, and
-              rollback behavior. Adding a backend changes how the feature is
-              composed — not the UI, and not the store.
-            </p>
           </div>
+          <p className="max-w-xl self-end text-lg leading-8 text-white/55">
+            Most projects don’t need a dedicated API server on day one, and some
+            never will. You get both in one repository, so that decision stays
+            reversible instead of structural.
+          </p>
+        </div>
 
-          <figure className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-6 sm:p-8">
-            <figcaption className="sr-only">
-              Data flow from a React feature through a domain store and
-              repository contract to either an in-memory adapter or an HTTP
-              adapter backed by NestJS, Prisma, and PostgreSQL.
-            </figcaption>
+        <div className="mt-14 grid gap-5 lg:grid-cols-2">
+          {runtimes.map((runtime) => {
+            const Icon = runtime.icon;
+            const isLime = runtime.accent === "lime";
 
-            <div className="space-y-2 text-center">
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium">
-                React feature
-              </div>
-              <div
-                aria-hidden="true"
-                className="mx-auto h-5 w-px bg-white/15"
-              />
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium">
-                Domain store
-                <span className="mt-1 block text-xs font-normal text-white/40">
-                  MobX projections, optimistic mutations, rollback
-                </span>
-              </div>
-              <div
-                aria-hidden="true"
-                className="mx-auto h-5 w-px bg-white/15"
-              />
-              <div className="rounded-xl border border-[#d8ff70]/25 bg-[#d8ff70]/[0.07] px-4 py-3 text-sm font-medium text-[#d8ff70]">
-                Repository contract
-              </div>
-            </div>
+            return (
+              <article
+                key={runtime.name}
+                className={`flex flex-col rounded-[1.75rem] border p-7 sm:p-9 ${
+                  isLime
+                    ? "border-[#d8ff70]/25 bg-[#d8ff70]/[0.06]"
+                    : "border-[#8d7cff]/30 bg-[#8d7cff]/[0.08]"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <span className="font-mono text-xs text-white/35">
+                    {runtime.label}
+                  </span>
+                  <span
+                    className={`grid size-10 place-items-center rounded-xl border bg-black/20 ${
+                      isLime
+                        ? "border-[#d8ff70]/25 text-[#d8ff70]"
+                        : "border-[#8d7cff]/30 text-[#bdb5ff]"
+                    }`}
+                  >
+                    <Icon className="size-4" aria-hidden="true" />
+                  </span>
+                </div>
 
-            <div
-              aria-hidden="true"
-              className="mx-auto mt-2 h-5 w-px bg-white/15"
-            />
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-[#0d0e11] p-4">
-                <p className="font-mono text-xs text-white/35">ADAPTER 01</p>
-                <p className="mt-2 text-sm font-medium">In-memory</p>
-                <p className="mt-2 text-sm leading-6 text-white/45">
-                  Fixture data, no services. Resets on reload.
+                <h3 className="mt-6 text-3xl font-medium tracking-[-0.04em]">
+                  {runtime.name}
+                </h3>
+                <p
+                  className={`mt-2 text-sm font-medium uppercase tracking-[0.14em] ${
+                    isLime ? "text-[#d8ff70]" : "text-[#bdb5ff]"
+                  }`}
+                >
+                  {runtime.role}
                 </p>
-                <code className="mt-4 inline-flex rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 font-mono text-xs text-white/55">
-                  yarn dev:frontend
-                </code>
-              </div>
-              <div className="rounded-xl border border-[#8d7cff]/30 bg-[#8d7cff]/[0.09] p-4">
-                <p className="font-mono text-xs text-white/35">ADAPTER 02</p>
-                <p className="mt-2 text-sm font-medium">HTTP</p>
-                <p className="mt-2 text-sm leading-6 text-white/50">
-                  NestJS → Prisma → PostgreSQL, with realtime.
+                <p className="mt-5 leading-7 text-white/55">
+                  {runtime.description}
                 </p>
-                <code className="mt-4 inline-flex rounded-lg border border-[#8d7cff]/25 bg-black/20 px-2.5 py-1.5 font-mono text-xs text-[#bdb5ff]">
-                  yarn dev
-                </code>
-              </div>
+
+                <ul className="mt-7 space-y-3 border-t border-white/10 pt-6 text-sm">
+                  {runtime.points.map((point) => (
+                    <li key={point} className="flex items-start gap-3">
+                      <Check
+                        className={`mt-0.5 size-4 shrink-0 ${
+                          isLime ? "text-[#d8ff70]" : "text-[#bdb5ff]"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <span className="text-white/70">{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <article className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-7 sm:p-9">
+            <span className="grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[0.05] text-[#d8ff70]">
+              <KeyRound className="size-4" aria-hidden="true" />
+            </span>
+            <h3 className="mt-5 text-2xl font-medium tracking-[-0.035em]">
+              One identity, both runtimes
+            </h3>
+            <p className="mt-4 leading-7 text-white/50">
+              Sign-in, sessions, and role checks are configured once. Whichever
+              runtime serves the request already knows who the user is — you
+              never build the same auth twice.
+            </p>
+          </article>
+
+          <article className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-7 sm:p-9">
+            <span className="grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[0.05] text-[#bdb5ff]">
+              <Container className="size-4" aria-hidden="true" />
+            </span>
+            <h3 className="mt-5 text-2xl font-medium tracking-[-0.035em]">
+              Shared code, not a generated client
+            </h3>
+            <p className="mt-4 leading-7 text-white/50">
+              Both apps sit in one repository and share the same schema, types,
+              and tooling. Change the data model and both sides fail to compile
+              in the same commit, instead of drifting until production notices.
+            </p>
+          </article>
+        </div>
+
+        <div className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-7 sm:p-9">
+          <div className="grid gap-6 lg:grid-cols-[0.4fr_1fr] lg:items-center">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#d8ff70]">
+                Deployment shapes
+              </p>
+              <h3 className="mt-3 text-2xl font-medium tracking-[-0.035em]">
+                Ship what you actually use
+              </h3>
             </div>
-          </figure>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  title: "Next only",
+                  body: "No container, no server to keep alive.",
+                },
+                {
+                  title: "Nest only",
+                  body: "An API for a mobile client or another frontend.",
+                },
+                {
+                  title: "Both",
+                  body: "Serverless at the edge, long-running work behind it.",
+                },
+              ].map((shape) => (
+                <div
+                  key={shape.title}
+                  className="rounded-xl border border-white/10 bg-[#0d0e11] p-4"
+                >
+                  <p className="text-sm font-medium">{shape.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-white/45">
+                    {shape.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -329,36 +453,36 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32 lg:px-10">
           <div className="max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#a89cff]">
-              What gets generated
+              The rest of the stack
             </p>
             <h2 className="mt-5 text-4xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl">
-              Every piece, already connected.
+              Chosen on purpose, not by default.
             </h2>
             <p className="mt-6 text-lg leading-8 text-white/55">
-              Not a list of dependencies you still have to integrate. These
-              layers ship talking to each other, with working examples for the
-              parts that are usually the hardest to get right.
+              Every dependency here is one you would have reached for anyway.
+              The difference is that they already work together, with a real
+              example for the parts that are usually hardest to get right.
             </p>
           </div>
 
-          <div className="mt-16 grid gap-px overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-16 grid gap-px overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/10 sm:grid-cols-2">
             {stack.map((item) => {
               const Icon = item.icon;
 
               return (
                 <article
                   key={item.name}
-                  className="bg-[#0d0e11] p-6 transition-colors hover:bg-[#111317]"
+                  className="bg-[#0d0e11] p-7 transition-colors hover:bg-[#111317] sm:p-8"
                 >
-                  <span className="grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-[#d8ff70]">
-                    <Icon className="size-4" aria-hidden="true" />
-                  </span>
-                  <h3 className="mt-5 text-lg font-medium tracking-[-0.02em]">
-                    {item.name}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-white/45">
-                    {item.detail}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-[#d8ff70]">
+                      <Icon className="size-4" aria-hidden="true" />
+                    </span>
+                    <h3 className="text-lg font-medium tracking-[-0.02em]">
+                      {item.name}
+                    </h3>
+                  </div>
+                  <p className="mt-4 leading-7 text-white/45">{item.why}</p>
                 </article>
               );
             })}
@@ -378,9 +502,9 @@ export default function LandingPage() {
               </h2>
             </div>
             <p className="max-w-xl self-end text-lg leading-8 text-black/55">
-              Both options generate the same codebase. The flag only decides how
-              much infrastructure boots on day one — draft mode isn’t a reduced
-              template, and it doesn’t delete the backend.
+              Both options generate the same codebase — draft mode isn’t a
+              reduced template and it doesn’t delete the backend. What you build
+              without a database keeps working once there is one.
             </p>
           </div>
 
@@ -440,46 +564,61 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section
-        id="operations"
-        className="mx-auto max-w-7xl scroll-mt-16 px-5 py-24 sm:px-8 sm:py-32 lg:px-10"
-      >
-        <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#d8ff70]">
-              After the demo
-            </p>
-            <h2 className="mt-5 text-4xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl">
-              The boring parts are
-              <span className="block font-gambetta font-normal italic text-white/45">
-                already scripted.
-              </span>
-            </h2>
-            <p className="mt-6 max-w-lg leading-7 text-white/50">
-              Generated apps usually stall at the point where you need
-              environments, migrations, secrets, and a deploy that can roll
-              back. Those are commands here, not a weekend.
-            </p>
-          </div>
-
-          <ul className="divide-y divide-white/10 border-y border-white/10">
-            {operations.map((operation) => (
-              <li
-                key={operation.command}
-                className="grid gap-2 py-5 sm:grid-cols-[16rem_1fr] sm:items-baseline sm:gap-8"
-              >
-                <code className="font-mono text-sm text-[#d8ff70]">
-                  {operation.command}
-                </code>
-                <p className="leading-7 text-white/50">
-                  {operation.description}
-                </p>
-              </li>
-            ))}
-          </ul>
+      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32 lg:px-10">
+        <div className="max-w-3xl">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#d8ff70]">
+            Quality of life
+          </p>
+          <h2 className="mt-5 text-4xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl">
+            The setup work is
+            <span className="font-gambetta font-normal italic text-white/45">
+              {" "}
+              already done.
+            </span>
+          </h2>
+          <p className="mt-6 text-lg leading-8 text-white/55">
+            The parts of a monorepo that quietly rot — environment files, four
+            copies of a tsconfig, scripts nobody understands — are already
+            handled.
+          </p>
         </div>
 
-        <div className="mt-6 grid gap-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-7 sm:p-9 lg:grid-cols-[0.45fr_1fr] lg:items-center">
+        <div className="mt-14 grid gap-5 md:grid-cols-2">
+          {qualityOfLife.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <article
+                key={item.name}
+                className="flex flex-col rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-7 sm:p-8"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.05] text-[#d8ff70]">
+                    <Icon className="size-4" aria-hidden="true" />
+                  </span>
+                  <h3 className="text-lg font-medium tracking-[-0.02em]">
+                    {item.name}
+                  </h3>
+                </div>
+                <p className="mt-4 leading-7 text-white/50">
+                  {item.description}
+                </p>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {item.commands.map((command) => (
+                    <code
+                      key={command}
+                      className="rounded-lg border border-white/10 bg-black/25 px-2.5 py-1.5 font-mono text-xs text-white/60"
+                    >
+                      {command}
+                    </code>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 grid gap-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-7 sm:p-9 lg:grid-cols-[0.45fr_1fr] lg:items-center">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#bdb5ff]">
               Working with agents
@@ -489,15 +628,61 @@ export default function LandingPage() {
             </h3>
           </div>
           <p className="max-w-3xl leading-7 text-white/50">
-            The repository ships project rules, architecture guides, and nearby
-            working examples, so an agent extends the system that exists instead
-            of inventing a parallel one. Let the repo carry the implementation
-            context; your prompt carries the product outcome.
+            The repository carries its own rules, architecture guides, and
+            working examples, so agents extend the system that exists instead of
+            inventing a parallel one. The repo holds the context; your prompt
+            just holds the outcome.
           </p>
         </div>
       </section>
 
-      <section className="px-5 pb-5 sm:px-8 lg:px-10">
+      <section
+        id="deploy"
+        className="scroll-mt-16 border-y border-white/10 bg-[#0c0d10]"
+      >
+        <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32 lg:px-10">
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-end">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#d8ff70]">
+                Deployment
+              </p>
+              <h2 className="mt-5 max-w-xl text-4xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl">
+                Deploy where you want.
+              </h2>
+            </div>
+            <p className="max-w-xl self-end text-lg leading-8 text-white/55">
+              Nothing here runs on a proprietary platform. A standard build, a
+              standard container, and a standard Postgres database — three
+              things every host already knows how to run.
+            </p>
+          </div>
+
+          <ul className="mt-14 divide-y divide-white/10 border-y border-white/10">
+            {deployTargets.map((target) => (
+              <li
+                key={target.surface}
+                className="grid gap-3 py-6 sm:grid-cols-[9rem_1fr_15rem] sm:items-baseline sm:gap-8"
+              >
+                <h3 className="text-lg font-medium tracking-[-0.02em]">
+                  {target.surface}
+                </h3>
+                <p className="leading-7 text-white/50">{target.detail}</p>
+                <code className="font-mono text-sm text-[#d8ff70] sm:text-right">
+                  {target.command}
+                </code>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-8 max-w-3xl leading-7 text-white/40">
+            The included scripts cover DigitalOcean and Vercel today. That is a
+            convenience, not a boundary — moving to Fly, Railway, AWS, or a box
+            you own is a change of configuration, not of architecture.
+          </p>
+        </div>
+      </section>
+
+      <section className="px-5 py-5 sm:px-8 lg:px-10">
         <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-[#d8ff70] px-6 py-20 text-[#11130d] sm:px-12 sm:py-24 lg:px-16">
           <div
             aria-hidden="true"
@@ -549,8 +734,11 @@ export default function LandingPage() {
           <span className="font-semibold">KingStack</span>
         </div>
         <div className="flex gap-5">
-          <a href="#stack" className="transition-colors hover:text-white">
-            The stack
+          <a
+            href="#architecture"
+            className="transition-colors hover:text-white"
+          >
+            Architecture
           </a>
           <Link href="/app" className="transition-colors hover:text-white">
             Demo
