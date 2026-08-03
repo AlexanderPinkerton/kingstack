@@ -2,6 +2,13 @@ import { createCapturingLogger } from "@kingstack/logger/testing";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "./prisma.service";
 
+vi.mock("@prisma/client", () => ({
+  PrismaClient: class {
+    async $connect(): Promise<void> {}
+    async $disconnect(): Promise<void> {}
+  },
+}));
+
 const originalConnectOnStart = process.env.PRISMA_CONNECT_ON_START;
 
 afterEach(() => {
