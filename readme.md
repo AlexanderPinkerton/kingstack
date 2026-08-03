@@ -298,6 +298,21 @@ projects, including stopped projects. Reservations live in:
 Use the URLs printed by the CLI or `backend:enable`; do not assume a shared
 hard-coded port across KingStack projects.
 
+Inspect, register, reassign, or release an existing project's machine-local
+allocation with the latest CLI:
+
+```bash
+yarn dlx @kingstack/create-kingstack ports status
+yarn dlx @kingstack/create-kingstack ports register
+yarn dlx @kingstack/create-kingstack ports assign
+yarn dlx @kingstack/create-kingstack ports release
+yarn dlx @kingstack/create-kingstack ports list
+```
+
+Use `ports assign` for legacy projects that do not already follow the contiguous
+ten-port layout. It preserves non-port values in `config/local.ts` and refreshes
+the generated local environment files.
+
 ### Deploy NestJS to DigitalOcean
 
 Provision the first tagged Docker host, then deploy the selected hosted

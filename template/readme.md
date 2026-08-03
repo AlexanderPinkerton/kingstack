@@ -199,6 +199,20 @@ update mapped values in `supabase/config.toml`.
 Do not assume ports used by another KingStack project. Use the URLs printed by
 the CLI, `backend:enable`, or `yarn supabase:status`.
 
+Inspect or change this project's machine-local port reservation with the latest
+generator utility:
+
+```bash
+yarn dlx @kingstack/create-kingstack ports status
+yarn dlx @kingstack/create-kingstack ports register
+yarn dlx @kingstack/create-kingstack ports assign
+yarn dlx @kingstack/create-kingstack ports release
+```
+
+`ports assign` moves legacy layouts to a fresh contiguous ten-port block,
+updates only port values in `config/local.ts`, and regenerates the local
+environment files. Restart running services after reassignment.
+
 Read [Configuration management](./config/readme.md).
 
 ## Command reference
