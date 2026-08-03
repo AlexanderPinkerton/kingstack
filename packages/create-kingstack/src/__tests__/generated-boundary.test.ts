@@ -89,7 +89,7 @@ describe("generated project boundary", () => {
       "utf8",
     );
 
-    expect(schema).toContain('environment.mode === "local"');
+    expect(schema).toContain("environment.mode === EnvironmentMode.Local");
     expect(schema).toContain("KINGSTACK_ENVIRONMENT: environment.environment");
     expect(example).not.toContain("KINGSTACK_ENVIRONMENT:");
     expect(schema).not.toContain("ENVIRONMENT_TYPE");

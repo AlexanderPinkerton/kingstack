@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { defineSchema, resolveConfig, validateSchemaMappings } from "./core";
+import {
+  defineSchema,
+  EnvironmentMode,
+  resolveConfig,
+  validateSchemaMappings,
+} from "./core";
 
 describe("resolveConfig", () => {
   it("should resolve core values and defaults", () => {
@@ -70,12 +75,12 @@ describe("resolveConfig", () => {
   it("uses environment context for requirements and computed values", () => {
     const schema = defineSchema({
       environments: {
-        local: { mode: "local", sync: false },
-        staging: { mode: "hosted", sync: true },
+        local: { mode: EnvironmentMode.Local, sync: false },
+        staging: { mode: EnvironmentMode.Hosted, sync: true },
       },
       core: {
         DEPLOY_TOKEN: {
-          requiredWhen: ({ mode }) => mode === "hosted",
+          requiredWhen: ({ mode }) => mode === EnvironmentMode.Hosted,
         },
       },
       computed: (_core, context) => ({ ENVIRONMENT: context.environment }),

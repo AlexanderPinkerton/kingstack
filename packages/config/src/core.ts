@@ -2,18 +2,23 @@
  * Pure schema resolution and validation for the configuration system.
  */
 
+export enum EnvironmentMode {
+  Local = "local",
+  Hosted = "hosted",
+}
+
 export interface EnvironmentDefinition {
   /** Human-readable purpose of the environment. */
   description?: string;
   /** Behavioral profile used by computed values and conditional requirements. */
-  mode: string;
+  mode: EnvironmentMode;
   /** Whether this environment is eligible for remote secret synchronization. */
   sync?: boolean;
 }
 
 export interface ResolveContext {
   environment: string;
-  mode: string;
+  mode: EnvironmentMode;
   definition?: EnvironmentDefinition;
 }
 
@@ -115,7 +120,10 @@ export function getResolveContext(
 
   if (environment && schema.environments && !definition) {
     return {
-      context: { environment: name, mode: name },
+      context: {
+        environment: name,
+        mode: name === "local" ? EnvironmentMode.Local : EnvironmentMode.Hosted,
+      },
       errors: [
         {
           key: `environments.${name}`,
@@ -128,7 +136,9 @@ export function getResolveContext(
   return {
     context: {
       environment: name,
-      mode: definition?.mode ?? name,
+      mode:
+        definition?.mode ??
+        (name === "local" ? EnvironmentMode.Local : EnvironmentMode.Hosted),
       definition,
     },
     errors: [],
@@ -281,10 +291,10 @@ export function validateSchemaMappings(
         message: `Environment name "${name}" may contain only letters, numbers, underscores, and hyphens`,
       });
     }
-    if (!definition.mode.trim()) {
+    if (!Object.values(EnvironmentMode).includes(definition.mode)) {
       errors.push({
         key: `environments.${name}.mode`,
-        message: `Environment "${name}" must declare a non-empty mode`,
+        message: `Environment "${name}" must use EnvironmentMode.Local or EnvironmentMode.Hosted`,
       });
     }
   }

@@ -20,16 +20,27 @@ yarn add -D @kingstack/config
 
 The CLI currently uses Bun to load TypeScript schema and value files directly.
 
+For a standalone project, generate a small working schema and example:
+
+```bash
+bun king-config init
+bun king-config env init local
+bun king-config check local
+bun king-config generate local
+```
+
+`init` refuses to overwrite an existing schema. The generated files are intentionally generic and demonstrate every required concept without assuming a KingStack project layout.
+
 ## Schema
 
 ```typescript
-import { defineSchema } from "@kingstack/config";
+import { defineSchema, EnvironmentMode } from "@kingstack/config";
 
 export const schema = defineSchema({
   environments: {
-    local: { mode: "local", sync: false },
-    development: { mode: "hosted", sync: true },
-    production: { mode: "hosted", sync: true },
+    local: { mode: EnvironmentMode.Local, sync: false },
+    development: { mode: EnvironmentMode.Hosted, sync: true },
+    production: { mode: EnvironmentMode.Hosted, sync: true },
   },
 
   core: {
@@ -42,14 +53,14 @@ export const schema = defineSchema({
     API_HOST: { default: "localhost" },
     DEPLOY_TOKEN: {
       sensitive: true,
-      requiredWhen: ({ mode }) => mode === "hosted",
+      requiredWhen: ({ mode }) => mode === EnvironmentMode.Hosted,
     },
   },
 
   computed: (core, environment) => ({
     KINGSTACK_ENVIRONMENT: environment.environment,
     API_URL:
-      environment.mode === "local"
+      environment.mode === EnvironmentMode.Local
         ? `http://${core.API_HOST}:${core.API_PORT}`
         : `https://${core.API_HOST}`,
   }),
@@ -95,7 +106,7 @@ Shows declared environment names, modes, synchronization eligibility, and whethe
 First register it in `schema.environments`:
 
 ```typescript
-staging: { mode: "hosted", sync: true }
+staging: { mode: EnvironmentMode.Hosted, sync: true }
 ```
 
 Then create a skeleton containing its required inputs:

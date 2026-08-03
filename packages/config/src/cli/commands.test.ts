@@ -14,6 +14,7 @@ import { checkCommand } from "./check";
 import { diffCommand } from "./diff";
 import { initEnvironmentCommand } from "./environment";
 import { generateCommand } from "./generate";
+import { initSchemaCommand } from "./init";
 import { syncCommand } from "./sync";
 
 describe("configuration CLI commands", () => {
@@ -76,11 +77,26 @@ describe("configuration CLI commands", () => {
     const content = readFileSync(join(cwd, "config/staging.ts"), "utf8");
     expect(content).toContain('PORT: ""');
     expect(content).not.toContain("3000");
+    expect(readFileSync(join(cwd, ".gitignore"), "utf8")).toContain(
+      "config/staging.ts",
+    );
+  });
+
+  it("initializes a standalone schema without overwriting existing files", () => {
+    const cwd = createEmptyFixture();
+
+    expect(initSchemaCommand({ cwd })).toBe(true);
+    expect(readFileSync(join(cwd, "config/schema.ts"), "utf8")).toContain(
+      "EnvironmentMode.Local",
+    );
+    expect(readFileSync(join(cwd, "config/example.ts"), "utf8")).toContain(
+      "satisfies ConfigValues",
+    );
+    expect(initSchemaCommand({ cwd })).toBe(false);
   });
 
   function createFixture(values: Record<string, string>): string {
-    const cwd = mkdtempSync(join(tmpdir(), "king-config-test-"));
-    temporaryDirectories.push(cwd);
+    const cwd = createEmptyFixture();
     mkdirSync(join(cwd, "config"), { recursive: true });
     writeFileSync(
       join(cwd, "config/schema.ts"),
@@ -107,6 +123,12 @@ describe("configuration CLI commands", () => {
       join(cwd, "config/local.ts"),
       `export const values = ${JSON.stringify(values)};\n`,
     );
+    return cwd;
+  }
+
+  function createEmptyFixture(): string {
+    const cwd = mkdtempSync(join(tmpdir(), "king-config-test-"));
+    temporaryDirectories.push(cwd);
     return cwd;
   }
 });

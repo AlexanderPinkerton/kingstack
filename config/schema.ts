@@ -1,4 +1,8 @@
-import { defineSchema, type ConfigValuesFor } from "@kingstack/config";
+import {
+  defineSchema,
+  EnvironmentMode,
+  type ConfigValuesFor,
+} from "@kingstack/config";
 
 function validatePort(value: string): string | undefined {
   const port = Number(value);
@@ -20,10 +24,10 @@ function validatePort(value: string): string | undefined {
 export const schema = defineSchema({
   environments: {
     local: {
-      mode: "local",
+      mode: EnvironmentMode.Local,
       sync: false,
       description: "Local development using local services",
-    }
+    },
   },
 
   // ============================================================================
@@ -133,16 +137,16 @@ export const schema = defineSchema({
 
     // Deployment values are required only for hosted environments.
     VERCEL_TOKEN: {
-      requiredWhen: ({ mode }) => mode === "hosted",
+      requiredWhen: ({ mode }) => mode === EnvironmentMode.Hosted,
       description: "Vercel deployment token",
       sensitive: true,
     },
     VERCEL_ORG_ID: {
-      requiredWhen: ({ mode }) => mode === "hosted",
+      requiredWhen: ({ mode }) => mode === EnvironmentMode.Hosted,
       description: "Vercel organization ID",
     },
     VERCEL_PROJECT_ID: {
-      requiredWhen: ({ mode }) => mode === "hosted",
+      requiredWhen: ({ mode }) => mode === EnvironmentMode.Hosted,
       description: "Vercel project ID",
     },
 
@@ -183,7 +187,7 @@ export const schema = defineSchema({
         if (value !== "json" && value !== "pretty") {
           return `Unknown log format "${value}"`;
         }
-        if (mode === "hosted" && value === "pretty") {
+        if (mode === EnvironmentMode.Hosted && value === "pretty") {
           return "Hosted environments require LOG_FORMAT=json";
         }
         return undefined;
@@ -195,9 +199,8 @@ export const schema = defineSchema({
   // Computed Values (Derived from Core Configuration)
   // ============================================================================
   computed: (core, environment) => {
-    // Local uses localhost and explicit ports. Development and production use
-    // hosted HTTPS endpoints.
-    const isLocal = environment.mode === "local";
+    // Local uses localhost and explicit ports. Hosted environments use HTTPS.
+    const isLocal = environment.mode === EnvironmentMode.Local;
 
     // Supabase URLs (different patterns for local vs remote)
     const supabaseApiUrl = isLocal

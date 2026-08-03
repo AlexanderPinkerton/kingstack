@@ -1,4 +1,10 @@
-import { writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+  appendFileSync,
+  existsSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { getResolveContext, type ConfigSchema } from "../core";
 import {
@@ -50,12 +56,16 @@ export async function initEnvironmentCommand(
     console.error(
       `❌ Declare "${environment}" in schema.environments before creating its values file.`,
     );
-    console.error(`   Example: ${environment}: { mode: "hosted", sync: true }`);
+    console.error(
+      `   Example: ${environment}: { mode: EnvironmentMode.Hosted, sync: true }`,
+    );
     return false;
   }
 
   const content = renderEnvironmentSkeleton(schema, environment);
-  const path = resolve(cwd, `config/${environment}.ts`);
+  const relativePath = `config/${environment}.ts`;
+  const path = resolve(cwd, relativePath);
+  ensureValuesFileIgnored(cwd, relativePath);
   writeFileSync(path, content, { flag: "wx" });
   console.log(`✅ Created config/${environment}.ts`);
   console.log(
@@ -93,4 +103,28 @@ function renderEnvironmentSkeleton(
 
   lines.push("} satisfies ConfigValuesFor<typeof schema>);", "");
   return lines.join("\n");
+}
+
+function ensureValuesFileIgnored(cwd: string, relativePath: string): void {
+  const check = spawnSync("git", ["check-ignore", "--quiet", relativePath], {
+    cwd,
+    shell: false,
+    stdio: "ignore",
+  });
+  if (check.status === 0) return;
+
+  const gitignorePath = resolve(cwd, ".gitignore");
+  const current = existsSync(gitignorePath)
+    ? readFileSync(gitignorePath, "utf8")
+    : "";
+  if (current.split(/\r?\n/).includes(relativePath)) return;
+
+  const needsLeadingNewline = current.length > 0 && !current.endsWith("\n");
+  const hasMarker = current.includes("# @kingstack/config environment values");
+  const addition = [
+    needsLeadingNewline ? "\n" : "",
+    hasMarker ? "" : "# @kingstack/config environment values\n",
+    `${relativePath}\n`,
+  ].join("");
+  appendFileSync(gitignorePath, addition);
 }

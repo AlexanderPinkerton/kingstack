@@ -44,11 +44,13 @@ The example uses local Supabase development credentials. Hosted credentials belo
 Environment names are not hardcoded in the CLI. Register the environment in `config/schema.ts`:
 
 ```typescript
+import { EnvironmentMode } from "@kingstack/config";
+
 environments: {
-  local: { mode: "local", sync: false },
-  development: { mode: "hosted", sync: true },
-  staging: { mode: "hosted", sync: true },
-  production: { mode: "hosted", sync: true },
+  local: { mode: EnvironmentMode.Local, sync: false },
+  development: { mode: EnvironmentMode.Hosted, sync: true },
+  staging: { mode: EnvironmentMode.Hosted, sync: true },
+  production: { mode: EnvironmentMode.Hosted, sync: true },
 }
 ```
 

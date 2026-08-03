@@ -3,7 +3,7 @@
   "author": "Alexander Pinkerton <alexanderpinkerton.business@gmail.com>",
   "version": "0.1.5",
   "license": "MIT",
-  "description": "Configuration management system for KingStack",
+  "description": "TypeScript configuration management and environment generation",
   "repository": {
     "type": "git",
     "url": "https://github.com/AlexanderPinkerton/kingstack.git",

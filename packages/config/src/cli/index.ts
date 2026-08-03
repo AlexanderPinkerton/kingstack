@@ -4,6 +4,7 @@ import { checkCommand } from "./check";
 import { diffCommand } from "./diff";
 import { initEnvironmentCommand, listEnvironmentsCommand } from "./environment";
 import { generateCommand } from "./generate";
+import { initSchemaCommand } from "./init";
 import { syncCommand } from "./sync";
 
 import { version } from "../../package.json";
@@ -12,8 +13,16 @@ const program = new Command();
 
 program
   .name("king-config")
-  .description("Configuration management CLI for KingStack")
+  .description("TypeScript configuration management CLI")
   .version(version);
+
+program
+  .command("init")
+  .description("Create a standalone starter schema and example values")
+  .option("--cwd <path>", "Working directory", process.cwd())
+  .action((options: { cwd: string }) => {
+    if (!initSchemaCommand(options)) process.exitCode = 1;
+  });
 
 program
   .command("generate")
