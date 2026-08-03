@@ -1,82 +1,165 @@
 # @kingstack/config
 
-A powerful, TypeScript-based configuration management system designed for monorepos. It provides type safety, schema validation, computed values, and automated synchronization of secrets to external services (GitHub Actions, Vercel).
+TypeScript configuration management for projects that need validated per-environment values, computed values, generated `.env`/TOML files, and remote secret synchronization.
 
-## 🚀 Features
+## Mental model
 
-*   **Type Safety**: Define your config schema in TypeScript.
-*   **Computed Values**: Automatically derive values (like database connection strings) from base inputs.
-*   **Single Source of Truth**: Manage all environment variables in one place `config/`.
-*   **Automated Generation**: Generates `.env` files for all your apps/packages.
-*   **Cloud Sync**: Sync secrets to GitHub and Vercel with a single command.
-*   **CLI**: Comes with `king-config` CLI for easy management.
+There are three kinds of files:
 
-## 📦 Installation
+1. **Schema (`config/schema.ts`)** — what values exist, how values are derived, which environments exist, and where values are emitted.
+2. **Environment values (`config/local.ts`, `config/staging.ts`)** — only the inputs that differ for one environment.
+3. **Generated outputs (`apps/*/.env`, `config.toml`)** — build artifacts. Never edit these directly.
+
+When adding or removing a configuration key, update the schema first and then run `king-config check --all`. The checker identifies every environment value file that is missing the key or still contains an obsolete key.
+
+## Installation
 
 ```bash
 yarn add -D @kingstack/config
-# or
-npm install -D @kingstack/config
-# or
-bun add -d @kingstack/config
 ```
 
-## 🛠 Usage
+The CLI currently uses Bun to load TypeScript schema and value files directly.
 
-### 1. Define your Schema
-
-Create `config/schema.ts`:
+## Schema
 
 ```typescript
 import { defineSchema } from "@kingstack/config";
 
 export const schema = defineSchema({
-  core: {
-    API_PORT: { required: true, description: "Port for the API" },
-    HOST: { default: "localhost" },
+  environments: {
+    local: { mode: "local", sync: false },
+    development: { mode: "hosted", sync: true },
+    production: { mode: "hosted", sync: true },
   },
-  computed: (core) => ({
-    API_URL: `http://${core.HOST}:${core.API_PORT}`,
+
+  core: {
+    API_PORT: {
+      required: true,
+      description: "Port used by the API",
+      validate: (value) =>
+        Number.isInteger(Number(value)) ? undefined : "API_PORT must be an integer",
+    },
+    API_HOST: { default: "localhost" },
+    DEPLOY_TOKEN: {
+      sensitive: true,
+      requiredWhen: ({ mode }) => mode === "hosted",
+    },
+  },
+
+  computed: (core, environment) => ({
+    KINGSTACK_ENVIRONMENT: environment.environment,
+    API_URL:
+      environment.mode === "local"
+        ? `http://${core.API_HOST}:${core.API_PORT}`
+        : `https://${core.API_HOST}`,
   }),
+
   envfiles: {
-    // Map values to your app's .env file
-    app: {
-      path: "apps/web/.env",
-      keys: ["API_URL"],
-    }
-  }
+    api: {
+      path: "apps/api/.env",
+      keys: ["API_URL", "KINGSTACK_ENVIRONMENT"],
+      // Aliases map source configuration key -> generated output key.
+      aliases: { API_PORT: "PORT" },
+    },
+  },
 });
 ```
 
-### 2. Define Values
+Environment names are supplied by the CLI. Do not duplicate an environment-name input in every value file; derive it from `environment.environment` as shown above.
 
-Create environment-specific files (e.g., `config/local.ts`):
+## Environment values
 
 ```typescript
-import { defineValues } from "@kingstack/config";
+import { defineValues, type ConfigValuesFor } from "@kingstack/config";
+import type { schema } from "./schema.js";
 
 export const values = defineValues({
   API_PORT: "3000",
-});
+} satisfies ConfigValuesFor<typeof schema>);
 ```
 
-### 3. Run the CLI
+Defaults belong in the schema. A value file should contain only genuine environment-specific inputs.
 
-Generate your configuration:
+## Commands
+
+### Inspect environments
 
 ```bash
-# Using bun (recommended to avoid compilation)
-bun king-config generate local
-
-# Or using node (requires pre-compiling your config files or using ts-node)
-npx king-config generate local
+bun king-config env list
 ```
 
-## 📚 commands
+Shows declared environment names, modes, synchronization eligibility, and whether each values file exists. It never prints values.
 
-*   `king-config generate <env>`: Generates `.env` files and updates compatible config files (TOML).
-*   `king-config sync`: Syncs secrets to external providers (GitHub, Vercel).
+### Create an environment
 
-## 📄 License
+First register it in `schema.environments`:
+
+```typescript
+staging: { mode: "hosted", sync: true }
+```
+
+Then create a skeleton containing its required inputs:
+
+```bash
+bun king-config env init staging
+```
+
+### Validate
+
+```bash
+bun king-config check local
+bun king-config check --all
+```
+
+Validation reports:
+
+- Missing required values
+- Unknown or obsolete values
+- Invalid runtime values
+- Undeclared or missing environments
+- Computed-value failures and collisions
+- Unknown env-file, config-file, and service mapping keys
+- Duplicate generated keys and output paths
+
+Values are always redacted from diagnostic output.
+
+### Detect generated-file drift
+
+```bash
+bun king-config diff local
+```
+
+Reports missing, extra, and changed generated keys without printing their values. The command exits nonzero when outputs are stale.
+
+### Generate
+
+```bash
+bun king-config generate local
+```
+
+Generation validates and renders every output before committing changes. Existing outputs are backed up with a `.previous` suffix.
+
+### Synchronize remote values
+
+```bash
+bun king-config sync --env development --dry-run
+bun king-config sync --env development
+```
+
+When `--env` is omitted, synchronization uses environments marked `sync: true`. Dry runs perform no writes and do not require provider CLIs. GitHub and Vercel values are passed through stdin instead of interpolated into shell commands.
+
+An actual sync requires authenticated `gh` and/or `vercel` CLIs on `PATH`.
+
+## Adding or removing a key
+
+1. Add or remove the input in `schema.core`, or update `schema.computed` for a derived value.
+2. Add or remove its destination mappings under `envfiles`, `configs`, or `services`.
+3. Run `bun king-config check --all` and update every reported environment values file.
+4. Run `bun king-config diff <environment>` to inspect generated drift.
+5. Run `bun king-config generate <environment>` when the plan is correct.
+
+Unknown keys are errors rather than silently ignored values, so old configuration cannot linger unnoticed.
+
+## License
 
 MIT

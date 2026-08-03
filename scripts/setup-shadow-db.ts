@@ -36,7 +36,7 @@ async function loadConfigForEnv(env: string) {
     throw new Error(`Config values not found: ${valuesPath}`);
   const { values } = await import(valuesPath);
 
-  return resolveConfig(schema, values);
+  return resolveConfig(schema, values, { environment: env });
 }
 
 async function main() {
@@ -53,16 +53,7 @@ async function main() {
       console.error("❌ Configuration errors:", errors);
       process.exit(1);
     }
-    projectId = config.all.SUPABASE_PROJECT_REF; // In local mode, REF usually acts as ID/Name suffix
-
-    // If it's a "remote" ref (like 'iytsajmbf...') but we are in the local KingStack environment,
-    // we might be looking for the local container name which usually follows the project_id in config.toml
-    // But the user defines SUPABASE_PROJECT_ID in their schema for this.
-    // Let's check SUPABASE_PROJECT_ID if available, else REF.
-
-    // In the user's schema, SUPABASE_PROJECT_REF is the key.
-    // In local.ts, the user likely sets this to "kingstack-local" for the local instance
-    // or the docker container name suffix.
+    projectId = config.all.SUPABASE_PROJECT_REF;
   } catch (e: any) {
     console.error(`❌ Failed to load config: ${e.message}`);
     process.exit(1);

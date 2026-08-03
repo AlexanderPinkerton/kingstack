@@ -69,7 +69,9 @@ export async function loadProjectConfig(
     throw new Error(`config/${environment}.ts exports no values.`);
   }
 
-  const result = resolveConfig(schemaModule.schema, valuesModule.values);
+  const result = resolveConfig(schemaModule.schema, valuesModule.values, {
+    environment,
+  });
   if (result.errors.length > 0) {
     throw new Error(
       `Configuration is invalid:\n${result.errors.map((error) => `- ${error.key}: ${error.message}`).join("\n")}`,

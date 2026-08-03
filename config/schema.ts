@@ -1,4 +1,12 @@
-import { defineSchema } from "@kingstack/config";
+import { defineSchema, type ConfigValuesFor } from "@kingstack/config";
+
+function validatePort(value: string): string | undefined {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    return `Expected a port between 1 and 65535, received "${value}"`;
+  }
+  return undefined;
+}
 
 /**
  * Configuration schema for KingStack.
@@ -10,6 +18,14 @@ import { defineSchema } from "@kingstack/config";
  * 4. Config file mappings (which values update which config files)
  */
 export const schema = defineSchema({
+  environments: {
+    local: {
+      mode: "local",
+      sync: false,
+      description: "Local development using local services",
+    }
+  },
+
   // ============================================================================
   // Core Configuration (The Inputs)
   // ============================================================================
@@ -28,10 +44,12 @@ export const schema = defineSchema({
     NEST_PORT: {
       required: true,
       description: "NestJS backend port",
+      validate: validatePort,
     },
     NEXT_PORT: {
       required: true,
       description: "Next.js frontend port",
+      validate: validatePort,
     },
 
     // Supabase Configuration
@@ -52,67 +70,79 @@ export const schema = defineSchema({
     SUPABASE_SERVICE_ROLE_KEY: {
       required: true,
       description: "Supabase service role key for server-side operations",
+      sensitive: true,
     },
     SUPA_JWT_SECRET: {
       required: true,
       description: "JWT secret from Supabase dashboard for token validation",
+      sensitive: true,
     },
     SUPABASE_DB_PASSWORD: {
       required: true,
       description: "Database password",
+      sensitive: true,
     },
     SUPABASE_DB_SHADOW_PORT: {
       required: false,
       default: "54320",
       description: "Supabase shadow port",
+      validate: validatePort,
     },
     SUPABASE_API_PORT: {
       required: false,
       default: "54321",
       description: "Supabase API port",
+      validate: validatePort,
     },
     SUPABASE_DB_DIRECT_PORT: {
       required: false,
       default: "54322",
       description: "Supabase database direct port",
+      validate: validatePort,
     },
     SUPABASE_DB_POOLER_PORT: {
       required: false,
       default: "54322", // Using the direct one for now since the pooler one doesn't work for some reason.
       description: "Supabase database pooler port",
+      validate: validatePort,
     },
     SUPABASE_STUDIO_PORT: {
       required: false,
       default: "54324",
       description: "Supabase studio port",
+      validate: validatePort,
     },
     SUPABASE_ANALYTICS_PORT: {
       required: false,
       default: "54325",
       description: "Supabase analytics port",
+      validate: validatePort,
     },
     SUPABASE_EMAIL_PORT: {
       required: false,
       default: "54326",
       description: "Supabase email port",
+      validate: validatePort,
     },
     SUPABASE_EDGE_RUNTIME_INSPECTOR_PORT: {
       required: false,
       default: "54327",
       description: "Supabase Edge Runtime inspector port",
+      validate: validatePort,
     },
 
-    // Optional: Deployment
+    // Deployment values are required only for hosted environments.
     VERCEL_TOKEN: {
-      required: true,
+      requiredWhen: ({ mode }) => mode === "hosted",
       description: "Vercel deployment token",
+      sensitive: true,
     },
     VERCEL_ORG_ID: {
-      required: true,
+      requiredWhen: ({ mode }) => mode === "hosted",
       description: "Vercel organization ID",
     },
     VERCEL_PROJECT_ID: {
-      required: true,
+      requiredWhen: ({ mode }) => mode === "hosted",
       description: "Vercel project ID",
     },
 
@@ -120,14 +150,17 @@ export const schema = defineSchema({
     OPENAI_API_KEY: {
       default: "",
       description: "OpenAI API key",
+      sensitive: true,
     },
     ANTHROPIC_API_KEY: {
       default: "",
       description: "Anthropic API key",
+      sensitive: true,
     },
     GEMINI_API_KEY: {
       default: "",
       description: "Google Gemini API key",
+      sensitive: true,
     },
 
     // Runtime logging. The config generator declares these values; each
@@ -136,25 +169,35 @@ export const schema = defineSchema({
       default: "info",
       description:
         "Minimum runtime log level: trace, debug, info, warn, error, fatal, or silent",
+      validate: (value) =>
+        ["trace", "debug", "info", "warn", "error", "fatal", "silent"].includes(
+          value,
+        )
+          ? undefined
+          : `Unknown log level "${value}"`,
     },
     LOG_FORMAT: {
       default: "json",
       description: "Runtime log format: json or pretty (pretty is local-only)",
-    },
-    KINGSTACK_ENVIRONMENT: {
-      default: "local",
-      description:
-        "KingStack environment: local, development, or production; also determines local or remote URL generation",
+      validate: (value, { mode }) => {
+        if (value !== "json" && value !== "pretty") {
+          return `Unknown log format "${value}"`;
+        }
+        if (mode === "hosted" && value === "pretty") {
+          return "Hosted environments require LOG_FORMAT=json";
+        }
+        return undefined;
+      },
     },
   },
 
   // ============================================================================
   // Computed Values (Derived from Core Configuration)
   // ============================================================================
-  computed: (core) => {
+  computed: (core, environment) => {
     // Local uses localhost and explicit ports. Development and production use
     // hosted HTTPS endpoints.
-    const isLocal = core.KINGSTACK_ENVIRONMENT === "local";
+    const isLocal = environment.mode === "local";
 
     // Supabase URLs (different patterns for local vs remote)
     const supabaseApiUrl = isLocal
@@ -202,13 +245,16 @@ export const schema = defineSchema({
 
       // Database connection strings
       // Pooler connection (for connection pooling via PgBouncer)
-      SUPABASE_DB_POOL_URL: `postgresql://${dbUser}:${core.SUPABASE_DB_PASSWORD}@${dbPoolerHost}:${dbPoolerPort}/postgres?pgbouncer=true`,
+      SUPABASE_DB_POOL_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbPoolerHost}:${dbPoolerPort}/postgres?pgbouncer=true`,
 
       // Direct connection (for migrations)
-      SUPABASE_DB_DIRECT_URL: `postgresql://${dbUser}:${core.SUPABASE_DB_PASSWORD}@${dbDirectHost}:${dbDirectPort}/postgres`,
+      SUPABASE_DB_DIRECT_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbDirectHost}:${dbDirectPort}/postgres`,
 
       // Shadow DB connection (for migrations)
-      SUPABASE_DB_SHADOW_URL: `postgresql://${dbUser}:${core.SUPABASE_DB_PASSWORD}@${dbDirectHost}:${dbDirectPort}/shadow_db`,
+      SUPABASE_DB_SHADOW_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbDirectHost}:${dbDirectPort}/shadow_db`,
+
+      // Environment identity comes from the CLI argument, never duplicated in values files.
+      KINGSTACK_ENVIRONMENT: environment.environment,
 
       // Public-facing URLs for Next.js
       NEXT_PUBLIC_SUPABASE_URL: supabaseApiUrl,
@@ -312,7 +358,7 @@ export const schema = defineSchema({
   configs: {
     supabase: {
       path: "supabase/config.toml",
-      format: "toml" as const,
+      format: "toml",
       mappings: {
         project_id: "SUPABASE_PROJECT_REF",
         "api.port": "SUPABASE_API_PORT",
@@ -362,6 +408,4 @@ export const schema = defineSchema({
   },
 });
 
-export type ConfigValues = {
-  [K in keyof typeof schema.core]?: string;
-};
+export type ConfigValues = ConfigValuesFor<typeof schema>;

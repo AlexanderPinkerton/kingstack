@@ -40,7 +40,7 @@ export const SKIP_PATTERNS = [
 // Published npm packages that should NOT be renamed
 // These will use their npm versions instead of workspace:*
 export const PUBLISHED_PACKAGES: Record<string, string> = {
-  "@kingstack/config": "^0.1.4",
+  "@kingstack/config": "^0.2.0",
   "@kingstack/advanced-optimistic-store": "^0.1.0",
   "@kingstack/comment-tree": "^0.2.2",
   "@kingstack/dnd-tree": "^0.2.0",

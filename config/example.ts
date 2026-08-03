@@ -1,18 +1,17 @@
 import { defineValues } from "@kingstack/config";
+import type { ConfigValues } from "./schema.js";
 
 /**
  * Example secret values for KingStack.
  *
  * Copy this file to create your own environment-specific values:
- * - secrets/local.ts (for local Supabase)
- * - secrets/development.ts (for development environment)
- * - secrets/production.ts (for production environment)
+ * - config/local.ts (for local Supabase)
+ * - config/development.ts (for development environment)
+ * - config/production.ts (for production environment)
  *
  * Replace all "REPLACEME" values with your actual secrets.
  */
 export const values = defineValues({
-  SUPABASE_PROJECT_ID: "kingstack-example",
-
   // ============================================================================
   // Application URLs (defaults are usually fine for local development)
   // ============================================================================
@@ -36,24 +35,14 @@ export const values = defineValues({
   // ============================================================================
   // Supabase Configuration
   // ============================================================================
-  // For remote Supabase (production/development):
-  SUPABASE_PROJECT_REF: "iytsajmbfqriqylrmruy", // Your project ref from Supabase dashboard
-  SUPABASE_REGION: "aws-1-us-east-1", // Your region from Supabase dashboard
-
-  // For local Supabase:
-  // SUPABASE_PROJECT_REF: "local",
-  // SUPABASE_REGION: "local",
-
-  SUPABASE_ANON_KEY: "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH",
-  SUPABASE_SERVICE_ROLE_KEY: "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz",
+  SUPABASE_PROJECT_REF: "kingstack-local",
+  SUPABASE_REGION: "local",
+  SUPABASE_ANON_KEY:
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
+  SUPABASE_SERVICE_ROLE_KEY:
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJsdJsyH-qQwv8Hdp7fsn3W0YpN81IU",
   SUPA_JWT_SECRET: "super-secret-jwt-token-with-at-least-32-characters-long",
   SUPABASE_DB_PASSWORD: "postgres",
-
-  // ============================================================================
-  // Optional: OAuth (leave empty if not using)
-  // ============================================================================
-  GOOGLE_CLIENT_ID: "",
-  GOOGLE_CLIENT_SECRET: "",
 
   // ============================================================================
   // Optional: Deployment (leave empty if not deploying)
@@ -72,25 +61,7 @@ export const values = defineValues({
   // ============================================================================
   // Runtime Environment and Logging
   // ============================================================================
-  // local uses localhost URLs; development and production use hosted URLs.
+  // The CLI derives KINGSTACK_ENVIRONMENT from the selected environment name.
   LOG_LEVEL: "debug",
   LOG_FORMAT: "pretty",
-  KINGSTACK_ENVIRONMENT: "local",
-
-  // ============================================================================
-  // Stripe
-  // ============================================================================
-  STRIPE_PUBLIC_KEY: "pk_test_REPLACEME",
-  STRIPE_SECRET_KEY: "sk_test_REPLACEME",
-  STRIPE_WEBHOOK_SECRET: "whsec_REPLACEME",
-
-  // ============================================================================
-  // Resend (Email)
-  // ============================================================================
-  RESEND_API_KEY: "re_REPLACEME",
-
-  // ============================================================================
-  // Ecommerce: Inventory
-  // ============================================================================
-  NEXT_PUBLIC_INVENTORY_POOL_ID: "REPLACEME",
-});
+} satisfies ConfigValues);

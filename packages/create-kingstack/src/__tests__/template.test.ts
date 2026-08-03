@@ -211,7 +211,7 @@ describe("replaceWorkspaceVersions", () => {
     replaceWorkspaceVersions(testDir);
 
     const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-    expect(pkg.devDependencies["@kingstack/config"]).toBe("^0.1.4");
+    expect(pkg.devDependencies["@kingstack/config"]).toBe("^0.2.0");
   });
 
   it("should replace the AOS workspace version with its npm version", () => {

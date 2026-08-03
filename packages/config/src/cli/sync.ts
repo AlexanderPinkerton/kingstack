@@ -1,177 +1,234 @@
-import { execSync } from "child_process";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
-import { join, resolve } from "path";
-import { resolveConfig } from "../core";
-import { loadUserSchema, loadUserValues } from "./utils";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import type { EnvironmentDefinition } from "../core";
+import { inspectEnvironment } from "./check";
+import { loadUserSchema } from "./utils";
+
+type SyncTarget = "github" | "vercel";
 
 export async function syncCommand(options: {
   cwd?: string;
   env?: string;
   target?: string;
   dryRun?: boolean;
-}) {
+}): Promise<boolean> {
   const cwd = options.cwd ? resolve(options.cwd) : process.cwd();
-  const envsToSync = options.env
+  const schema = await loadUserSchema(cwd);
+  const target = parseTarget(options.target);
+  const targets: SyncTarget[] = target ? [target] : ["github", "vercel"];
+  const environments = options.env
     ? [options.env]
-    : ["development", "production"];
-  const isDryRun = !!options.dryRun;
+    : getDefaultSyncEnvironments(schema.environments);
+  const isDryRun = options.dryRun === true;
 
-  console.log("🔐 Deployment Secret Sync Tool\n");
-
-  try {
-    const schema = await loadUserSchema(cwd);
-
-    // Check CLI tools
-    if (!options.target || options.target === "github") checkGitHubCLI();
-    if (!options.target || options.target === "vercel") checkVercelCLI();
-
-    for (const env of envsToSync) {
-      console.log(`\n📦 Environment: ${env}`);
-      const values = await loadUserValues(env, cwd);
-      const { config, errors } = resolveConfig(schema, values);
-
-      if (errors.length > 0) {
-        console.error("❌ Validation errors:");
-        errors.forEach((e) => console.error(`  - ${e.key}: ${e.message}`));
-        process.exit(1);
-      }
-
-      if (!options.target || options.target === "github") {
-        syncToGitHub(
-          env,
-          config.all,
-          schema.services?.github?.keys || [],
-          isDryRun,
-        );
-      }
-      if (!options.target || options.target === "vercel") {
-        syncToVercel(
-          env,
-          config.all,
-          schema.services?.vercel?.keys || [],
-          isDryRun,
-          cwd,
-        );
-      }
-    }
-  } catch (error: any) {
-    console.error(`❌ Error: ${error.message}`);
-    process.exit(1);
+  if (environments.length === 0) {
+    console.error("❌ No environments are marked with sync: true");
+    return false;
   }
+
+  console.log(`🔐 Deployment Secret Sync${isDryRun ? " (dry run)" : ""}\n`);
+  const inspections = await Promise.all(
+    environments.map((environment) =>
+      inspectEnvironment(schema, environment, cwd),
+    ),
+  );
+  const invalidInspections = inspections.filter(
+    (inspection) => inspection.errors.length > 0,
+  );
+  if (invalidInspections.length > 0) {
+    for (const inspection of invalidInspections) {
+      console.error(`❌ ${inspection.environment} configuration errors:`);
+      printErrors(inspection.errors);
+    }
+    return false;
+  }
+
+  if (!isDryRun) {
+    if (targets.includes("github")) checkCommandAvailable("gh", ["--version"]);
+    if (targets.includes("vercel"))
+      checkCommandAvailable("vercel", ["--version"]);
+  }
+
+  let failed = false;
+  for (const inspection of inspections) {
+    const { environment } = inspection;
+    console.log(`\n📦 Environment: ${environment}`);
+
+    for (const syncTarget of targets) {
+      const keys = schema.services?.[syncTarget]?.keys;
+      if (!keys) {
+        console.error(`❌ No services.${syncTarget} mapping is defined`);
+        failed = true;
+        continue;
+      }
+
+      const succeeded =
+        syncTarget === "github"
+          ? syncToGitHub(
+              environment,
+              inspection.config.all,
+              keys,
+              isDryRun,
+              cwd,
+            )
+          : syncToVercel(
+              environment,
+              inspection.config.all,
+              keys,
+              isDryRun,
+              cwd,
+            );
+      if (!succeeded) failed = true;
+    }
+  }
+
+  if (failed) {
+    console.error("\n❌ Secret synchronization completed with errors");
+    return false;
+  }
+  console.log(
+    `\n✅ ${isDryRun ? "Secret synchronization plan is valid" : "Secret synchronization completed"}`,
+  );
+  return true;
 }
 
 function syncToGitHub(
-  env: string,
-  config: Record<string, string>,
-  keys: string[],
-  isDryRun: boolean,
-) {
-  console.log(`\n🐙 Syncing to GitHub environment: ${env}`);
-  const secretsToSync = keys
-    .map((key) => ({ key, value: config[key] }))
-    .filter((s) => s.value);
-
-  if (isDryRun) {
-    console.log(
-      `🔍 [DRY RUN] Would sync ${secretsToSync.length} secrets to GitHub`,
-    );
-    return;
-  }
-
-  for (const { key, value } of secretsToSync) {
-    try {
-      execSync(
-        `gh secret set ${key} --env ${env} --body "${value.replace(/"/g, '\\"')}"`,
-        { stdio: "pipe" },
-      );
-      console.log(`   ✅ ${key}`);
-    } catch (e: any) {
-      console.error(`   ❌ ${key}: ${e.message}`);
-    }
-  }
-}
-
-function syncToVercel(
-  env: string,
+  environment: string,
   config: Record<string, string>,
   keys: string[],
   isDryRun: boolean,
   cwd: string,
-) {
-  console.log(`\n▲ Syncing to Vercel environment: ${env}`);
-
-  const projectId = config.VERCEL_PROJECT_ID;
-  const orgId = config.VERCEL_ORG_ID;
-
-  if (!projectId) {
-    console.error(`\n❌ Error: VERCEL_PROJECT_ID not found in ${env} config`);
-    return;
-  }
-  if (!orgId) {
-    console.error(`\n❌ Error: VERCEL_ORG_ID not found in ${env} config`);
-    return;
-  }
-
-  // Link project
-  const vercelDir = resolve(cwd, ".vercel");
-  const vercelProjectPath = join(vercelDir, "project.json");
-
-  if (!existsSync(vercelDir)) {
-    mkdirSync(vercelDir, { recursive: true });
-  }
-
-  const vercelProject = { projectId, orgId };
-  writeFileSync(vercelProjectPath, JSON.stringify(vercelProject, null, 2));
-  console.log(`🔗 Linked to Vercel project: ${vercelProjectPath}`);
-
-  const secretsToSync = keys
-    .map((key) => ({ key, value: config[key] }))
-    .filter((s) => s.value);
+): boolean {
+  const secrets = collectSecrets(config, keys);
+  console.log(`\n🐙 GitHub environment: ${environment}`);
 
   if (isDryRun) {
-    console.log(
-      `🔍 [DRY RUN] Would sync ${secretsToSync.length} secrets to Vercel`,
-    );
-    return;
+    console.log(`   Would sync ${secrets.length} secrets`);
+    return true;
   }
 
-  const vercelEnv = "production"; // Always sync as production to the mapped project
-  console.log(`\n🚀 Syncing secrets to Vercel project...`);
-
-  for (const { key, value } of secretsToSync) {
-    try {
-      try {
-        execSync(`npx vercel env rm ${key} ${vercelEnv} --yes`, {
-          stdio: "pipe",
-          cwd,
-        });
-      } catch {
-        // The secret may not exist yet.
-      }
-
-      execSync(
-        `echo "${value.replace(/"/g, '\\"')}" | npx vercel env add ${key} ${vercelEnv}`,
-        { stdio: "pipe", shell: "/bin/bash", cwd },
-      );
+  let succeeded = true;
+  for (const { key, value } of secrets) {
+    const result = spawnSync(
+      "gh",
+      ["secret", "set", key, "--env", environment],
+      {
+        cwd,
+        encoding: "utf8",
+        input: value,
+        shell: false,
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    );
+    if (result.status === 0) {
       console.log(`   ✅ ${key}`);
-    } catch (e: any) {
-      console.error(`   ❌ ${key}: ${e.message}`);
+    } else {
+      console.error(`   ❌ ${key}: ${commandError(result)}`);
+      succeeded = false;
     }
   }
+  return succeeded;
 }
 
-function checkGitHubCLI() {
-  try {
-    execSync("gh --version", { stdio: "pipe" });
-  } catch {
-    throw new Error("GitHub CLI (gh) is not installed");
+function syncToVercel(
+  environment: string,
+  config: Record<string, string>,
+  keys: string[],
+  isDryRun: boolean,
+  cwd: string,
+): boolean {
+  const projectId = config.VERCEL_PROJECT_ID;
+  const orgId = config.VERCEL_ORG_ID;
+  const secrets = collectSecrets(config, keys);
+  console.log(`\n▲ Vercel project for environment: ${environment}`);
+
+  if (!projectId || !orgId) {
+    console.error("   ❌ VERCEL_PROJECT_ID and VERCEL_ORG_ID are required");
+    return false;
   }
+  if (isDryRun) {
+    console.log(
+      `   Would link the configured project and sync ${secrets.length} values`,
+    );
+    return true;
+  }
+
+  const vercelDirectory = resolve(cwd, ".vercel");
+  if (!existsSync(vercelDirectory))
+    mkdirSync(vercelDirectory, { recursive: true });
+  writeFileSync(
+    join(vercelDirectory, "project.json"),
+    `${JSON.stringify({ projectId, orgId }, null, 2)}\n`,
+  );
+
+  // Each configured KingStack environment maps to a separate Vercel project's
+  // production environment.
+  const vercelEnvironment = "production";
+  let succeeded = true;
+  for (const { key, value } of secrets) {
+    const result = spawnSync(
+      "vercel",
+      ["env", "add", key, vercelEnvironment, "--force"],
+      {
+        cwd,
+        encoding: "utf8",
+        input: value,
+        shell: false,
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    );
+    if (result.status === 0) {
+      console.log(`   ✅ ${key}`);
+    } else {
+      console.error(`   ❌ ${key}: ${commandError(result)}`);
+      succeeded = false;
+    }
+  }
+  return succeeded;
 }
 
-function checkVercelCLI() {
-  try {
-    execSync("npx vercel --version", { stdio: "pipe" });
-  } catch {
-    throw new Error("Vercel CLI is not available");
-  }
+function collectSecrets(
+  config: Record<string, string>,
+  keys: string[],
+): Array<{ key: string; value: string }> {
+  return keys.flatMap((key) => {
+    const value = config[key];
+    return value === undefined ? [] : [{ key, value }];
+  });
+}
+
+function getDefaultSyncEnvironments(
+  environments: Record<string, EnvironmentDefinition> | undefined,
+): string[] {
+  if (!environments) return ["development", "production"];
+  return Object.entries(environments)
+    .filter(([, definition]) => definition.sync === true)
+    .map(([name]) => name);
+}
+
+function parseTarget(target: string | undefined): SyncTarget | undefined {
+  if (target === undefined) return undefined;
+  if (target === "github" || target === "vercel") return target;
+  throw new Error(`Unknown sync target "${target}"; expected github or vercel`);
+}
+
+function checkCommandAvailable(command: string, args: string[]): void {
+  const result = spawnSync(command, args, {
+    encoding: "utf8",
+    shell: false,
+    stdio: "pipe",
+  });
+  if (result.status !== 0) throw new Error(`${command} CLI is not available`);
+}
+
+function commandError(result: ReturnType<typeof spawnSync>): string {
+  if (result.error) return result.error.message;
+  const stderr = typeof result.stderr === "string" ? result.stderr.trim() : "";
+  return stderr || `command exited with status ${String(result.status)}`;
+}
+
+function printErrors(errors: Array<{ key: string; message: string }>): void {
+  for (const error of errors)
+    console.error(`  - ${error.key}: ${error.message}`);
 }
