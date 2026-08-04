@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  ArrowLeft,
+  ArrowUp,
   Check,
   Clock3,
   Database,
@@ -12,6 +14,7 @@ import {
   RotateCcw,
   Search,
   Trash2,
+  X,
   Zap,
 } from "lucide-react";
 import { observer } from "mobx-react-lite";
@@ -22,7 +25,10 @@ import {
   type OptimisticDemoPipelineRun,
   type OptimisticPostDemoController,
 } from "@/stores/userApp/optimisticPostDemoController";
-import { OptimisticPostsViewModel } from "@/stores/userApp/optimisticPostsViewModel";
+import {
+  OptimisticPostsViewModel,
+  type PostDivergence,
+} from "@/stores/userApp/optimisticPostsViewModel";
 import type { AdvancedPostStore, PostUiData } from "@/stores/userApp/postStore";
 
 interface AdvancedPostsExampleViewProps {
@@ -78,6 +84,69 @@ const pipelineNodes = [
 ] as const;
 
 const TRANSFORMER_NODE_INDEX = 2;
+
+type PipelineNodeId = (typeof pipelineNodes)[number]["id"];
+
+interface PipelineNodeDetail {
+  summary: string;
+  points: string[];
+  code?: string;
+}
+
+/** What the store actually does at each stage, shown when a node is selected. */
+const nodeDetails: Record<PipelineNodeId, PipelineNodeDetail> = {
+  ui: {
+    summary:
+      "Components read one observable projection and call plain methods. There are no cache keys, no invalidation, and no rollback code in the component.",
+    points: [
+      "store.ui is an observable list. Wrap a component in observer and it re-renders when the projection changes.",
+      "Mutations are direct calls. The store decides what the interface should show while the request is in flight.",
+      "Nothing here knows whether a record is optimistic — that distinction lives one layer down.",
+    ],
+    code: "const posts = store.ui.list;\nstore.api.create({ title });",
+  },
+  mobx: {
+    summary:
+      "The optimistic layer. The record is applied here before any request leaves the browser, and this is where a failure is undone.",
+    points: [
+      "onMutate builds the record from the transformer's createOptimisticUiData and upserts it under a temp- id.",
+      "Every operation gets a monotonic operationSequence, so overlapping mutations can never roll back one another.",
+      "Updates stack as { base, layers[] }. Two edits to one record compose instead of clobbering, and a rollback drops only the failed layer.",
+      "Deletes keep the previous record so a rejection can restore it exactly.",
+    ],
+  },
+  transformer: {
+    summary:
+      "The only place the shape of the data changes. It converts between the API row and the richer object the interface wants.",
+    points: [
+      "toUi derives UI-only fields — excerpt, word count, reading time, tags — and turns created_at into a Date.",
+      "toApi reverses that for the request body.",
+      "Derived fields are memoised, so components never recompute them during render.",
+      "createOptimisticUiData defines what a record should look like before the server has answered.",
+    ],
+    code: "toUi:  { created_at: string } → { created_at: Date, excerpt, tags }\ntoApi: { created_at: Date } → { created_at: string }",
+  },
+  query: {
+    summary:
+      "Transport and caching. The query cache holds only what the server has confirmed — optimistic records never reach it.",
+    points: [
+      "One MutationObserver per operation, plus a QueryObserver for the list.",
+      "onSuccess writes the server row and drops the matching temp record; onError restores the previous value.",
+      "committedEntitySequence discards responses older than what is already committed, so a slow reply cannot overwrite a newer one.",
+      "The query key is scoped, so switching users swaps the projection instead of leaking rows between accounts.",
+    ],
+  },
+  api: {
+    summary:
+      "The store never calls fetch. You hand it a repository and it owns the transport from there.",
+    points: [
+      "A repository is four functions: list, create, update, remove.",
+      "Swap an in-memory implementation in for tests and an HTTP one in the app without touching the store.",
+      "This page wraps the real HTTP repository to add the latency and the one-shot rejection you control above.",
+    ],
+    code: "mutations: {\n  create: (data) => repository.create(data, context),\n}",
+  },
+};
 
 function phaseLabel(run: OptimisticDemoPipelineRun | null): string {
   if (!run) return "Idle — run a mutation to watch data cross the boundary";
@@ -183,7 +252,8 @@ function PipelineEdge({
     >
       {showBlip && (
         <span
-          key={`${run?.id ?? "idle"}-${run?.phase ?? "idle"}-${index}`}
+          // Remounts per traversal so the animation restarts each time.
+          key={`${run?.id ?? "idle"}-${run?.direction ?? "idle"}-${index}`}
           className={`optimistic-flow-blip absolute -left-[0.1875rem] size-[0.4375rem] rounded-full ${blipTone}`}
           data-direction={backward ? "backward" : "forward"}
           style={{ animationDuration: `${run?.stepMs ?? 0}ms` }}
@@ -199,8 +269,12 @@ function PipelineEdge({
  */
 const PipelineSpine = observer(function PipelineSpine({
   controller,
+  selectedNodeId,
+  onSelectNode,
 }: {
   controller: OptimisticPostDemoController;
+  selectedNodeId: PipelineNodeId | null;
+  onSelectNode: (nodeId: PipelineNodeId | null) => void;
 }) {
   const run = controller.pipelineRun;
   const settledTone =
@@ -231,30 +305,36 @@ const PipelineSpine = observer(function PipelineSpine({
       <div className="mt-4">
         {pipelineNodes.map((node, index) => {
           const isTransformer = node.id === "transformer";
+          const selected = selectedNodeId === node.id;
 
           return (
             <div key={node.id}>
-              <div
-                className={`rounded-xl border px-2.5 py-2 text-center transition ${
-                  isTransformer && transformerActive
-                    ? "border-[#a89cff]/40 bg-[#a89cff]/[0.09]"
-                    : "border-white/[0.07] bg-white/[0.025]"
+              <button
+                type="button"
+                aria-pressed={selected}
+                onClick={() => onSelectNode(selected ? null : node.id)}
+                className={`block w-full rounded-xl border px-2.5 py-2 text-center transition hover:border-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a89cff]/50 ${
+                  selected
+                    ? "border-[#a89cff]/60 bg-[#a89cff]/[0.12]"
+                    : isTransformer && transformerActive
+                      ? "border-[#a89cff]/40 bg-[#a89cff]/[0.09]"
+                      : "border-white/[0.07] bg-white/[0.025]"
                 }`}
               >
-                <p
-                  className={`text-[0.65rem] font-semibold uppercase tracking-[0.12em] ${nodeTones[node.id]}`}
+                <span
+                  className={`block text-[0.65rem] font-semibold uppercase tracking-[0.12em] ${nodeTones[node.id]}`}
                 >
                   {node.label}
-                </p>
-                <p className="mt-0.5 font-mono text-[0.6rem] leading-4 text-white/35">
+                </span>
+                <span className="mt-0.5 block font-mono text-[0.6rem] leading-4 text-white/35">
                   {isTransformer ? transformer.detail : node.detail}
-                </p>
+                </span>
                 {isTransformer && (
-                  <p className="font-mono text-[0.6rem] leading-4 text-white/25">
+                  <span className="block font-mono text-[0.6rem] leading-4 text-white/25">
                     {transformer.shape}
-                  </p>
+                  </span>
                 )}
-              </div>
+              </button>
               {index < pipelineNodes.length - 1 && (
                 <PipelineEdge index={index} run={run} />
               )}
@@ -264,7 +344,7 @@ const PipelineSpine = observer(function PipelineSpine({
       </div>
       <p className="mt-4 text-center text-[0.7rem] leading-5 text-white/35">
         Every mutation travels down and comes back as a confirmation or a
-        rollback.
+        rollback. Select a stage to see what the store does there.
       </p>
     </div>
   );
@@ -581,25 +661,31 @@ const OptimisticColumn = observer(function OptimisticColumn({
 
 const ConfirmedColumn = observer(function ConfirmedColumn({
   viewModel,
+  onClose,
 }: {
   viewModel: OptimisticPostsViewModel;
+  onClose: () => void;
 }) {
   const divergence = viewModel.divergence;
   const rows = viewModel.visibleConfirmedPosts;
 
-  const divergenceParts = [
-    divergence.ahead > 0 ? `${divergence.ahead} not yet confirmed` : null,
-    divergence.changed > 0 ? `${divergence.changed} edited` : null,
-    divergence.behind > 0 ? `${divergence.behind} pending delete` : null,
-  ].filter(Boolean);
-
   return (
     <div className={`min-w-0 ${zoneDividerClass}`}>
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <p className={zoneLabelClass}>Server data · query cache</p>
-        <p className="text-[0.7rem] text-white/35">
-          {viewModel.confirmedPosts.length} confirmed
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <p className={zoneLabelClass}>Server data · query cache</p>
+          <p className="text-[0.7rem] text-white/35">
+            {viewModel.confirmedPosts.length} confirmed
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close server data"
+          className="grid size-7 shrink-0 place-items-center rounded-lg border border-white/10 text-white/40 transition hover:border-white/25 hover:text-white"
+        >
+          <X className="size-3.5" aria-hidden="true" />
+        </button>
       </div>
       <p className="mt-1.5 text-xs text-white/35">
         Only written when a mutation succeeds. Optimistic layers never reach it.
@@ -613,9 +699,7 @@ const ConfirmedColumn = observer(function ConfirmedColumn({
         }`}
         aria-live="polite"
       >
-        {divergence.inSync
-          ? "In sync — both sides agree"
-          : `Interface is ahead: ${divergenceParts.join(" · ")}`}
+        {divergenceSummary(divergence)}
       </div>
 
       <ul className="mt-3 space-y-1.5">
@@ -650,6 +734,140 @@ const ConfirmedColumn = observer(function ConfirmedColumn({
     </div>
   );
 });
+
+function divergenceSummary(divergence: PostDivergence): string {
+  if (divergence.inSync) return "In sync — both sides agree";
+
+  const parts = [
+    divergence.ahead > 0 ? `${divergence.ahead} not yet confirmed` : null,
+    divergence.changed > 0 ? `${divergence.changed} edited` : null,
+    divergence.behind > 0 ? `${divergence.behind} pending delete` : null,
+  ].filter(Boolean);
+
+  return `Interface is ahead: ${parts.join(" · ")}`;
+}
+
+/**
+ * Resting state of the detail column. Its job is to make the diagram look
+ * clickable and to keep the interface-vs-server signal on screen.
+ */
+const GuidePanel = observer(function GuidePanel({
+  viewModel,
+  onShowServerData,
+}: {
+  viewModel: OptimisticPostsViewModel;
+  onShowServerData: () => void;
+}) {
+  const divergence = viewModel.divergence;
+
+  return (
+    <div className={`flex min-w-0 flex-col ${zoneDividerClass}`}>
+      <p className={zoneLabelClass}>Inside the store</p>
+      <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.025em]">
+        Click a node to learn more
+      </h2>
+      <p className="mt-2 text-xs leading-5 text-white/45">
+        The spine is the path every mutation takes. Pick a stage to see what the
+        store does there, and what it saves you from writing.
+      </p>
+
+      {/* Points at the spine: beside this column on wide screens, above it
+          once the layout stacks. */}
+      <div className="flex flex-1 items-center justify-center py-10">
+        <span className="grid size-14 place-items-center rounded-full border border-[#d8ff70]/30 bg-[#d8ff70]/[0.08] text-[#d8ff70]">
+          <ArrowUp className="size-6 lg:hidden" aria-hidden="true" />
+          <ArrowLeft className="hidden size-6 lg:block" aria-hidden="true" />
+        </span>
+      </div>
+
+      <div className="border-t border-white/[0.07] pt-4">
+        <p
+          className={`text-xs ${
+            divergence.inSync ? "text-[#8ee8ff]" : "text-[#d8ff70]"
+          }`}
+          aria-live="polite"
+        >
+          {divergenceSummary(divergence)}
+        </p>
+        <button
+          type="button"
+          onClick={onShowServerData}
+          className="mt-2 text-xs text-white/35 transition hover:text-white"
+        >
+          View server data →
+        </button>
+      </div>
+    </div>
+  );
+});
+
+/**
+ * Takes over the confirmed-data column while a pipeline node is selected, so
+ * the diagram doubles as a guided tour of the store.
+ */
+function NodeDetailColumn({
+  nodeId,
+  onClose,
+}: {
+  nodeId: PipelineNodeId;
+  onClose: () => void;
+}) {
+  const node = pipelineNodes.find((candidate) => candidate.id === nodeId);
+  const detail = nodeDetails[nodeId];
+  if (!node) return null;
+
+  return (
+    <div className={`min-w-0 ${zoneDividerClass}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className={zoneLabelClass}>Inside the store</p>
+          <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.025em]">
+            {node.label}
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close stage detail"
+          className="grid size-7 shrink-0 place-items-center rounded-lg border border-white/10 text-white/40 transition hover:border-white/25 hover:text-white"
+        >
+          <X className="size-3.5" aria-hidden="true" />
+        </button>
+      </div>
+
+      <p className="mt-3 text-xs leading-5 text-white/50">{detail.summary}</p>
+
+      <ul className="mt-3 space-y-2">
+        {detail.points.map((point) => (
+          <li
+            key={point}
+            className="flex gap-2 text-xs leading-5 text-white/45"
+          >
+            <span
+              aria-hidden="true"
+              className="mt-[0.4rem] size-1 shrink-0 rounded-full bg-[#a89cff]"
+            />
+            <span className="min-w-0">{point}</span>
+          </li>
+        ))}
+      </ul>
+
+      {detail.code && (
+        <pre className="mt-3 overflow-x-auto rounded-lg border border-white/[0.07] bg-black/30 p-3 font-mono text-[0.65rem] leading-5 text-white/55">
+          {detail.code}
+        </pre>
+      )}
+
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-4 text-xs text-white/35 transition hover:text-white"
+      >
+        ← Back to server data
+      </button>
+    </div>
+  );
+}
 
 const MutationTrace = observer(function MutationTrace({
   controller,
@@ -809,6 +1027,12 @@ export const AdvancedPostsExampleView = observer(
         new OptimisticPostsViewModel(postStore, currentUserId, demoController),
     );
     const confirmedPosts = useConfirmedPosts(postStore);
+    // The detail column rests on the guide, and opens either a pipeline stage
+    // or the server-confirmed rows.
+    const [detailPanel, setDetailPanel] = useState<
+      PipelineNodeId | "server" | null
+    >(null);
+    const selectedNodeId = detailPanel === "server" ? null : detailPanel;
 
     useEffect(() => {
       setIsClient(true);
@@ -871,8 +1095,29 @@ export const AdvancedPostsExampleView = observer(
             }
           >
             <OptimisticColumn viewModel={viewModel} />
-            {demoController && <PipelineSpine controller={demoController} />}
-            <ConfirmedColumn viewModel={viewModel} />
+            {demoController && (
+              <PipelineSpine
+                controller={demoController}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={setDetailPanel}
+              />
+            )}
+            {detailPanel === null ? (
+              <GuidePanel
+                viewModel={viewModel}
+                onShowServerData={() => setDetailPanel("server")}
+              />
+            ) : detailPanel === "server" ? (
+              <ConfirmedColumn
+                viewModel={viewModel}
+                onClose={() => setDetailPanel(null)}
+              />
+            ) : (
+              <NodeDetailColumn
+                nodeId={detailPanel}
+                onClose={() => setDetailPanel(null)}
+              />
+            )}
           </div>
         </section>
 
