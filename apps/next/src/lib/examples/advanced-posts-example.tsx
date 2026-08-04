@@ -10,6 +10,7 @@ export const AdvancedPostsExample = observer(() => {
   return (
     <AdvancedPostsExampleView
       postStore={rootStore.userStore.postStore}
+      demoController={rootStore.userStore.optimisticPostDemoController}
       currentUserId={rootStore.session?.user?.id ?? "unknown"}
     />
   );

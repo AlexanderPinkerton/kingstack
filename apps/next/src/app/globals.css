@@ -142,3 +142,44 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Blip travelling along a connector in the optimistic mutation pipeline. */
+@keyframes optimistic-flow-forward {
+  from {
+    top: 0;
+  }
+  to {
+    top: calc(100% - 0.4375rem);
+  }
+}
+
+@keyframes optimistic-flow-backward {
+  from {
+    top: calc(100% - 0.4375rem);
+  }
+  to {
+    top: 0;
+  }
+}
+
+.optimistic-flow-blip {
+  animation-duration: 360ms;
+  animation-fill-mode: both;
+  animation-iteration-count: 1;
+  animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.optimistic-flow-blip[data-direction="forward"] {
+  animation-name: optimistic-flow-forward;
+}
+
+.optimistic-flow-blip[data-direction="backward"] {
+  animation-name: optimistic-flow-backward;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Wins over the per-run duration set inline by the pipeline. */
+  .optimistic-flow-blip {
+    animation-duration: 1ms !important;
+  }
+}

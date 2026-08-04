@@ -15,6 +15,7 @@ AppProviders
     ├── UserStoreManager
     │   ├── CurrentUserStore
     │   ├── AdvancedPostStore
+    │   ├── OptimisticPostDemoController
     │   ├── RealtimeCheckboxStore
     │   └── PublicTodoStore
     └── AdminStoreManager
@@ -82,6 +83,14 @@ Reusable UI receives the domain store directly. RootStore-backed pages add a
 thin composition wrapper, while backend-free routes compose the same UI and
 store outside `AppProviders`. See
 [Frontend drafts without Supabase](../../../../docs/frontend-drafts.md).
+
+The authenticated optimistic-post example wraps its HTTP repository with an
+`OptimisticPostDemoController`. The wrapper can add visible latency or reject
+one mutation before it reaches HTTP, while the unchanged `AdvancedPostStore`
+performs the real optimistic update, reconciliation, and rollback. Form,
+filter, and edit state lives in `OptimisticPostsViewModel`; React only renders
+it and forwards events. The draft route reuses the same view with its memory
+repository and without the network controls.
 
 ## Query Activation Policy
 

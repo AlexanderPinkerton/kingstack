@@ -11,12 +11,10 @@ export default function OptimisticStorePage() {
     <>
       <AppPageHeader
         eyebrow="Full-runtime example"
-        title="Optimistic state"
-        description="Inspect a production-connected store with transformations, filtering, analytics, optimistic mutations, rollback, and reconciliation."
+        title="Optimistic UI"
+        description="The interface and the server, side by side, with the mutation pipeline running between them. Add latency or reject a request to watch the two diverge and converge again."
       />
-      <section className="rounded-[2rem] border border-white/10 bg-[#111216]/85 p-4 shadow-2xl shadow-black/20 sm:p-8">
-        <AdvancedPostsExample />
-      </section>
+      <AdvancedPostsExample />
     </>
   );
 }
