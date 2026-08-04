@@ -6,22 +6,18 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowUp,
-  Check,
   Clock3,
   Database,
   Pencil,
   Plus,
-  RotateCcw,
   Search,
   Trash2,
   X,
-  Zap,
 } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useStoreActivation } from "@/hooks/useStoreActivation";
 import type { PostApiData } from "@/repositories/posts/types";
 import {
-  type OptimisticDemoActivity,
   type OptimisticDemoPipelineRun,
   type OptimisticPostDemoController,
 } from "@/stores/userApp/optimisticPostDemoController";
@@ -46,30 +42,6 @@ const BOUNDARY_GRID_PLAIN =
 const zoneLabelClass =
   "text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-white/30";
 const zoneDividerClass = "lg:border-l lg:border-white/[0.07] lg:pl-6";
-
-const activityPresentation = {
-  optimistic: {
-    icon: Zap,
-    title: "Optimistic layer applied",
-    tone: "text-[#d8ff70] bg-[#d8ff70]/10 border-[#d8ff70]/20",
-  },
-  confirmed: {
-    icon: Check,
-    title: "Server confirmed",
-    tone: "text-[#8ee8ff] bg-[#8ee8ff]/10 border-[#8ee8ff]/20",
-  },
-  rolled_back: {
-    icon: RotateCcw,
-    title: "Rolled back automatically",
-    tone: "text-[#ffb494] bg-[#ff9c6e]/10 border-[#ff9c6e]/20",
-  },
-} as const;
-
-function operationLabel(activity: OptimisticDemoActivity): string {
-  if (activity.operation === "create") return `Created “${activity.label}”`;
-  if (activity.operation === "remove") return `Deleted “${activity.label}”`;
-  return `Updated “${activity.label}”`;
-}
 
 /**
  * The five stages a mutation passes through. Edge count must stay in step with
@@ -852,11 +824,7 @@ function NodeDetailColumn({
         ))}
       </ul>
 
-      {detail.code && (
-        <pre className="mt-3 overflow-x-auto rounded-lg border border-white/[0.07] bg-black/30 p-3 font-mono text-[0.65rem] leading-5 text-white/55">
-          {detail.code}
-        </pre>
-      )}
+      {detail.code && <CodeBlock code={detail.code} />}
 
       <button
         type="button"
@@ -869,67 +837,177 @@ function NodeDetailColumn({
   );
 }
 
-const MutationTrace = observer(function MutationTrace({
-  controller,
-}: {
-  controller: OptimisticPostDemoController;
-}) {
-  return (
-    <section className="rounded-2xl border border-white/10 bg-[#0c0d10] p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className={zoneLabelClass}>Mutation trace</h2>
-        {controller.activity.length > 0 && (
-          <button
-            type="button"
-            onClick={() => controller.clearActivity()}
-            className="text-xs text-white/35 transition hover:text-white"
-          >
-            Clear
-          </button>
-        )}
-      </div>
+type TokenKind =
+  "comment" | "string" | "jsx" | "keyword" | "number" | "fn" | "prop" | "ident";
 
-      {controller.activity.length === 0 ? (
-        <p className="mt-3 rounded-xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-white/30">
-          Create, publish, edit, or delete a post to generate a trace.
-        </p>
+/**
+ * Ordered alternation — the first branch that matches wins, so comments and
+ * strings are consumed before anything inside them can be mistaken for code.
+ * Deliberately small: it only has to cover the snippets on this page.
+ */
+const TOKEN_PATTERN = new RegExp(
+  [
+    "(?<comment>//[^\\n]*)",
+    "(?<string>\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|`(?:[^`\\\\]|\\\\.)*`)",
+    "(?<jsx></?[A-Za-z][\\w.]*)",
+    "(?<keyword>\\b(?:const|let|var|function|return|new|await|async|import|export|from|type|interface)\\b)",
+    "(?<number>\\b\\d+(?:\\.\\d+)?\\b)",
+    "(?<fn>[A-Za-z_$][\\w$]*(?=\\())",
+    "(?<prop>[A-Za-z_$][\\w$]*(?=\\s*:))",
+    "(?<ident>[A-Za-z_$][\\w$]*)",
+  ].join("|"),
+  "g",
+);
+
+/** Keys are checked in this order when resolving which group matched. */
+const TOKEN_TONES: Record<TokenKind, string> = {
+  comment: "text-white/25",
+  string: "text-[#d8ff70]",
+  jsx: "text-[#8ee8ff]",
+  keyword: "text-[#a89cff]",
+  number: "text-[#ffb494]",
+  fn: "text-[#8ee8ff]",
+  prop: "text-white/55",
+  ident: "text-white/70",
+};
+
+function highlightLine(line: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+
+  TOKEN_PATTERN.lastIndex = 0;
+  let match = TOKEN_PATTERN.exec(line);
+
+  while (match !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(line.slice(lastIndex, match.index));
+    }
+
+    const groups = match.groups ?? {};
+    const kind = (Object.keys(TOKEN_TONES) as TokenKind[]).find(
+      (candidate) => groups[candidate] !== undefined,
+    );
+
+    nodes.push(
+      kind ? (
+        <span key={key++} className={TOKEN_TONES[kind]}>
+          {match[0]}
+        </span>
       ) : (
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {controller.activity.slice(0, 6).map((activity) => {
-            const presentation = activityPresentation[activity.phase];
-            const Icon = presentation.icon;
+        match[0]
+      ),
+    );
 
-            return (
-              <div
-                key={activity.id}
-                className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-2.5"
-              >
-                <span
-                  className={`grid size-7 shrink-0 place-items-center rounded-lg border ${presentation.tone}`}
-                >
-                  <Icon className="size-3.5" aria-hidden="true" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium">
-                    {presentation.title}
-                  </p>
-                  <p className="mt-0.5 truncate text-[0.7rem] text-white/35">
-                    {operationLabel(activity)}
-                  </p>
-                </div>
-                {activity.elapsedMs !== undefined && (
-                  <span className="shrink-0 font-mono text-[0.65rem] text-white/30">
-                    {activity.elapsedMs}ms
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+    lastIndex = match.index + match[0].length;
+    match = TOKEN_PATTERN.exec(line);
+  }
+
+  if (lastIndex < line.length) nodes.push(line.slice(lastIndex));
+  return nodes;
+}
+
+function CodeBlock({ code }: { code: string }) {
+  return (
+    <pre className="mt-3 overflow-x-auto rounded-xl border border-white/[0.07] bg-black/30 p-3 font-mono text-[0.7rem] leading-5 text-white/30">
+      <code>
+        {code.split("\n").map((line, index) => (
+          <span key={index} className="block">
+            {line ? highlightLine(line) : " "}
+          </span>
+        ))}
+      </code>
+    </pre>
+  );
+}
+
+const implementationSteps = [
+  {
+    title: "Describe the shape",
+    body: "One transformer owns the boundary between the API row and the object your components want.",
+    code: `const transformer = {
+  toUi: (row) => ({
+    ...row,
+    created_at: new Date(row.created_at),
+    excerpt: row.content.slice(0, 150),
+  }),
+  toApi: (post) => ({
+    ...post,
+    created_at: post.created_at.toISOString(),
+  }),
+  // How a record looks before the server replies
+  optimisticDefaults: {
+    createOptimisticUiData: (input) => ({
+      ...input,
+      created_at: new Date(),
+    }),
+  },
+};`,
+  },
+  {
+    title: "Create the store",
+    body: "Hand it a query, a repository, and the transformer. It owns the cache, the optimistic layer, and rollback.",
+    code: `const store = createOptimisticStore(
+  {
+    name: "posts",
+    queryKey: () => ["posts", userId],
+    queryFn: () => repository.list(),
+    mutations: {
+      create: (data) => repository.create(data),
+      update: ({ id, data }) =>
+        repository.update(id, data),
+      remove: (id) => repository.remove(id),
+    },
+    transformer,
+  },
+  queryClient,
+);`,
+  },
+  {
+    title: "Render and mutate",
+    body: "Components read one observable list and call plain methods. No cache keys, no invalidation, no rollback code.",
+    code: `const Posts = observer(() => (
+  <ul>
+    {store.ui.list.map((post) => (
+      <li key={post.id}>{post.title}</li>
+    ))}
+  </ul>
+));
+
+// Applied now, reconciled or rolled back later
+store.api.create({ title: "New Post" });`,
+  },
+] as const;
+
+function ImplementationGuide() {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-[#0c0d10] p-4 sm:p-6">
+      <p className={zoneLabelClass}>How it&rsquo;s wired</p>
+      <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.025em]">
+        Three steps to everything above
+      </h2>
+      <p className="mt-2 max-w-2xl text-xs leading-5 text-white/45">
+        The whole page — optimistic writes, reconciliation, rollback, and the
+        scoped cache — is this much wiring.
+      </p>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-3">
+        {implementationSteps.map((step, index) => (
+          <div key={step.title} className="min-w-0">
+            <div className="flex items-center gap-2.5">
+              <span className="grid size-6 shrink-0 place-items-center rounded-md border border-[#d8ff70]/25 bg-[#d8ff70]/10 font-mono text-[0.65rem] text-[#d8ff70]">
+                {index + 1}
+              </span>
+              <h3 className="text-sm font-semibold">{step.title}</h3>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-white/40">{step.body}</p>
+            <CodeBlock code={step.code} />
+          </div>
+        ))}
+      </div>
     </section>
   );
-});
+}
 
 const EditPostDialog = observer(function EditPostDialog({
   viewModel,
@@ -1121,11 +1199,9 @@ export const AdvancedPostsExampleView = observer(
           </div>
         </section>
 
-        {demoController && (
-          <div className="mt-4">
-            <MutationTrace controller={demoController} />
-          </div>
-        )}
+        <div className="mt-4">
+          <ImplementationGuide />
+        </div>
 
         <EditPostDialog viewModel={viewModel} />
       </>

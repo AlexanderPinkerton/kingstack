@@ -79,7 +79,7 @@ function trackEdges(controller: OptimisticPostDemoController) {
 }
 
 describe("OptimisticPostDemoController", () => {
-  it("records optimistic application and server confirmation", async () => {
+  it("reaches the source and confirms", async () => {
     const { controller, create } = createHarness();
 
     controller.create({ title: "Immediate interface" });
@@ -88,10 +88,11 @@ describe("OptimisticPostDemoController", () => {
       expect(controller.pipelineRun?.status).toBe("confirmed");
     });
     expect(create).toHaveBeenCalledOnce();
-    expect(controller.activity.map((event) => event.phase)).toEqual([
-      "confirmed",
-      "optimistic",
-    ]);
+    expect(controller.pipelineRun).toMatchObject({
+      status: "confirmed",
+      result: "confirmed",
+      willReject: false,
+    });
     expect(controller.isMutationPending).toBe(false);
     controller.dispose();
   });
@@ -109,12 +110,9 @@ describe("OptimisticPostDemoController", () => {
     expect(controller.failureArmed).toBe(false);
     expect(controller.pipelineRun).toMatchObject({
       status: "rolled_back",
+      result: "rolled_back",
       willReject: true,
     });
-    expect(controller.activity.map((event) => event.phase)).toEqual([
-      "rolled_back",
-      "optimistic",
-    ]);
     controller.dispose();
   });
 
@@ -153,7 +151,7 @@ describe("OptimisticPostDemoController", () => {
     controller.toggleFailure();
 
     await vi.waitFor(() => {
-      expect(controller.latestActivity?.phase).toBe("rolled_back");
+      expect(controller.pipelineRun?.status).toBe("rolled_back");
     });
     expect(create).not.toHaveBeenCalled();
     expect(controller.failureArmed).toBe(true);
@@ -234,7 +232,7 @@ describe("OptimisticPostDemoController", () => {
         { interval: 5 },
       );
       await vi.waitFor(() => {
-        expect(controller.latestActivity?.phase).toBe("rolled_back");
+        expect(controller.pipelineRun?.status).toBe("rolled_back");
       });
 
       expect(store.ui.list).toHaveLength(0);

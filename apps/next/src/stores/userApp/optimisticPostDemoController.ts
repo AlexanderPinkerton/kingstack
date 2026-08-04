@@ -7,18 +7,9 @@ import type {
 import type { AdvancedPostStore } from "./postStore";
 
 export type OptimisticDemoOperation = "create" | "update" | "remove";
-export type OptimisticDemoPhase = "optimistic" | "confirmed" | "rolled_back";
 export type OptimisticDemoPipelineStatus =
   "pending" | "confirmed" | "rolled_back";
 export type OptimisticDemoPipelineDirection = "outbound" | "return";
-
-export interface OptimisticDemoActivity {
-  id: number;
-  operation: OptimisticDemoOperation;
-  phase: OptimisticDemoPhase;
-  label: string;
-  elapsedMs?: number;
-}
 
 export interface OptimisticDemoPipelineRun {
   id: number;
@@ -35,7 +26,6 @@ export interface OptimisticDemoPipelineRun {
 }
 
 const DEFAULT_DELAY_MS = 1000;
-const MAX_ACTIVITY_ITEMS = 8;
 
 /**
  * Edges between the pipeline's five nodes:
@@ -55,14 +45,13 @@ export const OPTIMISTIC_PIPELINE_STEPS = OPTIMISTIC_PIPELINE_EDGES * 2;
 export class OptimisticPostDemoController {
   networkDelayMs = DEFAULT_DELAY_MS;
   failureArmed = false;
-  activity: OptimisticDemoActivity[] = [];
   activeMutationCount = 0;
   pipelineRun: OptimisticDemoPipelineRun | null = null;
 
   readonly repository: PostRepository;
 
   private store: AdvancedPostStore | null = null;
-  private activitySequence = 0;
+  private runSequence = 0;
   private rejectingRunId: number | null = null;
   private rejectedAttempts = 0;
   private pipelineOutboundReadyAt = 0;
@@ -82,11 +71,9 @@ export class OptimisticPostDemoController {
     makeObservable(this, {
       networkDelayMs: observable,
       failureArmed: observable,
-      activity: observable.shallow,
       activeMutationCount: observable,
       pipelineRun: observable.ref,
       isMutationPending: computed,
-      latestActivity: computed,
     });
   }
 
@@ -94,10 +81,6 @@ export class OptimisticPostDemoController {
     return (
       this.activeMutationCount > 0 || this.pipelineRun?.status === "pending"
     );
-  }
-
-  get latestActivity(): OptimisticDemoActivity | null {
-    return this.activity[0] ?? null;
   }
 
   attachStore(store: AdvancedPostStore): void {
@@ -134,13 +117,6 @@ export class OptimisticPostDemoController {
     void this.runMutation("remove", label, () => store.api.remove(id));
   }
 
-  clearActivity(): void {
-    runInAction(() => {
-      this.activity = [];
-      this.pipelineRun = null;
-    });
-  }
-
   dispose(): void {
     for (const timer of this.pipelineTimers) {
       clearTimeout(timer);
@@ -153,8 +129,7 @@ export class OptimisticPostDemoController {
     label: string,
     mutation: () => Promise<T>,
   ): Promise<void> {
-    const startedAt = Date.now();
-    const activityId = ++this.activitySequence;
+    const runId = ++this.runSequence;
     const willReject = this.failureArmed;
     // Captured per run so the visualisation matches the latency in force when
     // the mutation started, even if the setting changes before it settles.
@@ -167,11 +142,11 @@ export class OptimisticPostDemoController {
       this.activeMutationCount += 1;
       if (willReject) {
         this.failureArmed = false;
-        this.rejectingRunId = activityId;
+        this.rejectingRunId = runId;
         this.rejectedAttempts = 0;
       }
       this.pipelineRun = {
-        id: activityId,
+        id: runId,
         operation,
         status: "pending",
         edgeIndex: 0,
@@ -185,43 +160,16 @@ export class OptimisticPostDemoController {
         Date.now() + stepMs * OPTIMISTIC_PIPELINE_EDGES;
     });
     for (let edge = 1; edge < OPTIMISTIC_PIPELINE_EDGES; edge += 1) {
-      this.scheduleOutboundEdge(activityId, edge, stepMs * edge);
+      this.scheduleOutboundEdge(runId, edge, stepMs * edge);
     }
 
     try {
-      const pendingMutation = mutation();
-      runInAction(() => {
-        this.pushActivity({
-          id: activityId,
-          operation,
-          phase: "optimistic",
-          label,
-        });
-      });
-      await pendingMutation;
-      void this.settlePipeline(activityId, "confirmed");
-      runInAction(() => {
-        this.pushActivity({
-          id: ++this.activitySequence,
-          operation,
-          phase: "confirmed",
-          label,
-          elapsedMs: Date.now() - startedAt,
-        });
-      });
+      await mutation();
+      void this.settlePipeline(runId, "confirmed");
     } catch {
-      void this.settlePipeline(activityId, "rolled_back");
-      runInAction(() => {
-        this.pushActivity({
-          id: ++this.activitySequence,
-          operation,
-          phase: "rolled_back",
-          label,
-          elapsedMs: Date.now() - startedAt,
-        });
-      });
+      void this.settlePipeline(runId, "rolled_back");
     } finally {
-      if (this.rejectingRunId === activityId) {
+      if (this.rejectingRunId === runId) {
         this.rejectingRunId = null;
         this.rejectedAttempts = 0;
       }
@@ -263,10 +211,6 @@ export class OptimisticPostDemoController {
     }
 
     return request();
-  }
-
-  private pushActivity(activity: OptimisticDemoActivity): void {
-    this.activity = [activity, ...this.activity].slice(0, MAX_ACTIVITY_ITEMS);
   }
 
   private scheduleOutboundEdge(
