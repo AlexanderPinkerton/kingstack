@@ -209,4 +209,31 @@ describe("generated project boundary", () => {
       readFileSync(join(generatedRoot, "tsconfig.json"), "utf8"),
     ).toContain('"types": ["node", "bun"]');
   });
+
+  it("ships root-aware Vercel build configuration", () => {
+    const rootConfig = JSON.parse(
+      readFileSync(join(generatedRoot, "vercel.json"), "utf8"),
+    );
+    const nextConfig = JSON.parse(
+      readFileSync(join(generatedRoot, "apps", "next", "vercel.json"), "utf8"),
+    );
+
+    expect(rootConfig.buildCommand).toBe(
+      "yarn turbo run build --filter=@boundary-check/next",
+    );
+    expect(rootConfig.outputDirectory).toBe("apps/next/.next");
+    expect(rootConfig.ignoreCommand).toBeUndefined();
+
+    expect(nextConfig.buildCommand).toBe(
+      "cd ../.. && yarn turbo run build --filter=@boundary-check/next",
+    );
+    expect(nextConfig.outputDirectory).toBe(".next");
+    expect(nextConfig.ignoreCommand).toBeUndefined();
+
+    const rootPackage = JSON.parse(
+      readFileSync(join(generatedRoot, "package.json"), "utf8"),
+    );
+    expect(rootPackage.scripts.vercel).toBe("vercel deploy");
+    expect(rootPackage.scripts["vercel:prod"]).toBe("vercel deploy --prod");
+  });
 });

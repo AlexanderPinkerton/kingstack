@@ -200,9 +200,42 @@ ssh root@DROPLET_IP 'caddy validate --config /etc/caddy/Caddyfile'
 
 ## Next.js on Vercel
 
+### First deployment
+
+The recommended Vercel project root is `apps/next`:
+
+1. Import the Git repository in Vercel.
+2. Set **Root Directory** to `apps/next`.
+3. Keep the checked-in Framework, Build Command, and Output Directory values.
+4. Add the hosted environment variables before deploying the full application.
+
+The app-local `vercel.json` runs Turbo from the monorepo root so Prisma and
+project-owned workspace dependencies are prepared before Next.js builds. Its
+output directory is `.next`, relative to `apps/next`. A second root-level
+configuration supports repository-root CLI and CI invocations, where the output
+is instead `apps/next/.next` relative to the repository root.
+
+Do not copy `apps/next/.next` into the Vercel dashboard's Output Directory when
+the Root Directory is `apps/next`; that resolves to the nonexistent
+`apps/next/apps/next/.next` path.
+
+Vercel automatically detects the repository's Yarn workspace and skips
+unaffected projects using the workspace dependency graph. No custom Ignored
+Build Step is required.
+
+For a backend-connected deployment, configure the variables listed under the
+`vercel` service in `config/schema.ts`. You can inspect the intended changes
+before synchronizing them:
+
+```bash
+yarn deploy:sync-secrets:dry-run
+```
+
+### Automated deployments
+
 The checked-in GitHub Actions workflows deploy Next.js from explicit branches:
 
-- `development` deploys the Vercel development environment.
+- `development` creates a Vercel preview deployment.
 - `main` deploys the Vercel production environment.
 
 Both workflows run Prisma deployment migrations before Vercel deployment.
@@ -210,9 +243,24 @@ Required GitHub environment secrets include the Supabase database URLs,
 Supabase public values, and Vercel token/project identifiers. Use
 `yarn deploy:sync-secrets:dry-run` before synchronizing environment secrets.
 
-The manual Vercel commands remain available:
+### Manual deployment without GitHub linking
+
+The manual path does not require a GitHub connection or a separate
+`vercel link` command. Run it from the repository root:
 
 ```bash
+# Preview deployment
 yarn vercel
+
+# Production deployment
 yarn vercel:prod
 ```
+
+On the first deployment, Vercel CLI authenticates the user and creates or
+selects the Vercel project as part of the deployment flow. It then saves the
+project association in the gitignored `.vercel` directory for subsequent
+commands. This is a Vercel project association, not a GitHub integration.
+
+For CI or another stateless environment, provide `VERCEL_ORG_ID` and
+`VERCEL_PROJECT_ID`; Vercel CLI uses those values without requiring a local
+project link. The checked-in GitHub workflows already use this path.
