@@ -99,22 +99,23 @@ export class OptimisticPostsViewModel {
     return new Map(this.confirmedPosts.map((post) => [post.id, post]));
   }
 
-  /** Confirmed rows under the same search and filter as the optimistic list. */
-  get visibleConfirmedPosts(): PostApiData[] {
-    const query = this.searchQuery.trim().toLowerCase();
+  /**
+   * Every record in the projection, newest first.
+   *
+   * Deliberately ignores the example app's search and filter: those narrow what
+   * the app renders, not what the store holds, and the two ledgers are only
+   * comparable if both show everything.
+   */
+  get uiRecords(): PostUiData[] {
+    return this.postStore.ui.list
+      .slice()
+      .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+  }
 
+  /** Every server-confirmed row, newest first. Counterpart to uiRecords. */
+  get confirmedRecords(): PostApiData[] {
     return this.confirmedPosts
-      .filter((post) => {
-        if (this.selectedFilter === "published" && !post.published)
-          return false;
-        if (this.selectedFilter === "draft" && post.published) return false;
-        if (!query) return true;
-
-        return (
-          post.title.toLowerCase().includes(query) ||
-          (post.content ?? "").toLowerCase().includes(query)
-        );
-      })
+      .slice()
       .sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),

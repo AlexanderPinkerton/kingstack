@@ -4,26 +4,29 @@ import type { PrismaService } from "../prisma/prisma.service";
 import { PostsService } from "./posts.service";
 
 describe("PostsService", () => {
-  it("deletes all posts and records the cleanup result", async () => {
-    const deleteMany = vi.fn().mockResolvedValue({ count: 3 });
-    const prisma = { post: { deleteMany } } as unknown as PrismaService;
+  it("records how many posts exist without modifying them", async () => {
+    const count = vi.fn().mockResolvedValue(3);
+    const deleteMany = vi.fn();
+    const prisma = { post: { count, deleteMany } } as unknown as PrismaService;
     const capture = createCapturingLogger();
     const service = new PostsService(prisma, capture.logger);
 
     await service.handleCron();
 
-    expect(deleteMany).toHaveBeenCalledWith({});
+    expect(count).toHaveBeenCalled();
+    // The example job must stay read-only: an open client is showing this data.
+    expect(deleteMany).not.toHaveBeenCalled();
     expect(capture.records).toEqual([
       {
         level: "debug",
-        event: "posts.cleanup_started",
+        event: "posts.census_started",
         context: { component: "PostsService" },
         error: undefined,
       },
       {
         level: "info",
-        event: "posts.cleanup_completed",
-        context: { component: "PostsService", deletedCount: 3 },
+        event: "posts.census_completed",
+        context: { component: "PostsService", postCount: 3 },
         error: undefined,
       },
     ]);

@@ -33,15 +33,8 @@ interface AdvancedPostsExampleViewProps {
   demoController?: OptimisticPostDemoController;
 }
 
-// Written as complete literals so Tailwind's scanner picks the templates up.
-const BOUNDARY_GRID_WITH_SPINE =
-  "grid gap-x-6 gap-y-6 lg:grid-cols-[minmax(0,1fr)_12.5rem_minmax(0,18rem)]";
-const BOUNDARY_GRID_PLAIN =
-  "grid gap-x-6 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,18rem)]";
-
 const zoneLabelClass =
   "text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-white/30";
-const zoneDividerClass = "lg:border-l lg:border-white/[0.07] lg:pl-6";
 
 /**
  * The five stages a mutation passes through. Edge count must stay in step with
@@ -272,7 +265,7 @@ const PipelineSpine = observer(function PipelineSpine({
       run.edgeIndex === TRANSFORMER_NODE_INDEX);
 
   return (
-    <div className={zoneDividerClass}>
+    <div className="min-w-0">
       <p className={zoneLabelClass}>The boundary</p>
       <div className="mt-4">
         {pipelineNodes.map((node, index) => {
@@ -322,6 +315,7 @@ const PipelineSpine = observer(function PipelineSpine({
   );
 });
 
+/** Stacked rather than inline: it lives in a narrow rail beside the app. */
 const Toolbar = observer(function Toolbar({
   controller,
 }: {
@@ -330,8 +324,8 @@ const Toolbar = observer(function Toolbar({
   const run = controller.pipelineRun;
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#0c0d10] p-4 lg:flex-row lg:items-center lg:gap-6">
-      <div className="flex items-center gap-3">
+    <div className="rounded-2xl border border-white/10 bg-[#0c0d10] p-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className={zoneLabelClass}>Latency</span>
         <div className="flex gap-1.5">
           {[
@@ -347,7 +341,7 @@ const Toolbar = observer(function Toolbar({
                 disabled={controller.isMutationPending}
                 onClick={() => controller.setNetworkDelay(option.value)}
                 aria-pressed={selected}
-                className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
                   selected
                     ? "border-[#d8ff70]/50 bg-[#d8ff70]/10 text-[#d8ff70]"
                     : "border-white/10 bg-white/[0.03] text-white/45 hover:border-white/20 hover:text-white"
@@ -365,7 +359,7 @@ const Toolbar = observer(function Toolbar({
         disabled={controller.isMutationPending}
         onClick={() => controller.toggleFailure()}
         aria-pressed={controller.failureArmed}
-        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+        className={`mt-2.5 flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
           controller.failureArmed
             ? "border-[#ff9c6e]/50 bg-[#ff9c6e]/10 text-[#ffb494]"
             : "border-white/10 bg-white/[0.03] text-white/55 hover:border-white/20 hover:text-white"
@@ -378,7 +372,7 @@ const Toolbar = observer(function Toolbar({
       </button>
 
       <p
-        className={`min-w-0 flex-1 truncate text-xs lg:text-right ${
+        className={`mt-2.5 text-xs leading-5 ${
           run?.status === "rolled_back"
             ? "text-[#ffb494]"
             : run?.status === "confirmed"
@@ -548,7 +542,11 @@ const PostCard = observer(function PostCard({
   );
 });
 
-const OptimisticColumn = observer(function OptimisticColumn({
+/**
+ * The demo product, framed as its own window so it reads as the application a
+ * user would see rather than as part of the explanation around it.
+ */
+const ExampleApplication = observer(function ExampleApplication({
   viewModel,
 }: {
   viewModel: OptimisticPostsViewModel;
@@ -556,19 +554,28 @@ const OptimisticColumn = observer(function OptimisticColumn({
   const stats = viewModel.stats;
 
   return (
-    <div className="min-w-0">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <p className={zoneLabelClass}>UI data · MobX projection</p>
-        <p className="text-[0.7rem] text-white/35">
-          {stats.total} shown · {stats.published} published
+    <section className="overflow-hidden rounded-2xl border border-white/[0.14] bg-[#15171c] shadow-2xl shadow-black/40">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-white/10 bg-white/[0.03] px-4 py-2.5">
+        <span className="flex shrink-0 gap-1.5" aria-hidden="true">
+          <span className="size-2.5 rounded-full bg-[#ff5f57]" />
+          <span className="size-2.5 rounded-full bg-[#febc2e]" />
+          <span className="size-2.5 rounded-full bg-[#28c840]" />
+        </span>
+        <h2 className="text-xs font-medium text-white/55">
+          Example application
+        </h2>
+        <p className="ml-auto text-[0.65rem] text-white/30">
+          {stats.total} posts · {stats.published} published
+          {stats.optimistic > 0 && (
+            <span className="text-[#d8ff70]">
+              {" "}
+              · {stats.optimistic} pending
+            </span>
+          )}
         </p>
       </div>
-      <p className="mt-1.5 text-xs text-white/35">
-        What the interface believes right now. Updates before the request
-        settles.
-      </p>
 
-      <div className="mt-4 space-y-3">
+      <div className="space-y-4 p-4 sm:p-6">
         <CreatePostForm viewModel={viewModel} />
 
         <div className="flex flex-wrap items-center gap-2">
@@ -587,7 +594,7 @@ const OptimisticColumn = observer(function OptimisticColumn({
               {filter}
             </button>
           ))}
-          <div className="relative ml-auto min-w-0 flex-1 sm:max-w-[13rem]">
+          <div className="relative ml-auto min-w-0 flex-1 sm:max-w-[14rem]">
             <Search
               className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-white/25"
               aria-hidden="true"
@@ -602,9 +609,11 @@ const OptimisticColumn = observer(function OptimisticColumn({
           </div>
         </div>
 
-        {viewModel.visiblePosts.map((post) => (
-          <PostCard key={post.id} post={post} viewModel={viewModel} />
-        ))}
+        <div className="space-y-3">
+          {viewModel.visiblePosts.map((post) => (
+            <PostCard key={post.id} post={post} viewModel={viewModel} />
+          ))}
+        </div>
 
         {viewModel.filteredPosts.length === 0 && (
           <div className="rounded-xl border border-dashed border-white/10 px-6 py-10 text-center">
@@ -627,11 +636,58 @@ const OptimisticColumn = observer(function OptimisticColumn({
           </p>
         )}
       </div>
-    </div>
+    </section>
   );
 });
 
-const ConfirmedColumn = observer(function ConfirmedColumn({
+/** Compact mirror of the projection, sized to sit opposite the server ledger. */
+const ledgerRowClass =
+  "flex items-center gap-2 rounded-lg border px-2.5 py-1.5 transition";
+
+function LedgerRow({
+  title,
+  published,
+  idLabel,
+  divergent = false,
+}: {
+  title: string;
+  published: boolean;
+  idLabel: string;
+  divergent?: boolean;
+}) {
+  return (
+    <li
+      className={`${ledgerRowClass} ${
+        divergent
+          ? "border-[#d8ff70]/40 bg-[#d8ff70]/[0.07]"
+          : "border-white/[0.06] bg-white/[0.02]"
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`size-1.5 shrink-0 rounded-full ${
+          published ? "bg-[#8ee8ff]" : "bg-white/25"
+        }`}
+      />
+      <span className="min-w-0 flex-1 truncate text-xs text-white/60">
+        {title}
+      </span>
+      <span
+        className={`shrink-0 font-mono text-[0.6rem] ${
+          divergent ? "text-[#d8ff70]" : "text-white/25"
+        }`}
+      >
+        {idLabel}
+      </span>
+    </li>
+  );
+}
+
+/**
+ * Both sides of the boundary, stacked. The projection holds optimistic records
+ * the cache has never seen, so the two lists only match once everything settles.
+ */
+const DataComparisonPanel = observer(function DataComparisonPanel({
   viewModel,
   onClose,
 }: {
@@ -639,32 +695,30 @@ const ConfirmedColumn = observer(function ConfirmedColumn({
   onClose: () => void;
 }) {
   const divergence = viewModel.divergence;
-  const rows = viewModel.visibleConfirmedPosts;
+  const uiRows = viewModel.uiRecords.slice(0, 5);
+  const serverRows = viewModel.confirmedRecords.slice(0, 5);
 
   return (
-    <div className={`min-w-0 ${zoneDividerClass}`}>
+    <div className="min-w-0">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <p className={zoneLabelClass}>Server data · query cache</p>
-          <p className="text-[0.7rem] text-white/35">
-            {viewModel.confirmedPosts.length} confirmed
-          </p>
+        <div className="min-w-0">
+          <p className={zoneLabelClass}>Both sides</p>
+          <h3 className="mt-1.5 text-base font-semibold tracking-[-0.02em]">
+            Projection vs. cache
+          </h3>
         </div>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close server data"
+          aria-label="Close data comparison"
           className="grid size-7 shrink-0 place-items-center rounded-lg border border-white/10 text-white/40 transition hover:border-white/25 hover:text-white"
         >
           <X className="size-3.5" aria-hidden="true" />
         </button>
       </div>
-      <p className="mt-1.5 text-xs text-white/35">
-        Only written when a mutation succeeds. Optimistic layers never reach it.
-      </p>
 
       <div
-        className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${
+        className={`mt-3 rounded-xl border px-3 py-2 text-xs ${
           divergence.inSync
             ? "border-[#8ee8ff]/25 bg-[#8ee8ff]/[0.07] text-[#8ee8ff]"
             : "border-[#d8ff70]/30 bg-[#d8ff70]/[0.07] text-[#d8ff70]"
@@ -674,35 +728,60 @@ const ConfirmedColumn = observer(function ConfirmedColumn({
         {divergenceSummary(divergence)}
       </div>
 
-      <ul className="mt-3 space-y-1.5">
-        {rows.map((post) => (
-          <li
-            key={post.id}
-            className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2"
-          >
-            <span
-              aria-hidden="true"
-              className={`size-1.5 shrink-0 rounded-full ${
-                post.published ? "bg-[#8ee8ff]" : "bg-white/25"
-              }`}
+      <div className="mt-4">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <p className={zoneLabelClass}>UI data · MobX</p>
+          <p className="text-[0.7rem] text-white/35">
+            {viewModel.uiRecords.length}
+          </p>
+        </div>
+        <ul className="mt-2 space-y-1.5">
+          {uiRows.map((post) => (
+            <LedgerRow
+              key={post.id}
+              title={post.title}
+              published={post.published}
+              divergent={viewModel.isDivergent(post)}
+              idLabel={
+                post.id.startsWith("temp-") ? "temp" : post.id.slice(0, 8)
+              }
             />
-            <span className="min-w-0 flex-1 truncate text-xs text-white/60">
-              {post.title}
-            </span>
-            <span className="shrink-0 font-mono text-[0.6rem] text-white/25">
-              {post.id.slice(0, 8)}
-            </span>
-          </li>
-        ))}
+          ))}
+          {uiRows.length === 0 && (
+            <li className="rounded-lg border border-dashed border-white/10 px-3 py-4 text-center text-xs text-white/30">
+              Nothing in the projection yet.
+            </li>
+          )}
+        </ul>
+      </div>
 
-        {rows.length === 0 && (
-          <li className="rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-xs text-white/30">
-            {viewModel.confirmedPosts.length === 0
-              ? "Nothing confirmed yet."
-              : "No confirmed rows match these filters."}
-          </li>
-        )}
-      </ul>
+      <div className="mt-4 border-t border-white/[0.07] pt-4">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <p className={zoneLabelClass}>Server data · cache</p>
+          <p className="text-[0.7rem] text-white/35">
+            {viewModel.confirmedRecords.length}
+          </p>
+        </div>
+        <ul className="mt-2 space-y-1.5">
+          {serverRows.map((post) => (
+            <LedgerRow
+              key={post.id}
+              title={post.title}
+              published={post.published}
+              idLabel={post.id.slice(0, 8)}
+            />
+          ))}
+          {serverRows.length === 0 && (
+            <li className="rounded-lg border border-dashed border-white/10 px-3 py-4 text-center text-xs text-white/30">
+              Nothing confirmed yet.
+            </li>
+          )}
+        </ul>
+        <p className="mt-2 text-[0.7rem] leading-4 text-white/25">
+          Only written when a mutation succeeds. Optimistic records never reach
+          it.
+        </p>
+      </div>
     </div>
   );
 });
@@ -733,7 +812,7 @@ const GuidePanel = observer(function GuidePanel({
   const divergence = viewModel.divergence;
 
   return (
-    <div className={`flex min-w-0 flex-col ${zoneDividerClass}`}>
+    <div className="flex min-w-0 flex-col">
       <p className={zoneLabelClass}>Inside the store</p>
       <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.025em]">
         Click a node to learn more
@@ -747,8 +826,8 @@ const GuidePanel = observer(function GuidePanel({
           once the layout stacks. */}
       <div className="flex flex-1 items-center justify-center py-10">
         <span className="grid size-14 place-items-center rounded-full border border-[#d8ff70]/30 bg-[#d8ff70]/[0.08] text-[#d8ff70]">
-          <ArrowUp className="size-6 lg:hidden" aria-hidden="true" />
-          <ArrowLeft className="hidden size-6 lg:block" aria-hidden="true" />
+          <ArrowUp className="size-6 sm:hidden" aria-hidden="true" />
+          <ArrowLeft className="hidden size-6 sm:block" aria-hidden="true" />
         </span>
       </div>
 
@@ -766,7 +845,7 @@ const GuidePanel = observer(function GuidePanel({
           onClick={onShowServerData}
           className="mt-2 text-xs text-white/35 transition hover:text-white"
         >
-          View server data →
+          Compare both sides →
         </button>
       </div>
     </div>
@@ -789,7 +868,7 @@ function NodeDetailColumn({
   if (!node) return null;
 
   return (
-    <div className={`min-w-0 ${zoneDividerClass}`}>
+    <div className="min-w-0">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className={zoneLabelClass}>Inside the store</p>
@@ -1162,44 +1241,54 @@ export const AdvancedPostsExampleView = observer(
 
     return (
       <>
-        {demoController && <Toolbar controller={demoController} />}
+        {/* Side by side so the pipeline stays on screen while you drive the
+            application next to it. */}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:gap-8">
+          <ExampleApplication viewModel={viewModel} />
 
-        {/* One container, three zones: the pipeline is literally the boundary
-            between the optimistic projection and server-confirmed data. */}
-        <section className="mt-4 rounded-2xl border border-white/10 bg-[#0c0d10] p-4 sm:p-6">
-          <div
-            className={
-              demoController ? BOUNDARY_GRID_WITH_SPINE : BOUNDARY_GRID_PLAIN
-            }
-          >
-            <OptimisticColumn viewModel={viewModel} />
+          <div className="min-w-0 lg:border-l lg:border-white/[0.07] lg:pl-8">
+            <h2 className="text-xl font-semibold tracking-[-0.03em]">
+              Under the hood
+            </h2>
+            <p className="mt-1 text-xs text-white/40">
+              What the store does while you use the application.
+            </p>
+
             {demoController && (
-              <PipelineSpine
-                controller={demoController}
-                selectedNodeId={selectedNodeId}
-                onSelectNode={setDetailPanel}
-              />
+              <div className="mt-4">
+                <Toolbar controller={demoController} />
+              </div>
             )}
-            {detailPanel === null ? (
-              <GuidePanel
-                viewModel={viewModel}
-                onShowServerData={() => setDetailPanel("server")}
-              />
-            ) : detailPanel === "server" ? (
-              <ConfirmedColumn
-                viewModel={viewModel}
-                onClose={() => setDetailPanel(null)}
-              />
-            ) : (
-              <NodeDetailColumn
-                nodeId={detailPanel}
-                onClose={() => setDetailPanel(null)}
-              />
-            )}
-          </div>
-        </section>
 
-        <div className="mt-4">
+            <div className="mt-4 grid gap-5 sm:grid-cols-[10.5rem_minmax(0,1fr)]">
+              {demoController && (
+                <PipelineSpine
+                  controller={demoController}
+                  selectedNodeId={selectedNodeId}
+                  onSelectNode={setDetailPanel}
+                />
+              )}
+              {detailPanel === null ? (
+                <GuidePanel
+                  viewModel={viewModel}
+                  onShowServerData={() => setDetailPanel("server")}
+                />
+              ) : detailPanel === "server" ? (
+                <DataComparisonPanel
+                  viewModel={viewModel}
+                  onClose={() => setDetailPanel(null)}
+                />
+              ) : (
+                <NodeDetailColumn
+                  nodeId={detailPanel}
+                  onClose={() => setDetailPanel(null)}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8">
           <ImplementationGuide />
         </div>
 

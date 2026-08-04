@@ -16,11 +16,18 @@ export class PostsService {
     this.logger = logger.child({ component: PostsService.name });
   }
 
+  /**
+   * Example scheduled job.
+   *
+   * Deliberately read-only: it runs against the same data the optimistic UI
+   * example is showing, and deleting rows out from under an open client leaves
+   * it holding records the server no longer has.
+   */
   @Cron(CronExpression.EVERY_30_MINUTES)
   async handleCron() {
-    this.logger.debug("posts.cleanup_started");
+    this.logger.debug("posts.census_started");
 
-    const result = await this.prisma.post.deleteMany({});
-    this.logger.info("posts.cleanup_completed", { deletedCount: result.count });
+    const postCount = await this.prisma.post.count();
+    this.logger.info("posts.census_completed", { postCount });
   }
 }

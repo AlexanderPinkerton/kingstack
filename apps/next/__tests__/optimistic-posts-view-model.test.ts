@@ -1,4 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
+import { reaction } from "mobx";
 import { describe, expect, it, vi } from "vitest";
 import type {
   PostCreateInput,
@@ -213,23 +214,56 @@ describe("optimistic vs confirmed data", () => {
     }
   });
 
-  it("applies the active search and filter to the confirmed column", async () => {
+  it("holds the optimistic layer until the return trip reaches the store", async () => {
+    const { controller, store, viewModel, dispose } = createHarness();
+
+    try {
+      await store.api.refetch();
+      controller.setNetworkDelay(80);
+
+      // Where the pipeline was when the confirmed row first appeared in MobX.
+      let edgeAtReconcile: string | null = null;
+      const stopTracking = reaction(
+        () => store.ui.list.some((post) => post.id === "post-2"),
+        (arrived) => {
+          if (!arrived || edgeAtReconcile) return;
+          const run = controller.pipelineRun;
+          edgeAtReconcile = run ? `${run.direction}:${run.edgeIndex}` : "none";
+        },
+      );
+
+      viewModel.setNewTitle("Confirmed on arrival");
+      viewModel.createPost();
+
+      await vi.waitFor(() => {
+        expect(controller.pipelineRun?.status).toBe("confirmed");
+      });
+
+      // Not "return:3" — the response must travel back down to MobX before the
+      // store writes it, so the optimistic badge survives the whole return leg.
+      expect(edgeAtReconcile).toBe("return:1");
+      stopTracking();
+    } finally {
+      dispose();
+    }
+  });
+
+  it("keeps the store ledgers independent of the app's search and filter", async () => {
     const { store, viewModel, syncConfirmed, dispose } = createHarness();
 
     try {
       await store.api.refetch();
       syncConfirmed();
-      expect(viewModel.visibleConfirmedPosts).toHaveLength(1);
+      expect(viewModel.uiRecords).toHaveLength(1);
+      expect(viewModel.confirmedRecords).toHaveLength(1);
 
+      // Narrowing the example app must not imply the store dropped records.
       viewModel.setSelectedFilter("published");
-      expect(viewModel.visibleConfirmedPosts).toHaveLength(0);
-
-      viewModel.setSelectedFilter("all");
       viewModel.setSearchQuery("nothing matches this");
-      expect(viewModel.visibleConfirmedPosts).toHaveLength(0);
 
-      viewModel.setSearchQuery("existing");
-      expect(viewModel.visibleConfirmedPosts).toHaveLength(1);
+      expect(viewModel.filteredPosts).toHaveLength(0);
+      expect(viewModel.uiRecords).toHaveLength(1);
+      expect(viewModel.confirmedRecords).toHaveLength(1);
     } finally {
       dispose();
     }

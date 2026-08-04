@@ -42,6 +42,14 @@ export const OPTIMISTIC_PIPELINE_EDGES = 4;
  */
 export const OPTIMISTIC_PIPELINE_STEPS = OPTIMISTIC_PIPELINE_EDGES * 2;
 
+/**
+ * Edge between MobX and the transformer. The returning response is handed to
+ * the store once the blip has crossed it, because that write is what clears the
+ * optimistic layer — anything below this edge is the store talking to the
+ * network, anything above it is the interface reacting.
+ */
+const OPTIMISTIC_PIPELINE_STORE_EDGE = 1;
+
 export class OptimisticPostDemoController {
   networkDelayMs = DEFAULT_DELAY_MS;
   failureArmed = false;
@@ -193,12 +201,10 @@ export class OptimisticPostDemoController {
     const reject = this.rejectingRunId !== null;
     // Only the first attempt pays the latency; retries of an already-rejected
     // mutation fail immediately so the rollback still lands promptly.
-    const delayMs =
-      reject && this.rejectedAttempts > 0 ? 0 : this.networkDelayMs;
-
-    if (reject) {
-      this.rejectedAttempts += 1;
-    }
+    const attempt = reject ? this.rejectedAttempts++ : 0;
+    // Only the first attempt pays the latency; retries of an already-rejected
+    // mutation fail immediately so the rollback still lands promptly.
+    const delayMs = attempt > 0 ? 0 : this.networkDelayMs;
 
     if (delayMs > 0) {
       await new Promise<void>((resolve) => {
@@ -206,11 +212,62 @@ export class OptimisticPostDemoController {
       });
     }
 
-    if (reject) {
-      throw new Error("Demo rejection: the next mutation was not sent");
+    const pending = reject
+      ? Promise.reject(
+          new Error("Demo rejection: the next mutation was not sent"),
+        )
+      : request();
+
+    // Observe the outcome without consuming it, so the original settlement —
+    // value or error — is what the store eventually receives.
+    let failed = false;
+    await pending.catch(() => {
+      failed = true;
+    });
+
+    // Walk the response back as far as the store before handing it over. The
+    // store's onSuccess/onError is the MobX write, so resolving earlier would
+    // clear the optimistic layer while the blip is still in transit.
+    if (attempt === 0) {
+      await this.playReturnToStore(failed ? "rolled_back" : "confirmed");
     }
 
-    return request();
+    return pending;
+  }
+
+  /**
+   * Animates the return leg from the API down to the MobX node, leaving only
+   * the final store → UI edge for `settlePipeline` once the store has written.
+   */
+  private async playReturnToStore(
+    result: Exclude<OptimisticDemoPipelineStatus, "pending">,
+  ): Promise<void> {
+    const id = this.pipelineRun?.id;
+    if (id === undefined) return;
+
+    await this.waitForPipeline(
+      Math.max(0, this.pipelineOutboundReadyAt - Date.now()),
+    );
+
+    for (
+      let edge = OPTIMISTIC_PIPELINE_EDGES - 1;
+      edge >= OPTIMISTIC_PIPELINE_STORE_EDGE;
+      edge -= 1
+    ) {
+      if (this.pipelineRun?.id !== id) return;
+      const stepMs = this.pipelineRun.stepMs;
+
+      runInAction(() => {
+        if (this.pipelineRun?.id !== id) return;
+        this.pipelineRun = {
+          ...this.pipelineRun,
+          edgeIndex: edge,
+          direction: "return",
+          result,
+        };
+      });
+      await this.waitForPipeline(stepMs);
+    }
   }
 
   private scheduleOutboundEdge(
@@ -232,7 +289,10 @@ export class OptimisticPostDemoController {
     this.pipelineTimers.add(timer);
   }
 
-  /** Walks the run back up every edge it came down, then marks it settled. */
+  /**
+   * Plays the last edge — the store's write reaching the components — and marks
+   * the run settled. Everything above it already ran in `playReturnToStore`.
+   */
   private async settlePipeline(
     id: number,
     result: Exclude<OptimisticDemoPipelineStatus, "pending">,
@@ -243,7 +303,7 @@ export class OptimisticPostDemoController {
     if (this.pipelineRun?.id !== id) return;
     const stepMs = this.pipelineRun.stepMs;
 
-    for (let edge = OPTIMISTIC_PIPELINE_EDGES - 1; edge >= 0; edge -= 1) {
+    for (let edge = OPTIMISTIC_PIPELINE_STORE_EDGE - 1; edge >= 0; edge -= 1) {
       if (this.pipelineRun?.id !== id) return;
       runInAction(() => {
         if (this.pipelineRun?.id !== id) return;
