@@ -16,43 +16,54 @@ import useAuthGuard from "@/hooks/useAuthGuard";
 const examples = [
   {
     href: "/app/optimistic",
-    title: "Optimistic state",
+    title: "Optimistic UI",
     description:
-      "Create, update, filter, and reconcile data through the application’s production state path.",
+      "The interface and the server side by side, with the mutation pipeline running between them. Add latency or reject a request to watch the optimistic layer reconcile or roll back.",
     icon: DatabaseZap,
     accent: "text-[#d8ff70] bg-[#d8ff70]/10 border-[#d8ff70]/20",
+    glow: "rgba(216, 255, 112, 0.12)",
+    tags: ["MobX", "TanStack Query", "advanced-optimistic-store"],
+    featured: true,
   },
   {
     href: "/app/realtime",
-    title: "Realtime synchronization",
+    title: "Realtime collaboration",
     description:
-      "Exercise multi-user updates, optimistic feedback, and server reconciliation together.",
+      "Two isolated clients on one screen, sharing presence and server events while optimistic writes reconcile.",
     icon: Radio,
     accent: "text-[#bdb5ff] bg-[#8d7cff]/10 border-[#8d7cff]/25",
+    glow: "rgba(141, 124, 255, 0.12)",
+    tags: ["Supabase Realtime", "Presence"],
   },
   {
     href: "/chat",
     title: "AI chat",
     description:
-      "Stream responses through a provider-backed chat surface with model selection and image support.",
+      "Streamed responses through a provider-backed chat surface, with model selection and image input.",
     icon: MessageSquare,
     accent: "text-[#ffb494] bg-[#ff9c6e]/10 border-[#ff9c6e]/20",
+    glow: "rgba(255, 156, 110, 0.12)",
+    tags: ["Streaming", "Model selection"],
   },
   {
     href: "/app/theme-builder",
     title: "Theme system",
     description:
-      "Edit the application’s design tokens, preview the result, and export a reusable theme.",
+      "Edit the design tokens, preview the result live, and export a reusable theme.",
     icon: Palette,
     accent: "text-[#8ee8ff] bg-cyan-400/10 border-cyan-300/20",
+    glow: "rgba(142, 232, 255, 0.12)",
+    tags: ["Design tokens", "CSS variables"],
   },
   {
     href: "/admin/dashboard",
     title: "Admin workflows",
     description:
-      "See protected administration, role checks, data tables, and dashboard composition.",
+      "Protected administration, role checks, data tables, and dashboard composition.",
     icon: ShieldCheck,
     accent: "text-[#f9da7f] bg-amber-300/10 border-amber-300/20",
+    glow: "rgba(249, 218, 127, 0.12)",
+    tags: ["Role checks", "Data tables"],
   },
 ] as const;
 
@@ -122,35 +133,65 @@ export default function ApplicationPage() {
           </p>
         </div>
 
+        {/* Five cards: the featured one spans two columns so the last row
+            fills exactly instead of leaving a gap. */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {examples.map((example) => {
             const Icon = example.icon;
+            const featured = "featured" in example && example.featured;
 
             return (
               <Link
                 key={example.href}
                 href={example.href}
-                className="group flex min-h-72 flex-col rounded-[1.75rem] border border-white/10 bg-[#111216]/85 p-7 transition hover:-translate-y-1 hover:border-white/20 hover:bg-[#15161b]"
+                className={`group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#111216]/85 p-6 transition duration-200 hover:-translate-y-0.5 hover:border-white/25 hover:bg-[#15161b] ${
+                  featured ? "md:col-span-2 lg:col-span-2" : ""
+                }`}
               >
                 <span
-                  className={`grid size-11 place-items-center rounded-full border ${example.accent}`}
-                >
-                  <Icon className="size-4.5" aria-hidden="true" />
-                </span>
-                <div className="mt-auto pt-14">
-                  <h3 className="text-2xl font-medium tracking-[-0.035em]">
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  style={{
+                    background: `radial-gradient(circle at 12% 0%, ${example.glow}, transparent 55%)`,
+                  }}
+                />
+
+                <div className="relative flex items-center gap-3">
+                  <span
+                    className={`grid size-10 shrink-0 place-items-center rounded-xl border ${example.accent}`}
+                  >
+                    <Icon className="size-4" aria-hidden="true" />
+                  </span>
+                  <h3
+                    className={`min-w-0 flex-1 font-medium tracking-[-0.025em] ${
+                      featured ? "text-xl" : "text-lg"
+                    }`}
+                  >
                     {example.title}
                   </h3>
-                  <p className="mt-3 leading-7 text-white/45">
-                    {example.description}
-                  </p>
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-white/70">
-                    Open example
-                    <ArrowRight
-                      className="size-4 transition-transform group-hover:translate-x-1"
-                      aria-hidden="true"
-                    />
-                  </span>
+                  <ArrowRight
+                    className="size-4 shrink-0 text-white/25 transition duration-200 group-hover:translate-x-0.5 group-hover:text-white"
+                    aria-hidden="true"
+                  />
+                </div>
+
+                <p
+                  className={`relative mt-4 text-sm leading-6 text-white/45 ${
+                    featured ? "max-w-xl" : ""
+                  }`}
+                >
+                  {example.description}
+                </p>
+
+                <div className="relative mt-auto flex flex-wrap gap-1.5 pt-5">
+                  {example.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-1 font-mono text-[0.65rem] text-white/40"
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
               </Link>
             );
