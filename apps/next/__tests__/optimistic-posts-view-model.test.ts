@@ -171,7 +171,8 @@ describe("optimistic vs confirmed data", () => {
       );
       syncConfirmed();
       expect(viewModel.divergence).toMatchObject({ changed: 1, inSync: false });
-      expect(viewModel.isDivergent(store.ui.get("post-1")!)).toBe(true);
+      const edited = store.ui.list.find((post) => post.id === "post-1");
+      expect(edited && viewModel.isDivergent(edited)).toBe(true);
 
       await vi.waitFor(() => {
         expect(controller.pipelineRun?.status).toBe("confirmed");

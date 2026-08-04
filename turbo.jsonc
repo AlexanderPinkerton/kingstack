@@ -15,7 +15,13 @@
       "dependsOn": ["build"],
       "persistent": true,
     },
+    // Depends on ^build so workspace packages have emitted their .d.ts files.
+    // Without it, imports of those packages resolve to `any` and every
+    // type-aware rule silently degrades — which reports phantom errors and
+    // misses real ones. This builds dependencies only (small tsc libraries),
+    // never the consuming app.
     "lint": {
+      "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/packages/eslint-config/index.mjs",
@@ -25,6 +31,7 @@
     },
     "lint:fix": {
       "cache": false,
+      "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/packages/eslint-config/index.mjs",
