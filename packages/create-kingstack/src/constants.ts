@@ -109,7 +109,6 @@ export const TEMPLATE_PATHS = [
   "template/readme.md",
   "tsconfig.json",
   "turbo.jsonc",
-  "vercel.json",
 ] as const;
 
 // File extensions to process for namespace replacement

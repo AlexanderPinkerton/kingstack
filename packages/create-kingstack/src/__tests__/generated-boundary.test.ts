@@ -210,19 +210,12 @@ describe("generated project boundary", () => {
     ).toContain('"types": ["node", "bun"]');
   });
 
-  it("ships root-aware Vercel build configuration", () => {
-    const rootConfig = JSON.parse(
-      readFileSync(join(generatedRoot, "vercel.json"), "utf8"),
-    );
+  it("ships one app-rooted Vercel build configuration", () => {
+    expect(existsSync(join(generatedRoot, "vercel.json"))).toBe(false);
+
     const nextConfig = JSON.parse(
       readFileSync(join(generatedRoot, "apps", "next", "vercel.json"), "utf8"),
     );
-
-    expect(rootConfig.buildCommand).toBe(
-      "yarn turbo run build --filter=@boundary-check/next",
-    );
-    expect(rootConfig.outputDirectory).toBe("apps/next/.next");
-    expect(rootConfig.ignoreCommand).toBeUndefined();
 
     expect(nextConfig.buildCommand).toBe(
       "cd ../.. && yarn turbo run build --filter=@boundary-check/next",
