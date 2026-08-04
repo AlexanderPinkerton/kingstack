@@ -121,7 +121,7 @@ exit 0
       "yarn prisma:migrate",
     ]);
     expect(result.stdout).toContain("KingStack backend is enabled");
-    expect(result.stdout).toContain("http://localhost:17420/full-stack");
+    expect(result.stdout).toContain("http://localhost:17420/app");
     expect(result.stdout).toContain("Run yarn dev");
   });
 

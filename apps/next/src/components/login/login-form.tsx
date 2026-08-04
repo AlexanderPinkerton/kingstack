@@ -1,7 +1,4 @@
 import { cn } from "@/lib/utils";
-import { AnimatedBorderContainer } from "@/components/ui/animated-border-container";
-import { NeonCard } from "@/components/ui/neon-card";
-import { GradientText } from "@/components/ui/gradient-text";
 import { ThemedInput } from "@/components/ui/themed-input";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { ThemedLabel } from "@/components/ui/themed-label";
@@ -152,148 +149,141 @@ export function LoginForm({
 
   return (
     <div
-      className={cn(
-        "flex flex-col items-center justify-center min-h-screen",
-        className,
-      )}
+      className={cn("flex flex-col items-center justify-center", className)}
       {...props}
     >
-      <AnimatedBorderContainer className="max-w-md w-full">
-        <NeonCard className="bg-black/80 backdrop-blur border border-cyan-400/30 shadow-lg p-8">
-          <form
-            onSubmit={(event) => void handleSubmit(event)}
-            className="space-y-6"
-          >
-            <div className="mb-6 text-center">
-              <GradientText className="text-3xl font-bold tracking-tight">
-                {mode === "login"
-                  ? "Login to your account"
-                  : "Register for " + APPNAME}
-              </GradientText>
-              <div className="mt-2 text-gray-300 text-sm">
-                {mode === "login"
-                  ? "Enter your email below to login to your account"
-                  : "Sign up with your email to get started. You'll verify your identity after registration."}
-              </div>
+      <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-[#111216]/90 p-8 shadow-2xl shadow-black/30 backdrop-blur-xl">
+        <form
+          onSubmit={(event) => void handleSubmit(event)}
+          className="space-y-6"
+        >
+          <div className="mb-6 text-center">
+            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-[#f5f2e8]">
+              {mode === "login"
+                ? "Login to your account"
+                : "Register for " + APPNAME}
+            </h1>
+            <div className="mt-2 text-sm text-white/50">
+              {mode === "login"
+                ? "Enter your email below to login to your account"
+                : "Sign up with your email to get started. You'll verify your identity after registration."}
             </div>
-            {!supabaseConfigured && (
-              <ThemedErrorText>
-                Authentication needs the KingStack backend. Run{" "}
-                <code>yarn backend:enable</code> locally, or configure Supabase
-                before deploying.
-              </ThemedErrorText>
-            )}
-            <div className="flex flex-col gap-6">
+          </div>
+          {!supabaseConfigured && (
+            <ThemedErrorText>
+              Authentication needs the KingStack backend. Run{" "}
+              <code>yarn backend:enable</code> locally, or configure Supabase
+              before deploying.
+            </ThemedErrorText>
+          )}
+          <div className="flex flex-col gap-6">
+            <div className="grid gap-3">
+              <ThemedLabel htmlFor="email" className="text-gray-300">
+                Email
+              </ThemedLabel>
+              <ThemedInput
+                id="email"
+                type="email"
+                placeholder=""
+                value={email}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setEmail(e.target.value)
+                }
+                required
+              />
+            </div>
+            {mode === "register" && (
               <div className="grid gap-3">
-                <ThemedLabel htmlFor="email" className="text-gray-300">
-                  Email
+                <ThemedLabel htmlFor="username" className="text-gray-300">
+                  Username
                 </ThemedLabel>
                 <ThemedInput
-                  id="email"
-                  type="email"
-                  placeholder=""
-                  value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setEmail(e.target.value)
-                  }
+                  id="username"
+                  type="text"
+                  placeholder="Choose a unique username"
+                  value={username}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setUsername(e.target.value);
+                  }}
                   required
                 />
-              </div>
-              {mode === "register" && (
-                <div className="grid gap-3">
-                  <ThemedLabel htmlFor="username" className="text-gray-300">
-                    Username
-                  </ThemedLabel>
-                  <ThemedInput
-                    id="username"
-                    type="text"
-                    placeholder="Choose a unique username"
-                    value={username}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      setUsername(e.target.value);
-                    }}
-                    required
-                  />
-                  {usernameError && (
-                    <ThemedErrorText>{usernameError}</ThemedErrorText>
-                  )}
-                  <div className="text-xs text-gray-400">
-                    3-40 characters, letters, numbers, underscores, and hyphens
-                    only
-                  </div>
+                {usernameError && (
+                  <ThemedErrorText>{usernameError}</ThemedErrorText>
+                )}
+                <div className="text-xs text-gray-400">
+                  3-40 characters, letters, numbers, underscores, and hyphens
+                  only
                 </div>
-              )}
-              <div className="grid gap-3">
-                <div className="flex items-center">
-                  <ThemedLabel htmlFor="password" className="text-gray-300">
-                    Password
-                  </ThemedLabel>
-                  {mode === "login" && (
-                    <a
-                      href="#"
-                      className="ml-auto inline-block text-sm underline-offset-4 text-gray-300 hover:text-[var(--accent-mix)] hover:underline transition"
-                    >
-                      Forgot your password?
-                    </a>
-                  )}
-                </div>
-                <ThemedInput
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setPassword(e.target.value)
-                  }
-                  required
-                />
               </div>
-              <div className="flex flex-col gap-3">
-                <ThemedButton
-                  type="submit"
-                  disabled={loading || !supabaseConfigured}
+            )}
+            <div className="grid gap-3">
+              <div className="flex items-center">
+                <ThemedLabel htmlFor="password" className="text-gray-300">
+                  Password
+                </ThemedLabel>
+                {mode === "login" && (
+                  <a
+                    href="#"
+                    className="ml-auto inline-block text-sm underline-offset-4 text-gray-300 hover:text-[var(--accent-mix)] hover:underline transition"
+                  >
+                    Forgot your password?
+                  </a>
+                )}
+              </div>
+              <ThemedInput
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setPassword(e.target.value)
+                }
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-3">
+              <ThemedButton
+                type="submit"
+                disabled={loading || !supabaseConfigured}
+              >
+                {loading
+                  ? mode === "login"
+                    ? "Logging in..."
+                    : "Registering..."
+                  : mode === "login"
+                    ? "Login"
+                    : "Register"}
+              </ThemedButton>
+            </div>
+            {formError && <ThemedErrorText>{formError}</ThemedErrorText>}
+            {successMsg && <ThemedSuccessText>{successMsg}</ThemedSuccessText>}
+          </div>
+          <div className="mt-4 text-center text-sm text-gray-300">
+            {mode === "login" ? (
+              <>
+                Don&apos;t have an account?{" "}
+                <button
+                  type="button"
+                  className="underline underline-offset-4 text-[var(--accent-2-l)] hover:text-[var(--accent-mix)] transition"
+                  onClick={() => setMode("register")}
                 >
-                  {loading
-                    ? mode === "login"
-                      ? "Logging in..."
-                      : "Registering..."
-                    : mode === "login"
-                      ? "Login"
-                      : "Register"}
-                </ThemedButton>
-              </div>
-              {formError && <ThemedErrorText>{formError}</ThemedErrorText>}
-              {successMsg && (
-                <ThemedSuccessText>{successMsg}</ThemedSuccessText>
-              )}
-            </div>
-            <div className="mt-4 text-center text-sm text-gray-300">
-              {mode === "login" ? (
-                <>
-                  Don&apos;t have an account?{" "}
-                  <button
-                    type="button"
-                    className="underline underline-offset-4 text-[var(--accent-2-l)] hover:text-[var(--accent-mix)] transition"
-                    onClick={() => setMode("register")}
-                  >
-                    Register
-                  </button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{" "}
-                  <button
-                    type="button"
-                    className="underline underline-offset-4 text-[var(--accent-2-l)] hover:text-[var(--accent-mix)] transition"
-                    onClick={() => setMode("login")}
-                  >
-                    Login
-                  </button>
-                </>
-              )}
-            </div>
-          </form>
-        </NeonCard>
-      </AnimatedBorderContainer>
+                  Register
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  className="underline underline-offset-4 text-[var(--accent-2-l)] hover:text-[var(--accent-mix)] transition"
+                  onClick={() => setMode("login")}
+                >
+                  Login
+                </button>
+              </>
+            )}
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

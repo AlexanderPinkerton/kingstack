@@ -17,6 +17,9 @@ import type {
 
 export type { PostApiData } from "@/repositories/posts/types";
 
+/** Stable empty result so cache reads can back a `useSyncExternalStore`. */
+const NO_CONFIRMED_POSTS: readonly PostApiData[] = Object.freeze([]);
+
 // UI data structure (enhanced for the frontend)
 export interface PostUiData {
   id: string;
@@ -253,7 +256,7 @@ export class AdvancedPostStore {
   private context: PostRepositoryContext;
 
   constructor(
-    queryClient: QueryClient,
+    private readonly queryClient: QueryClient,
     private readonly repository: PostRepository,
     initialContext: PostRepositoryContext = {
       scope: "disabled",
@@ -274,7 +277,7 @@ export class AdvancedPostStore {
     >(
       {
         name: "advanced-posts",
-        queryKey: () => ["advanced-posts", this.context.scope],
+        queryKey: () => this.queryKey,
         queryFn: () => this.repository.list(this.context),
         mutations: {
           create: (data) => this.repository.create(data, this.context),
@@ -326,5 +329,24 @@ export class AdvancedPostStore {
   // Check if store is ready and enabled
   get isReady() {
     return this.context.enabled;
+  }
+
+  get queryKey(): string[] {
+    return ["advanced-posts", this.context.scope];
+  }
+
+  /**
+   * Rows the server has actually confirmed.
+   *
+   * Optimistic layers are held in the MobX projection (`ui`) and never written
+   * to the query cache — the cache is only updated when a mutation succeeds or
+   * the list query resolves. Reading it therefore gives the pre-transformer,
+   * server-truth counterpart to `ui.list`, which is what the demo contrasts.
+   */
+  get confirmedApiData(): readonly PostApiData[] {
+    return (
+      this.queryClient.getQueryData<PostApiData[]>(this.queryKey) ??
+      NO_CONFIRMED_POSTS
+    );
   }
 }

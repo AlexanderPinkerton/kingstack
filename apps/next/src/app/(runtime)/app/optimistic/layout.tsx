@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createMetadata({
-  title: "Optimistic Store",
+  title: "Optimistic UI",
   description:
-    "Advanced state management with custom transformers, search, filtering, and analytics. See optimistic updates in action.",
+    "Interactive optimistic mutations with visible latency, reconciliation, and automatic rollback.",
   keywords: [
     "optimistic updates",
     "state management",
@@ -12,7 +12,7 @@ export const metadata: Metadata = createMetadata({
     "tanstack query",
     "transformer",
   ],
-  canonical: "/home/optimistic",
+  canonical: "/app/optimistic",
 });
 
 export default function OptimisticLayout({

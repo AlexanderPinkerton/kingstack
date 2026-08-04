@@ -15,6 +15,7 @@ AppProviders
     ├── UserStoreManager
     │   ├── CurrentUserStore
     │   ├── AdvancedPostStore
+    │   ├── OptimisticPostDemoController
     │   ├── RealtimeCheckboxStore
     │   └── PublicTodoStore
     └── AdminStoreManager
@@ -83,6 +84,14 @@ thin composition wrapper, while backend-free routes compose the same UI and
 store outside `AppProviders`. See
 [Frontend drafts without Supabase](../../../../docs/frontend-drafts.md).
 
+The authenticated optimistic-post example wraps its HTTP repository with an
+`OptimisticPostDemoController`. The wrapper can add visible latency or reject
+one mutation before it reaches HTTP, while the unchanged `AdvancedPostStore`
+performs the real optimistic update, reconciliation, and rollback. Form,
+filter, and edit state lives in `OptimisticPostsViewModel`; React only renders
+it and forwards events. The draft route reuses the same view with its memory
+repository and without the network controls.
+
 ## Query Activation Policy
 
 | Store | Activation |
@@ -116,14 +125,21 @@ and move to the new scoped query key.
 
 ## Realtime
 
-RootStore owns one RealtimeManager and one socket. Domain stores subscribe by
-channel, validate their raw transport events, and pass normalized
+RootStore owns one RealtimeManager and one socket. Domain stores subscribe and
+publish by channel, validate their raw transport events, and pass normalized
 `RemoteChange` values to AOS. The manager knows nothing about domain stores or
-query caches.
+query caches. The latest outgoing presence state is retained per channel and
+replayed after socket registration, which keeps presence from racing
+authentication or disappearing after a reconnect.
 
 Channel subscriptions survive socket recreation and are released by their
 domain owners. Realtime-capable feature stores gate those subscriptions on
 feature demand; the checkbox store listens only while its feature is active.
+
+The side-by-side checkbox example deliberately owns a second QueryClient,
+RealtimeManager, and RealtimeCheckboxStore in a route-level controller. This is
+the simulated collaborator boundary: the two panes never share checkbox memory,
+and the controller disposes the extra cache and socket with the example.
 
 ## Disposal
 

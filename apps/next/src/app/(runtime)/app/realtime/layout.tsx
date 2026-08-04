@@ -2,17 +2,18 @@ import type { Metadata } from "next";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createMetadata({
-  title: "Realtime Sync",
+  title: "Realtime Collaboration",
   description:
-    "Multi-user real-time synchronization with optimistic updates and auto-rollback. Experience collaborative features powered by Socket.io.",
+    "Side-by-side multi-user synchronization with optimistic updates and live presence.",
   keywords: [
     "realtime",
     "websockets",
     "socket.io",
     "collaborative",
     "multi-user",
+    "presence",
   ],
-  canonical: "/home/realtime",
+  canonical: "/app/realtime",
 });
 
 export default function RealtimeLayout({

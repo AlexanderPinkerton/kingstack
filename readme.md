@@ -84,11 +84,14 @@ directories and port selection.
 Both choices contain the complete KingStack source. Draft mode is not a
 separate template and does not delete backend code.
 
-The generated root page provides two explicit routes:
+The generated site has two user-facing entry points:
 
-- `/drafts` contains backend-free examples.
-- `/full-stack` contains the authenticated, database-backed, and realtime
-  showcase.
+- `/` explains when to use the frontend-only and full-stack workflows.
+- `/app` contains the authenticated, database-backed application examples.
+
+The no-index `/drafts/posts` route remains as an implementation reference for
+agents building an in-memory repository. It is documented rather than linked
+from the primary application navigation.
 
 ### Why drafts can become real features
 

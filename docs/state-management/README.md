@@ -230,9 +230,10 @@ probe effects.
 ## Backend-free frontend drafts
 
 Reusable domain UI can receive a store directly instead of reading RootStore.
-The same store can then be composed with an in-memory repository under
-`/drafts`, outside the Supabase-backed runtime route group. Moving the feature
-to production changes only its repository composition.
+The same store can then be composed with an in-memory repository under the
+no-index `/drafts/posts` reference route, outside the Supabase-backed runtime
+route group. Moving the feature to production changes only its repository
+composition.
 
 See [Frontend drafts without Supabase](../frontend-drafts.md) for the workflow
 and the advanced-posts reference implementation.

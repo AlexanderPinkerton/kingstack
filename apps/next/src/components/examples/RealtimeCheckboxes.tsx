@@ -1,250 +1,433 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { Check, Radio, Users, Zap } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useRootStore } from "@/hooks/useRootStore";
-import { useStoreActivation } from "@/hooks/useStoreActivation";
+import type { RealtimeStatus } from "@/lib/realtime-manager";
+import {
+  type CheckboxPresenceParticipant,
+  type RealtimeCheckboxStore,
+} from "@/stores/userApp/checkboxStore";
+import { RealtimeCheckboxDemoController } from "@/stores/userApp/realtimeCheckboxDemoController";
 
-// ---------- Realtime Checkboxes Component ----------
+const CHECKBOX_COUNT = 200;
+const PHONE_CHECKBOX_COUNT = 16;
+const DESKTOP_CHECKBOX_COUNT = 60;
 
-export const RealtimeCheckboxes = observer(() => {
+type DemoSide = "primary" | "collaborator";
+
+interface CheckboxPaneProps {
+  controller: RealtimeCheckboxDemoController;
+  side: DemoSide;
+  store: RealtimeCheckboxStore;
+  participant: CheckboxPresenceParticipant;
+  eyebrow: string;
+  description: string;
+  connected: boolean;
+  status: RealtimeStatus;
+}
+
+function ConnectionStatus({
+  connected,
+  status,
+}: {
+  connected: boolean;
+  status: RealtimeStatus;
+}) {
+  return (
+    <div
+      className="flex items-center gap-2 text-xs text-white/45"
+      aria-label={connected ? "Connected" : status}
+      role="status"
+    >
+      <span
+        className={`size-1.5 rounded-full ${
+          connected ? "bg-[#d8ff70]" : "bg-[#ff8b7b]"
+        }`}
+        aria-hidden="true"
+      />
+      <span className="hidden sm:inline">
+        {connected ? "Connected" : status}
+      </span>
+    </div>
+  );
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+const CollaboratorList = observer(function CollaboratorList({
+  controller,
+}: {
+  controller: RealtimeCheckboxDemoController;
+}) {
+  const participants = controller.primaryStore.getPresentParticipants();
+  const primaryId = controller.primaryParticipant.id;
+  const collaboratorId = controller.collaboratorParticipant.id;
+
+  return (
+    <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#d8ff70]">
+            Who is here?
+          </p>
+          <p className="mt-1 text-sm text-white/40">
+            {participants.length}{" "}
+            {participants.length === 1 ? "person" : "people"} present
+          </p>
+        </div>
+
+        <div className="flex flex-wrap justify-end gap-2">
+          {participants.map((participant) => {
+            const isPrimary = participant.id === primaryId;
+            const isDemoCollaborator = participant.id === collaboratorId;
+            const isLime = participant.tone === "lime";
+
+            return (
+              <div
+                key={participant.id}
+                className="flex items-center gap-2 rounded-full border border-white/10 bg-[#0c0d10] py-1.5 pl-1.5 pr-3"
+              >
+                <span
+                  className={`grid size-7 place-items-center rounded-full text-[0.6rem] font-bold text-[#11130d] ${
+                    isLime ? "bg-[#d8ff70]" : "bg-[#a89cff]"
+                  }`}
+                  aria-hidden="true"
+                >
+                  {getInitials(participant.name)}
+                </span>
+                <span className="max-w-28 truncate text-xs font-medium sm:max-w-40 sm:text-sm">
+                  {participant.name}
+                </span>
+                {(isPrimary || isDemoCollaborator) && (
+                  <span className="hidden text-[0.6rem] uppercase tracking-[0.12em] text-white/30 sm:inline">
+                    {isPrimary ? "You" : "Demo"}
+                  </span>
+                )}
+                <span
+                  className="size-1.5 rounded-full bg-[#d8ff70]"
+                  aria-label="Present"
+                  role="status"
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+});
+
+const CheckboxPane = observer(function CheckboxPane({
+  controller,
+  side,
+  store,
+  participant,
+  eyebrow,
+  description,
+  connected,
+  status,
+}: CheckboxPaneProps) {
+  const isPending =
+    store.updatePending || store.createPending || store.deletePending;
+
+  return (
+    <article className="min-w-0 rounded-2xl border border-white/10 bg-[#0c0d10] p-2 sm:rounded-[1.5rem] sm:p-4 lg:p-6">
+      <div className="flex items-start justify-between gap-2 border-b border-white/10 pb-3 sm:gap-4 sm:pb-5">
+        <div className="min-w-0">
+          <p
+            className={`text-[0.65rem] font-semibold uppercase tracking-[0.18em] ${
+              side === "primary" ? "text-[#d8ff70]" : "text-[#a89cff]"
+            }`}
+          >
+            {eyebrow}
+          </p>
+          <div className="mt-1 flex items-center gap-2 sm:mt-2">
+            <h3 className="truncate text-base font-semibold tracking-[-0.035em] sm:text-xl">
+              {participant.name}
+            </h3>
+            {side === "primary" && (
+              <span className="hidden rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[0.65rem] text-white/45 sm:inline">
+                You
+              </span>
+            )}
+          </div>
+          <p className="mt-2 hidden text-sm leading-6 text-white/45 sm:block">
+            {description}
+          </p>
+        </div>
+        <div className="shrink-0 rounded-full border border-white/10 bg-white/[0.035] p-2 sm:px-3 sm:py-2">
+          <ConnectionStatus connected={connected} status={status} />
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between text-[0.65rem] text-white/35 sm:mt-5 sm:text-xs">
+        <span className="lg:hidden">
+          {Math.min(PHONE_CHECKBOX_COUNT, store.count)}/{store.count} shown
+        </span>
+        <span className="hidden lg:inline xl:hidden">
+          {Math.min(DESKTOP_CHECKBOX_COUNT, store.count)}/{store.count} shown
+        </span>
+        <span className="hidden xl:inline">{store.count} shared items</span>
+        <span
+          className={`hidden sm:inline ${isPending ? "text-[#d8ff70]" : ""}`}
+        >
+          {isPending ? "Syncing change…" : "Up to date"}
+        </span>
+      </div>
+
+      {store.isLoading ? (
+        <div className="mt-4 grid min-h-64 place-items-center rounded-xl border border-white/10 bg-white/[0.025] text-sm text-white/45">
+          Loading this client…
+        </div>
+      ) : store.isError ? (
+        <div className="mt-4 grid min-h-64 place-items-center rounded-xl border border-[#ff8b7b]/30 bg-[#ff8b7b]/5 px-6 text-center text-sm text-[#ffb6ac]">
+          {store.error?.message ?? "This client could not load checkboxes."}
+        </div>
+      ) : (
+        <div className="mt-3 grid grid-cols-4 gap-1 rounded-lg border border-white/10 bg-black/20 p-1.5 sm:mt-4 sm:rounded-xl sm:p-3 lg:grid-cols-10 lg:gap-1.5 lg:p-4 xl:grid-cols-20">
+          {Array.from({ length: CHECKBOX_COUNT }, (_, index) => {
+            const isChecked = store.isCheckboxChecked(index);
+            const visitors = store.getPresenceAt(index, participant.id);
+            const visitor = visitors[0];
+            const visitorIsLime = visitor?.tone === "lime";
+            const visibilityClass =
+              index < PHONE_CHECKBOX_COUNT
+                ? "grid"
+                : index < DESKTOP_CHECKBOX_COUNT
+                  ? "hidden lg:grid"
+                  : "hidden xl:grid";
+
+            return (
+              <button
+                key={index}
+                type="button"
+                role="checkbox"
+                aria-checked={isChecked}
+                aria-label={`Checkbox ${index + 1}, ${
+                  isChecked ? "checked" : "unchecked"
+                }`}
+                onClick={() => store.toggleCheckbox(index)}
+                onPointerEnter={() => controller.highlight(side, index)}
+                onPointerLeave={(event) => {
+                  if (document.activeElement !== event.currentTarget) {
+                    controller.clearHighlight(side);
+                  }
+                }}
+                onFocus={() => controller.highlight(side, index)}
+                onBlur={() => controller.clearHighlight(side)}
+                className={`${visibilityClass} relative aspect-square min-h-5 w-full place-items-center rounded-[0.3rem] border transition-colors focus-visible:outline-none ${
+                  isChecked
+                    ? "border-[#d8ff70] bg-[#d8ff70] text-[#11130d]"
+                    : "border-white/15 bg-white/[0.055] text-transparent hover:border-white/35 hover:bg-white/[0.09]"
+                } ${
+                  visitor
+                    ? visitorIsLime
+                      ? "z-20 border-[#d8ff70] ring-2 ring-[#d8ff70]/80 ring-offset-2 ring-offset-[#0c0d10]"
+                      : "z-20 border-[#a89cff] ring-2 ring-[#a89cff]/80 ring-offset-2 ring-offset-[#0c0d10]"
+                    : "focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0d10]"
+                }`}
+              >
+                {isChecked && (
+                  <Check
+                    className="size-3 stroke-[3] xl:size-2.5"
+                    aria-hidden="true"
+                  />
+                )}
+
+                {visitor && (
+                  <span
+                    className={`pointer-events-none absolute -top-7 left-1/2 z-30 max-w-28 -translate-x-1/2 truncate rounded-md px-2 py-1 text-[0.6rem] font-semibold shadow-lg ${
+                      visitorIsLime
+                        ? "bg-[#d8ff70] text-[#11130d]"
+                        : "bg-[#a89cff] text-[#11130d]"
+                    }`}
+                    title={visitor.name}
+                  >
+                    {visitor.name}
+                    {visitors.length > 1 ? ` +${visitors.length - 1}` : ""}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </article>
+  );
+});
+
+export const RealtimeCheckboxes = observer(function RealtimeCheckboxes() {
   const rootStore = useRootStore();
   const checkboxStore = rootStore.userStore.checkboxStore;
-  useStoreActivation(checkboxStore);
+  const sessionUser = rootStore.session?.user;
+  const primaryName =
+    rootStore.userData?.displayName ||
+    sessionUser?.user_metadata?.username ||
+    sessionUser?.email?.split("@")[0] ||
+    "You";
+  const [controller] = useState(
+    () => new RealtimeCheckboxDemoController(checkboxStore, primaryName),
+  );
   const [isClient, setIsClient] = useState(false);
 
-  // Prevent hydration mismatch by only rendering after client mount
+  useEffect(() => controller.mount(), [controller]);
+
+  useEffect(() => {
+    controller.setAccessToken(rootStore.session?.access_token ?? null);
+  }, [controller, rootStore.session?.access_token]);
+
+  useEffect(() => {
+    controller.setPrimaryName(primaryName);
+  }, [controller, primaryName]);
+
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Show loading state during hydration
   if (!isClient || checkboxStore.isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-lg">Loading checkboxes...</div>
-      </div>
+      <section className="grid min-h-[30rem] place-items-center rounded-[2rem] border border-white/10 bg-[#111216]/85 text-white/45">
+        Preparing two isolated realtime clients…
+      </section>
     );
   }
 
   if (checkboxStore.isError) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-lg text-red-500">
-          Error loading checkboxes: {checkboxStore.error?.message}
-        </div>
-      </div>
+      <section className="grid min-h-80 place-items-center rounded-[2rem] border border-[#ff8b7b]/30 bg-[#ff8b7b]/5 px-6 text-center text-[#ffb6ac]">
+        Error loading checkboxes: {checkboxStore.error?.message}
+      </section>
     );
   }
 
-  // If no checkboxes exist, show a message to initialize them
   if (checkboxStore.count === 0) {
     return (
-      <div className="p-8 bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700 shadow-2xl">
-        <h2 className="text-3xl font-bold mb-4 text-white">
-          Realtime Checkboxes
-        </h2>
-        <p className="text-slate-300 mb-8 text-lg">
-          No checkboxes found. Please initialize the database first.
-        </p>
-        <button
-          onClick={() => {
-            void checkboxStore.initializeCheckboxes().catch(() => undefined);
+      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#111216]/85 p-6 sm:p-10">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{
+            background:
+              "radial-gradient(circle at 88% 0%, rgba(118, 85, 255, 0.2), transparent 34%), radial-gradient(circle at 8% 100%, rgba(216, 255, 112, 0.08), transparent 30%)",
           }}
-          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
-          Initialize 200 Checkboxes
-        </button>
-      </div>
+        />
+        <div className="relative max-w-2xl">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#d8ff70]">
+            One-time setup
+          </p>
+          <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">
+            Seed the shared canvas.
+          </h2>
+          <p className="mt-4 text-lg leading-8 text-white/50">
+            The demo needs 200 checkbox records so both clients can reconcile
+            against the same backend state.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              void checkboxStore
+                .initializeCheckboxes(CHECKBOX_COUNT)
+                .catch(() => undefined);
+            }}
+            className="mt-8 inline-flex min-h-12 items-center justify-center rounded-xl bg-[#d8ff70] px-6 font-semibold text-[#11130d] transition hover:bg-[#e3ff98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#111216]"
+          >
+            Initialize 200 checkboxes
+          </button>
+        </div>
+      </section>
     );
   }
 
   return (
-    <div className="p-8 bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-sm rounded-2xl border border-slate-600 shadow-2xl">
-      {/* Header Section */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-4 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400">
-          <div className="w-2 h-2 rounded-full animate-pulse mr-2 bg-emerald-400" />
-          Live Demo
-        </div>
-        <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-          Realtime Optimistic Updates
-        </h2>
-        <p className="text-slate-300 text-lg max-w-2xl mx-auto leading-relaxed">
-          Experience instant UI updates with automatic rollback on errors.
-          Changes sync across all users in real-time with zero configuration.
-        </p>
-      </div>
+    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#111216]/85 p-2 shadow-2xl shadow-black/20 sm:p-8">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-80 opacity-60"
+        style={{
+          background:
+            "radial-gradient(circle at 92% 0%, rgba(118, 85, 255, 0.18), transparent 36%), radial-gradient(circle at 8% 0%, rgba(216, 255, 112, 0.07), transparent 28%)",
+        }}
+      />
 
-      {/* Feature Highlights */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="flex items-center space-x-3 p-4 bg-slate-700/30 rounded-lg border border-slate-600">
-          <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
-            <svg
-              className="w-4 h-4 text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
+      <div className="relative">
+        <div className="max-w-3xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 text-xs text-white/55">
+            <Radio className="size-3 text-[#d8ff70]" aria-hidden="true" />
+            Live collaboration sandbox
           </div>
-          <div>
-            <div className="text-white font-semibold">Instant Updates</div>
-            <div className="text-slate-400 text-sm">
-              UI responds immediately
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3 p-4 bg-slate-700/30 rounded-lg border border-slate-600">
-          <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-            <svg
-              className="w-4 h-4 text-emerald-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-          </div>
-          <div>
-            <div className="text-white font-semibold">Auto Rollback</div>
-            <div className="text-slate-400 text-sm">
-              Failed operations revert
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3 p-4 bg-slate-700/30 rounded-lg border border-slate-600">
-          <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
-            <svg
-              className="w-4 h-4 text-purple-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-          </div>
-          <div>
-            <div className="text-white font-semibold">Multi-User Sync</div>
-            <div className="text-slate-400 text-sm">
-              Real-time collaboration
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Demo Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-semibold text-white">Interactive Demo</h3>
-          <div className="flex items-center space-x-2 text-sm text-slate-400">
-            <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-400" />
-            <span>Live</span>
-            {(checkboxStore.updatePending ||
-              checkboxStore.createPending ||
-              checkboxStore.deletePending) && (
-              <span className="text-blue-400">• Syncing...</span>
-            )}
-          </div>
-        </div>
-        <p className="text-slate-400 mb-4">
-          Click any checkbox below to see optimistic updates in action. Open
-          this page in multiple tabs to experience real-time synchronization.
-        </p>
-
-        <div className="grid grid-cols-10 sm:grid-cols-20 gap-2 p-4 bg-slate-900/30 rounded-lg border border-slate-600">
-          {Array.from({ length: 200 }, (_, i) => {
-            const isChecked = checkboxStore.isCheckboxChecked(i);
-
-            return (
-              <label
-                key={i}
-                className={`
-                  group relative flex items-center justify-center w-6 h-6 border-2 rounded cursor-pointer transition-all duration-200 transform hover:scale-110
-                  ${
-                    isChecked
-                      ? "bg-gradient-to-br from-emerald-500 to-green-600 border-emerald-400 text-white shadow-lg shadow-emerald-500/25"
-                      : "bg-slate-700/50 border-slate-500 text-slate-300 hover:bg-slate-600/50 hover:border-slate-400 hover:shadow-md"
-                  }
-                `}
-              >
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={() => checkboxStore.toggleCheckbox(i)}
-                  className="sr-only"
-                />
-                {isChecked && (
-                  <svg
-                    className="w-3 h-3 drop-shadow-sm"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-
-                {/* Hover effect */}
-                <div className="absolute inset-0 rounded-lg bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-              </label>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Call to Action */}
-      <div className="mt-8 p-6 bg-gradient-to-r from-slate-700/30 to-slate-800/30 rounded-xl border border-slate-600">
-        <div className="text-center">
-          <h3 className="text-xl font-semibold text-white mb-2">
-            Ready to Build Something Amazing?
-          </h3>
-          <p className="text-slate-300 mb-4">
-            This demo showcases our optimistic store pattern with real-time
-            synchronization. Perfect for collaborative apps, real-time
-            dashboards, and interactive experiences.
+          <h2 className="mt-5 text-3xl font-semibold leading-tight tracking-[-0.045em] sm:text-5xl">
+            Two clients. One shared state.
+            <span className="block font-gambetta font-normal italic text-white/45">
+              No second tab required.
+            </span>
+          </h2>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-white/50 sm:text-lg sm:leading-8">
+            Tap, hover, or keyboard-focus a square in either pane. The other
+            client shows that person’s name and border; clicks still travel
+            through the optimistic update and realtime reconciliation path.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-slate-400">
-              {rootStore.realtimeConnected ? (
-                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-              ) : (
-                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
-              )}
-              <span>
-                Socket:{" "}
-                {rootStore.realtimeConnected
-                  ? "Connected"
-                  : rootStore.realtimeStatus}
-              </span>
+        </div>
+
+        <CollaboratorList controller={controller} />
+
+        <div className="mt-8 hidden gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 lg:grid lg:grid-cols-3">
+          {[
+            {
+              icon: Users,
+              label: "Independent clients",
+              detail: "Separate cache and socket",
+            },
+            {
+              icon: Radio,
+              label: "Ephemeral presence",
+              detail: "Clears on leave or disconnect",
+            },
+            {
+              icon: Zap,
+              label: "Optimistic writes",
+              detail: "Immediate feedback, then reconcile",
+            },
+          ].map(({ icon: Icon, label, detail }) => (
+            <div key={label} className="bg-[#0c0d10] px-5 py-4">
+              <Icon className="size-4 text-[#d8ff70]" aria-hidden="true" />
+              <p className="mt-3 text-sm font-medium">{label}</p>
+              <p className="mt-1 text-xs text-white/35">{detail}</p>
             </div>
-            <div className="text-sm text-slate-500">
-              • {checkboxStore.count} items loaded
-            </div>
-          </div>
+          ))}
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-1 sm:gap-4">
+          <CheckboxPane
+            controller={controller}
+            side="primary"
+            store={controller.primaryStore}
+            participant={controller.primaryParticipant}
+            eyebrow="Your view"
+            description="Your authenticated app runtime. Maya’s focus appears here."
+            connected={rootStore.realtimeConnected}
+            status={rootStore.realtimeStatus}
+          />
+          <CheckboxPane
+            controller={controller}
+            side="collaborator"
+            store={controller.collaboratorStore}
+            participant={controller.collaboratorParticipant}
+            eyebrow="Collaborator"
+            description="A second query cache and socket. Your focus appears here."
+            connected={controller.collaboratorConnected}
+            status={controller.collaboratorStatus}
+          />
         </div>
       </div>
-    </div>
+    </section>
   );
 });

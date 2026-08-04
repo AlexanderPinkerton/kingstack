@@ -1,8 +1,9 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { SupabaseSession } from "@/lib/session-manager";
-import type { RealtimeSource } from "@/lib/realtime-manager";
+import type { RealtimeTransport } from "@/lib/realtime-manager";
 import { createHttpPostRepository } from "@/repositories/posts/http-post-repository";
 import { AdvancedPostStore } from "./postStore";
+import { OptimisticPostDemoController } from "./optimisticPostDemoController";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { CurrentUserStore } from "./currentUserStore";
 import { PublicTodoStore } from "./publicTodoStore";
@@ -10,7 +11,7 @@ import { PublicTodoStore } from "./publicTodoStore";
 interface UserStoreManagerOptions {
   queryClient: QueryClient;
   browserId: string;
-  realtimeSource: RealtimeSource;
+  realtimeSource: RealtimeTransport;
 }
 
 /**
@@ -21,6 +22,7 @@ interface UserStoreManagerOptions {
  */
 export class UserStoreManager {
   readonly postStore: AdvancedPostStore;
+  readonly optimisticPostDemoController: OptimisticPostDemoController;
   readonly checkboxStore: RealtimeCheckboxStore;
   readonly publicTodoStore: PublicTodoStore;
   readonly currentUserStore: CurrentUserStore;
@@ -33,10 +35,14 @@ export class UserStoreManager {
     browserId,
     realtimeSource,
   }: UserStoreManagerOptions) {
-    this.postStore = new AdvancedPostStore(
-      queryClient,
+    this.optimisticPostDemoController = new OptimisticPostDemoController(
       createHttpPostRepository(),
     );
+    this.postStore = new AdvancedPostStore(
+      queryClient,
+      this.optimisticPostDemoController.repository,
+    );
+    this.optimisticPostDemoController.attachStore(this.postStore);
     this.checkboxStore = new RealtimeCheckboxStore(
       queryClient,
       realtimeSource,
@@ -74,6 +80,7 @@ export class UserStoreManager {
     this.releaseCurrentUser?.();
     this.releaseCurrentUser = null;
 
+    this.optimisticPostDemoController.dispose();
     this.postStore.dispose();
     this.checkboxStore.dispose();
     this.publicTodoStore.dispose();

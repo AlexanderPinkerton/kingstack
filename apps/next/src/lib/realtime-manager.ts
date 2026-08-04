@@ -12,6 +12,10 @@ export interface RealtimeSource {
   ): () => void;
 }
 
+export interface RealtimeTransport extends RealtimeSource {
+  publishLatest<TEvent>(eventType: string, event: TEvent): void;
+}
+
 interface RealtimeManagerOptions {
   serverUrl?: string;
   browserId?: string;
@@ -29,12 +33,13 @@ interface Subscription {
  * manager deliberately knows nothing about stores, query caches, or MobX UI
  * projections.
  */
-export class RealtimeManager implements RealtimeSource {
+export class RealtimeManager implements RealtimeTransport {
   status: RealtimeStatus = "idle";
   error: Error | null = null;
 
   private socket: Socket | null = null;
   private readonly subscriptions = new Map<string, Set<Subscription>>();
+  private readonly latestPublications = new Map<string, unknown>();
   private readonly browserId: string;
   private readonly serverUrl: string;
   private readonly socketFactory: () => Socket;
@@ -97,6 +102,17 @@ export class RealtimeManager implements RealtimeSource {
     };
   }
 
+  publishLatest<TEvent>(eventType: string, event: TEvent): void {
+    if (this.disposed) {
+      throw new Error("Cannot publish with a disposed RealtimeManager");
+    }
+
+    this.latestPublications.set(eventType, event);
+    if (this.socket?.connected && this.status === "connected") {
+      this.socket.emit(eventType, event);
+    }
+  }
+
   setup(token: string): void {
     if (this.disposed) {
       throw new Error("Cannot set up a disposed RealtimeManager");
@@ -128,6 +144,7 @@ export class RealtimeManager implements RealtimeSource {
         token: this.currentToken,
         browserId: this.browserId,
       });
+      this.publishLatestState(socket);
     });
 
     socket.on("disconnect", (reason) => {
@@ -154,6 +171,7 @@ export class RealtimeManager implements RealtimeSource {
   teardown(): void {
     if (this.disposed) return;
     this.teardownSocket();
+    this.latestPublications.clear();
     this.currentToken = null;
     this.setConnectionState("idle");
   }
@@ -164,6 +182,7 @@ export class RealtimeManager implements RealtimeSource {
     this.teardownSocket();
     this.currentToken = null;
     this.subscriptions.clear();
+    this.latestPublications.clear();
     this.disposed = true;
     this.setConnectionState("disposed");
   }
@@ -181,6 +200,12 @@ export class RealtimeManager implements RealtimeSource {
       subscriptions.forEach((subscription) => {
         socket.off(eventType, subscription.listener);
       });
+    });
+  }
+
+  private publishLatestState(socket: Socket): void {
+    this.latestPublications.forEach((event, eventType) => {
+      socket.emit(eventType, event);
     });
   }
 
