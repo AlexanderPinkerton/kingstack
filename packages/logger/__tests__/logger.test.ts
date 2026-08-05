@@ -154,6 +154,45 @@ describe("node logger", () => {
       event: "process.terminating",
     });
   });
+
+  it("keeps the payload of a rejected plain object", () => {
+    const { destination, records } = createLogDestination();
+    const runtime = createNodeLogger({ service: "test", destination });
+
+    // Shape of a Supabase PostgrestError, which is not an Error instance.
+    runtime.logger.error("query.failed", {
+      error: {
+        message: "relation \"post\" does not exist",
+        details: null,
+        hint: null,
+        code: "42P01",
+      },
+    });
+
+    expect(records[0]).toMatchObject({
+      event: "query.failed",
+      err: {
+        type: "NonErrorThrown",
+        message: 'relation "post" does not exist',
+        payload: { code: "42P01" },
+      },
+    });
+  });
+
+  it("falls back to a generic message for an object with no message", () => {
+    const { destination, records } = createLogDestination();
+    const runtime = createNodeLogger({ service: "test", destination });
+
+    runtime.logger.error("query.failed", { error: { status: 503 } });
+
+    expect(records[0]).toMatchObject({
+      err: {
+        type: "NonErrorThrown",
+        message: "A non-Error value was thrown",
+        payload: { status: 503 },
+      },
+    });
+  });
 });
 
 describe("runtime-neutral adapters", () => {

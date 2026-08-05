@@ -7,6 +7,7 @@ import { OptimisticPostDemoController } from "./optimisticPostDemoController";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { CurrentUserStore } from "./currentUserStore";
 import { PublicTodoStore } from "./publicTodoStore";
+import { SharedCursorStore } from "./sharedCursorStore";
 
 interface UserStoreManagerOptions {
   queryClient: QueryClient;
@@ -27,6 +28,8 @@ export class UserStoreManager {
   readonly publicTodoStore: PublicTodoStore;
   readonly currentUserStore: CurrentUserStore;
 
+  private readonly realtimeSource: RealtimeTransport;
+  private readonly cursorStores = new Map<string, SharedCursorStore>();
   private releaseCurrentUser: (() => void) | null = null;
   private isDisposed = false;
 
@@ -35,6 +38,7 @@ export class UserStoreManager {
     browserId,
     realtimeSource,
   }: UserStoreManagerOptions) {
+    this.realtimeSource = realtimeSource;
     this.optimisticPostDemoController = new OptimisticPostDemoController(
       createHttpPostRepository(),
     );
@@ -50,6 +54,20 @@ export class UserStoreManager {
     );
     this.publicTodoStore = new PublicTodoStore(queryClient);
     this.currentUserStore = new CurrentUserStore(queryClient);
+  }
+
+  /**
+   * Cursor rooms are scoped per surface rather than per app, so they are made
+   * on demand. One store is shared by every consumer of the same scope; the
+   * manager keeps them so page unmounts cannot leak a socket subscription.
+   */
+  cursorStore(scope: string): SharedCursorStore {
+    const existing = this.cursorStores.get(scope);
+    if (existing) return existing;
+
+    const store = new SharedCursorStore(this.realtimeSource, scope);
+    this.cursorStores.set(scope, store);
+    return store;
   }
 
   updateSession(session: SupabaseSession): void {
@@ -85,5 +103,7 @@ export class UserStoreManager {
     this.checkboxStore.dispose();
     this.publicTodoStore.dispose();
     this.currentUserStore.dispose();
+    this.cursorStores.forEach((store) => store.dispose());
+    this.cursorStores.clear();
   }
 }

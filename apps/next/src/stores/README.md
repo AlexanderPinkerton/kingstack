@@ -17,6 +17,7 @@ AppProviders
     │   ├── AdvancedPostStore
     │   ├── OptimisticPostDemoController
     │   ├── RealtimeCheckboxStore
+    │   ├── SharedCursorStore (one per cursor room scope)
     │   └── PublicTodoStore
     └── AdminStoreManager
         └── AdminMgmtStore
@@ -100,6 +101,7 @@ repository and without the network controls.
 | `AdvancedPostStore` | While the posts feature is mounted |
 | `PublicTodoStore` | While the public-todos feature is mounted |
 | `RealtimeCheckboxStore` | While the checkbox feature is mounted; realtime follows the same demand |
+| `SharedCursorStore` | While a surface is bound to its room; holds no query at all |
 | `AdminMgmtStore` | While the admin-management feature is mounted and an authorized session exists |
 
 TanStack Query still decides whether activation requires a network request.
@@ -128,9 +130,35 @@ and move to the new scoped query key.
 RootStore owns one RealtimeManager and one socket. Domain stores subscribe and
 publish by channel, validate their raw transport events, and pass normalized
 `RemoteChange` values to AOS. The manager knows nothing about domain stores or
-query caches. The latest outgoing presence state is retained per channel and
-replayed after socket registration, which keeps presence from racing
-authentication or disappearing after a reconnect.
+query caches.
+
+### Rooms
+
+Every realtime message is scoped to a room named `<namespace>:<scope>`, such as
+`checkboxes:global` or `cursors:realtime-demo`. `RealtimeManager.joinRoom()` is
+ref-counted and re-joins on reconnect, so entity fan-out and presence for one
+feature never reach clients looking at another. The server owns the namespace
+policy — who may join, and what a valid presence payload looks like — in
+`apps/nest/src/realtime/presence/room-namespaces.ts`. Adding a collaborative
+example means adding one entry there, not another gateway handler.
+
+`RealtimeManager.publish()` takes two options that matter for presence:
+`latestKey` retains the message as the caller's current state and replays it
+after a reconnect, and `throttleMs` coalesces to a trailing edge so a pointer
+stream collapses to one frame per interval instead of one per pixel.
+
+### Presence
+
+`PresenceRoom<TState>` (`src/lib/realtime/presence-room.ts`) is the shared
+client half: it holds an observable roster, applies local state immediately,
+ignores the server's echo of its own participant, and preserves the local entry
+across an authoritative roster sync. Features differ only in the `TState` they
+put on the wire — a grid index for checkboxes, a normalized point for cursors.
+
+`SharedCursorStore` is the purely ephemeral case: it never touches Postgres or
+the AOS cache, which is what lets it publish at pointer rate. Its DOM wiring
+lives in `CursorSurfaceController`, outside React, so pointermove never causes a
+render or a forced layout.
 
 Channel subscriptions survive socket recreation and are released by their
 domain owners. Realtime-capable feature stores gate those subscriptions on

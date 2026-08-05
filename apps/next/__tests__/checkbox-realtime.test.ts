@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  decodeCheckboxPresence,
   decodeCheckboxRemoteChange,
   type CheckboxApiData,
 } from "@/stores/userApp/checkboxStore";
@@ -55,85 +54,5 @@ describe("decodeCheckboxRemoteChange", () => {
     ).toBeNull();
     expect(decodeCheckboxRemoteChange({ event: "INSERT" })).toBeNull();
     expect(decodeCheckboxRemoteChange({ checkbox })).toBeNull();
-  });
-});
-
-describe("decodeCheckboxPresence", () => {
-  const participant = {
-    id: "participant-a",
-    name: "Maya",
-    tone: "violet" as const,
-  };
-
-  it("decodes join, focus, idle, and leave events", () => {
-    expect(
-      decodeCheckboxPresence({
-        type: "checkbox_presence",
-        action: "join",
-        participant,
-        checkboxIndex: null,
-      }),
-    ).toEqual({
-      operation: "upsert",
-      presence: { participant, checkboxIndex: null },
-    });
-
-    expect(
-      decodeCheckboxPresence({
-        type: "checkbox_presence",
-        action: "focus",
-        participant,
-        checkboxIndex: 42,
-      }),
-    ).toEqual({
-      operation: "upsert",
-      presence: { participant, checkboxIndex: 42 },
-    });
-
-    expect(
-      decodeCheckboxPresence({
-        type: "checkbox_presence",
-        action: "idle",
-        participant,
-        checkboxIndex: null,
-      }),
-    ).toEqual({
-      operation: "upsert",
-      presence: { participant, checkboxIndex: null },
-    });
-
-    expect(
-      decodeCheckboxPresence({
-        type: "checkbox_presence",
-        action: "leave",
-        participant,
-        checkboxIndex: null,
-      }),
-    ).toEqual({ operation: "remove", participantId: participant.id });
-  });
-
-  it("decodes authoritative roster resets", () => {
-    expect(
-      decodeCheckboxPresence({
-        type: "checkbox_presence",
-        action: "reset",
-      }),
-    ).toEqual({ operation: "reset" });
-  });
-
-  it("rejects malformed and unrelated presence events", () => {
-    expect(
-      decodeCheckboxPresence({
-        type: "checkbox_presence",
-        action: "focus",
-        participant,
-        checkboxIndex: -1,
-      }),
-    ).toBeNull();
-    expect(
-      decodeCheckboxPresence({
-        participant: { ...participant, tone: "violet" },
-      }),
-    ).toBeNull();
   });
 });

@@ -9,8 +9,11 @@ import {
 } from "@kingstack/advanced-optimistic-store";
 import type { QueryClient } from "@tanstack/react-query";
 import { StoreDemand } from "@/lib/store-lifecycle";
-import { observable } from "mobx";
 import type { RealtimeTransport } from "@/lib/realtime-manager";
+import {
+  PresenceRoom,
+  type PresenceParticipant,
+} from "@/lib/realtime/presence-room";
 import { browserLogger } from "@/lib/browser-logger";
 
 const logger = browserLogger.child({ component: "CheckboxStore" });
@@ -39,33 +42,15 @@ export interface CheckboxRealtimeEvent {
   browserId?: string;
 }
 
-export type CheckboxPresenceTone = "lime" | "violet";
-
-export interface CheckboxPresenceParticipant {
-  id: string;
-  name: string;
-  tone: CheckboxPresenceTone;
+/** Presence in this room is "which cell of the shared grid are you on". */
+export interface CheckboxPresenceState {
+  checkboxIndex: number;
 }
 
-export type CheckboxPresenceAction =
-  "join" | "focus" | "idle" | "leave" | "reset";
+export type CheckboxPresenceParticipant = PresenceParticipant;
 
-export interface CheckboxPresenceEvent {
-  type?: "checkbox_presence";
-  action?: CheckboxPresenceAction;
-  participant?: CheckboxPresenceParticipant;
-  checkboxIndex?: number | null;
-}
-
-export interface CheckboxPresence {
-  participant: CheckboxPresenceParticipant;
-  checkboxIndex: number | null;
-}
-
-export type DecodedCheckboxPresence =
-  | { operation: "upsert"; presence: CheckboxPresence }
-  | { operation: "remove"; participantId: string }
-  | { operation: "reset" };
+/** Entity events and presence for the grid share one room. */
+export const CHECKBOX_ROOM_ID = "checkboxes:global";
 
 export function decodeCheckboxRemoteChange(
   event: CheckboxRealtimeEvent,
@@ -91,52 +76,6 @@ export function decodeCheckboxRemoteChange(
     originId: event.browserId,
     revision: entity.updated_at,
   };
-}
-
-export function decodeCheckboxPresence(
-  event: CheckboxPresenceEvent,
-): DecodedCheckboxPresence | null {
-  if (event.type && event.type !== "checkbox_presence") return null;
-  if (event.action === "reset") return { operation: "reset" };
-
-  const participant = event.participant;
-  const checkboxIndex = event.checkboxIndex;
-  if (
-    !participant ||
-    typeof participant.id !== "string" ||
-    typeof participant.name !== "string" ||
-    (participant.tone !== "lime" && participant.tone !== "violet")
-  ) {
-    return null;
-  }
-
-  if (event.action === "leave" && checkboxIndex === null) {
-    return { operation: "remove", participantId: participant.id };
-  }
-
-  if (
-    event.action === "focus" &&
-    typeof checkboxIndex === "number" &&
-    Number.isInteger(checkboxIndex) &&
-    checkboxIndex >= 0
-  ) {
-    return {
-      operation: "upsert",
-      presence: { participant, checkboxIndex },
-    };
-  }
-
-  if (
-    (event.action === "join" || event.action === "idle") &&
-    checkboxIndex === null
-  ) {
-    return {
-      operation: "upsert",
-      presence: { participant, checkboxIndex: null },
-    };
-  }
-
-  return null;
 }
 
 // ---------- API Functions ----------
@@ -246,12 +185,10 @@ export class RealtimeCheckboxStore {
     CheckboxUiData
   >;
   private readonly demand: StoreDemand;
-  private readonly presenceByParticipant = observable.map<
-    string,
-    CheckboxPresence
-  >();
+  private readonly presence: PresenceRoom<CheckboxPresenceState>;
   private releaseCheckboxRealtime: (() => void) | null = null;
-  private releasePresenceRealtime: (() => void) | null = null;
+  private releaseRoom: (() => void) | null = null;
+  private releasePresence: (() => void) | null = null;
 
   constructor(
     queryClient: QueryClient,
@@ -262,6 +199,10 @@ export class RealtimeCheckboxStore {
       this.optimisticStore.updateOptions();
       this.syncRealtimeSubscription();
     });
+    this.presence = new PresenceRoom<CheckboxPresenceState>(
+      realtimeTransport,
+      CHECKBOX_ROOM_ID,
+    );
 
     this.optimisticStore = createOptimisticStore<
       CheckboxApiData,
@@ -293,9 +234,11 @@ export class RealtimeCheckboxStore {
   dispose(): void {
     this.releaseCheckboxRealtime?.();
     this.releaseCheckboxRealtime = null;
-    this.releasePresenceRealtime?.();
-    this.releasePresenceRealtime = null;
-    this.presenceByParticipant.clear();
+    this.releaseRoom?.();
+    this.releaseRoom = null;
+    this.releasePresence?.();
+    this.releasePresence = null;
+    this.presence.dispose();
     this.demand.dispose();
     this.optimisticStore.destroy();
   }
@@ -355,66 +298,36 @@ export class RealtimeCheckboxStore {
     index: number,
     excludingParticipantId: string,
   ): CheckboxPresenceParticipant[] {
-    return Array.from(this.presenceByParticipant.values())
+    return Array.from(this.presence.entries.values())
       .filter(
-        (presence) =>
-          presence.checkboxIndex === index &&
-          presence.participant.id !== excludingParticipantId,
+        (entry) =>
+          entry.state?.checkboxIndex === index &&
+          entry.participant.id !== excludingParticipantId,
       )
-      .map((presence) => presence.participant);
+      .map((entry) => entry.participant);
   }
 
   getPresentParticipants(): CheckboxPresenceParticipant[] {
-    return Array.from(this.presenceByParticipant.values()).map(
-      (presence) => presence.participant,
-    );
+    return this.presence.participants;
   }
 
   joinPresence(participant: CheckboxPresenceParticipant): void {
-    const event: Required<CheckboxPresenceEvent> = {
-      type: "checkbox_presence",
-      action: "join",
-      participant,
-      checkboxIndex: null,
-    };
-    this.applyPresenceEvent(event);
-    this.realtimeTransport.publishLatest("checkbox_presence", event);
+    this.presence.setSelf(participant, null);
   }
 
   highlightCheckbox(
     participant: CheckboxPresenceParticipant,
     checkboxIndex: number,
   ): void {
-    const event: Required<CheckboxPresenceEvent> = {
-      type: "checkbox_presence",
-      action: "focus",
-      participant,
-      checkboxIndex,
-    };
-    this.applyPresenceEvent(event);
-    this.realtimeTransport.publishLatest("checkbox_presence", event);
+    this.presence.setSelf(participant, { checkboxIndex });
   }
 
   clearCheckboxHighlight(participant: CheckboxPresenceParticipant): void {
-    const event: Required<CheckboxPresenceEvent> = {
-      type: "checkbox_presence",
-      action: "idle",
-      participant,
-      checkboxIndex: null,
-    };
-    this.applyPresenceEvent(event);
-    this.realtimeTransport.publishLatest("checkbox_presence", event);
+    this.presence.setSelf(participant, null);
   }
 
-  leavePresence(participant: CheckboxPresenceParticipant): void {
-    const event: Required<CheckboxPresenceEvent> = {
-      type: "checkbox_presence",
-      action: "leave",
-      participant,
-      checkboxIndex: null,
-    };
-    this.applyPresenceEvent(event);
-    this.realtimeTransport.publishLatest("checkbox_presence", event);
+  leavePresence(): void {
+    this.presence.clearSelf();
   }
 
   toggleCheckbox(index: number): void {
@@ -487,6 +400,10 @@ export class RealtimeCheckboxStore {
     const shouldSubscribe = this.demand.isActive;
 
     if (shouldSubscribe && !this.releaseCheckboxRealtime) {
+      // Entity events are room-scoped, so the store must hold the room itself
+      // rather than relying on presence to have joined it.
+      this.releaseRoom = this.realtimeTransport.joinRoom(CHECKBOX_ROOM_ID);
+      this.releasePresence = this.presence.activate();
       this.releaseCheckboxRealtime =
         this.realtimeTransport.subscribe<CheckboxRealtimeEvent>(
           "checkbox_update",
@@ -497,37 +414,16 @@ export class RealtimeCheckboxStore {
             }
           },
         );
-    } else if (!shouldSubscribe && this.releaseCheckboxRealtime) {
+      return;
+    }
+
+    if (!shouldSubscribe && this.releaseCheckboxRealtime) {
       this.releaseCheckboxRealtime();
       this.releaseCheckboxRealtime = null;
-    }
-
-    if (shouldSubscribe && !this.releasePresenceRealtime) {
-      this.releasePresenceRealtime =
-        this.realtimeTransport.subscribe<CheckboxPresenceEvent>(
-          "checkbox_presence",
-          (event) => this.applyPresenceEvent(event),
-        );
-    } else if (!shouldSubscribe && this.releasePresenceRealtime) {
-      this.releasePresenceRealtime();
-      this.releasePresenceRealtime = null;
-      this.presenceByParticipant.clear();
-    }
-  }
-
-  private applyPresenceEvent(event: CheckboxPresenceEvent): void {
-    const change = decodeCheckboxPresence(event);
-    if (!change) return;
-
-    if (change.operation === "reset") {
-      this.presenceByParticipant.clear();
-    } else if (change.operation === "remove") {
-      this.presenceByParticipant.delete(change.participantId);
-    } else {
-      this.presenceByParticipant.set(
-        change.presence.participant.id,
-        change.presence,
-      );
+      this.releasePresence?.();
+      this.releasePresence = null;
+      this.releaseRoom?.();
+      this.releaseRoom = null;
     }
   }
 

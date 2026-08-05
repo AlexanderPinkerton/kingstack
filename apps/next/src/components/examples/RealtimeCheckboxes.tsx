@@ -1,19 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Check, Radio, Users, Zap } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, MousePointer2, Radio, Users, Zap } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useRootStore } from "@/hooks/useRootStore";
+import { useSharedCursors } from "@/hooks/useSharedCursors";
+import { CursorOverlay } from "@/components/collaboration/cursor-overlay";
 import type { RealtimeStatus } from "@/lib/realtime-manager";
+import {
+  createParticipantId,
+  toneForParticipantId,
+} from "@/lib/realtime/presence-room";
 import {
   type CheckboxPresenceParticipant,
   type RealtimeCheckboxStore,
 } from "@/stores/userApp/checkboxStore";
 import { RealtimeCheckboxDemoController } from "@/stores/userApp/realtimeCheckboxDemoController";
+import type { SharedCursorStore } from "@/stores/userApp/sharedCursorStore";
 
 const CHECKBOX_COUNT = 200;
 const PHONE_CHECKBOX_COUNT = 16;
 const DESKTOP_CHECKBOX_COUNT = 60;
+
+/** Everyone viewing this page shares one cursor room. */
+const CURSOR_SCOPE = "realtime-demo";
 
 type DemoSide = "primary" | "collaborator";
 
@@ -123,6 +133,30 @@ const CollaboratorList = observer(function CollaboratorList({
         </div>
       </div>
     </section>
+  );
+});
+
+/**
+ * Cursor presence is invisible when nobody else is looking, which reads as a
+ * bug rather than as an empty room. Say which it is.
+ */
+const LiveCursorBadge = observer(function LiveCursorBadge({
+  store,
+}: {
+  store: SharedCursorStore;
+}) {
+  const count = store.cursors.length;
+
+  return (
+    <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 text-xs text-white/55">
+      <MousePointer2
+        className={`size-3 ${count > 0 ? "text-[#d8ff70]" : "text-white/30"}`}
+        aria-hidden="true"
+      />
+      {count > 0
+        ? `${count} live ${count === 1 ? "cursor" : "cursors"} on this page`
+        : "Open this page in another window to see live cursors"}
+    </div>
   );
 });
 
@@ -279,6 +313,21 @@ export const RealtimeCheckboxes = observer(function RealtimeCheckboxes() {
   );
   const [isClient, setIsClient] = useState(false);
 
+  // Cursor identity is per tab so two tabs of one account read as two people.
+  const [cursorParticipantId] = useState(() => createParticipantId("cursor"));
+  const cursorParticipant = useMemo(
+    () => ({
+      id: cursorParticipantId,
+      name: primaryName,
+      tone: toneForParticipantId(cursorParticipantId),
+    }),
+    [cursorParticipantId, primaryName],
+  );
+  const { store: cursorStore, surfaceRef } = useSharedCursors(
+    CURSOR_SCOPE,
+    cursorParticipant,
+  );
+
   useEffect(() => controller.mount(), [controller]);
 
   useEffect(() => {
@@ -348,7 +397,10 @@ export const RealtimeCheckboxes = observer(function RealtimeCheckboxes() {
   }
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#111216]/85 p-2 shadow-2xl shadow-black/20 sm:p-8">
+    <section
+      ref={surfaceRef}
+      className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#111216]/85 p-2 shadow-2xl shadow-black/20 sm:p-8"
+    >
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-80 opacity-60"
@@ -375,6 +427,7 @@ export const RealtimeCheckboxes = observer(function RealtimeCheckboxes() {
             client shows that person’s name and border; clicks still travel
             through the optimistic update and realtime reconciliation path.
           </p>
+          <LiveCursorBadge store={cursorStore} />
         </div>
 
         <CollaboratorList controller={controller} />
@@ -428,6 +481,8 @@ export const RealtimeCheckboxes = observer(function RealtimeCheckboxes() {
           />
         </div>
       </div>
+
+      <CursorOverlay store={cursorStore} />
     </section>
   );
 });

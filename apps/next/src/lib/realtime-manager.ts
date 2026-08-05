@@ -12,18 +12,54 @@ export interface RealtimeSource {
   ): () => void;
 }
 
+export interface PublishOptions {
+  /**
+   * Marks the message as the caller's current state for this key. The latest
+   * value per key is re-sent after a reconnect so a dropped socket does not
+   * leave the caller invisible to peers.
+   */
+  latestKey?: string;
+  /**
+   * Coalesce to a trailing edge at most once per interval. Required for pointer
+   * streams; without it a mousemove handler emits a frame per pixel.
+   */
+  throttleMs?: number;
+}
+
 export interface RealtimeTransport extends RealtimeSource {
-  publishLatest<TEvent>(eventType: string, event: TEvent): void;
+  publish<TEvent>(
+    eventType: string,
+    event: TEvent,
+    options?: PublishOptions,
+  ): void;
+  /** Forgets a `latestKey` so it is no longer replayed after a reconnect. */
+  dropLatest(latestKey: string): void;
+  /** Ref-counted. Rooms are re-joined automatically after a reconnect. */
+  joinRoom(roomId: string): () => void;
 }
 
 interface RealtimeManagerOptions {
   serverUrl?: string;
   browserId?: string;
   socketFactory?: () => Socket;
+  now?: () => number;
+  scheduleFlush?: (callback: () => void, delayMs: number) => unknown;
+  cancelFlush?: (handle: unknown) => void;
 }
 
 interface Subscription {
   listener: (event: unknown) => void;
+}
+
+interface PendingPublication {
+  eventType: string;
+  event: unknown;
+}
+
+interface ThrottleState {
+  lastSentMs: number;
+  handle: unknown | null;
+  pending: PendingPublication | null;
 }
 
 /**
@@ -39,10 +75,18 @@ export class RealtimeManager implements RealtimeTransport {
 
   private socket: Socket | null = null;
   private readonly subscriptions = new Map<string, Set<Subscription>>();
-  private readonly latestPublications = new Map<string, unknown>();
+  private readonly latestPublications = new Map<string, PendingPublication>();
+  private readonly throttles = new Map<string, ThrottleState>();
+  private readonly roomCounts = new Map<string, number>();
   private readonly browserId: string;
   private readonly serverUrl: string;
   private readonly socketFactory: () => Socket;
+  private readonly now: () => number;
+  private readonly scheduleFlush: (
+    callback: () => void,
+    delayMs: number,
+  ) => unknown;
+  private readonly cancelFlush: (handle: unknown) => void;
   private currentToken: string | null = null;
   private disposed = false;
 
@@ -59,6 +103,13 @@ export class RealtimeManager implements RealtimeTransport {
           transports: ["websocket"],
           autoConnect: true,
         }));
+    this.now = options.now ?? (() => Date.now());
+    this.scheduleFlush =
+      options.scheduleFlush ??
+      ((callback, delayMs) => setTimeout(callback, delayMs));
+    this.cancelFlush =
+      options.cancelFlush ??
+      ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>));
 
     makeObservable(this, {
       status: observable,
@@ -102,12 +153,98 @@ export class RealtimeManager implements RealtimeTransport {
     };
   }
 
-  publishLatest<TEvent>(eventType: string, event: TEvent): void {
+  publish<TEvent>(
+    eventType: string,
+    event: TEvent,
+    options: PublishOptions = {},
+  ): void {
     if (this.disposed) {
       throw new Error("Cannot publish with a disposed RealtimeManager");
     }
 
-    this.latestPublications.set(eventType, event);
+    const { latestKey, throttleMs } = options;
+    if (latestKey) {
+      this.latestPublications.set(latestKey, { eventType, event });
+    }
+
+    if (!throttleMs || throttleMs <= 0) {
+      this.emit(eventType, event);
+      return;
+    }
+
+    const throttleKey = latestKey ?? eventType;
+    const state = this.throttles.get(throttleKey) ?? {
+      lastSentMs: Number.NEGATIVE_INFINITY,
+      handle: null,
+      pending: null,
+    };
+    this.throttles.set(throttleKey, state);
+
+    const elapsed = this.now() - state.lastSentMs;
+    if (elapsed >= throttleMs && state.handle === null) {
+      state.lastSentMs = this.now();
+      this.emit(eventType, event);
+      return;
+    }
+
+    // Inside the window: keep only the newest frame and flush it on the
+    // trailing edge, so a fast pointer collapses to one message per interval.
+    state.pending = { eventType, event };
+    if (state.handle !== null) return;
+
+    state.handle = this.scheduleFlush(
+      () => {
+        state.handle = null;
+        const pending = state.pending;
+        state.pending = null;
+        if (!pending || this.disposed) return;
+        state.lastSentMs = this.now();
+        this.emit(pending.eventType, pending.event);
+      },
+      Math.max(0, throttleMs - elapsed),
+    );
+  }
+
+  dropLatest(latestKey: string): void {
+    this.latestPublications.delete(latestKey);
+
+    const throttle = this.throttles.get(latestKey);
+    if (throttle?.handle != null) this.cancelFlush(throttle.handle);
+    this.throttles.delete(latestKey);
+  }
+
+  /**
+   * Joins a server room. Multiple callers may hold the same room; the socket
+   * only leaves once the final holder releases it.
+   */
+  joinRoom(roomId: string): () => void {
+    if (this.disposed) {
+      throw new Error("Cannot join a room with a disposed RealtimeManager");
+    }
+
+    const nextCount = (this.roomCounts.get(roomId) ?? 0) + 1;
+    this.roomCounts.set(roomId, nextCount);
+    if (nextCount === 1) {
+      this.emit("room:join", { roomId });
+    }
+
+    let released = false;
+    return () => {
+      if (released || this.disposed) return;
+      released = true;
+
+      const remaining = (this.roomCounts.get(roomId) ?? 1) - 1;
+      if (remaining > 0) {
+        this.roomCounts.set(roomId, remaining);
+        return;
+      }
+
+      this.roomCounts.delete(roomId);
+      this.emit("room:leave", { roomId });
+    };
+  }
+
+  private emit(eventType: string, event: unknown): void {
     if (this.socket?.connected && this.status === "connected") {
       this.socket.emit(eventType, event);
     }
@@ -144,7 +281,7 @@ export class RealtimeManager implements RealtimeTransport {
         token: this.currentToken,
         browserId: this.browserId,
       });
-      this.publishLatestState(socket);
+      this.restoreSessionState(socket);
     });
 
     socket.on("disconnect", (reason) => {
@@ -171,18 +308,23 @@ export class RealtimeManager implements RealtimeTransport {
   teardown(): void {
     if (this.disposed) return;
     this.teardownSocket();
+    this.clearThrottles();
     this.latestPublications.clear();
     this.currentToken = null;
     this.setConnectionState("idle");
+    // Room holders are left intact: they still own their subscription, so a
+    // later setup() re-joins on their behalf.
   }
 
   dispose(): void {
     if (this.disposed) return;
 
     this.teardownSocket();
+    this.clearThrottles();
     this.currentToken = null;
     this.subscriptions.clear();
     this.latestPublications.clear();
+    this.roomCounts.clear();
     this.disposed = true;
     this.setConnectionState("disposed");
   }
@@ -203,10 +345,25 @@ export class RealtimeManager implements RealtimeTransport {
     });
   }
 
-  private publishLatestState(socket: Socket): void {
-    this.latestPublications.forEach((event, eventType) => {
-      socket.emit(eventType, event);
+  /**
+   * Restores this client's server-side footprint after a reconnect: rooms
+   * first, because the server rejects presence from a socket that is not yet a
+   * member of the room it names.
+   */
+  private restoreSessionState(socket: Socket): void {
+    this.roomCounts.forEach((_count, roomId) => {
+      socket.emit("room:join", { roomId });
     });
+    this.latestPublications.forEach((publication) => {
+      socket.emit(publication.eventType, publication.event);
+    });
+  }
+
+  private clearThrottles(): void {
+    this.throttles.forEach((state) => {
+      if (state.handle !== null) this.cancelFlush(state.handle);
+    });
+    this.throttles.clear();
   }
 
   private teardownSocket(): void {
