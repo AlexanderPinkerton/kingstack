@@ -63,7 +63,10 @@ yarn dev
 
 The guided command uses the port block reserved during draft creation, starts
 Supabase, prepares Prisma's shadow database, and applies migrations. Draft
-fixture data remains in memory and is not copied into the database.
+fixture data remains in memory and is not copied into the database. After
+migrations succeed, it removes `.kingstack/frontend-draft`. Configure the
+hosted backend and commit that removal when CI should begin running deployment
+migrations.
 
 The store and UI do not change. Compose the store with the HTTP repository and
 provide its authenticated runtime context:

@@ -17,6 +17,7 @@ import { dirname, join, resolve } from "path";
 import {
   AUTO_PORT_BASE_MAX,
   AUTO_PORT_BASE_MIN,
+  BROWSER_BLOCKED_PORTS,
   PORT_BLOCK_BASE_MAX,
   PORT_BLOCK_BASE_MIN,
   PORT_BLOCK_SIZE,
@@ -34,7 +35,6 @@ export type PortProbe = (port: number) => Promise<boolean>;
 export interface PortAllocationRecord {
   projectName: string;
   projectPath: string;
-  setup?: "draft" | "full";
   assignedAt: string;
   basePort: number;
   ports: PortAssignments;
@@ -48,7 +48,6 @@ interface PortRegistry {
 export interface AllocateProjectPortsOptions {
   projectName: string;
   targetDir: string;
-  setup?: "draft" | "full";
   preferredBase?: number;
   registryPath?: string;
   probe?: PortProbe;
@@ -99,6 +98,19 @@ export function projectBlockPorts(basePort: number): number[] {
   );
 }
 
+export function browserBlockedPorts(ports: number[]): number[] {
+  return ports.filter((port) => port in BROWSER_BLOCKED_PORTS);
+}
+
+export function describeBrowserBlockedPorts(ports: number[]): string {
+  return ports
+    .map(
+      (port) =>
+        `${port} (${BROWSER_BLOCKED_PORTS[port as keyof typeof BROWSER_BLOCKED_PORTS]})`,
+    )
+    .join(", ");
+}
+
 export async function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolveAvailable) => {
     const server = createServer();
@@ -140,7 +152,16 @@ function loadRegistry(registryPath: string): PortRegistry {
       throw new Error("unsupported registry format");
     }
 
-    return registry;
+    return {
+      ...registry,
+      allocations: registry.allocations.map((allocation) => {
+        const normalized = {
+          ...allocation,
+        } as PortAllocationRecord & { setup?: unknown };
+        delete normalized.setup;
+        return normalized;
+      }),
+    };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(
@@ -343,6 +364,16 @@ export async function allocateProjectPorts(
     for (const basePort of bases) {
       validateBasePort(basePort);
       const ports = portsFromBase(basePort);
+      const blockedPorts = browserBlockedPorts(uniquePorts(ports));
+      if (blockedPorts.length > 0) {
+        if (preferredBase !== undefined) {
+          throw new Error(
+            `Requested port block ${basePort}-${basePort + PORT_BLOCK_SIZE - 1} includes browser-blocked ports: ${describeBrowserBlockedPorts(blockedPorts)}.`,
+          );
+        }
+        continue;
+      }
+
       const unavailable = await unavailablePorts(
         projectBlockPorts(basePort),
         reservedPorts,
@@ -361,7 +392,6 @@ export async function allocateProjectPorts(
       allocations.push({
         projectName,
         projectPath: targetDir,
-        setup: options.setup,
         assignedAt: now.toISOString(),
         basePort,
         ports,

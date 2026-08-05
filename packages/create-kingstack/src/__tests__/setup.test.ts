@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseArgs } from "../cli";
+import { parseArgs, promptForConfig } from "../cli";
 import { getSetupProfile } from "../setup";
 
 describe("setup selection", () => {
@@ -38,6 +38,21 @@ describe("setup selection", () => {
       setup: "draft",
       noStart: true,
       yes: true,
+    });
+  });
+
+  it("keeps the project name separate from an explicit target directory", async () => {
+    const args = parseArgs([
+      "my-app",
+      "--draft",
+      "--yes",
+      "--target-dir",
+      "/tmp/my-app-smoke-run",
+    ]);
+
+    await expect(promptForConfig(args)).resolves.toMatchObject({
+      projectName: "my-app",
+      targetDir: "/tmp/my-app-smoke-run",
     });
   });
 

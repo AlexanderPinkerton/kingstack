@@ -117,6 +117,7 @@ describe("generated project boundary", () => {
     );
     expect(rootPackage.scripts["build:release-packages"]).toBeUndefined();
     expect(rootPackage.scripts["test:create-kingstack"]).toBeUndefined();
+    expect(rootPackage.scripts["king-config"]).toBe("bun king-config");
     expect(rootPackage.devDependencies["@changesets/cli"]).toBeUndefined();
   });
 
@@ -173,6 +174,7 @@ describe("generated project boundary", () => {
     expect(readdirSync(join(generatedRoot, "scripts")).sort()).toEqual([
       "deploy",
       "enable-backend.ts",
+      "project-mode.ts",
       "setup-shadow-db.ts",
       "supabase-check-config.ts",
       "supabase-list-instances.ts",
@@ -203,10 +205,48 @@ describe("generated project boundary", () => {
     expect(rootPackage.scripts["deploy:nest"]).toBe(
       "bun scripts/deploy/nest-digitalocean.ts",
     );
-    expect(rootPackage.scripts["prisma:deploy"]).toContain("migrate deploy");
+    expect(rootPackage.scripts["prisma:deploy"]).toBe(
+      "yarn workspace @boundary-check/prisma prisma migrate deploy",
+    );
     expect(rootPackage.devDependencies["@types/bun"]).toBeDefined();
+
+    for (const workflow of ["deploy-next-dev.yml", "deploy-next-prod.yml"]) {
+      const deployment = readFileSync(
+        join(generatedRoot, ".github", "workflows", workflow),
+        "utf8",
+      );
+      expect(deployment).toContain(".kingstack/frontend-draft");
+      expect(deployment).toContain("steps.backend.outputs.enabled == 'true'");
+      expect(deployment).toContain("run: yarn prisma:deploy");
+      expect(deployment).toContain("VERCEL_ORG_ID:");
+      expect(deployment).toContain("VERCEL_PROJECT_ID:");
+      expect(deployment).toContain("--token $VERCEL_TOKEN");
+      expect(deployment).not.toContain("--scope");
+      expect(deployment).not.toContain("yarn exec prisma");
+    }
+
     expect(
       readFileSync(join(generatedRoot, "tsconfig.json"), "utf8"),
     ).toContain('"types": ["node", "bun"]');
+  });
+
+  it("ships one app-rooted Vercel build configuration", () => {
+    expect(existsSync(join(generatedRoot, "vercel.json"))).toBe(false);
+
+    const nextConfig = JSON.parse(
+      readFileSync(join(generatedRoot, "apps", "next", "vercel.json"), "utf8"),
+    );
+
+    expect(nextConfig.buildCommand).toBe(
+      "cd ../.. && yarn turbo run build --filter=@boundary-check/next",
+    );
+    expect(nextConfig.outputDirectory).toBe(".next");
+    expect(nextConfig.ignoreCommand).toBeUndefined();
+
+    const rootPackage = JSON.parse(
+      readFileSync(join(generatedRoot, "package.json"), "utf8"),
+    );
+    expect(rootPackage.scripts.vercel).toBe("vercel deploy");
+    expect(rootPackage.scripts["vercel:prod"]).toBe("vercel deploy --prod");
   });
 });

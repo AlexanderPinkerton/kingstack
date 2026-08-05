@@ -1,10 +1,18 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generateLocalConfig } from "../config-generators";
 import {
   allocateProjectPorts,
+  browserBlockedPorts,
   portsFromBase,
   projectBlockPorts,
   uniquePorts,
@@ -42,6 +50,45 @@ describe("smart port allocation", () => {
     ]);
   });
 
+  it("recognizes Fetch Standard browser-blocked ports", () => {
+    expect(browserBlockedPorts([1719, 4190, 10079, 10080])).toEqual([
+      1719, 4190, 10080,
+    ]);
+  });
+
+  it("skips the automatic block containing Next.js reserved port 10080", async () => {
+    const allocation = await allocateProjectPorts({
+      projectName: "new-project",
+      targetDir: join(testRoot, "new-project"),
+      registryPath,
+      probe: (port) => Promise.resolve(port >= 10080),
+    });
+
+    expect(allocation.basePort).toBe(10090);
+  });
+
+  it("rejects explicit blocks containing browser-blocked service ports", async () => {
+    await expect(
+      allocateProjectPorts({
+        projectName: "next-on-amanda",
+        targetDir: join(testRoot, "next-on-amanda"),
+        preferredBase: 10080,
+        registryPath,
+        probe: () => Promise.resolve(true),
+      }),
+    ).rejects.toThrow("includes browser-blocked ports: 10080 (amanda)");
+
+    await expect(
+      allocateProjectPorts({
+        projectName: "api-on-sieve",
+        targetDir: join(testRoot, "api-on-sieve"),
+        preferredBase: 4187,
+        registryPath,
+        probe: () => Promise.resolve(true),
+      }),
+    ).rejects.toThrow("includes browser-blocked ports: 4190 (sieve)");
+  });
+
   it("skips a block containing a port used by a running process", async () => {
     const allocation = await allocateProjectPorts({
       projectName: "new-project",
@@ -61,7 +108,6 @@ describe("smart port allocation", () => {
     await allocateProjectPorts({
       projectName: "existing-project",
       targetDir: existingProject,
-      setup: "full",
       preferredBase: 10000,
       registryPath,
       probe: () => Promise.resolve(true),
@@ -77,7 +123,39 @@ describe("smart port allocation", () => {
     expect(allocation.basePort).toBe(10010);
     const registry = JSON.parse(readFileSync(registryPath, "utf-8"));
     expect(registry.allocations).toHaveLength(2);
-    expect(registry.allocations[0].setup).toBe("full");
+    expect(registry.allocations[0].setup).toBeUndefined();
+  });
+
+  it("ignores and removes legacy setup metadata on the next registry write", async () => {
+    const existingProject = join(testRoot, "legacy-project");
+    mkdirSync(existingProject);
+    writeFileSync(
+      registryPath,
+      JSON.stringify({
+        version: 1,
+        allocations: [
+          {
+            projectName: "legacy-project",
+            projectPath: existingProject,
+            setup: "draft",
+            assignedAt: new Date().toISOString(),
+            basePort: 10000,
+            ports: portsFromBase(10000),
+          },
+        ],
+      }),
+    );
+
+    const allocation = await allocateProjectPorts({
+      projectName: "new-project",
+      targetDir: join(testRoot, "new-project"),
+      registryPath,
+      probe: () => Promise.resolve(true),
+    });
+
+    expect(allocation.basePort).toBe(10010);
+    const registry = JSON.parse(readFileSync(registryPath, "utf-8"));
+    expect(registry.allocations[0].setup).toBeUndefined();
   });
 
   it("rejects an explicitly requested block when any port is unavailable", async () => {

@@ -292,7 +292,8 @@ yarn supabase:stop
 
 Projects receive a reserved ten-port block during generation. The allocator
 avoids currently listening ports and assignments belonging to other generated
-projects, including stopped projects. Reservations live in:
+projects, including stopped projects. It also excludes ports blocked by browsers
+and Next.js, such as `10080`. Reservations live in:
 
 ```text
 ~/.kingstack/port-allocations.json

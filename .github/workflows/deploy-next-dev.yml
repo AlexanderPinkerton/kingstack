@@ -13,11 +13,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Detect Backend Setup
+        id: backend
+        shell: bash
+        run: |
+          if [[ -f .kingstack/frontend-draft ]]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Frontend draft detected; skipping database migrations."
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Backend enabled; database migrations are required."
+          fi
       - name: Set up Node
+        if: ${{ steps.backend.outputs.enabled == 'true' }}
         uses: actions/setup-node@v6
         with:
           node-version: 24.18.0
       - name: Cache Yarn
+        if: ${{ steps.backend.outputs.enabled == 'true' }}
         uses: actions/cache@v5
         with:
           path: |
@@ -28,9 +41,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
       - name: Install dependencies
+        if: ${{ steps.backend.outputs.enabled == 'true' }}
         run: yarn install --immutable
       - name: Run Prisma Migrations
-        run: npx prisma migrate deploy --schema=packages/prisma/schema.prisma
+        if: ${{ steps.backend.outputs.enabled == 'true' }}
+        run: yarn prisma:deploy
 
   deploy:
     environment: development
@@ -60,7 +75,7 @@ jobs:
             ${{ runner.os }}-yarn-
       - name: Install dependencies
         run: yarn install --immutable
-      - name: Link Vercel Project
-        run: npx vercel link --yes --cwd apps/next --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID
+      # The Vercel project referenced by VERCEL_PROJECT_ID must use
+      # apps/next as its Root Directory so the sole vercel.json is loaded.
       - name: Deploy to Vercel
-        run: npx vercel deploy --prod --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID --yes
+        run: yarn exec vercel deploy --token $VERCEL_TOKEN --yes

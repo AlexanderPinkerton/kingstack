@@ -1,10 +1,8 @@
 {
-  "buildCommand": "turbo build --filter=@kingstack/next",
-  "outputDirectory": "apps/next/.next",
-  "installCommand": "yarn install",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && yarn turbo run build --filter=@kingstack/next",
+  "outputDirectory": ".next",
   "framework": "nextjs",
-  "devCommand": "yarn workspace @kingstack/next dev",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./apps/next",
   "git": {
     "deploymentEnabled": {
       "main": false,

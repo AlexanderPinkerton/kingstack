@@ -50,6 +50,9 @@ yarn dev
 
 The command is safe to rerun after an interrupted setup. If
 `yarn dev:frontend` is already running, stop it before starting `yarn dev`.
+After migrations succeed, the command removes `.kingstack/frontend-draft`.
+Configure the hosted backend and commit that removal when deployment CI should
+begin running database migrations.
 
 Stop the local Supabase services later with:
 
@@ -214,7 +217,8 @@ yarn dlx @kingstack/create-kingstack ports release
 
 `ports assign` moves legacy layouts to a fresh contiguous ten-port block,
 updates only port values in `config/local.ts`, and regenerates the local
-environment files. Restart running services after reassignment.
+environment files. The allocator excludes ports blocked by browsers and Next.js,
+such as `10080`. Restart running services after reassignment.
 
 Read [Configuration management](./config/readme.md).
 

@@ -75,8 +75,9 @@ complete block so enabling their backend later does not require reconfiguration.
 
 Assignments are stored in `~/.kingstack/port-allocations.json`. The allocator
 avoids both listening ports and blocks belonging to other generated projects,
-including projects that are currently stopped. Entries for missing project
-directories are reclaimed after a short pending period.
+including projects that are currently stopped. It also excludes ports blocked
+by browsers and Next.js, such as `10080`. Entries for missing project directories
+are reclaimed after a short pending period.
 
 ### Existing project port management
 
@@ -180,10 +181,10 @@ bun scripts/test-create-kingstack my-draft-check
 
 It builds the compiled CLI, copies the current Git working tree—including
 uncommitted tracked changes and non-ignored untracked files—and generates,
-typechecks, and tests a timestamped project under:
+typechecks, and tests a timestamped project directly under the output root:
 
 ```text
-~/kingstack-smoke-tests/<timestamp>/my-draft-check
+~/kingstack-smoke-tests/my-draft-check-<timestamp>
 ```
 
 Without a setup flag, the helper presents the real `create-kingstack` setup and

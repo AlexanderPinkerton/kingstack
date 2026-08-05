@@ -35,6 +35,7 @@ import {
 } from "./template";
 import {
   generateLocalConfig,
+  configureProjectSetup,
   updateRootPackageJson,
   initGit,
   deleteYarnLock,
@@ -136,7 +137,6 @@ async function main() {
   const { basePort, ports } = await allocateProjectPorts({
     projectName,
     targetDir,
-    setup,
     preferredBase: requestedPortBase,
   });
 
@@ -199,6 +199,7 @@ async function main() {
   // ==========================================================================
   step(5, totalSteps, "Generating configuration...");
   generateLocalConfig(targetDir, projectName, ports);
+  configureProjectSetup(targetDir, setup);
   success("Created config/local.ts");
 
   // ==========================================================================

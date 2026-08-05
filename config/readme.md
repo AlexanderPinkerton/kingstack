@@ -14,26 +14,30 @@ If you are adding or removing a key, change the schema first. The checker will t
 
 ```bash
 # List known environments and missing value files
-bun king-config env list
+yarn king-config env list
 
 # Validate one environment or all environments; values stay redacted
-bun king-config check local
-bun king-config check --all
+yarn king-config check local
+yarn king-config check --all
 
 # Inspect stale generated files without changing them
-bun king-config diff local
+yarn king-config diff local
 
 # Generate after validation
 yarn env:local
 ```
 
 `generate` completely regenerates managed `.env` files, so removed keys disappear after generation. Existing output files receive a `.previous` backup.
+TOML outputs are handled differently: KingStack validates the document and
+updates only existing mapped scalar assignments, preserving comments, ordering,
+spacing, and unrelated values. Missing or unsupported assignments fail instead
+of being synthesized.
 
 ## Initial local setup
 
 ```bash
 cp config/example.ts config/local.ts
-bun king-config check local
+yarn king-config check local
 yarn env:local
 ```
 
@@ -57,10 +61,10 @@ environments: {
 Then scaffold and validate its values:
 
 ```bash
-bun king-config env init staging
-bun king-config check staging
-bun king-config generate staging
-bun king-config sync --env staging --dry-run
+yarn king-config env init staging
+yarn king-config check staging
+yarn king-config generate staging
+yarn king-config sync --env staging --dry-run
 ```
 
 The environment name comes from the CLI argument. Do not add `KINGSTACK_ENVIRONMENT` to `config/staging.ts`; the schema derives it automatically.

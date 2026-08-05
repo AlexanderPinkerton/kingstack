@@ -2,10 +2,13 @@
 // Config generators for create-kingstack CLI
 // ============================================================================
 
-import { existsSync, readFileSync, writeFileSync, rmSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "fs";
 import { execSync } from "child_process";
 import { join } from "path";
 import { DEFAULT_PORTS } from "./constants";
+import type { SetupKind } from "./setup";
+
+export const FRONTEND_DRAFT_MARKER = join(".kingstack", "frontend-draft");
 
 // ============================================================================
 // Package.json Updates
@@ -86,6 +89,30 @@ export const values = defineValues({
 } satisfies ConfigValues);
 `;
   writeFileSync(join(targetDir, "config", "local.ts"), configContent, "utf-8");
+}
+
+export function configureProjectSetup(
+  targetDir: string,
+  setup: SetupKind,
+): void {
+  const markerPath = join(targetDir, FRONTEND_DRAFT_MARKER);
+
+  if (setup === "draft") {
+    mkdirSync(join(targetDir, ".kingstack"), { recursive: true });
+    writeFileSync(
+      markerPath,
+      [
+        "This marker tells KingStack CI to skip backend database migrations.",
+        "Run `yarn backend:enable` to remove it after local backend setup succeeds,",
+        "then configure the hosted backend and commit the marker removal.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    return;
+  }
+
+  rmSync(markerPath, { force: true });
 }
 
 // ============================================================================

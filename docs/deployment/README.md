@@ -200,19 +200,181 @@ ssh root@DROPLET_IP 'caddy validate --config /etc/caddy/Caddyfile'
 
 ## Next.js on Vercel
 
-The checked-in GitHub Actions workflows deploy Next.js from explicit branches:
+### First deployment through the Vercel dashboard
 
-- `development` deploys the Vercel development environment.
-- `main` deploys the Vercel production environment.
+The recommended Vercel project root is `apps/next`:
 
-Both workflows run Prisma deployment migrations before Vercel deployment.
-Required GitHub environment secrets include the Supabase database URLs,
-Supabase public values, and Vercel token/project identifiers. Use
-`yarn deploy:sync-secrets:dry-run` before synchronizing environment secrets.
+1. Import the Git repository in Vercel.
+2. Set **Root Directory** to `apps/next`.
+3. Keep the checked-in Framework, Build Command, and Output Directory values.
+4. Add the hosted environment variables before deploying the full application.
 
-The manual Vercel commands remain available:
+The app-local `vercel.json` runs Turbo from the monorepo root so Prisma and
+project-owned workspace dependencies are prepared before Next.js builds. Its
+output directory is `.next`, relative to `apps/next`. It is the repository's
+only Vercel configuration; manual and CI commands still execute from the
+monorepo root so Vercel uploads project-owned workspace dependencies.
+
+Do not copy `apps/next/.next` into the Vercel dashboard's Output Directory when
+the Root Directory is `apps/next`; that resolves to the nonexistent
+`apps/next/apps/next/.next` path.
+
+Vercel automatically detects the repository's Yarn workspace and skips
+unaffected projects using the workspace dependency graph. No custom Ignored
+Build Step is required.
+
+For a backend-connected deployment, configure the variables listed under the
+`vercel` service in `config/schema.ts`. You can inspect the intended changes
+before synchronizing them:
 
 ```bash
+yarn deploy:sync-secrets:dry-run
+```
+
+### Automated deployments
+
+The checked-in GitHub Actions workflows deploy Next.js from explicit branches:
+
+- `development` creates a Vercel preview deployment.
+- `main` deploys the Vercel production environment.
+
+For full-stack projects, both workflows run `yarn prisma:deploy` before Vercel
+deployment. Frontend drafts contain `.kingstack/frontend-draft`; the migration
+job detects that marker, reports that migrations were skipped, and allows the
+Next.js deployment to continue without backend secrets. `yarn backend:enable`
+removes the marker only after local migrations succeed. Configure the hosted
+database and environment secrets, then commit the marker removal to enable CI
+migrations.
+
+Draft projects generated before this marker was introduced can opt into the
+same behavior by committing the marker:
+
+```bash
+mkdir -p .kingstack
+touch .kingstack/frontend-draft
+git add .kingstack/frontend-draft
+```
+
+Full-stack deployments require the Supabase database URLs, Supabase public
+values, and Vercel token/project identifiers. Use
+`yarn deploy:sync-secrets:dry-run` before synchronizing environment secrets.
+The project referenced by `VERCEL_PROJECT_ID` must have its Vercel Root
+Directory set to `apps/next`. The Actions run from the repository root, and
+Vercel uses that project setting to load the sole app-local `vercel.json` while
+including the rest of the Yarn workspace in the deployment.
+
+Set `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` to the `orgId` and `projectId`
+values for the Vercel project. Together, these variables let Vercel CLI resolve
+the project without a local `.vercel` directory or a `vercel link` step. Do not
+also pass `VERCEL_ORG_ID` through `--scope`: that option selects an account or
+team by its CLI scope, is unnecessary here, and can fail before Vercel reads the
+project identifiers. The user who created `VERCEL_TOKEN` must still have access
+to the referenced account and project.
+
+### Manual deployment without GitHub linking
+
+The manual path does not require a GitHub connection or a separate
+`vercel link` command. Run it from the repository root:
+
+```bash
+# Use a globally installed Vercel CLI
+vercel
+
+# Or use the repository command
 yarn vercel
+
+# Explicit production deployment after initial setup
 yarn vercel:prod
 ```
+
+On the first deployment, Vercel CLI authenticates the user and creates or
+selects the Vercel project as part of the deployment flow. Current Vercel CLI
+versions may detect `apps/nest` as a possible Vercel Service before they read
+the Next.js-specific configuration. Choose these answers:
+
+| Prompt                                  | Answer                              |
+| --------------------------------------- | ----------------------------------- |
+| Which project?                          | Create a new project                |
+| Name?                                   | Accept or enter the project name    |
+| How would you like to set up this project? | Choose a different root directory |
+| Code directory?                         | `apps/next`                         |
+| Customize settings?                     | No                                  |
+
+Do not select the detected NestJS service or set up all detected services.
+KingStack deploys NestJS separately; this Vercel project owns only the Next.js
+application. Before creating the project, the CLI should report the checked-in
+settings:
+
+```text
+Build Command: cd ../.. && yarn turbo run build --filter=@your-project/next
+Framework: nextjs
+Output Directory: .next
+```
+
+Vercel assigns a project's first deployment to production even when the command
+does not include `--prod`. Later plain `vercel` or `yarn vercel` commands create
+preview deployments; use `vercel --prod` or `yarn vercel:prod` to update
+production explicitly.
+
+After the first deployment, Vercel saves the project association in the
+gitignored `.vercel` directory for subsequent commands. This is a Vercel
+project association, not a GitHub integration.
+
+#### Repairing an older generated project
+
+Older KingStack templates used `apps/next/.next` in the app-local
+`apps/next/vercel.json`. When `apps/next` is also the Vercel Code Directory,
+Vercel resolves that value as the nonexistent
+`apps/next/apps/next/.next` directory and reports that the Next.js output was
+not found.
+
+Replace the build-related fields in `apps/next/vercel.json` with the following,
+substituting the actual workspace namespace from `apps/next/package.json` for
+`@your-project`:
+
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && yarn turbo run build --filter=@your-project/next",
+  "outputDirectory": ".next",
+  "framework": "nextjs"
+}
+```
+
+Preserve the existing `git` block if GitHub Actions owns deployments for the
+project. Remove the old `installCommand`, `devCommand`, and `ignoreCommand`
+fields. Vercel detects the Yarn install automatically, and its workspace graph
+accounts for changes outside `apps/next`.
+
+Delete the legacy root-level `vercel.json`, if present. In the Vercel project
+settings, confirm that **Root Directory** is `apps/next` before running a manual
+deployment or the checked-in GitHub Actions workflows.
+
+Also change the root `package.json` scripts so manual deployments execute from
+the monorepo root:
+
+```json
+{
+  "scripts": {
+    "vercel": "vercel deploy",
+    "vercel:prod": "vercel deploy --prod"
+  }
+}
+```
+
+The failed first attempt already created the Vercel project and local
+`.vercel/project.json`. After making these changes, deploy it again from the
+repository root without recreating or relinking anything:
+
+```bash
+vercel --prod
+```
+
+KingStack's app-specific Turbo configuration already declares `.next/**` as a
+build output. Do not add `apps/next/.next/**` to the root Turbo outputs in
+response to Vercel's generic error message.
+
+For CI or another stateless environment, provide `VERCEL_ORG_ID` and
+`VERCEL_PROJECT_ID`; Vercel CLI uses those values without requiring a local
+project link. Pass only `VERCEL_TOKEN` on the command line; do not pass the org
+ID as `--scope`. The checked-in GitHub workflows already use this path.

@@ -10,6 +10,10 @@ There are three kinds of files:
 2. **Environment values (`config/local.ts`, `config/staging.ts`)** — only the inputs that differ for one environment.
 3. **Generated outputs (`apps/*/.env`, `config.toml`)** — build artifacts. Never edit these directly.
 
+TOML generation validates the existing document and patches only mapped scalar
+assignments. It preserves comments, ordering, spacing, and unrelated values,
+and refuses to synthesize missing assignments.
+
 When adding or removing a configuration key, update the schema first and then run `king-config check --all`. The checker identifies every environment value file that is missing the key or still contains an obsolete key.
 
 ## Installation
