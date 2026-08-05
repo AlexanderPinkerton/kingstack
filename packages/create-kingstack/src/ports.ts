@@ -17,6 +17,7 @@ import { dirname, join, resolve } from "path";
 import {
   AUTO_PORT_BASE_MAX,
   AUTO_PORT_BASE_MIN,
+  BROWSER_BLOCKED_PORTS,
   PORT_BLOCK_BASE_MAX,
   PORT_BLOCK_BASE_MIN,
   PORT_BLOCK_SIZE,
@@ -95,6 +96,19 @@ export function projectBlockPorts(basePort: number): number[] {
     { length: PORT_BLOCK_SIZE },
     (_, offset) => basePort + offset,
   );
+}
+
+export function browserBlockedPorts(ports: number[]): number[] {
+  return ports.filter((port) => port in BROWSER_BLOCKED_PORTS);
+}
+
+export function describeBrowserBlockedPorts(ports: number[]): string {
+  return ports
+    .map(
+      (port) =>
+        `${port} (${BROWSER_BLOCKED_PORTS[port as keyof typeof BROWSER_BLOCKED_PORTS]})`,
+    )
+    .join(", ");
 }
 
 export async function isPortAvailable(port: number): Promise<boolean> {
@@ -350,6 +364,16 @@ export async function allocateProjectPorts(
     for (const basePort of bases) {
       validateBasePort(basePort);
       const ports = portsFromBase(basePort);
+      const blockedPorts = browserBlockedPorts(uniquePorts(ports));
+      if (blockedPorts.length > 0) {
+        if (preferredBase !== undefined) {
+          throw new Error(
+            `Requested port block ${basePort}-${basePort + PORT_BLOCK_SIZE - 1} includes browser-blocked ports: ${describeBrowserBlockedPorts(blockedPorts)}.`,
+          );
+        }
+        continue;
+      }
+
       const unavailable = await unavailablePorts(
         projectBlockPorts(basePort),
         reservedPorts,

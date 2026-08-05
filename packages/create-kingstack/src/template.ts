@@ -378,6 +378,9 @@ export function prepareGeneratedProject(targetDir: string): number {
       ]) {
         delete rootPackage.scripts?.[script];
       }
+      if (rootPackage.scripts?.["king-config"]) {
+        rootPackage.scripts["king-config"] = "bun king-config";
+      }
       delete rootPackage.devDependencies?.["@changesets/cli"];
       writeFileSync(
         rootPackagePath,

@@ -16,6 +16,8 @@ import {
 } from "./port-config";
 import {
   allocateProjectPorts,
+  browserBlockedPorts,
+  describeBrowserBlockedPorts,
   getPortRegistryPath,
   isPortAvailable,
   listProjectPortAllocations,
@@ -210,6 +212,7 @@ async function showStatus(
   );
   const basePort = standardPortBase(config.ports);
   const listening = await busyPorts(config.ports, dependencies.probe);
+  const blockedPorts = browserBlockedPorts(uniquePorts(config.ports));
   const registryMatches =
     registered !== undefined &&
     basePort !== undefined &&
@@ -229,6 +232,11 @@ async function showStatus(
   dependencies.log(
     `Listening now: ${listening.length > 0 ? listening.join(", ") : "none"}`,
   );
+  dependencies.log(
+    blockedPorts.length > 0
+      ? `Browser compatibility: blocked ports ${describeBrowserBlockedPorts(blockedPorts)}`
+      : "Browser compatibility: safe",
+  );
 
   if (conflicts.length > 0) {
     dependencies.log("Registry conflicts:");
@@ -241,17 +249,19 @@ async function showStatus(
     dependencies.log("Registry conflicts: none");
   }
 
-  if (registryMatches && conflicts.length === 0) {
+  if (registryMatches && conflicts.length === 0 && blockedPorts.length === 0) {
     dependencies.log("Status: configuration and registry agree.");
     return 0;
   }
 
   dependencies.log(
-    basePort === undefined
-      ? "Recommendation: run ports assign to move this project to a standard block."
-      : registered
-        ? "Recommendation: run ports assign to reconcile this project with the registry."
-        : "Recommendation: run ports register to claim the configured block, or ports assign for a fresh block.",
+    blockedPorts.length > 0
+      ? "Recommendation: run ports assign to replace browser-blocked ports."
+      : basePort === undefined
+        ? "Recommendation: run ports assign to move this project to a standard block."
+        : registered
+          ? "Recommendation: run ports assign to reconcile this project with the registry."
+          : "Recommendation: run ports register to claim the configured block, or ports assign for a fresh block.",
   );
   return 1;
 }

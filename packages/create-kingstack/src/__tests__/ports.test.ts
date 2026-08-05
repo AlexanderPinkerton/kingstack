@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generateLocalConfig } from "../config-generators";
 import {
   allocateProjectPorts,
+  browserBlockedPorts,
   portsFromBase,
   projectBlockPorts,
   uniquePorts,
@@ -47,6 +48,45 @@ describe("smart port allocation", () => {
     expect(projectBlockPorts(17420)).toEqual([
       17420, 17421, 17422, 17423, 17424, 17425, 17426, 17427, 17428, 17429,
     ]);
+  });
+
+  it("recognizes Fetch Standard browser-blocked ports", () => {
+    expect(browserBlockedPorts([1719, 4190, 10079, 10080])).toEqual([
+      1719, 4190, 10080,
+    ]);
+  });
+
+  it("skips the automatic block containing Next.js reserved port 10080", async () => {
+    const allocation = await allocateProjectPorts({
+      projectName: "new-project",
+      targetDir: join(testRoot, "new-project"),
+      registryPath,
+      probe: (port) => Promise.resolve(port >= 10080),
+    });
+
+    expect(allocation.basePort).toBe(10090);
+  });
+
+  it("rejects explicit blocks containing browser-blocked service ports", async () => {
+    await expect(
+      allocateProjectPorts({
+        projectName: "next-on-amanda",
+        targetDir: join(testRoot, "next-on-amanda"),
+        preferredBase: 10080,
+        registryPath,
+        probe: () => Promise.resolve(true),
+      }),
+    ).rejects.toThrow("includes browser-blocked ports: 10080 (amanda)");
+
+    await expect(
+      allocateProjectPorts({
+        projectName: "api-on-sieve",
+        targetDir: join(testRoot, "api-on-sieve"),
+        preferredBase: 4187,
+        registryPath,
+        probe: () => Promise.resolve(true),
+      }),
+    ).rejects.toThrow("includes browser-blocked ports: 4190 (sieve)");
   });
 
   it("skips a block containing a port used by a running process", async () => {

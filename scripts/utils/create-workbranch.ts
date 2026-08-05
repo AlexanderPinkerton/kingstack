@@ -294,7 +294,7 @@ function printNextSteps(
     existsSync(join(worktreePath, "config", "example.ts")) &&
     !existsSync(join(worktreePath, "config", "local.ts"))
   ) {
-    console.log("  bun king-config env init local");
+    console.log("  yarn king-config env init local");
   }
   console.log();
   console.log(

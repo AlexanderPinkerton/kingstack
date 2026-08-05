@@ -217,7 +217,8 @@ yarn dlx @kingstack/create-kingstack ports release
 
 `ports assign` moves legacy layouts to a fresh contiguous ten-port block,
 updates only port values in `config/local.ts`, and regenerates the local
-environment files. Restart running services after reassignment.
+environment files. The allocator excludes ports blocked by browsers and Next.js,
+such as `10080`. Restart running services after reassignment.
 
 Read [Configuration management](./config/readme.md).
 

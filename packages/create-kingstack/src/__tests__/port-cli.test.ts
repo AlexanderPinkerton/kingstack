@@ -121,6 +121,18 @@ describe("existing-project port commands", () => {
     );
   });
 
+  it("reports an existing browser-blocked port assignment", async () => {
+    const projectRoot = createProject("blocked-project", 10080);
+
+    expect(await run(projectRoot, ["status"])).toBe(1);
+    expect(logs.join("\n")).toContain(
+      "Browser compatibility: blocked ports 10080 (amanda)",
+    );
+    expect(logs.join("\n")).toContain(
+      "run ports assign to replace browser-blocked ports",
+    );
+  });
+
   it("requires legacy projects to assign rather than register", async () => {
     const projectRoot = createProject("legacy-register", 10000, true);
 

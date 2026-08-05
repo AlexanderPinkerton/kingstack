@@ -26,6 +26,30 @@ export const PORT_BLOCK_BASE_MAX = 65535 - (PORT_BLOCK_SIZE - 1);
 export const AUTO_PORT_BASE_MIN = 10000;
 export const AUTO_PORT_BASE_MAX = 29990;
 
+// Fetch Standard bad ports that overlap KingStack's allowed project range.
+// Browser-facing services must not be assigned any of these ports.
+export const BROWSER_BLOCKED_PORTS = {
+  1719: "h323gatestat",
+  1720: "h323hostcall",
+  1723: "pptp",
+  2049: "nfs",
+  3659: "apple-sasl",
+  4045: "npp",
+  4190: "sieve",
+  5060: "sip",
+  5061: "sips",
+  6000: "x11",
+  6566: "sane-port",
+  6665: "ircu",
+  6666: "ircu",
+  6667: "ircu",
+  6668: "ircu",
+  6669: "ircu",
+  6679: "osaut",
+  6697: "ircs-u",
+  10080: "amanda",
+} as const;
+
 // Files/directories to skip during namespace replacement
 export const SKIP_PATTERNS = [
   "node_modules",

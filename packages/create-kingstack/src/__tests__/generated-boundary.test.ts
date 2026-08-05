@@ -117,6 +117,7 @@ describe("generated project boundary", () => {
     );
     expect(rootPackage.scripts["build:release-packages"]).toBeUndefined();
     expect(rootPackage.scripts["test:create-kingstack"]).toBeUndefined();
+    expect(rootPackage.scripts["king-config"]).toBe("bun king-config");
     expect(rootPackage.devDependencies["@changesets/cli"]).toBeUndefined();
   });
 
@@ -217,6 +218,10 @@ describe("generated project boundary", () => {
       expect(deployment).toContain(".kingstack/frontend-draft");
       expect(deployment).toContain("steps.backend.outputs.enabled == 'true'");
       expect(deployment).toContain("run: yarn prisma:deploy");
+      expect(deployment).toContain("VERCEL_ORG_ID:");
+      expect(deployment).toContain("VERCEL_PROJECT_ID:");
+      expect(deployment).toContain("--token $VERCEL_TOKEN");
+      expect(deployment).not.toContain("--scope");
       expect(deployment).not.toContain("yarn exec prisma");
     }
 

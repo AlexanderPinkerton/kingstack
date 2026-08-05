@@ -4,13 +4,14 @@
  * Checks config.toml exists, validates project_id, and shows current settings
  */
 
+import * as TOML from "@iarna/toml";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
 const SUPABASE_DIR = join(process.cwd(), "supabase");
 const CONFIG_FILE = join(SUPABASE_DIR, "config.toml");
 
-interface ConfigInfo {
+export interface ConfigInfo {
   projectId?: string;
   apiPort?: number;
   dbPort?: number;
@@ -18,42 +19,39 @@ interface ConfigInfo {
   shadowPort?: number;
 }
 
-function parseConfig(): ConfigInfo {
+function numberAt(
+  config: Record<string, unknown>,
+  sectionName: string,
+  key: string,
+): number | undefined {
+  const section = config[sectionName];
+  if (typeof section !== "object" || section === null) return undefined;
+
+  const value = (section as Record<string, unknown>)[key];
+  return typeof value === "number" && Number.isInteger(value)
+    ? value
+    : undefined;
+}
+
+export function parseSupabaseConfig(content: string): ConfigInfo {
+  const config = TOML.parse(content) as Record<string, unknown>;
+  const projectId = config.project_id;
+
+  return {
+    projectId: typeof projectId === "string" ? projectId : undefined,
+    apiPort: numberAt(config, "api", "port"),
+    dbPort: numberAt(config, "db", "port"),
+    studioPort: numberAt(config, "studio", "port"),
+    shadowPort: numberAt(config, "db", "shadow_port"),
+  };
+}
+
+function readConfig(): ConfigInfo {
   if (!existsSync(CONFIG_FILE)) {
     throw new Error("config.toml not found");
   }
 
-  const content = readFileSync(CONFIG_FILE, "utf-8");
-  const info: ConfigInfo = {};
-
-  // Extract project_id
-  const projectIdMatch = content.match(/project_id\s*=\s*"([^"]+)"/);
-  if (projectIdMatch) {
-    info.projectId = projectIdMatch[1];
-  }
-
-  // Extract ports - handle both with and without newlines
-  const apiPortMatch = content.match(/\[api\][\s\S]*?port\s*=\s*(\d+)/);
-  if (apiPortMatch) {
-    info.apiPort = parseInt(apiPortMatch[1], 10);
-  }
-
-  const dbPortMatch = content.match(/\[db\][\s\S]*?port\s*=\s*(\d+)/);
-  if (dbPortMatch) {
-    info.dbPort = parseInt(dbPortMatch[1], 10);
-  }
-
-  const studioPortMatch = content.match(/\[studio\][\s\S]*?port\s*=\s*(\d+)/);
-  if (studioPortMatch) {
-    info.studioPort = parseInt(studioPortMatch[1], 10);
-  }
-
-  const shadowPortMatch = content.match(/shadow_port\s*=\s*(\d+)/);
-  if (shadowPortMatch) {
-    info.shadowPort = parseInt(shadowPortMatch[1], 10);
-  }
-
-  return info;
+  return parseSupabaseConfig(readFileSync(CONFIG_FILE, "utf-8"));
 }
 
 function main() {
@@ -67,7 +65,7 @@ function main() {
   }
 
   try {
-    const config = parseConfig();
+    const config = readConfig();
 
     console.log("✅ Supabase configuration found\n");
     console.log("📋 Current Settings:");
@@ -106,4 +104,4 @@ function main() {
   }
 }
 
-main();
+if (import.meta.main) main();

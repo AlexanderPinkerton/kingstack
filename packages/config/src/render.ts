@@ -106,15 +106,58 @@ export function renderTomlFile(
   config: Record<string, string>,
   definition: ConfigFileMapping,
 ): string {
-  const parsed = TOML.parse(currentContent);
+  const parsed = TOML.parse(currentContent) as Record<string, unknown>;
+  const replacements: Array<{
+    destination: string;
+    value: string | number;
+  }> = [];
 
   for (const [destination, sourceKey] of Object.entries(definition.mappings)) {
     const value = config[sourceKey];
     if (value === undefined) continue;
-    setNestedValue(parsed, destination, coerceTomlValue(destination, value));
+
+    const coerced = coerceTomlValue(destination, value);
+    if (typeof coerced === "string" && /[\r\n]/.test(coerced)) {
+      throw new Error(
+        `TOML mapping "${destination}" in ${definition.path} must be a single-line string`,
+      );
+    }
+    const current = getNestedValue(parsed, destination);
+    if (current === undefined) {
+      throw new Error(
+        `Cannot update missing TOML mapping "${destination}" in ${definition.path}`,
+      );
+    }
+    if (typeof current !== typeof coerced) {
+      throw new Error(
+        `Cannot change TOML mapping "${destination}" in ${definition.path} from ${typeof current} to ${typeof coerced}`,
+      );
+    }
+    replacements.push({ destination, value: coerced });
   }
 
-  return TOML.stringify(parsed);
+  let updated = currentContent;
+  for (const replacement of replacements) {
+    updated = replaceTomlAssignment(
+      updated,
+      replacement.destination,
+      replacement.value,
+      definition.path,
+    );
+  }
+
+  const verified = TOML.parse(updated) as Record<string, unknown>;
+  for (const replacement of replacements) {
+    if (
+      getNestedValue(verified, replacement.destination) !== replacement.value
+    ) {
+      throw new Error(
+        `Could not verify TOML mapping "${replacement.destination}" in ${definition.path}`,
+      );
+    }
+  }
+
+  return updated;
 }
 
 export function getNestedValue(
@@ -142,33 +185,141 @@ export function coerceTomlValue(path: string, value: string): string | number {
   return number;
 }
 
-function setNestedValue(
-  object: Record<string, unknown>,
+function replaceTomlAssignment(
+  content: string,
   path: string,
   value: string | number,
-): void {
+  filePath: string,
+): string {
   const keys = path.split(".");
-  let current = object;
-
-  for (const key of keys.slice(0, -1)) {
-    const existing = current[key];
-    if (existing === undefined) {
-      const child: Record<string, unknown> = {};
-      current[key] = child;
-      current = child;
-      continue;
-    }
-    if (
-      typeof existing !== "object" ||
-      existing === null ||
-      Array.isArray(existing)
-    ) {
-      throw new Error(`Cannot write TOML mapping "${path}" through "${key}"`);
-    }
-    current = existing as Record<string, unknown>;
+  if (keys.length === 0 || keys.some((key) => !/^[A-Za-z0-9_-]+$/.test(key))) {
+    throw new Error(
+      `TOML mapping "${path}" in ${filePath} must use bare dotted keys`,
+    );
   }
 
-  const leaf = keys.at(-1);
-  if (!leaf) throw new Error("TOML mapping path cannot be empty");
-  current[leaf] = value;
+  const targetKey = keys.at(-1);
+  if (!targetKey) throw new Error("TOML mapping path cannot be empty");
+  const targetTable = keys.slice(0, -1).join(".");
+  const assignmentPattern = new RegExp(
+    `^[\\t ]*${escapeRegExp(targetKey)}[\\t ]*=[\\t ]*`,
+  );
+  const matches: Array<{ start: number; end: number; lineEnding: string }> = [];
+  let currentTable: string | undefined = "";
+  let offset = 0;
+
+  for (const line of content.match(/[^\r\n]*(?:\r\n|\n|$)/g) ?? []) {
+    if (line === "") continue;
+    const lineEnding = line.endsWith("\r\n")
+      ? "\r\n"
+      : line.endsWith("\n")
+        ? "\n"
+        : "";
+    const body = line.slice(0, line.length - lineEnding.length);
+    const table =
+      /^\s*\[\s*([A-Za-z0-9_-]+(?:\s*\.\s*[A-Za-z0-9_-]+)*)\s*\]\s*(?:#.*)?$/.exec(
+        body,
+      );
+
+    if (table) {
+      currentTable = table[1]?.replace(/\s/g, "");
+      offset += line.length;
+      continue;
+    }
+    if (/^\s*\[/.test(body)) {
+      currentTable = undefined;
+      offset += line.length;
+      continue;
+    }
+    if (currentTable !== targetTable) {
+      offset += line.length;
+      continue;
+    }
+
+    const assignment = assignmentPattern.exec(body);
+    if (!assignment) {
+      offset += line.length;
+      continue;
+    }
+
+    const remainder = body.slice(assignment[0].length);
+    const commentStart = findTomlCommentStart(remainder);
+    const rawValue = (
+      commentStart === -1 ? remainder : remainder.slice(0, commentStart)
+    ).trimEnd();
+    if (!rawValue || rawValue.startsWith('"""') || rawValue.startsWith("'''")) {
+      throw new Error(
+        `TOML mapping "${path}" in ${filePath} must be a single-line assignment`,
+      );
+    }
+
+    const start = offset + assignment[0].length;
+    matches.push({
+      start,
+      end: start + rawValue.length,
+      lineEnding,
+    });
+    offset += line.length;
+  }
+
+  if (matches.length !== 1) {
+    throw new Error(
+      `Expected exactly one source assignment for TOML mapping "${path}" in ${filePath}; found ${matches.length}`,
+    );
+  }
+
+  const match = matches[0];
+  if (!match) throw new Error(`Could not locate TOML mapping "${path}"`);
+  const lineEnding =
+    match.lineEnding || (content.includes("\r\n") ? "\r\n" : "\n");
+  const serialized = serializeTomlScalar(value, lineEnding);
+  return content.slice(0, match.start) + serialized + content.slice(match.end);
+}
+
+function serializeTomlScalar(
+  value: string | number,
+  lineEnding: string,
+): string {
+  if (typeof value === "number") return String(value);
+
+  const prefix = "value = ";
+  const serialized = TOML.stringify({ value });
+  if (!serialized.startsWith(prefix) || !serialized.endsWith("\n")) {
+    throw new Error("Could not serialize TOML string value");
+  }
+  return serialized.slice(prefix.length, -1).replace(/\n/g, lineEnding);
+}
+
+function findTomlCommentStart(value: string): number {
+  let quote: '"' | "'" | undefined;
+  let escaped = false;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (quote === '"') {
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === quote) {
+        quote = undefined;
+      }
+      continue;
+    }
+    if (quote === "'") {
+      if (character === quote) quote = undefined;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === "#") {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

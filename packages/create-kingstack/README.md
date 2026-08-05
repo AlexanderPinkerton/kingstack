@@ -75,8 +75,9 @@ complete block so enabling their backend later does not require reconfiguration.
 
 Assignments are stored in `~/.kingstack/port-allocations.json`. The allocator
 avoids both listening ports and blocks belonging to other generated projects,
-including projects that are currently stopped. Entries for missing project
-directories are reclaimed after a short pending period.
+including projects that are currently stopped. It also excludes ports blocked
+by browsers and Next.js, such as `10080`. Entries for missing project directories
+are reclaimed after a short pending period.
 
 ### Existing project port management
 

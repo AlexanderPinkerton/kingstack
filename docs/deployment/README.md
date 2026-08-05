@@ -263,6 +263,14 @@ Directory set to `apps/next`. The Actions run from the repository root, and
 Vercel uses that project setting to load the sole app-local `vercel.json` while
 including the rest of the Yarn workspace in the deployment.
 
+Set `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` to the `orgId` and `projectId`
+values for the Vercel project. Together, these variables let Vercel CLI resolve
+the project without a local `.vercel` directory or a `vercel link` step. Do not
+also pass `VERCEL_ORG_ID` through `--scope`: that option selects an account or
+team by its CLI scope, is unnecessary here, and can fail before Vercel reads the
+project identifiers. The user who created `VERCEL_TOKEN` must still have access
+to the referenced account and project.
+
 ### Manual deployment without GitHub linking
 
 The manual path does not require a GitHub connection or a separate
@@ -368,4 +376,5 @@ response to Vercel's generic error message.
 
 For CI or another stateless environment, provide `VERCEL_ORG_ID` and
 `VERCEL_PROJECT_ID`; Vercel CLI uses those values without requiring a local
-project link. The checked-in GitHub workflows already use this path.
+project link. Pass only `VERCEL_TOKEN` on the command line; do not pass the org
+ID as `--scope`. The checked-in GitHub workflows already use this path.
