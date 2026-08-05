@@ -33,6 +33,8 @@ Examples:
   bun scripts/test-create-kingstack full-check --full
 
 Without --draft or --full, the real create-kingstack setup prompt is shown.
+The generated project directory receives a UTC timestamp suffix and is retained
+directly under the output root.
 Every run typechecks and tests the generated project before starting its
 selected development server.
 `);
@@ -122,8 +124,15 @@ function run(
   }
 }
 
-function timestamp(): string {
-  return new Date().toISOString().replace(/[:.]/g, "-");
+export function smokeProjectDirectoryName(
+  projectName: string,
+  now = new Date(),
+): string {
+  const timestamp = now
+    .toISOString()
+    .replace(/[T:.Z]/g, "-")
+    .replace(/-$/, "");
+  return `${projectName}-${timestamp}`;
 }
 
 function readSelectedSetup(
@@ -164,11 +173,13 @@ function main(): void {
     "dist",
     "index.js",
   );
-  const runDirectory = join(options.outputRoot, timestamp());
-  const projectDirectory = join(runDirectory, options.projectName);
+  const projectDirectory = join(
+    options.outputRoot,
+    smokeProjectDirectoryName(options.projectName),
+  );
   const registryPath = join(options.outputRoot, "port-allocations.json");
 
-  mkdirSync(runDirectory, { recursive: true });
+  mkdirSync(options.outputRoot, { recursive: true });
 
   console.log();
   console.log("👑 Local create-kingstack smoke test");
@@ -189,8 +200,8 @@ function main(): void {
     options.projectName,
     "--template-dir",
     repoRoot,
-    "--dir",
-    runDirectory,
+    "--target-dir",
+    projectDirectory,
   ];
 
   if (options.setup) {
@@ -236,10 +247,12 @@ function main(): void {
   run("yarn", [devScript], projectDirectory, { allowInterrupt: true });
 }
 
-try {
-  main();
-} catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(`\n✗ create-kingstack smoke test failed: ${message}`);
-  process.exitCode = 1;
+if (import.meta.main) {
+  try {
+    main();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`\n✗ create-kingstack smoke test failed: ${message}`);
+    process.exitCode = 1;
+  }
 }

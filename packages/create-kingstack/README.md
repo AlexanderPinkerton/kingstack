@@ -180,10 +180,10 @@ bun scripts/test-create-kingstack my-draft-check
 
 It builds the compiled CLI, copies the current Git working tree—including
 uncommitted tracked changes and non-ignored untracked files—and generates,
-typechecks, and tests a timestamped project under:
+typechecks, and tests a timestamped project directly under the output root:
 
 ```text
-~/kingstack-smoke-tests/<timestamp>/my-draft-check
+~/kingstack-smoke-tests/my-draft-check-<timestamp>
 ```
 
 Without a setup flag, the helper presents the real `create-kingstack` setup and

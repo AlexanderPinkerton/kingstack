@@ -20,6 +20,7 @@ import type { SetupKind } from "./setup";
 export interface ParsedArgs {
   projectName?: string;
   baseDir: string;
+  targetDir?: string;
   help: boolean;
   setup?: SetupKind;
   templateDir?: string;
@@ -43,6 +44,7 @@ export function parseArgs(rawArgs = process.argv.slice(2)): ParsedArgs {
   const result: ParsedArgs = {
     projectName: undefined,
     baseDir: process.cwd(),
+    targetDir: undefined,
     help: false,
     setup: undefined,
     templateDir: undefined,
@@ -111,6 +113,16 @@ export function parseArgs(rawArgs = process.argv.slice(2)): ParsedArgs {
         : nextArg;
       result.baseDir = resolve(expandedPath);
       i += 2;
+    } else if (arg === "--target-dir") {
+      const nextArg = rawArgs[i + 1];
+      if (!nextArg || nextArg.startsWith("-")) {
+        throw new Error("--target-dir requires a path argument");
+      }
+      const expandedPath = nextArg.startsWith("~")
+        ? nextArg.replace("~", process.env.HOME || "")
+        : nextArg;
+      result.targetDir = resolve(expandedPath);
+      i += 2;
     } else if (arg.startsWith("-")) {
       console.warn(`Warning: Unknown flag ${arg}`);
       i++;
@@ -143,6 +155,8 @@ export function printHelp(): void {
 
   ${pc.bold("Options:")}
     -d, --dir <path>   Base directory for the new project (default: current directory)
+    --target-dir <path>
+                       Exact project directory (overrides --dir)
     --draft            Start Next.js only; skip Docker, Supabase, and migrations
     --full             Start the complete local stack and run database setup
     --port-base <port> Use a specific ten-port project block instead of auto-detection
@@ -182,7 +196,9 @@ export async function promptForConfig(
       {
         type: projectName ? null : "text",
         name: "projectName",
-        message: "Project name (also used as directory name):",
+        message: args.targetDir
+          ? "Project name:"
+          : "Project name (also used as directory name):",
         initial: "my-app",
         validate: validateProjectName,
       },
@@ -244,7 +260,7 @@ export async function promptForConfig(
     projectName,
     requestedPortBase:
       args.portBase ?? (response.customPorts ? response.portBase : undefined),
-    targetDir: resolve(args.baseDir, projectName),
+    targetDir: args.targetDir ?? resolve(args.baseDir, projectName),
     setup,
   };
 }
