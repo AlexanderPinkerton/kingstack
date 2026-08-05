@@ -50,6 +50,9 @@ yarn dev
 
 The command is safe to rerun after an interrupted setup. If
 `yarn dev:frontend` is already running, stop it before starting `yarn dev`.
+After migrations succeed, the command removes `.kingstack/frontend-draft`.
+Configure the hosted backend and commit that removal when deployment CI should
+begin running database migrations.
 
 Stop the local Supabase services later with:
 

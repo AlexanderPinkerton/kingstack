@@ -238,9 +238,25 @@ The checked-in GitHub Actions workflows deploy Next.js from explicit branches:
 - `development` creates a Vercel preview deployment.
 - `main` deploys the Vercel production environment.
 
-Both workflows run Prisma deployment migrations before Vercel deployment.
-Required GitHub environment secrets include the Supabase database URLs,
-Supabase public values, and Vercel token/project identifiers. Use
+For full-stack projects, both workflows run `yarn prisma:deploy` before Vercel
+deployment. Frontend drafts contain `.kingstack/frontend-draft`; the migration
+job detects that marker, reports that migrations were skipped, and allows the
+Next.js deployment to continue without backend secrets. `yarn backend:enable`
+removes the marker only after local migrations succeed. Configure the hosted
+database and environment secrets, then commit the marker removal to enable CI
+migrations.
+
+Draft projects generated before this marker was introduced can opt into the
+same behavior by committing the marker:
+
+```bash
+mkdir -p .kingstack
+touch .kingstack/frontend-draft
+git add .kingstack/frontend-draft
+```
+
+Full-stack deployments require the Supabase database URLs, Supabase public
+values, and Vercel token/project identifiers. Use
 `yarn deploy:sync-secrets:dry-run` before synchronizing environment secrets.
 The project referenced by `VERCEL_PROJECT_ID` must have its Vercel Root
 Directory set to `apps/next`. The Actions run from the repository root, and

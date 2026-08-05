@@ -1,18 +1,22 @@
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "fs";
-import { spawnSync } from "child_process";
+import { execFileSync, spawnSync } from "child_process";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repoRoot = resolve(process.cwd(), "..", "..");
 const enableBackendScript = join(repoRoot, "scripts", "enable-backend.ts");
+const bunExecutable = execFileSync("which", ["bun"], {
+  encoding: "utf-8",
+}).trim();
 
 describe("guided backend enablement", () => {
   let testRoot: string;
@@ -25,6 +29,7 @@ describe("guided backend enablement", () => {
     commandLog = join(testRoot, "commands.log");
 
     for (const relativePath of [
+      ".kingstack/frontend-draft",
       "config/local.ts",
       "supabase/config.toml",
       "packages/prisma/schema.prisma",
@@ -67,6 +72,9 @@ if [ "$1" = "supabase:status" ]; then
   echo "Supabase is not running"
   exit 1
 fi
+if [ "$1" = "prisma:migrate" ]; then
+  exit "\${MIGRATION_STATUS:-0}"
+fi
 exit 0
 `,
     );
@@ -92,7 +100,7 @@ exit 0
   function runEnableBackend(
     extraEnv: NodeJS.ProcessEnv = {},
   ): ReturnType<typeof spawnSync> {
-    return spawnSync(process.execPath, [enableBackendScript], {
+    return spawnSync(bunExecutable, [enableBackendScript], {
       cwd: testRoot,
       encoding: "utf-8",
       env: {
@@ -123,6 +131,9 @@ exit 0
     expect(result.stdout).toContain("KingStack backend is enabled");
     expect(result.stdout).toContain("http://localhost:17420/app");
     expect(result.stdout).toContain("Run yarn dev");
+    expect(existsSync(join(testRoot, ".kingstack", "frontend-draft"))).toBe(
+      false,
+    );
   });
 
   it("reuses an already-running project Supabase instance", () => {
@@ -140,5 +151,18 @@ exit 0
     expect(commands()).toEqual(["docker info"]);
     expect(result.stderr).toContain("Start Docker Desktop");
     expect(result.stderr).toContain("yarn backend:enable");
+    expect(existsSync(join(testRoot, ".kingstack", "frontend-draft"))).toBe(
+      true,
+    );
+  });
+
+  it("keeps draft CI disabled when migrations fail", () => {
+    const result = runEnableBackend({ MIGRATION_STATUS: "1" });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("yarn prisma:migrate exited with status 1");
+    expect(existsSync(join(testRoot, ".kingstack", "frontend-draft"))).toBe(
+      true,
+    );
   });
 });

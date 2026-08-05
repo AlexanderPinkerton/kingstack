@@ -3,6 +3,7 @@
 import { spawnSync } from "child_process";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { clearFrontendDraft } from "./project-mode.js";
 
 interface CommandResult {
   status: number;
@@ -151,6 +152,12 @@ function printSuccess(): void {
   console.log("Stop the local backend later with: yarn supabase:stop");
 }
 
+function markBackendEnabled(): void {
+  if (clearFrontendDraft()) {
+    console.log("✓ Frontend-draft CI marker removed; commit this change");
+  }
+}
+
 function main(): void {
   if (process.argv.includes("--help") || process.argv.includes("-h")) {
     printHelp();
@@ -187,6 +194,8 @@ function main(): void {
   step(5, totalSteps, "Applying database migrations...");
   run("yarn", ["prisma:migrate"]);
   console.log("✓ Database migrations are applied");
+
+  markBackendEnabled();
 
   printSuccess();
 }

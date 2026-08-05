@@ -1,10 +1,11 @@
 #!/usr/bin/env bun
 
-import { existsSync, mkdirSync, readFileSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { homedir } from "os";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { spawnSync } from "child_process";
+import { isFrontendDraft } from "./project-mode.js";
 
 interface Options {
   projectName: string;
@@ -48,7 +49,6 @@ function parseArgs(args: string[]): Options | null {
 
   let projectName: string | undefined;
   let setup: Options["setup"];
-  let setupFlag: Options["setup"] | undefined;
   let noStart = false;
   let outputRoot = join(homedir(), "kingstack-smoke-tests");
 
@@ -56,17 +56,15 @@ function parseArgs(args: string[]): Options | null {
     const arg = args[index];
 
     if (arg === "--draft") {
-      if (setupFlag === "full") {
+      if (setup === "full") {
         throw new Error("--draft and --full cannot be used together.");
       }
       setup = "draft";
-      setupFlag = "draft";
     } else if (arg === "--full") {
-      if (setupFlag === "draft") {
+      if (setup === "draft") {
         throw new Error("--draft and --full cannot be used together.");
       }
       setup = "full";
-      setupFlag = "full";
     } else if (arg === "--no-start") {
       noStart = true;
     } else if (arg === "--output-dir") {
@@ -135,31 +133,6 @@ export function smokeProjectDirectoryName(
   return `${projectName}-${timestamp}`;
 }
 
-function readSelectedSetup(
-  registryPath: string,
-  projectDirectory: string,
-): "draft" | "full" {
-  const registry = JSON.parse(readFileSync(registryPath, "utf-8")) as {
-    allocations?: Array<{
-      projectPath?: string;
-      setup?: "draft" | "full";
-    }>;
-  };
-  const projectPath = resolve(projectDirectory);
-  const allocation = registry.allocations?.find(
-    (candidate) =>
-      candidate.projectPath && resolve(candidate.projectPath) === projectPath,
-  );
-
-  if (allocation?.setup === "draft" || allocation?.setup === "full") {
-    return allocation.setup;
-  }
-
-  throw new Error(
-    `Could not determine the selected setup from ${registryPath}.`,
-  );
-}
-
 function main(): void {
   const options = parseArgs(process.argv.slice(2));
   if (!options) return;
@@ -225,8 +198,7 @@ function main(): void {
     return;
   }
 
-  const selectedSetup =
-    options.setup ?? readSelectedSetup(registryPath, projectDirectory);
+  const selectedSetup = isFrontendDraft(projectDirectory) ? "draft" : "full";
 
   console.log();
   console.log("Verifying the generated project...");

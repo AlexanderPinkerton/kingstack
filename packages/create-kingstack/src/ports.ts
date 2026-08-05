@@ -34,7 +34,6 @@ export type PortProbe = (port: number) => Promise<boolean>;
 export interface PortAllocationRecord {
   projectName: string;
   projectPath: string;
-  setup?: "draft" | "full";
   assignedAt: string;
   basePort: number;
   ports: PortAssignments;
@@ -48,7 +47,6 @@ interface PortRegistry {
 export interface AllocateProjectPortsOptions {
   projectName: string;
   targetDir: string;
-  setup?: "draft" | "full";
   preferredBase?: number;
   registryPath?: string;
   probe?: PortProbe;
@@ -140,7 +138,16 @@ function loadRegistry(registryPath: string): PortRegistry {
       throw new Error("unsupported registry format");
     }
 
-    return registry;
+    return {
+      ...registry,
+      allocations: registry.allocations.map((allocation) => {
+        const normalized = {
+          ...allocation,
+        } as PortAllocationRecord & { setup?: unknown };
+        delete normalized.setup;
+        return normalized;
+      }),
+    };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(
@@ -361,7 +368,6 @@ export async function allocateProjectPorts(
       allocations.push({
         projectName,
         projectPath: targetDir,
-        setup: options.setup,
         assignedAt: now.toISOString(),
         basePort,
         ports,

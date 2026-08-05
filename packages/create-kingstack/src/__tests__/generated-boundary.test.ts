@@ -173,6 +173,7 @@ describe("generated project boundary", () => {
     expect(readdirSync(join(generatedRoot, "scripts")).sort()).toEqual([
       "deploy",
       "enable-backend.ts",
+      "project-mode.ts",
       "setup-shadow-db.ts",
       "supabase-check-config.ts",
       "supabase-list-instances.ts",
@@ -203,8 +204,22 @@ describe("generated project boundary", () => {
     expect(rootPackage.scripts["deploy:nest"]).toBe(
       "bun scripts/deploy/nest-digitalocean.ts",
     );
-    expect(rootPackage.scripts["prisma:deploy"]).toContain("migrate deploy");
+    expect(rootPackage.scripts["prisma:deploy"]).toBe(
+      "yarn workspace @boundary-check/prisma prisma migrate deploy",
+    );
     expect(rootPackage.devDependencies["@types/bun"]).toBeDefined();
+
+    for (const workflow of ["deploy-next-dev.yml", "deploy-next-prod.yml"]) {
+      const deployment = readFileSync(
+        join(generatedRoot, ".github", "workflows", workflow),
+        "utf8",
+      );
+      expect(deployment).toContain(".kingstack/frontend-draft");
+      expect(deployment).toContain("steps.backend.outputs.enabled == 'true'");
+      expect(deployment).toContain("run: yarn prisma:deploy");
+      expect(deployment).not.toContain("yarn exec prisma");
+    }
+
     expect(
       readFileSync(join(generatedRoot, "tsconfig.json"), "utf8"),
     ).toContain('"types": ["node", "bun"]');
