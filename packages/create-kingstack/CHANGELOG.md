@@ -1,5 +1,13 @@
 # @kingstack/create-kingstack
 
+## 0.5.1
+
+### Patch Changes
+
+- e0de7c6: Preserve existing TOML formatting while updating mapped configuration values,
+  and ensure KingStack development commands execute the current configuration
+  source instead of stale build output.
+
 ## 0.5.0
 
 ### Minor Changes
