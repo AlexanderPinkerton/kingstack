@@ -1,16 +1,17 @@
 "use client";
 
 import { observer } from "mobx-react-lite";
-import type { PresenceTone } from "@/lib/realtime/presence-room";
+import { PRESENCE_TONE_COLORS } from "@/components/collaboration/presence-tones";
 import type { SharedCursorStore } from "@/stores/userApp/sharedCursorStore";
 
-const TONE_COLORS: Record<PresenceTone, string> = {
-  lime: "#d8ff70",
-  violet: "#a89cff",
-  cyan: "#8ee8ff",
-  amber: "#f9da7f",
-  coral: "#ff9c6e",
-};
+interface CursorOverlayProps {
+  store: SharedCursorStore;
+  /**
+   * Extent of the room's coordinate space. Defaults to the unit square, which
+   * is right for surface-fraction rooms; a canvas room passes its world size.
+   */
+  space?: { width: number; height: number };
+}
 
 /**
  * Draws every peer pointer inside the surface bound by `useSharedCursors`.
@@ -19,9 +20,8 @@ const TONE_COLORS: Record<PresenceTone, string> = {
  */
 export const CursorOverlay = observer(function CursorOverlay({
   store,
-}: {
-  store: SharedCursorStore;
-}) {
+  space = { width: 1, height: 1 },
+}: CursorOverlayProps) {
   return (
     <div
       aria-hidden="true"
@@ -31,7 +31,7 @@ export const CursorOverlay = observer(function CursorOverlay({
       style={{ containerType: "size" }}
     >
       {store.cursors.map(({ participant, state }) => {
-        const color = TONE_COLORS[participant.tone];
+        const color = PRESENCE_TONE_COLORS[participant.tone];
 
         return (
           <div
@@ -40,7 +40,7 @@ export const CursorOverlay = observer(function CursorOverlay({
             style={{
               // Translating a fixed-origin node keeps the whole cursor on the
               // compositor; animating left/top would relayout every frame.
-              transform: `translate3d(${state.x * 100}cqw, ${state.y * 100}cqh, 0)`,
+              transform: `translate3d(${(state.x / space.width) * 100}cqw, ${(state.y / space.height) * 100}cqh, 0)`,
               transition: "transform 90ms linear",
             }}
           >

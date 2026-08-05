@@ -40,6 +40,61 @@ describe("cursors namespace", () => {
   });
 });
 
+describe("canvas namespace", () => {
+  const config = getRoomNamespaceConfig("canvas")!;
+
+  it("accepts absolute world coordinates", () => {
+    expect(config.validateState({ x: 812, y: 460 })).toEqual({
+      x: 812,
+      y: 460,
+    });
+  });
+
+  it("keeps sub-unit precision so cursors do not snap to whole pixels", () => {
+    expect(config.validateState({ x: 812.25, y: 460.75 })).toEqual({
+      x: 812.25,
+      y: 460.75,
+    });
+  });
+
+  it("rejects points outside the world rather than clamping them", () => {
+    // A fraction here means the client forgot to project into world units,
+    // which is a bug worth surfacing rather than silently snapping to a corner.
+    expect(config.validateState({ x: -1, y: 460 })).toBeNull();
+    expect(config.validateState({ x: 20_000, y: 460 })).toBeNull();
+    expect(config.validateState({ x: 812, y: Number.POSITIVE_INFINITY })).toBeNull();
+    expect(config.validateState({ y: 460 })).toBeNull();
+  });
+});
+
+describe("room signals", () => {
+  it("accepts a canvas ripple at a world point", () => {
+    const config = getRoomNamespaceConfig("canvas")!;
+
+    expect(config.validateSignal?.("ripple", { x: 400, y: 800 })).toEqual({
+      x: 400,
+      y: 800,
+    });
+  });
+
+  it("rejects unknown signal kinds and malformed ripple points", () => {
+    const config = getRoomNamespaceConfig("canvas")!;
+
+    expect(config.validateSignal?.("explode", { x: 400, y: 800 })).toBeNull();
+    expect(config.validateSignal?.("ripple", { x: -5, y: 800 })).toBeNull();
+    expect(config.validateSignal?.("ripple", null)).toBeNull();
+  });
+
+  it("is opt-in: namespaces without a validator accept no signals", () => {
+    expect(
+      getRoomNamespaceConfig("cursors")?.validateSignal === undefined,
+    ).toBe(true);
+    expect(
+      getRoomNamespaceConfig("checkboxes")?.validateSignal === undefined,
+    ).toBe(true);
+  });
+});
+
 describe("unknown namespaces", () => {
   it("has no configuration", () => {
     expect(getRoomNamespaceConfig("kanban")).toBeNull();

@@ -2,8 +2,25 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeParticipant,
   normalizeRoomId,
+  normalizeSignalKind,
   roomNamespaceOf,
 } from "./presence-protocol";
+
+describe("normalizeSignalKind", () => {
+  it("accepts short kebab-case kinds", () => {
+    expect(normalizeSignalKind("ripple")).toBe("ripple");
+    expect(normalizeSignalKind("  typing-start  ")).toBe("typing-start");
+  });
+
+  it("rejects empty, oversized, and non-slug kinds", () => {
+    expect(normalizeSignalKind("")).toBeNull();
+    expect(normalizeSignalKind("   ")).toBeNull();
+    expect(normalizeSignalKind("Ripple")).toBeNull();
+    expect(normalizeSignalKind("ripple!")).toBeNull();
+    expect(normalizeSignalKind("a".repeat(40))).toBeNull();
+    expect(normalizeSignalKind(7)).toBeNull();
+  });
+});
 
 describe("normalizeRoomId", () => {
   it("accepts namespace:scope ids", () => {

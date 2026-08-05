@@ -7,8 +7,23 @@ import type { SharedCursorStore } from "@/stores/userApp/sharedCursorStore";
 function fakeStore() {
   const setPointer = vi.fn<(x: number, y: number) => void>();
   const clearPointer = vi.fn<() => void>();
-  const store = { setPointer, clearPointer } as unknown as SharedCursorStore;
-  return { store, setPointer, clearPointer };
+  const emitTap = vi.fn<(x: number, y: number) => void>();
+  const store = {
+    setPointer,
+    clearPointer,
+    emitTap,
+  } as unknown as SharedCursorStore;
+  return { store, setPointer, clearPointer, emitTap };
+}
+
+function click(element: HTMLElement, clientX: number, clientY: number): void {
+  const event = new Event("click") as Event & {
+    clientX: number;
+    clientY: number;
+  };
+  event.clientX = clientX;
+  event.clientY = clientY;
+  element.dispatchEvent(event);
 }
 
 function surfaceElement(rect: Partial<DOMRect>): HTMLElement {
@@ -113,6 +128,49 @@ describe("CursorSurfaceController", () => {
     document.dispatchEvent(new Event("visibilitychange"));
 
     expect(clearPointer).toHaveBeenCalledOnce();
+  });
+
+  it("emits taps only when the surface opts in", () => {
+    const silent = fakeStore();
+    const silentController = new CursorSurfaceController(silent.store);
+    const silentElement = surfaceElement({});
+    silentController.attach(silentElement);
+    click(silentElement, 100, 50);
+    expect(silent.emitTap).not.toHaveBeenCalled();
+
+    const tapping = fakeStore();
+    const tappingController = new CursorSurfaceController(tapping.store, {
+      emitTaps: true,
+    });
+    const tappingElement = surfaceElement({ width: 200, height: 100 });
+    tappingController.attach(tappingElement);
+    click(tappingElement, 100, 50);
+    expect(tapping.emitTap).toHaveBeenCalledWith(0.5, 0.5);
+  });
+
+  it("emits taps from touch, which publishes no pointer of its own", () => {
+    const { store, emitTap, setPointer } = fakeStore();
+    const controller = new CursorSurfaceController(store, { emitTaps: true });
+    const element = surfaceElement({ width: 200, height: 100 });
+
+    controller.attach(element);
+    pointerMove(element, 100, 50, "touch");
+    click(element, 100, 50);
+
+    expect(setPointer).not.toHaveBeenCalled();
+    expect(emitTap).toHaveBeenCalledWith(0.5, 0.5);
+  });
+
+  it("stops emitting taps after detach", () => {
+    const { store, emitTap } = fakeStore();
+    const controller = new CursorSurfaceController(store, { emitTaps: true });
+    const element = surfaceElement({});
+
+    controller.attach(element);
+    controller.detach();
+    click(element, 100, 50);
+
+    expect(emitTap).not.toHaveBeenCalled();
   });
 
   it("ignores a surface that has collapsed to zero size", () => {

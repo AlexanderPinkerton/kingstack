@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Bot,
   DatabaseZap,
+  Frame,
   Gauge,
   MessageSquare,
   Palette,
@@ -34,6 +35,16 @@ const examples = [
     accent: "text-[#bdb5ff] bg-[#8d7cff]/10 border-[#8d7cff]/25",
     glow: "rgba(141, 124, 255, 0.12)",
     tags: ["Supabase Realtime", "Presence"],
+  },
+  {
+    href: "/app/canvas",
+    title: "Collaborative canvas",
+    description:
+      "A fixed world where presence is published in world coordinates, so a cursor lands on the same gridline on a laptop and a phone.",
+    icon: Frame,
+    accent: "text-[#8ee8ff] bg-cyan-400/10 border-cyan-300/20",
+    glow: "rgba(142, 232, 255, 0.12)",
+    tags: ["World space", "Presence"],
   },
   {
     href: "/chat",

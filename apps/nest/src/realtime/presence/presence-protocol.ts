@@ -39,6 +39,41 @@ export interface RoomPayload {
   roomId?: unknown;
 }
 
+/**
+ * Client -> server. A signal is a one-shot event at a moment, not state: it is
+ * never retained, never replayed to a late joiner, and never re-sent after a
+ * reconnect. Presence answers "where are you now"; a signal answers "something
+ * happened here".
+ */
+export interface SignalPayload {
+  roomId?: unknown;
+  kind?: unknown;
+  participant?: unknown;
+  data?: unknown;
+}
+
+/** Server -> client. */
+export interface SignalServerEvent<TData = unknown> {
+  type: "signal";
+  roomId: string;
+  kind: string;
+  participant: PresenceParticipant;
+  data: TData;
+}
+
+export const SIGNAL_KIND_MAX_LENGTH = 32;
+
+const SIGNAL_KIND_PATTERN = /^[a-z0-9-]+$/;
+
+export function normalizeSignalKind(kind: unknown): string | null {
+  if (typeof kind !== "string") return null;
+  const trimmed = kind.trim();
+  if (trimmed.length === 0 || trimmed.length > SIGNAL_KIND_MAX_LENGTH) {
+    return null;
+  }
+  return SIGNAL_KIND_PATTERN.test(trimmed) ? trimmed : null;
+}
+
 /** Server -> client, single `presence` channel with a discriminated action. */
 export type PresenceServerEvent<TState = unknown> =
   | { type: "presence"; roomId: string; action: "sync"; entries: PresenceEntry<TState>[] }

@@ -160,6 +160,44 @@ the AOS cache, which is what lets it publish at pointer rate. Its DOM wiring
 lives in `CursorSurfaceController`, outside React, so pointermove never causes a
 render or a forced layout.
 
+### Two coordinate spaces
+
+The surface controller always reports a fraction of the element it is bound to.
+What that fraction *means* is decided by the store's projection, and the two
+examples deliberately choose differently:
+
+| Room | Space | Agrees across devices? |
+| --- | --- | --- |
+| `cursors:realtime-demo` | Fraction of the bound surface | Only between clients rendering the same layout |
+| `canvas:world` | Absolute units in a fixed 1600×1000 world | Always |
+
+A fraction of a responsive card is not a location: the realtime example renders
+16 checkboxes on a phone and 200 at `xl`, so the same fraction names different
+content on different devices. The canvas example fixes this by locking its stage
+to the world's aspect ratio, which makes the stage the world at a uniform scale
+and leaves nothing for two clients to disagree about.
+
+Anything needing exact cross-device presence over a responsive layout wants a
+third approach — anchor-relative coordinates, `{ anchorId, dx, dy }`, resolved
+against a stable DOM node on the receiving client and hidden when that node is
+absent. Nothing in the repo needs it yet.
+
+### Signals
+
+Presence answers "where are you now". A signal answers "something happened
+here": a one-shot room event that is never retained, never replayed to a late
+joiner, and never re-sent after a reconnect, because it means nothing after the
+moment it arrives. `PresenceRoom.sendSignal()` and `onSignal()` are the client
+half; the server validates them through `validateSignal` on the room namespace,
+which is opt-in, so a room accepts no signals unless it asks to.
+
+Signals get their own token bucket, much tighter than presence: a sampled
+pointer stream is expected to be fast, a deliberate user action is not.
+
+Canvas taps are the first use. They matter beyond decoration — a touch client
+has no hover to sample and so publishes no cursor at all, which makes a tap the
+only presence it can express.
+
 Channel subscriptions survive socket recreation and are released by their
 domain owners. Realtime-capable feature stores gate those subscriptions on
 feature demand; the checkbox store listens only while its feature is active.

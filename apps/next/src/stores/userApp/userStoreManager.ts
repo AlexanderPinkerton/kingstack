@@ -7,7 +7,12 @@ import { OptimisticPostDemoController } from "./optimisticPostDemoController";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { CurrentUserStore } from "./currentUserStore";
 import { PublicTodoStore } from "./publicTodoStore";
-import { SharedCursorStore } from "./sharedCursorStore";
+import {
+  SharedCursorStore,
+  worldProjection,
+  type SharedCursorStoreOptions,
+} from "./sharedCursorStore";
+import { CANVAS_WORLD } from "@/lib/realtime/canvas-world";
 
 interface UserStoreManagerOptions {
   queryClient: QueryClient;
@@ -58,15 +63,33 @@ export class UserStoreManager {
 
   /**
    * Cursor rooms are scoped per surface rather than per app, so they are made
-   * on demand. One store is shared by every consumer of the same scope; the
+   * on demand. One store is shared by every consumer of the same room; the
    * manager keeps them so page unmounts cannot leak a socket subscription.
+   *
+   * Positions are fractions of the bound surface, which only agree between
+   * clients rendering the same layout. Use `canvasCursorStore` for a surface
+   * that needs to agree across devices.
    */
   cursorStore(scope: string): SharedCursorStore {
-    const existing = this.cursorStores.get(scope);
+    return this.sharedCursorStore(`cursors:${scope}`);
+  }
+
+  /** Positions are absolute units in the fixed canvas world. */
+  canvasCursorStore(scope: string): SharedCursorStore {
+    return this.sharedCursorStore(`canvas:${scope}`, {
+      projection: worldProjection(CANVAS_WORLD.width, CANVAS_WORLD.height),
+    });
+  }
+
+  private sharedCursorStore(
+    roomId: string,
+    options?: SharedCursorStoreOptions,
+  ): SharedCursorStore {
+    const existing = this.cursorStores.get(roomId);
     if (existing) return existing;
 
-    const store = new SharedCursorStore(this.realtimeSource, scope);
-    this.cursorStores.set(scope, store);
+    const store = new SharedCursorStore(this.realtimeSource, roomId, options);
+    this.cursorStores.set(roomId, store);
     return store;
   }
 

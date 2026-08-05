@@ -49,6 +49,37 @@ export type DecodedPresence<TState> =
   | { operation: "remove"; participantId: string };
 
 /**
+ * A one-shot event in the room. Unlike presence it is never retained, so it
+ * carries no meaning after the instant it arrives.
+ */
+export interface RoomSignal<TData> {
+  kind: string;
+  participant: PresenceParticipant;
+  data: TData;
+}
+
+export type RoomSignalEvent<TData> = {
+  type?: string;
+  roomId?: string;
+  kind?: string;
+  participant?: unknown;
+  data?: TData;
+};
+
+export function decodeRoomSignal<TData>(
+  roomId: string,
+  event: RoomSignalEvent<TData>,
+): RoomSignal<TData> | null {
+  if (event.type && event.type !== "signal") return null;
+  if (event.roomId !== roomId) return null;
+  if (typeof event.kind !== "string" || event.kind.length === 0) return null;
+  if (!isParticipant(event.participant)) return null;
+  if (event.data === undefined) return null;
+
+  return { kind: event.kind, participant: event.participant, data: event.data };
+}
+
+/**
  * A presence identity is per tab, not per user: two tabs belonging to one
  * person are two independent cursors and must not overwrite each other.
  */
@@ -133,8 +164,10 @@ export class PresenceRoom<TState> {
 
   private readonly demand: StoreDemand;
   private readonly throttleMs: number;
+  private readonly signalListeners = new Set<(signal: RoomSignal<any>) => void>();
   private releaseRoom: (() => void) | null = null;
   private releaseSubscription: (() => void) | null = null;
+  private releaseSignalSubscription: (() => void) | null = null;
   private self: PresenceParticipant | null = null;
   private selfState: TState | null = null;
 
@@ -159,8 +192,17 @@ export class PresenceRoom<TState> {
 
   // ---------- Reads ----------
 
+  /** Everyone in the room, including participants publishing no state. */
   get participants(): PresenceParticipant[] {
     return Array.from(this.entries.values()).map((entry) => entry.participant);
+  }
+
+  get selfParticipant(): PresenceParticipant | null {
+    return this.self;
+  }
+
+  stateOf(participantId: string): TState | null {
+    return this.entries.get(participantId)?.state ?? null;
   }
 
   /** Everyone except the local participant, which the UI usually draws itself. */
@@ -203,6 +245,31 @@ export class PresenceRoom<TState> {
     this.setSelf(this.self, null);
   }
 
+  /**
+   * Fires a one-shot event at every peer. Never retained and never throttled:
+   * a signal is a deliberate action, and coalescing two taps into one would
+   * lose the second entirely.
+   */
+  sendSignal<TData>(kind: string, data: TData): void {
+    if (!this.self) return;
+
+    this.transport.publish("room:signal", {
+      roomId: this.roomId,
+      kind,
+      participant: this.self,
+      data,
+    });
+  }
+
+  /** Listeners receive peer signals only; the sender echoes its own locally. */
+  onSignal<TData>(listener: (signal: RoomSignal<TData>) => void): () => void {
+    const typed = listener as (signal: RoomSignal<any>) => void;
+    this.signalListeners.add(typed);
+    return () => {
+      this.signalListeners.delete(typed);
+    };
+  }
+
   /** Removes this client from the room roster without leaving the room. */
   clearSelf(): void {
     const participant = this.self;
@@ -236,6 +303,8 @@ export class PresenceRoom<TState> {
     this.transport.dropLatest(this.latestKey);
     this.releaseSubscription?.();
     this.releaseSubscription = null;
+    this.releaseSignalSubscription?.();
+    this.releaseSignalSubscription = null;
     this.releaseRoom?.();
     this.releaseRoom = null;
     runInAction(() => this.entries.clear());
@@ -248,6 +317,9 @@ export class PresenceRoom<TState> {
       this.releaseSubscription = this.transport.subscribe<
         PresenceServerEvent<TState>
       >("presence", (event) => this.applyEvent(event));
+      this.releaseSignalSubscription = this.transport.subscribe<
+        RoomSignalEvent<unknown>
+      >("signal", (event) => this.applySignal(event));
       this.releaseRoom = this.transport.joinRoom(this.roomId);
 
       // Re-announce after a remount so peers that missed the gap see us again.
@@ -260,6 +332,12 @@ export class PresenceRoom<TState> {
     if (!shouldJoin && this.releaseRoom) {
       this.leave();
     }
+  }
+
+  private applySignal(event: RoomSignalEvent<unknown>): void {
+    const signal = decodeRoomSignal(this.roomId, event);
+    if (!signal) return;
+    this.signalListeners.forEach((listener) => listener(signal));
   }
 
   private applyEvent(event: PresenceServerEvent<TState>): void {

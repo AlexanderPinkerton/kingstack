@@ -13,6 +13,11 @@ export interface RoomNamespaceConfig {
    * Idle presence (`state: null`) bypasses this and is always allowed.
    */
   validateState(state: unknown): unknown | null;
+  /**
+   * Validate a one-shot signal. Omit to reject every signal in this namespace,
+   * which is the default: a room opts in to transient events explicitly.
+   */
+  validateSignal?(kind: string, data: unknown): unknown | null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -71,6 +76,28 @@ function validateCursorState(state: unknown): unknown | null {
   };
 }
 
+/**
+ * Largest world a canvas room may declare. Positions are absolute world units,
+ * not viewport fractions, so every client resolves them to the same point on
+ * the scene regardless of how big its own window is.
+ */
+export const CANVAS_WORLD_LIMIT = 10_000;
+
+/** `{ x, y }` in world units. Out-of-world points are rejected, not clamped. */
+function validateCanvasState(state: unknown): unknown | null {
+  const record = asRecord(state);
+  if (!record) return null;
+
+  if (
+    !isFiniteNumberInRange(record.x, 0, CANVAS_WORLD_LIMIT) ||
+    !isFiniteNumberInRange(record.y, 0, CANVAS_WORLD_LIMIT)
+  ) {
+    return null;
+  }
+
+  return { x: record.x, y: record.y };
+}
+
 const ROOM_NAMESPACES: Record<string, RoomNamespaceConfig> = {
   checkboxes: {
     requiresAuth: true,
@@ -79,6 +106,14 @@ const ROOM_NAMESPACES: Record<string, RoomNamespaceConfig> = {
   cursors: {
     requiresAuth: true,
     validateState: validateCursorState,
+  },
+  canvas: {
+    requiresAuth: true,
+    validateState: validateCanvasState,
+    // A tap at a world point. Touch clients have no pointer to publish, so
+    // this is the only way they are visible on the canvas at all.
+    validateSignal: (kind, data) =>
+      kind === "ripple" ? validateCanvasState(data) : null,
   },
   // Entity fan-out only; the post feed carries no presence of its own.
   posts: {

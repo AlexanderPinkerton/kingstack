@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 import { useRootStore } from "@/hooks/useRootStore";
-import { CursorSurfaceController } from "@/lib/realtime/cursor-surface";
+import {
+  CursorSurfaceController,
+  type CursorSurfaceOptions,
+} from "@/lib/realtime/cursor-surface";
 import type { PresenceParticipant } from "@/lib/realtime/presence-room";
 import type { SharedCursorStore } from "@/stores/userApp/sharedCursorStore";
 
@@ -22,8 +25,36 @@ export function useSharedCursors(
   participant: PresenceParticipant | null,
 ): SharedCursorsBinding {
   const rootStore = useRootStore();
-  const store = rootStore.userStore.cursorStore(scope);
-  const surface = useMemo(() => new CursorSurfaceController(store), [store]);
+  return useCursorRoom(rootStore.userStore.cursorStore(scope), participant);
+}
+
+/**
+ * Same wiring against the fixed canvas world, where positions are absolute
+ * world units and therefore mean the same thing on every device.
+ */
+export function useCanvasCursors(
+  scope: string,
+  participant: PresenceParticipant | null,
+): SharedCursorsBinding {
+  const rootStore = useRootStore();
+  return useCursorRoom(
+    rootStore.userStore.canvasCursorStore(scope),
+    participant,
+    // Taps are how a touch client shows up on the canvas at all.
+    { emitTaps: true },
+  );
+}
+
+function useCursorRoom(
+  store: SharedCursorStore,
+  participant: PresenceParticipant | null,
+  options: CursorSurfaceOptions = {},
+): SharedCursorsBinding {
+  const emitTaps = options.emitTaps ?? false;
+  const surface = useMemo(
+    () => new CursorSurfaceController(store, { emitTaps }),
+    [store, emitTaps],
+  );
 
   const participantId = participant?.id ?? null;
   const participantName = participant?.name ?? null;

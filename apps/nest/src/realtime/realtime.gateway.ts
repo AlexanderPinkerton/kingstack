@@ -17,10 +17,12 @@ import { APP_LOGGER } from "../logging";
 import {
   normalizeParticipant,
   normalizeRoomId,
+  normalizeSignalKind,
   roomNamespaceOf,
   type PresenceEntry,
   type PresenceSetPayload,
   type RoomPayload,
+  type SignalPayload,
 } from "./presence/presence-protocol";
 import { getRoomNamespaceConfig } from "./presence/room-namespaces";
 import { RoomRegistry } from "./presence/room-registry";
@@ -42,6 +44,14 @@ export const POST_ROOM_ID = "posts:global";
 const PRESENCE_RATE_PER_SECOND = 60;
 const PRESENCE_BURST = 120;
 
+/**
+ * Signals are deliberate user actions rather than a sampled stream, so they get
+ * their own much tighter budget. A human taps a few times a second; anything
+ * beyond this burst is a script.
+ */
+const SIGNAL_RATE_PER_SECOND = 8;
+const SIGNAL_BURST = 16;
+
 @Injectable()
 @WebSocketGateway({
   cors: {
@@ -59,6 +69,10 @@ export class RealtimeGateway
   private readonly presenceLimiter = new TokenBucketLimiter({
     ratePerSecond: PRESENCE_RATE_PER_SECOND,
     burst: PRESENCE_BURST,
+  });
+  private readonly signalLimiter = new TokenBucketLimiter({
+    ratePerSecond: SIGNAL_RATE_PER_SECOND,
+    burst: SIGNAL_BURST,
   });
   private supabase: SupabaseClient;
   private subscriptionChannel: any = null;
@@ -87,6 +101,7 @@ export class RealtimeGateway
   handleDisconnect(client: Socket) {
     const retractions = this.rooms.leaveAll(client.id);
     this.presenceLimiter.release(client.id);
+    this.signalLimiter.release(client.id);
 
     for (const retraction of retractions) {
       this.emitToRoom(retraction.roomId, {
@@ -290,6 +305,53 @@ export class RealtimeGateway
       roomId,
       action: "remove",
       participantId,
+    });
+
+    return { status: "ok" };
+  }
+
+  @SubscribeMessage("room:signal")
+  handleRoomSignal(
+    @MessageBody() payload: SignalPayload,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const roomId = normalizeRoomId(payload?.roomId);
+    if (!roomId || !this.rooms.isMember(client.id, roomId)) {
+      return { status: "error", message: "Join the room before signalling" };
+    }
+
+    if (!this.signalLimiter.allow(client.id)) {
+      this.socketLogger(client).debug("realtime.signal_rate_limited", {
+        roomId,
+      });
+      return { status: "error", message: "Rate limited" };
+    }
+
+    const kind = normalizeSignalKind(payload?.kind);
+    const participant = normalizeParticipant(payload?.participant);
+    if (!kind || !participant) {
+      this.socketLogger(client).warn("realtime.signal_invalid", { roomId });
+      return { status: "error", message: "Invalid signal" };
+    }
+
+    const config = getRoomNamespaceConfig(roomNamespaceOf(roomId));
+    const data = config?.validateSignal?.(kind, payload?.data) ?? null;
+    if (data === null) {
+      this.socketLogger(client).warn("realtime.signal_rejected", {
+        roomId,
+        kind,
+      });
+      return { status: "error", message: "Signal not accepted by this room" };
+    }
+
+    // Nothing is stored: a signal that arrives after the moment has passed is
+    // noise, so late joiners and reconnects never see it.
+    client.to(roomId).emit("signal", {
+      type: "signal",
+      roomId,
+      kind,
+      participant,
+      data,
     });
 
     return { status: "ok" };

@@ -274,6 +274,98 @@ describe("PresenceRoom", () => {
     expect(room.peersWhere((state) => state === null)).toEqual([]);
   });
 
+  it("delivers peer signals to listeners and drops foreign rooms", () => {
+    const transport = new FakeTransport();
+    const room = new PresenceRoom<CursorState>(transport, ROOM_ID);
+    room.activate();
+
+    const received: unknown[] = [];
+    room.onSignal<CursorState>((signal) => received.push(signal));
+
+    transport.deliver("signal", {
+      type: "signal",
+      roomId: ROOM_ID,
+      kind: "ripple",
+      participant: maya,
+      data: { x: 0.5, y: 0.5 },
+    });
+    transport.deliver("signal", {
+      type: "signal",
+      roomId: "cursors:other",
+      kind: "ripple",
+      participant: maya,
+      data: { x: 0.1, y: 0.1 },
+    });
+    transport.deliver("signal", {
+      type: "signal",
+      roomId: ROOM_ID,
+      kind: "ripple",
+      participant: { id: "", name: "", tone: "gold" },
+      data: { x: 0.2, y: 0.2 },
+    });
+
+    expect(received).toEqual([
+      { kind: "ripple", participant: maya, data: { x: 0.5, y: 0.5 } },
+    ]);
+  });
+
+  it("publishes a signal without retaining it for reconnect replay", () => {
+    const transport = new FakeTransport();
+    const room = new PresenceRoom<CursorState>(transport, ROOM_ID);
+    room.activate();
+    room.setSelf(ada, null);
+
+    room.sendSignal("ripple", { x: 0.4, y: 0.6 });
+
+    const published = transport.published.filter(
+      (call) => call.eventType === "room:signal",
+    );
+    expect(published).toEqual([
+      {
+        eventType: "room:signal",
+        event: {
+          roomId: ROOM_ID,
+          kind: "ripple",
+          participant: ada,
+          data: { x: 0.4, y: 0.6 },
+        },
+        options: undefined,
+      },
+    ]);
+  });
+
+  it("ignores a signal sent before an identity exists", () => {
+    const transport = new FakeTransport();
+    const room = new PresenceRoom<CursorState>(transport, ROOM_ID);
+    room.activate();
+
+    room.sendSignal("ripple", { x: 0.4, y: 0.6 });
+
+    expect(
+      transport.published.filter((call) => call.eventType === "room:signal"),
+    ).toEqual([]);
+  });
+
+  it("stops delivering signals once the room is released", () => {
+    const transport = new FakeTransport();
+    const room = new PresenceRoom<CursorState>(transport, ROOM_ID);
+    const release = room.activate();
+
+    const received: unknown[] = [];
+    room.onSignal(() => received.push(true));
+    release();
+
+    transport.deliver("signal", {
+      type: "signal",
+      roomId: ROOM_ID,
+      kind: "ripple",
+      participant: maya,
+      data: { x: 0.5, y: 0.5 },
+    });
+
+    expect(received).toEqual([]);
+  });
+
   it("does not throw when disposed twice", () => {
     const transport = new FakeTransport();
     const room = new PresenceRoom<CursorState>(transport, ROOM_ID);
