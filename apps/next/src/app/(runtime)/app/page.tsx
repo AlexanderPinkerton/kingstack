@@ -11,6 +11,7 @@ import {
   Palette,
   Radio,
   ShieldCheck,
+  Waves,
 } from "lucide-react";
 import useAuthGuard from "@/hooks/useAuthGuard";
 
@@ -45,6 +46,17 @@ const examples = [
     accent: "text-[#8ee8ff] bg-cyan-400/10 border-cyan-300/20",
     glow: "rgba(142, 232, 255, 0.12)",
     tags: ["World space", "Presence"],
+  },
+  {
+    href: "/app/wave-pool",
+    title: "Global wave pool",
+    description:
+      "One server-authoritative wave field shared by everyone, with pointer trails and taps rendered through a compact Three.js surface.",
+    icon: Waves,
+    accent:
+      "text-[var(--accent-1-l)] bg-[color-mix(in_oklch,var(--accent-1-m)_10%,transparent)] border-[color-mix(in_oklch,var(--accent-1-m)_22%,transparent)]",
+    glow: "color-mix(in oklch, var(--accent-1-m) 13%, transparent)",
+    tags: ["Three.js", "Authoritative realtime"],
   },
   {
     href: "/chat",
@@ -144,8 +156,7 @@ export default function ApplicationPage() {
           </p>
         </div>
 
-        {/* Five cards: the featured one spans two columns so the last row
-            fills exactly instead of leaving a gap. */}
+        {/* The featured card spans two columns to anchor the grid. */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {examples.map((example) => {
             const Icon = example.icon;

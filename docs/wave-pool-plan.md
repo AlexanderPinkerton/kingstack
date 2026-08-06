@@ -1,4 +1,4 @@
-# Shared Wave Pool — Implementation Plan
+# Shared Wave Pool — Implementation Plan and Status
 
 A tech demo: a 3D pool of water rendered in every connected client's browser,
 simulated on the server, where moving your cursor through the surface creates
@@ -14,9 +14,18 @@ There is exactly **one** pool: `pool:global`. Every authenticated site user who
 opens the demo joins that same surface. Multiple pool scopes, private pool
 sessions, and horizontal simulation scaling are deliberately out of scope.
 
+**Implementation status (2026-08-06):** the shared protocol, authoritative
+solver, exact global-room admission, gateway wiring, structural roster, client
+store, bounded cursor projection, Three.js renderer, controller, route, and
+automated tests are implemented. Automated verification is recorded in §9.
+The remaining acceptance work is intentionally browser-driven: visual tuning,
+two-browser interaction, React Profiler confirmation, and bandwidth/compression
+measurement. Per repository guidance, the implementation did not start the dev
+server or claim visual verification.
+
 ---
 
-## 1. What already exists
+## 1. Baseline before implementation
 
 Roughly 80% of the networking is done. Confirmed by reading the current tree:
 
@@ -30,9 +39,9 @@ Roughly 80% of the networking is done. Confirmed by reading the current tree:
 | Cursor store, throttled publish, idle retirement | `apps/next/src/stores/userApp/sharedCursorStore.ts` | Yes, plus pool projection and structural roster reads |
 | Fixed shared world concept | `apps/next/src/lib/realtime/canvas-world.ts` | Pattern copied for 3D |
 
-Two things do **not** exist and are the real work: **a server tick loop** (the
-gateway is currently a stateless relay) and **a 3D renderer** (no `three` in
-`apps/next/package.json`).
+At planning time, the two missing pieces were **a server tick loop** (the
+gateway was a stateless relay) and **a 3D renderer** (`three` was not yet a Next
+dependency). Both now exist in the paths described below.
 
 ---
 
@@ -155,7 +164,7 @@ export const POOL_BROADCAST_INTERVAL_MS = 100;
 divides evenly into `8 × 5 = 40` tiles of `8 × 8`.
 
 The protocol's pool surface is `x = 0…1600`, `z = 0…1000`; Y is height. The
-three.js mesh may be centred internally, but `PoolRenderer.projectPointer()`
+three.js mesh may be centred internally, but `PoolRenderer.project()`
 must convert back to that zero-based protocol space before publishing.
 Presence state stays `{ x, y }`, where `y` means **depth along Z**, matching the
 existing `CursorState` wire shape. The pool namespace gets an exact-bounds
@@ -250,11 +259,12 @@ class GlobalPool {
 }
 ```
 
-Membership is idempotent and independent from `RoomRegistry` retractions. The
-first member starts the timer and receives a keyframe; every later join receives
-the current keyframe. The last leave stops the timer, clears pointer history,
-and resets the unseen field to flat so a later first visitor does not resume a
-wave frozen in time.
+Membership is idempotent and independent from `RoomRegistry` retractions. Every
+join receives a freshly quantised current keyframe, including a late join that
+lands between 10 Hz broadcasts. Joining a flat pool does not start a wasteful
+60 Hz timer: the first accepted pointer movement or tap wakes it. The last leave
+stops the timer, clears pointer history, and resets the unseen field to flat so
+a later first visitor does not resume a wave frozen in time.
 
 Simulation runs at **60 Hz** with a fixed timestep; broadcast runs at **10 Hz**
 every sixth step. A delayed Node event loop never passes a large wall-clock
@@ -360,8 +370,8 @@ the reconciler, so the loop itself would be fine — but R3F puts a React
 reconciler underneath the scene graph, so *any* JSX describing scene contents is
 one careless `observer` or changed prop away from reconciling three.js objects at
 pointer rate. Plain `three` removes that possibility entirely. It also drops a
-dependency and shrinks the bundle. The cost is ~100 lines of renderer, resize,
-and disposal boilerplate that we own and control.
+dependency and shrinks the bundle. The cost is renderer, resize, shader, and
+disposal code that we own and control.
 
 **Pull, never push.** The render loop *polls* plain data each frame. Nothing
 subscribes, nothing reacts, nothing calls `setState`. No MobX reaction is allowed
@@ -373,8 +383,8 @@ to reach a React component at frame rate.
    rate. Ever.
 2. Per-frame data lives in plain typed arrays and plain number fields — **not**
    `observable`. Not even the `version` counter.
-3. Scene objects are pre-allocated in a fixed pool at mount. Never created or
-   destroyed per frame; visibility is toggled with `.visible`.
+3. Scene objects and GPU buffers are pre-allocated at mount. They are never
+   created or destroyed per frame; bounded draw ranges select active cursors.
 4. The renderer imports nothing from `react` or `mobx-react-lite`.
 5. React-facing UI (facepile, counts) is driven by a separate **structural**
    observable that changes on membership, identity, or pointer-active
@@ -439,7 +449,7 @@ scene, camera, water mesh, cursor pool, and the rAF loop.
 ```ts
 export class PoolRenderer {
   constructor(canvas: HTMLCanvasElement, field: PoolField, cursors: CursorBuffer);
-  projectPointer(clientX: number, clientY: number): { x: number; z: number } | null;
+  project(fractionX: number, fractionY: number): { x: number; z: number } | null;
   start(): void;
   stop(): void;
   dispose(): void;
@@ -456,9 +466,10 @@ Per frame, in plain TS:
 - Displace the water plane's Y in the vertex shader by sampling and mixing both
   textures. Derive normals from neighbouring height samples so lighting reveals
   the wave instead of shading a displaced surface as a flat plane.
-- Walk `cursors.positions`, write `.position` on pooled sprites, set `.visible`
-  for `count`, hide the rest. Y comes from `field.heightAt(x, z, alpha)`, using
-  the exact same interpolation factor as the surface.
+- Walk `cursors.positions` and update one preallocated point-cloud position and
+  colour buffer with a draw range bounded by `count`. Y comes from
+  `field.heightAt(x, z, alpha)`, using the exact same interpolation factor as
+  the surface. This is one draw call rather than 64 sprite draw calls.
 
 The whole loop is allocation-free after mount.
 
@@ -466,9 +477,9 @@ The whole loop is allocation-free after mount.
 
 Replaces `CursorSurfaceController` for this scene. Same lifecycle (`attach` /
 `detach` / `dispose`, idempotent), but asks the renderer's
-`projectPointer(clientX, clientY)` method for a point on the analytic `y = 0`
-plane. Three.js camera/matrix knowledge stays in the renderer; the controller
-only owns DOM event wiring.
+`project(fractionX, fractionY)` method for a point on the analytic `y = 0`
+plane. The controller caches the canvas rectangle and converts DOM coordinates
+to fractions; Three.js camera/matrix knowledge stays in the renderer.
 
 `UserStoreManager` creates the pool's `SharedCursorStore` with a dedicated
 projection that accepts these world units and returns `{ x, y: z }`, clamped to
@@ -497,7 +508,7 @@ export const WavePoolCanvas = memo(function WavePoolCanvas({
     const canvas = ref.current;
     if (!canvas) return;
     const renderer = new PoolRenderer(canvas, pool.field, pool.cursorBuffer);
-    const surface = new PoolSurfaceController(pool.cursors, renderer);
+    const surface = new PoolSurfaceController(pool, renderer);
     renderer.start();
     surface.attach(canvas);
     return () => { surface.dispose(); renderer.dispose(); };
@@ -587,19 +598,17 @@ singleton if it was constructed.
 
 Reuse the existing collaboration chrome, `PresenceFacepile`, presence-tone
 palette, typography, spacing, borders, and radii rather than inventing a second
-visual language for the demo. Pass resolved water/background/tone colours into
-the pure renderer as constructor options; the renderer must not import React to
-obtain theme values.
-
-The repository currently has no discoverable brandkit document, so visual work
-cannot claim brandkit compliance until that source is added or identified. The
-implementation PR should name the exact design-system/brand source it used.
+visual language for the demo. The implementation follows
+`apps/next/src/components/ui/ui-design.md`, the CSS accent variables in
+`globals.css`, and the existing canvas/presence components. The pure renderer
+uses the same established cyan, violet, and lime palette without importing
+React or MobX.
 
 The canvas gets an accessible label and adjacent explanatory fallback text.
-For `prefers-reduced-motion: reduce`, render only on incoming 10 Hz state changes
-with no interpolation or camera motion. Touch keeps the existing tap impulse;
-low-end devices may use fewer mesh subdivisions while sampling the same 64×40
-protocol texture. Client rendering quality never changes authoritative state.
+For `prefers-reduced-motion: reduce`, draw only when field/cursor state or size
+changes, with no interpolation or camera motion. Touch keeps the existing tap
+impulse. The mesh already matches the modest 64×40 protocol field, and client
+rendering never changes authoritative state.
 
 ---
 
@@ -654,8 +663,9 @@ Following existing conventions — `*.spec.ts` beside source in `apps/nest`,
   bit-exact; tile masks include live tiles plus trailing zero; wrong version,
   room, mask, ordering, and byte length are rejected; a new epoch requires and
   accepts a new keyframe even when its sequence is below the previous epoch.
-- `global-pool.spec.ts` — membership is idempotent; first join starts, every
-  join gets a keyframe, last leave stops and resets; idle sleep sends final zero;
+- `global-pool.spec.ts` — membership is idempotent; every join gets a current
+  keyframe without waking a flat pool; first input starts it; last leave stops
+  and resets; idle sleep sends final zero;
   pointer baselines, null/re-entry, long gaps, teleports, taps, and disconnects
   obey the bounded input contract.
 - Namespace/gateway specs — only `pool:global` joins; valid pointer/tap events
@@ -674,23 +684,22 @@ Following existing conventions — `*.spec.ts` beside source in `apps/nest`,
 
 ---
 
-## 9. Sequencing
+## 9. Sequencing and verification status
 
-| # | Step | Est. | Verifiable by |
+| # | Step | Status | Verification |
 | --- | --- | --- | --- |
-| 1 | Shared constants/types/codec + exact-room namespace policy | 0.75 d | Protocol and admission specs |
-| 2 | `WaveField` solver + bounded-input specs | 0.5 d | Unit tests, ASCII-art dump of the grid |
-| 3 | `GlobalPool`, gateway wiring, volatile recovery, instrumentation | 1 d | Server/gateway specs and logs |
-| 4 | Structural roster, `WavePoolStore`, `PoolField`, `CursorBuffer` | 1 d | Lifecycle specs + 2D field debug view |
-| 5 | `PoolRenderer`, two-snapshot shader, derived normals | 1.25 d | Visual; surface/cursor interpolation agrees |
-| 6 | Pointer projection, pooled cursors, collaboration chrome | 0.75 d | Visual, two browsers |
-| 7 | Reduced motion, mobile quality, A/B compression, final profiling | 0.75 d | Metrics + throttled-network profile |
+| 1 | Shared constants/types/codec + exact-room namespace policy | Implemented | Protocol and admission specs |
+| 2 | `WaveField` solver + bounded-input specs | Implemented | Solver unit/long-run tests |
+| 3 | `GlobalPool`, gateway wiring, volatile recovery, instrumentation | Implemented | Realtime suite + Nest typecheck |
+| 4 | Structural roster, `WavePoolStore`, `PoolField`, `CursorBuffer` | Implemented | Client lifecycle/codec tests |
+| 5 | `PoolRenderer`, two-snapshot shader, derived normals | Implemented | Next typecheck + lint; visual check pending |
+| 6 | Pointer projection, point-cloud cursors, collaboration chrome | Implemented | Controller tests; two-browser check pending |
+| 7 | Reduced motion, compression decision, final profiling | Partial | Reduced motion implemented; profiling/A-B remains manual |
 
-**~6 days.** Step 4 landing before renderer work is deliberate: it makes the
-entire network and lifecycle path testable with a flat 2D debug view, so a later
-failure is isolated to rendering. The estimate is higher than the original
-because keyframe ordering, bounded input, recovery, normals, and integration
-tests are now explicit work rather than hidden implementation details.
+Current automated result: the realtime Nest suite passes, the focused Next
+pool/presence suite passes, both package typechecks pass, and targeted ESLint is
+clean. The final section is not silently treated as complete: compression stays
+off until the §7 A/B measurement justifies it.
 
 ---
 
@@ -706,12 +715,12 @@ tests are now explicit work rather than hidden implementation details.
    O(connected users), and only 64 cursors are drawn in 3D. Instrument recipient
    count/egress and document the visual cap. There is intentionally no sharding
    or private-room escape hatch in this phase.
-3. **`three` is a heavy new dependency.** Route-level dynamic import so it never
-   enters the shared bundle. Dropping R3F (§6.0) removes a second one.
+3. **`three` is a heavy new dependency.** The App Router gives
+   `/app/wave-pool` its own route chunk, and no shared layout imports the
+   renderer. Dropping R3F (§6.0) avoids a second 3D dependency.
 4. **Mobile and reduced motion.** Touch has no hover, so taps are its only
-   impulse. Low-end devices reduce mesh density, and reduced-motion clients
-   render only on incoming snapshots. These are client presentation choices,
-   not alternate simulations.
+   impulse. Reduced-motion clients render only on incoming changes. These are
+   client presentation choices, not alternate simulations.
 5. **`setPointer`'s "fraction" contract widens** to "controller input mapped
    into the room's coordinate space." Small, but it touches shared comments and
    tests.

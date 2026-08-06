@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { POOL_ROOM_ID } from "@kingstack/shared";
 import { getRoomNamespaceConfig } from "./room-namespaces";
 
 describe("checkboxes namespace", () => {
@@ -62,7 +63,9 @@ describe("canvas namespace", () => {
     // which is a bug worth surfacing rather than silently snapping to a corner.
     expect(config.validateState({ x: -1, y: 460 })).toBeNull();
     expect(config.validateState({ x: 20_000, y: 460 })).toBeNull();
-    expect(config.validateState({ x: 812, y: Number.POSITIVE_INFINITY })).toBeNull();
+    expect(
+      config.validateState({ x: 812, y: Number.POSITIVE_INFINITY }),
+    ).toBeNull();
     expect(config.validateState({ y: 460 })).toBeNull();
   });
 });
@@ -92,6 +95,28 @@ describe("room signals", () => {
     expect(
       getRoomNamespaceConfig("checkboxes")?.validateSignal === undefined,
     ).toBe(true);
+  });
+});
+
+describe("global pool namespace", () => {
+  const config = getRoomNamespaceConfig("pool")!;
+
+  it("admits only the one global pool room", () => {
+    expect(config.allowsRoomId?.(POOL_ROOM_ID)).toBe(true);
+    expect(config.allowsRoomId?.("pool:private")).toBe(false);
+  });
+
+  it("validates exact pool bounds for pointers and taps", () => {
+    expect(config.validateState({ x: 1600, y: 1000 })).toEqual({
+      x: 1600,
+      y: 1000,
+    });
+    expect(config.validateState({ x: 1601, y: 1000 })).toBeNull();
+    expect(config.validateSignal?.("ripple", { x: 20, y: 30 })).toEqual({
+      x: 20,
+      y: 30,
+    });
+    expect(config.validateSignal?.("explode", { x: 20, y: 30 })).toBeNull();
   });
 });
 

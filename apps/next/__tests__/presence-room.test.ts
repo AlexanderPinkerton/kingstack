@@ -1,3 +1,4 @@
+import { autorun } from "mobx";
 import { describe, expect, it } from "vitest";
 import {
   PresenceRoom,
@@ -221,6 +222,57 @@ describe("PresenceRoom", () => {
     expect(room.participants).toEqual([]);
   });
 
+  it("keeps the structural roster stable during coordinate movement", () => {
+    const transport = new FakeTransport();
+    const room = new PresenceRoom<CursorState>(transport, ROOM_ID);
+    room.activate();
+
+    const snapshots: string[] = [];
+    const dispose = autorun(() => {
+      snapshots.push(
+        room.roster
+          .map(
+            ({ participant, hasState }) =>
+              `${participant.id}:${participant.name}:${hasState}`,
+          )
+          .join(","),
+      );
+    });
+
+    transport.deliver("presence", {
+      type: "presence",
+      roomId: ROOM_ID,
+      action: "upsert",
+      entry: entry(maya, null),
+    });
+    transport.deliver("presence", {
+      type: "presence",
+      roomId: ROOM_ID,
+      action: "upsert",
+      entry: entry(maya, { x: 0.1, y: 0.2 }),
+    });
+    transport.deliver("presence", {
+      type: "presence",
+      roomId: ROOM_ID,
+      action: "upsert",
+      entry: entry(maya, { x: 0.8, y: 0.9 }),
+    });
+    transport.deliver("presence", {
+      type: "presence",
+      roomId: ROOM_ID,
+      action: "upsert",
+      entry: entry({ ...maya, name: "Maya R." }, { x: 0.8, y: 0.9 }),
+    });
+
+    dispose();
+    expect(snapshots).toEqual([
+      "",
+      "maya:Maya:false",
+      "maya:Maya:true",
+      "maya:Maya R.:true",
+    ]);
+  });
+
   it("re-announces the local participant when demand returns", () => {
     const transport = new FakeTransport();
     const room = new PresenceRoom<CursorState>(transport, ROOM_ID);
@@ -251,7 +303,11 @@ describe("PresenceRoom", () => {
     expect(
       transport.published.filter((call) => call.eventType === "presence:clear"),
     ).toEqual([
-      { eventType: "presence:clear", event: { roomId: ROOM_ID }, options: undefined },
+      {
+        eventType: "presence:clear",
+        event: { roomId: ROOM_ID },
+        options: undefined,
+      },
     ]);
   });
 

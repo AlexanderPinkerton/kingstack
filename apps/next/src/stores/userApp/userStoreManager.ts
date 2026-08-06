@@ -13,6 +13,7 @@ import {
   type SharedCursorStoreOptions,
 } from "./sharedCursorStore";
 import { CANVAS_WORLD } from "@/lib/realtime/canvas-world";
+import { WavePoolStore } from "./wavePoolStore";
 
 interface UserStoreManagerOptions {
   queryClient: QueryClient;
@@ -35,6 +36,7 @@ export class UserStoreManager {
 
   private readonly realtimeSource: RealtimeTransport;
   private readonly cursorStores = new Map<string, SharedCursorStore>();
+  private wavePoolStoreInstance: WavePoolStore | null = null;
   private releaseCurrentUser: (() => void) | null = null;
   private isDisposed = false;
 
@@ -79,6 +81,12 @@ export class UserStoreManager {
     return this.sharedCursorStore(`canvas:${scope}`, {
       projection: worldProjection(CANVAS_WORLD.width, CANVAS_WORLD.height),
     });
+  }
+
+  /** The site has exactly one shared wave pool, created only when requested. */
+  wavePoolStore(): WavePoolStore {
+    this.wavePoolStoreInstance ??= new WavePoolStore(this.realtimeSource);
+    return this.wavePoolStoreInstance;
   }
 
   private sharedCursorStore(
@@ -128,5 +136,7 @@ export class UserStoreManager {
     this.currentUserStore.dispose();
     this.cursorStores.forEach((store) => store.dispose());
     this.cursorStores.clear();
+    this.wavePoolStoreInstance?.dispose();
+    this.wavePoolStoreInstance = null;
   }
 }

@@ -5,9 +5,13 @@
 // collaborative example means adding one entry to this table, not another
 // handler on the gateway.
 
+import { POOL_ROOM_ID, normalizePoolPoint } from "@kingstack/shared";
+
 export interface RoomNamespaceConfig {
   /** Reject joins from sockets that only completed `register_public`. */
   requiresAuth: boolean;
+  /** Optional exact room/scope admission policy within this namespace. */
+  allowsRoomId?(roomId: string): boolean;
   /**
    * Validate and normalize a non-null presence state. Return `null` to reject.
    * Idle presence (`state: null`) bypasses this and is always allowed.
@@ -31,7 +35,12 @@ function isFiniteNumberInRange(
   min: number,
   max: number,
 ): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= min &&
+    value <= max
+  );
 }
 
 export const CHECKBOX_GRID_SIZE = 200;
@@ -114,6 +123,13 @@ const ROOM_NAMESPACES: Record<string, RoomNamespaceConfig> = {
     // this is the only way they are visible on the canvas at all.
     validateSignal: (kind, data) =>
       kind === "ripple" ? validateCanvasState(data) : null,
+  },
+  pool: {
+    requiresAuth: true,
+    allowsRoomId: (roomId) => roomId === POOL_ROOM_ID,
+    validateState: normalizePoolPoint,
+    validateSignal: (kind, data) =>
+      kind === "ripple" ? normalizePoolPoint(data) : null,
   },
   // Entity fan-out only; the post feed carries no presence of its own.
   posts: {

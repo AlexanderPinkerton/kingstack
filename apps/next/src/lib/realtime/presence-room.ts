@@ -34,6 +34,12 @@ export interface PresenceEntry<TState> {
   state: TState | null;
 }
 
+/** React-safe projection that deliberately excludes hot coordinate values. */
+export interface PresenceSummary {
+  participant: PresenceParticipant;
+  hasState: boolean;
+}
+
 export type PresenceServerEvent<TState> = {
   type?: string;
   roomId?: string;
@@ -161,15 +167,20 @@ export interface PresenceRoomOptions {
 export class PresenceRoom<TState> {
   /** Everyone in the room, including this client once it publishes. */
   readonly entries = observable.map<string, PresenceEntry<TState>>();
+  /** Changes only on membership, identity, or null/non-null state transitions. */
+  readonly roster = observable.array<PresenceSummary>([], { deep: false });
 
   private readonly demand: StoreDemand;
   private readonly throttleMs: number;
-  private readonly signalListeners = new Set<(signal: RoomSignal<any>) => void>();
+  private readonly signalListeners = new Set<
+    (signal: RoomSignal<any>) => void
+  >();
   private releaseRoom: (() => void) | null = null;
   private releaseSubscription: (() => void) | null = null;
   private releaseSignalSubscription: (() => void) | null = null;
   private self: PresenceParticipant | null = null;
   private selfState: TState | null = null;
+  private readonly summaryById = new Map<string, PresenceSummary>();
 
   constructor(
     private readonly transport: RealtimeTransport,
@@ -194,7 +205,7 @@ export class PresenceRoom<TState> {
 
   /** Everyone in the room, including participants publishing no state. */
   get participants(): PresenceParticipant[] {
-    return Array.from(this.entries.values()).map((entry) => entry.participant);
+    return this.roster.map((summary) => summary.participant);
   }
 
   get selfParticipant(): PresenceParticipant | null {
@@ -203,6 +214,10 @@ export class PresenceRoom<TState> {
 
   stateOf(participantId: string): TState | null {
     return this.entries.get(participantId)?.state ?? null;
+  }
+
+  hasState(participantId: string): boolean {
+    return this.summaryById.get(participantId)?.hasState ?? false;
   }
 
   /** Everyone except the local participant, which the UI usually draws itself. */
@@ -229,7 +244,9 @@ export class PresenceRoom<TState> {
     this.selfState = state;
 
     runInAction(() => {
-      this.entries.set(participant.id, { participant, state });
+      const entry = { participant, state };
+      this.entries.set(participant.id, entry);
+      this.upsertSummary(entry);
     });
 
     this.transport.publish(
@@ -279,6 +296,7 @@ export class PresenceRoom<TState> {
     this.selfState = null;
     runInAction(() => {
       this.entries.delete(participant.id);
+      this.removeSummary(participant.id);
     });
 
     this.transport.publish("presence:clear", { roomId: this.roomId });
@@ -307,7 +325,11 @@ export class PresenceRoom<TState> {
     this.releaseSignalSubscription = null;
     this.releaseRoom?.();
     this.releaseRoom = null;
-    runInAction(() => this.entries.clear());
+    runInAction(() => {
+      this.entries.clear();
+      this.summaryById.clear();
+      this.roster.clear();
+    });
   }
 
   private syncSubscription(): void {
@@ -348,7 +370,9 @@ export class PresenceRoom<TState> {
       if (change.operation === "sync") {
         // A sync is authoritative for peers only; the local entry is owned by
         // this client and would otherwise vanish on every reconnect.
-        const selfEntry = this.self ? this.entries.get(this.self.id) : undefined;
+        const selfEntry = this.self
+          ? this.entries.get(this.self.id)
+          : undefined;
         this.entries.clear();
         change.entries.forEach((entry) => {
           this.entries.set(entry.participant.id, entry);
@@ -356,17 +380,66 @@ export class PresenceRoom<TState> {
         if (this.self && selfEntry) {
           this.entries.set(this.self.id, selfEntry);
         }
+        this.replaceRoster(Array.from(this.entries.values()));
         return;
       }
 
       if (change.operation === "remove") {
         if (change.participantId === this.self?.id) return;
         this.entries.delete(change.participantId);
+        this.removeSummary(change.participantId);
         return;
       }
 
       if (change.entry.participant.id === this.self?.id) return;
       this.entries.set(change.entry.participant.id, change.entry);
+      this.upsertSummary(change.entry);
     });
+  }
+
+  private upsertSummary(entry: PresenceEntry<TState>): void {
+    const participant = entry.participant;
+    const next: PresenceSummary = {
+      participant,
+      hasState: entry.state !== null,
+    };
+    const previous = this.summaryById.get(participant.id);
+    if (
+      previous?.hasState === next.hasState &&
+      previous.participant.name === participant.name &&
+      previous.participant.tone === participant.tone
+    ) {
+      return;
+    }
+
+    this.summaryById.set(participant.id, next);
+    const index = this.roster.findIndex(
+      (summary) => summary.participant.id === participant.id,
+    );
+    if (index === -1) {
+      this.roster.push(next);
+    } else {
+      this.roster[index] = next;
+    }
+  }
+
+  private removeSummary(participantId: string): void {
+    if (!this.summaryById.delete(participantId)) return;
+    const index = this.roster.findIndex(
+      (summary) => summary.participant.id === participantId,
+    );
+    if (index !== -1) this.roster.splice(index, 1);
+  }
+
+  private replaceRoster(entries: PresenceEntry<TState>[]): void {
+    this.summaryById.clear();
+    const summaries = entries.map((entry) => ({
+      participant: entry.participant,
+      hasState: entry.state !== null,
+    }));
+    summaries.forEach((summary) => {
+      this.summaryById.set(summary.participant.id, summary);
+    });
+    this.roster.replace(summaries);
   }
 }

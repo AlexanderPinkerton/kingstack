@@ -10,9 +10,15 @@ import {
 } from "@nestjs/websockets";
 import { Socket, Server } from "socket.io";
 import { JwtService } from "@nestjs/jwt";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, type OnApplicationShutdown } from "@nestjs/common";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { AppLogger, LogContext } from "@kingstack/logger";
+import {
+  POOL_ROOM_ID,
+  type PoolFrame,
+  type PoolKeyframe,
+  type PoolPoint,
+} from "@kingstack/shared";
 import { APP_LOGGER } from "../logging";
 import {
   normalizeParticipant,
@@ -27,6 +33,7 @@ import {
 import { getRoomNamespaceConfig } from "./presence/room-namespaces";
 import { RoomRegistry } from "./presence/room-registry";
 import { TokenBucketLimiter } from "./presence/rate-limiter";
+import { GlobalPool } from "./pool/global-pool";
 
 interface RegisterPayload {
   token: string;
@@ -59,12 +66,17 @@ const SIGNAL_BURST = 16;
   },
 })
 export class RealtimeGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+  implements
+    OnGatewayInit,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnApplicationShutdown
 {
   @WebSocketServer()
   private server!: Server;
 
   private readonly logger: AppLogger;
+  private readonly globalPool: GlobalPool;
   private readonly rooms = new RoomRegistry();
   private readonly presenceLimiter = new TokenBucketLimiter({
     ratePerSecond: PRESENCE_RATE_PER_SECOND,
@@ -85,6 +97,18 @@ export class RealtimeGateway
     @Inject(APP_LOGGER) logger: AppLogger,
   ) {
     this.logger = logger.child({ component: RealtimeGateway.name });
+    this.globalPool = new GlobalPool({
+      logger: this.logger.child({ component: GlobalPool.name }),
+      transport: {
+        broadcastVolatile: (frame: PoolFrame) => {
+          this.server.to(POOL_ROOM_ID).volatile.emit("pool", frame);
+        },
+        broadcastReliable: (frame: PoolKeyframe) => {
+          this.server.to(POOL_ROOM_ID).emit("pool", frame);
+        },
+        unwritableSocketCount: () => this.unwritablePoolSocketCount(),
+      },
+    });
     this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
     void this.connectSupabase();
   }
@@ -99,6 +123,7 @@ export class RealtimeGateway
   }
 
   handleDisconnect(client: Socket) {
+    this.globalPool.leave(client.id);
     const retractions = this.rooms.leaveAll(client.id);
     this.presenceLimiter.release(client.id);
     this.signalLimiter.release(client.id);
@@ -115,6 +140,10 @@ export class RealtimeGateway
     this.socketLogger(client).info("realtime.client_disconnected", {
       retractedRooms: retractions.length,
     });
+  }
+
+  onApplicationShutdown(): void {
+    this.globalPool.dispose();
   }
 
   // ---------- Registration ----------
@@ -183,6 +212,10 @@ export class RealtimeGateway
     this.rooms.join(client.id, roomId);
     await client.join(roomId);
 
+    if (roomId === POOL_ROOM_ID) {
+      this.globalPool.join(client);
+    }
+
     // Replay current occupants so a late joiner starts with a full roster.
     client.emit("presence", {
       type: "presence",
@@ -207,6 +240,9 @@ export class RealtimeGateway
     if (!roomId) return { status: "error", message: "Invalid room id" };
 
     const retraction = this.rooms.leave(client.id, roomId);
+    if (roomId === POOL_ROOM_ID) {
+      this.globalPool.leave(client.id);
+    }
     await client.leave(roomId);
 
     if (retraction) {
@@ -268,6 +304,17 @@ export class RealtimeGateway
     const result = this.rooms.setPresence(client.id, roomId, entry);
     if (!result) return { status: "error", message: "Not a room member" };
 
+    if (roomId === POOL_ROOM_ID) {
+      if (result.supersededParticipantId) {
+        this.globalPool.clearPointer(client.id);
+      }
+      this.globalPool.observePointer(
+        client.id,
+        state as PoolPoint | null,
+        performance.now(),
+      );
+    }
+
     // A socket that swapped identity leaves a ghost behind; retract it first.
     if (result.supersededParticipantId) {
       this.emitToRoom(roomId, {
@@ -298,6 +345,9 @@ export class RealtimeGateway
     if (!roomId) return { status: "error", message: "Invalid room id" };
 
     const participantId = this.rooms.clearPresence(client.id, roomId);
+    if (roomId === POOL_ROOM_ID) {
+      this.globalPool.clearPointer(client.id);
+    }
     if (!participantId) return { status: "ok" };
 
     client.to(roomId).emit("presence", {
@@ -344,6 +394,10 @@ export class RealtimeGateway
       return { status: "error", message: "Signal not accepted by this room" };
     }
 
+    if (roomId === POOL_ROOM_ID && kind === "ripple") {
+      this.globalPool.tap(data as PoolPoint);
+    }
+
     // Nothing is stored: a signal that arrives after the moment has passed is
     // noise, so late joiners and reconnects never see it.
     client.to(roomId).emit("signal", {
@@ -365,6 +419,9 @@ export class RealtimeGateway
     }
     if (config.requiresAuth && typeof client.data.userId !== "string") {
       return "Room requires an authenticated connection";
+    }
+    if (config.allowsRoomId && !config.allowsRoomId(roomId)) {
+      return "Room is not available";
     }
     return null;
   }
@@ -500,6 +557,19 @@ export class RealtimeGateway
       eventType: payload.type,
       memberCount: this.rooms.memberCount(roomId),
     });
+  }
+
+  private unwritablePoolSocketCount(): number {
+    if (!this.server) return 0;
+    const socketIds = this.server.sockets.adapter.rooms.get(POOL_ROOM_ID);
+    if (!socketIds) return 0;
+
+    let count = 0;
+    for (const socketId of socketIds) {
+      const socket = this.server.sockets.sockets.get(socketId);
+      if (socket && !socket.conn.transport.writable) count += 1;
+    }
+    return count;
   }
 
   private socketLogger(client: Socket): AppLogger {

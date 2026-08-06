@@ -26,7 +26,7 @@ export interface CursorState {
   y: number;
 }
 
-/** Maps a surface fraction to the coordinate space the room publishes. */
+/** Maps controller input to the coordinate space the room publishes. */
 export type CursorProjection = (x: number, y: number) => CursorState;
 
 function clamp(value: number, max: number): number {
@@ -84,11 +84,13 @@ const DEFAULT_THROTTLE_MS = 33;
 const DEFAULT_IDLE_AFTER_MS = 10_000;
 
 export interface SharedCursorStoreOptions {
-  /** Defaults to surface fractions; pass `worldProjection` for a fixed scene. */
+  /** Maps controller input to wire coordinates; defaults to surface fractions. */
   projection?: CursorProjection;
   throttleMs?: number;
   idleAfterMs?: number;
   rippleLifetimeMs?: number;
+  /** Disable DOM-ripple bookkeeping for scenes that render the tap themselves. */
+  trackRipples?: boolean;
   setTimer?: (callback: () => void, delayMs: number) => unknown;
   clearTimer?: (handle: unknown) => void;
 }
@@ -101,6 +103,7 @@ export class SharedCursorStore {
   private readonly projection: CursorProjection;
   private readonly idleAfterMs: number;
   private readonly rippleLifetimeMs: number;
+  private readonly trackRipples: boolean;
   private readonly setTimer: (callback: () => void, delayMs: number) => unknown;
   private readonly clearTimer: (handle: unknown) => void;
   private readonly rippleHandles = new Set<unknown>();
@@ -122,8 +125,10 @@ export class SharedCursorStore {
     this.idleAfterMs = options.idleAfterMs ?? DEFAULT_IDLE_AFTER_MS;
     this.rippleLifetimeMs =
       options.rippleLifetimeMs ?? DEFAULT_RIPPLE_LIFETIME_MS;
+    this.trackRipples = options.trackRipples ?? true;
     this.setTimer =
-      options.setTimer ?? ((callback, delayMs) => setTimeout(callback, delayMs));
+      options.setTimer ??
+      ((callback, delayMs) => setTimeout(callback, delayMs));
     this.clearTimer =
       options.clearTimer ??
       ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>));
@@ -136,10 +141,12 @@ export class SharedCursorStore {
   }
 
   activate(): () => void {
-    this.releaseSignals ??= this.room.onSignal<CursorState>((signal) => {
-      if (signal.kind !== RIPPLE_SIGNAL_KIND) return;
-      this.addRipple(signal.participant, signal.data);
-    });
+    if (this.trackRipples) {
+      this.releaseSignals ??= this.room.onSignal<CursorState>((signal) => {
+        if (signal.kind !== RIPPLE_SIGNAL_KIND) return;
+        this.addRipple(signal.participant, signal.data);
+      });
+    }
     return this.room.activate();
   }
 
@@ -170,7 +177,7 @@ export class SharedCursorStore {
   }
 
   hasPointer(participantId: string): boolean {
-    return this.room.stateOf(participantId) !== null;
+    return this.room.hasState(participantId);
   }
 
   setParticipant(participant: PresenceParticipant): void {
@@ -181,8 +188,8 @@ export class SharedCursorStore {
   }
 
   /**
-   * Takes a fraction of the bound surface, as reported by the surface
-   * controller, and publishes it in this room's coordinate space.
+   * Takes coordinates from the bound controller and projects them into this
+   * room's published coordinate space.
    */
   setPointer(x: number, y: number): void {
     if (!this.participant) return;
@@ -199,7 +206,7 @@ export class SharedCursorStore {
     if (!this.participant) return;
 
     const point = this.projection(x, y);
-    this.addRipple(this.participant, point);
+    if (this.trackRipples) this.addRipple(this.participant, point);
     this.room.sendSignal(RIPPLE_SIGNAL_KIND, point);
   }
 
@@ -210,7 +217,10 @@ export class SharedCursorStore {
     this.room.setSelf(this.participant, null);
   }
 
-  private addRipple(participant: PresenceParticipant, point: CursorState): void {
+  private addRipple(
+    participant: PresenceParticipant,
+    point: CursorState,
+  ): void {
     this.rippleSequence += 1;
     const ripple: Ripple = {
       id: `${participant.id}-${this.rippleSequence}`,
