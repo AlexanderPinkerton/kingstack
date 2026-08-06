@@ -117,7 +117,7 @@ describe("generated project boundary", () => {
     );
     expect(rootPackage.scripts["build:release-packages"]).toBeUndefined();
     expect(rootPackage.scripts["test:create-kingstack"]).toBeUndefined();
-    expect(rootPackage.scripts["king-config"]).toBe("bun king-config");
+    expect(rootPackage.scripts["king-config"]).toBe("yarn exec king-config");
     expect(rootPackage.devDependencies["@changesets/cli"]).toBeUndefined();
   });
 

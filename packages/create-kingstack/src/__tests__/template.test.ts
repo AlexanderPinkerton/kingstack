@@ -436,7 +436,7 @@ describe("prepareGeneratedProject", () => {
     expect(pkg.scripts["build:release-packages"]).toBeUndefined();
     expect(pkg.scripts["test:create-kingstack"]).toBeUndefined();
     expect(pkg.scripts["backend:enable"]).toBe("bun scripts/enable-backend.ts");
-    expect(pkg.scripts["king-config"]).toBe("bun king-config");
+    expect(pkg.scripts["king-config"]).toBe("yarn exec king-config");
     expect(pkg.devDependencies["@changesets/cli"]).toBeUndefined();
     expect(pkg.devDependencies.vitest).toBe("^3.0.0");
     expect(existsSync(join(testDir, "scripts", "enable-backend.ts"))).toBe(
