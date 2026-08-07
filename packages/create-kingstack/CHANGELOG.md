@@ -1,5 +1,12 @@
 # @kingstack/create-kingstack
 
+## 0.5.2
+
+### Patch Changes
+
+- 0bfe35c: Prevent generated projects from recursively invoking the `king-config` package
+  script when generating local environment files.
+
 ## 0.5.1
 
 ### Patch Changes
