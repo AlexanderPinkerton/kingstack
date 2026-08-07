@@ -156,12 +156,14 @@ export function decodePresenceEvent<TState>(
   return null;
 }
 
-export interface PresenceRoomOptions {
+export interface PresenceRoomOptions<TState = unknown> {
   /**
    * Coalescing interval for outbound state. Leave unset for low-frequency
    * presence; set it for pointer-rate streams.
    */
   throttleMs?: number;
+  /** Defines the structural active/inactive bit exposed to React chrome. */
+  structuralHasState?: (state: TState | null) => boolean;
 }
 
 export class PresenceRoom<TState> {
@@ -172,6 +174,7 @@ export class PresenceRoom<TState> {
 
   private readonly demand: StoreDemand;
   private readonly throttleMs: number;
+  private readonly structuralHasState: (state: TState | null) => boolean;
   private readonly signalListeners = new Set<
     (signal: RoomSignal<any>) => void
   >();
@@ -185,9 +188,11 @@ export class PresenceRoom<TState> {
   constructor(
     private readonly transport: RealtimeTransport,
     readonly roomId: string,
-    options: PresenceRoomOptions = {},
+    options: PresenceRoomOptions<TState> = {},
   ) {
     this.throttleMs = options.throttleMs ?? 0;
+    this.structuralHasState =
+      options.structuralHasState ?? ((state) => state !== null);
     this.demand = new StoreDemand(() => this.syncSubscription());
   }
 
@@ -401,7 +406,7 @@ export class PresenceRoom<TState> {
     const participant = entry.participant;
     const next: PresenceSummary = {
       participant,
-      hasState: entry.state !== null,
+      hasState: this.structuralHasState(entry.state),
     };
     const previous = this.summaryById.get(participant.id);
     if (
@@ -435,7 +440,7 @@ export class PresenceRoom<TState> {
     this.summaryById.clear();
     const summaries = entries.map((entry) => ({
       participant: entry.participant,
-      hasState: entry.state !== null,
+      hasState: this.structuralHasState(entry.state),
     }));
     summaries.forEach((summary) => {
       this.summaryById.set(summary.participant.id, summary);

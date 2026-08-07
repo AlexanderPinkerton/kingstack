@@ -12,8 +12,12 @@ export const POOL_GRID = {
 } as const;
 
 export const POOL_HEIGHT_MAX = 80;
+/** Shared gameplay/render scale so buoyancy and the visible mesh agree. */
+export const POOL_PRESENTATION_HEIGHT_SCALE = 2.2;
 export const POOL_PROTOCOL_VERSION = 1;
 export const POOL_BROADCAST_INTERVAL_MS = 100;
+export const POOL_BOAT_BROADCAST_INTERVAL_MS = 1_000 / 30;
+export const POOL_BOAT_RESET_COOLDOWN_MS = 5_000;
 export const POOL_KEYFRAME_INTERVAL_MS = 2_000;
 
 export const POOL_CELL_COUNT = POOL_GRID.cols * POOL_GRID.rows;
@@ -26,6 +30,29 @@ export interface PoolPoint {
   x: number;
   /** Depth along the pool's Z axis. */
   y: number;
+}
+
+export interface PoolViewpoint {
+  /** Zero-based pool-world X; viewpoints may stand outside the basin. */
+  x: number;
+  y: number;
+  /** Zero-based pool-world Z; viewpoints may stand outside the basin. */
+  z: number;
+}
+
+export interface PoolPresenceState {
+  pointer: PoolPoint | null;
+  viewpoint: PoolViewpoint;
+}
+
+export interface PoolVector3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface PoolQuaternion extends PoolVector3 {
+  w: number;
 }
 
 interface PoolFrameBase {
@@ -52,6 +79,20 @@ export interface PoolTileFrame<TBinary = Int8Array> extends PoolFrameBase {
 export type PoolFrame<TBinary = Int8Array> =
   PoolKeyframe<TBinary> | PoolTileFrame<TBinary>;
 
+export interface PoolBoatFrame {
+  type: "pool:boat";
+  version: typeof POOL_PROTOCOL_VERSION;
+  roomId: typeof POOL_ROOM_ID;
+  epoch: string;
+  seq: number;
+  position: PoolVector3;
+  rotation: PoolQuaternion;
+  /** Increments only when a participant resets the boat. */
+  resetSeq: number;
+  /** Server-authoritative cooldown remaining when this frame was created. */
+  resetCooldownMs: number;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null
     ? (value as Record<string, unknown>)
@@ -77,6 +118,27 @@ export function normalizePoolPoint(value: unknown): PoolPoint | null {
   if (!finiteInRange(record.x, 0, POOL_WORLD.width)) return null;
   if (!finiteInRange(record.y, 0, POOL_WORLD.depth)) return null;
   return { x: record.x, y: record.y };
+}
+
+export function normalizePoolViewpoint(value: unknown): PoolViewpoint | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  if (!finiteInRange(record.x, -5_000, POOL_WORLD.width + 5_000)) return null;
+  if (!finiteInRange(record.y, 100, 6_000)) return null;
+  if (!finiteInRange(record.z, -5_000, POOL_WORLD.depth + 5_000)) return null;
+  return { x: record.x, y: record.y, z: record.z };
+}
+
+export function normalizePoolPresenceState(
+  value: unknown,
+): PoolPresenceState | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const pointer =
+    record.pointer === null ? null : normalizePoolPoint(record.pointer);
+  const viewpoint = normalizePoolViewpoint(record.viewpoint);
+  if ((record.pointer !== null && !pointer) || !viewpoint) return null;
+  return { pointer, viewpoint };
 }
 
 function exactBinaryView(value: unknown): Int8Array | null {
@@ -169,6 +231,72 @@ export function decodePoolFrame(value: unknown): PoolFrame | null {
     action: "tiles",
     mask,
     data,
+  };
+}
+
+function normalizeVector3(
+  value: unknown,
+  ranges: readonly [number, number, number, number, number, number],
+): PoolVector3 | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  if (!finiteInRange(record.x, ranges[0], ranges[1])) return null;
+  if (!finiteInRange(record.y, ranges[2], ranges[3])) return null;
+  if (!finiteInRange(record.z, ranges[4], ranges[5])) return null;
+  return { x: record.x, y: record.y, z: record.z };
+}
+
+export function decodePoolBoatFrame(value: unknown): PoolBoatFrame | null {
+  const record = asRecord(value);
+  if (
+    !record ||
+    record.type !== "pool:boat" ||
+    record.version !== POOL_PROTOCOL_VERSION ||
+    record.roomId !== POOL_ROOM_ID ||
+    !validEpoch(record.epoch) ||
+    !validSequence(record.seq) ||
+    !validSequence(record.resetSeq) ||
+    !finiteInRange(record.resetCooldownMs, 0, POOL_BOAT_RESET_COOLDOWN_MS)
+  ) {
+    return null;
+  }
+
+  const position = normalizeVector3(record.position, [
+    0,
+    POOL_WORLD.width,
+    -POOL_HEIGHT_MAX * POOL_PRESENTATION_HEIGHT_SCALE,
+    POOL_HEIGHT_MAX * POOL_PRESENTATION_HEIGHT_SCALE + 240,
+    0,
+    POOL_WORLD.depth,
+  ]);
+  const rotation = asRecord(record.rotation);
+  if (!position || !rotation) return null;
+  if (
+    !finiteInRange(rotation.x, -1, 1) ||
+    !finiteInRange(rotation.y, -1, 1) ||
+    !finiteInRange(rotation.z, -1, 1) ||
+    !finiteInRange(rotation.w, -1, 1)
+  ) {
+    return null;
+  }
+
+  const norm = Math.hypot(rotation.x, rotation.y, rotation.z, rotation.w);
+  if (norm < 0.9 || norm > 1.1) return null;
+  return {
+    type: "pool:boat",
+    version: POOL_PROTOCOL_VERSION,
+    roomId: POOL_ROOM_ID,
+    epoch: record.epoch,
+    seq: record.seq,
+    position,
+    rotation: {
+      x: rotation.x / norm,
+      y: rotation.y / norm,
+      z: rotation.z / norm,
+      w: rotation.w / norm,
+    },
+    resetSeq: record.resetSeq,
+    resetCooldownMs: record.resetCooldownMs,
   };
 }
 

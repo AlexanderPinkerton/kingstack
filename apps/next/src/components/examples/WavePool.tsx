@@ -1,9 +1,16 @@
 "use client";
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, MousePointerClick, Radio, Waves } from "lucide-react";
+import {
+  Activity,
+  MousePointerClick,
+  Radio,
+  RotateCcw,
+  Waves,
+} from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { PresenceFacepile } from "@/components/collaboration/presence-facepile";
+import { Button } from "@/components/ui/button";
 import { useRootStore } from "@/hooks/useRootStore";
 import { useWavePool } from "@/hooks/useWavePool";
 import { browserLogger } from "@/lib/browser-logger";
@@ -17,7 +24,13 @@ import type { WavePoolStore } from "@/stores/userApp/wavePoolStore";
 
 const logger = browserLogger.child({ component: "WavePool" });
 
-const PoolScene = memo(function PoolScene({ store }: { store: WavePoolStore }) {
+const PoolScene = memo(function PoolScene({
+  store,
+  participantId,
+}: {
+  store: WavePoolStore;
+  participantId: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -27,10 +40,18 @@ const PoolScene = memo(function PoolScene({ store }: { store: WavePoolStore }) {
     let renderer: PoolRenderer | null = null;
     let surface: PoolSurfaceController | null = null;
     try {
-      renderer = new PoolRenderer(canvas, store.field, store.cursorBuffer, {
-        reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)")
-          .matches,
-      });
+      renderer = new PoolRenderer(
+        canvas,
+        store.field,
+        store.cursorBuffer,
+        store.viewpointBuffer,
+        store.boat,
+        {
+          reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)")
+            .matches,
+          initialAzimuth: azimuthForParticipantId(participantId),
+        },
+      );
       surface = new PoolSurfaceController(store, renderer);
       surface.attach(canvas);
       renderer.start();
@@ -42,13 +63,13 @@ const PoolScene = memo(function PoolScene({ store }: { store: WavePoolStore }) {
       surface?.dispose();
       renderer?.dispose();
     };
-  }, [store]);
+  }, [participantId, store]);
 
   return (
     <canvas
       ref={canvasRef}
       className="block size-full cursor-crosshair touch-pan-y"
-      aria-label="Interactive global wave pool. Move the pointer to disturb the water and click or tap to make a wave."
+      aria-label="Interactive global wave pool. Move the pointer to disturb the water, click for a wave, right-drag to orbit, and use the wheel to zoom."
     />
   );
 });
@@ -65,6 +86,26 @@ const PoolPresence = observer(function PoolPresence({
       hasPointer={(participantId) => store.cursors.hasPointer(participantId)}
       emptyLabel="Connecting to the global pool…"
     />
+  );
+});
+
+const PoolBoatReset = observer(function PoolBoatReset({
+  store,
+}: {
+  store: WavePoolStore;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={!store.boatReset.canReset}
+      onClick={() => store.resetBoat()}
+      title="Reset the shared boat to the center of the pool"
+    >
+      <RotateCcw aria-hidden="true" />
+      <span aria-live="polite">{store.boatReset.label}</span>
+    </Button>
   );
 });
 
@@ -114,10 +155,10 @@ export const WavePool = observer(function WavePool() {
             </span>
           </h2>
           <p className="mt-5 max-w-2xl text-base leading-7 text-white/50 sm:text-lg sm:leading-8">
-            Move across the surface to trail a disturbance, or click and tap to
-            send out a stronger pulse. The Nest server advances one
-            authoritative field for the entire site, so every person here sees
-            the same waves.
+            Make waves to push the shared boat, or right-drag to watch from a
+            different side. The Nest server advances one authoritative field and
+            boat for the entire site, so every person here changes the same
+            water. Colored 3D markers show where everyone else is watching from.
           </p>
         </div>
 
@@ -131,12 +172,12 @@ export const WavePool = observer(function WavePool() {
             {
               icon: Activity,
               label: "Smooth playback",
-              detail: "60Hz render, 10Hz network",
+              detail: "60Hz render, 30Hz boat",
             },
             {
               icon: MousePointerClick,
-              label: "Shared input",
-              detail: "Move, click, or tap",
+              label: "Shared boat",
+              detail: "Buoyancy, pitch, and roll",
             },
           ].map(({ icon: Icon, label, detail }) => (
             <div key={label} className="bg-[#0c0d10] px-5 py-4">
@@ -155,16 +196,27 @@ export const WavePool = observer(function WavePool() {
           role="group"
           aria-label="Wave pool controls"
         >
-          <PoolScene store={store} />
+          <PoolScene store={store} participantId={participantId} />
           <div className="pointer-events-none absolute bottom-3 left-3 rounded-full border border-white/10 bg-black/45 px-3 py-1.5 text-[0.68rem] text-white/45 backdrop-blur-md">
-            Move to stir · Click or tap for a pulse
+            Move to stir · Click for a pulse · Right-drag to orbit · Wheel to
+            zoom
           </div>
         </div>
 
-        <div className="mt-5">
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <PoolPresence store={store} />
+          <PoolBoatReset store={store} />
         </div>
       </div>
     </section>
   );
 });
+
+function azimuthForParticipantId(participantId: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < participantId.length; index += 1) {
+    hash ^= participantId.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) / 0xffffffff) * Math.PI * 2;
+}

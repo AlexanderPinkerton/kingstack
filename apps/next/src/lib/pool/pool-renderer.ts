@@ -5,21 +5,30 @@ import {
   BufferGeometry,
   CanvasTexture,
   Color,
+  ConeGeometry,
   DataTexture,
   DoubleSide,
   DirectionalLight,
+  Group,
+  InstancedMesh,
   LinearFilter,
+  LineBasicMaterial,
+  LineSegments,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
+  Object3D,
   PerspectiveCamera,
   Plane,
   PlaneGeometry,
   Points,
   PointsMaterial,
+  Quaternion,
   Raycaster,
   RedFormat,
   Scene,
   ShaderMaterial,
+  SphereGeometry,
   UnsignedByteType,
   Vector2,
   Vector3,
@@ -30,10 +39,14 @@ import {
   POOL_CELL_COUNT,
   POOL_GRID,
   POOL_HEIGHT_MAX,
+  POOL_PRESENTATION_HEIGHT_SCALE,
   POOL_WORLD,
+  type PoolViewpoint,
 } from "@kingstack/shared";
+import type { BoatBuffer } from "@/lib/pool/boat-buffer";
 import type { CursorBuffer } from "@/lib/pool/cursor-buffer";
 import type { PoolField } from "@/lib/pool/pool-field";
+import type { ViewpointBuffer } from "@/lib/pool/viewpoint-buffer";
 
 const VERTEX_SHADER = /* glsl */ `
   uniform sampler2D previousField;
@@ -140,17 +153,22 @@ export interface PoolProjector {
   project(fractionX: number, fractionY: number): PoolWorldPoint | null;
 }
 
+export interface PoolViewController extends PoolProjector {
+  orbit(deltaX: number, deltaY: number): void;
+  zoom(deltaY: number): void;
+  viewpoint(): PoolViewpoint;
+}
+
 export interface PoolRendererOptions {
   reducedMotion?: boolean;
-  /** Presentation-only exaggeration; authoritative heights remain unchanged. */
-  visualHeightScale?: number;
+  initialAzimuth?: number;
 }
 
 /** Owns all WebGL resources for one canvas. No React or MobX dependency. */
-export class PoolRenderer implements PoolProjector {
+export class PoolRenderer implements PoolViewController {
   private readonly renderer: WebGLRenderer;
   private readonly scene = new Scene();
-  private readonly camera = new PerspectiveCamera(42, 1, 10, 5_000);
+  private readonly camera = new PerspectiveCamera(42, 1, 10, 8_000);
   private readonly previousBytes = new Uint8Array(POOL_CELL_COUNT);
   private readonly currentBytes = new Uint8Array(POOL_CELL_COUNT);
   private readonly previousTexture = this.createFieldTexture(
@@ -179,6 +197,29 @@ export class PoolRenderer implements PoolProjector {
     depthWrite: false,
   });
   private readonly cursorPoints: Points;
+  private readonly viewpointGeometry = new ConeGeometry(19, 54, 6);
+  private readonly viewpointMaterials: MeshBasicMaterial[] = [];
+  private readonly viewpointMarkers: InstancedMesh[] = [];
+  private readonly viewpointToneCounts = new Uint16Array(TONE_COLORS.length);
+  private readonly viewpointLineGeometry = new BufferGeometry();
+  private readonly viewpointLinePositions: Float32Array;
+  private readonly viewpointLineColors: Float32Array;
+  private readonly viewpointLineMaterial = new LineBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.68,
+    depthTest: false,
+    depthWrite: false,
+  });
+  private readonly viewpointLines: LineSegments;
+  private readonly viewpointTransform = new Object3D();
+  private readonly viewpointDirection = new Vector3();
+  private readonly viewpointUp = new Vector3(0, 1, 0);
+  private readonly boatGroup = new Group();
+  private readonly boatGeometries: BufferGeometry[] = [];
+  private readonly boatMaterials: MeshStandardMaterial[] = [];
+  private readonly boatPreviousRotation = new Quaternion();
+  private readonly boatCurrentRotation = new Quaternion();
   private readonly basinGeometries: BufferGeometry[] = [];
   private readonly basinMaterial = new MeshStandardMaterial({
     color: 0x111c24,
@@ -195,26 +236,32 @@ export class PoolRenderer implements PoolProjector {
   private readonly intersection = new Vector3();
   private readonly surfacePlane = new Plane(new Vector3(0, 1, 0), 0);
   private readonly reducedMotion: boolean;
-  private readonly visualHeightScale: number;
+  private readonly visualHeightScale = POOL_PRESENTATION_HEIGHT_SCALE;
 
   private animationFrame: number | null = null;
   private fieldVersion = -1;
   private cursorVersion = -1;
+  private viewpointVersion = -1;
+  private boatVersion = -1;
   private width = 0;
   private height = 0;
+  private cameraAzimuth = 0;
+  private cameraElevation = 0.63;
+  private cameraRadius = 1_630;
+  private viewportDistanceScale = 1;
+  private cameraDirty = true;
   private disposed = false;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly field: PoolField,
     private readonly cursors: CursorBuffer,
+    private readonly viewpoints: ViewpointBuffer,
+    private readonly boat: BoatBuffer,
     options: PoolRendererOptions = {},
   ) {
     this.reducedMotion = options.reducedMotion ?? false;
-    this.visualHeightScale = Math.min(
-      3,
-      Math.max(1, options.visualHeightScale ?? 2.2),
-    );
+    this.cameraAzimuth = options.initialAzimuth ?? 0;
     this.renderer = new WebGLRenderer({
       canvas,
       antialias: true,
@@ -224,8 +271,7 @@ export class PoolRenderer implements PoolProjector {
     this.renderer.setClearColor(0x070b11, 1);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-    this.camera.position.set(0, 960, 1_320);
-    this.camera.lookAt(0, -20, 0);
+    this.applyCameraPose();
 
     this.scene.add(new AmbientLight(0x77a6b8, 0.72));
     const keyLight = new DirectionalLight(0xc8f5ff, 2.4);
@@ -281,6 +327,51 @@ export class PoolRenderer implements PoolProjector {
     this.cursorPoints.renderOrder = 2;
     this.scene.add(this.cursorPoints);
 
+    // Explicit tone materials avoid the fragile instanced-color shader path and
+    // guarantee that a marker matches its participant's facepile color.
+    for (const color of TONE_COLORS) {
+      const material = new MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.96,
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: false,
+      });
+      const markers = new InstancedMesh(
+        this.viewpointGeometry,
+        material,
+        viewpoints.capacity,
+      );
+      markers.count = 0;
+      markers.frustumCulled = false;
+      markers.renderOrder = 3;
+      this.viewpointMaterials.push(material);
+      this.viewpointMarkers.push(markers);
+      this.scene.add(markers);
+    }
+
+    this.viewpointLinePositions = new Float32Array(viewpoints.capacity * 6);
+    this.viewpointLineColors = new Float32Array(viewpoints.capacity * 6);
+    this.viewpointLineGeometry.setAttribute(
+      "position",
+      new BufferAttribute(this.viewpointLinePositions, 3),
+    );
+    this.viewpointLineGeometry.setAttribute(
+      "color",
+      new BufferAttribute(this.viewpointLineColors, 3),
+    );
+    this.viewpointLineGeometry.setDrawRange(0, 0);
+    this.viewpointLines = new LineSegments(
+      this.viewpointLineGeometry,
+      this.viewpointLineMaterial,
+    );
+    this.viewpointLines.frustumCulled = false;
+    this.viewpointLines.renderOrder = 3;
+    this.scene.add(this.viewpointLines);
+
+    this.addBoat();
+
     this.resize();
   }
 
@@ -323,6 +414,36 @@ export class PoolRenderer implements PoolProjector {
     return { x, z };
   }
 
+  orbit(deltaX: number, deltaY: number): void {
+    if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return;
+    this.cameraAzimuth -= deltaX * 0.005;
+    this.cameraElevation = Math.min(
+      1.18,
+      Math.max(0.28, this.cameraElevation + deltaY * 0.004),
+    );
+    this.applyCameraPose();
+    this.cameraDirty = true;
+  }
+
+  zoom(deltaY: number): void {
+    if (!Number.isFinite(deltaY)) return;
+    this.cameraRadius = Math.min(
+      2_800,
+      Math.max(1_100, this.cameraRadius * Math.exp(deltaY * 0.001)),
+    );
+    this.applyCameraPose();
+    this.cameraDirty = true;
+  }
+
+  viewpoint(): PoolViewpoint {
+    this.resize();
+    return {
+      x: this.camera.position.x + POOL_WORLD.width / 2,
+      y: this.camera.position.y,
+      z: this.camera.position.z + POOL_WORLD.depth / 2,
+    };
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.stop();
@@ -334,6 +455,12 @@ export class PoolRenderer implements PoolProjector {
     this.cursorGeometry.dispose();
     this.cursorMaterial.dispose();
     this.cursorTexture.dispose();
+    this.viewpointGeometry.dispose();
+    this.viewpointMaterials.forEach((material) => material.dispose());
+    this.viewpointLineGeometry.dispose();
+    this.viewpointLineMaterial.dispose();
+    this.boatGeometries.forEach((geometry) => geometry.dispose());
+    this.boatMaterials.forEach((material) => material.dispose());
     this.basinGeometries.forEach((geometry) => geometry.dispose());
     this.basinMaterial.dispose();
     this.floorMaterial.dispose();
@@ -357,7 +484,30 @@ export class PoolRenderer implements PoolProjector {
         );
     this.poolMaterial.uniforms.frameMix.value = alpha;
     const cursorsChanged = this.syncCursors(alpha);
-    if (!this.reducedMotion || resized || fieldChanged || cursorsChanged) {
+    const viewpointsChanged = this.syncViewpoints();
+    const boatChanged = this.syncBoat(
+      this.reducedMotion
+        ? 1
+        : Math.min(
+            1,
+            Math.max(
+              0,
+              (nowMs - this.boat.receivedAtMs) /
+                (this.boat.interpolationIntervalMs * 1.15),
+            ),
+          ),
+    );
+    const cameraChanged = this.cameraDirty;
+    this.cameraDirty = false;
+    if (
+      !this.reducedMotion ||
+      resized ||
+      fieldChanged ||
+      cursorsChanged ||
+      viewpointsChanged ||
+      boatChanged ||
+      cameraChanged
+    ) {
       this.renderer.render(this.scene, this.camera);
     }
     this.animationFrame = requestAnimationFrame(this.renderFrame);
@@ -373,10 +523,9 @@ export class PoolRenderer implements PoolProjector {
     const aspect = width / height;
     // Pull back on portrait surfaces so the fixed-width world is never
     // cropped merely because the canvas is taller on a phone.
-    const distanceScale = Math.max(1, 16 / 9 / aspect);
-    this.camera.position.set(0, 960 * distanceScale, 1_320 * distanceScale);
-    this.camera.lookAt(0, -20, 0);
+    this.viewportDistanceScale = Math.max(1, 16 / 9 / aspect);
     this.camera.aspect = aspect;
+    this.applyCameraPose();
     this.camera.updateProjectionMatrix();
     return true;
   }
@@ -421,6 +570,100 @@ export class PoolRenderer implements PoolProjector {
       this.cursorGeometry.getAttribute("color").needsUpdate = true;
     }
     return cursorChanged;
+  }
+
+  private syncViewpoints(): boolean {
+    if (this.viewpointVersion === this.viewpoints.version) return false;
+    this.viewpointVersion = this.viewpoints.version;
+    this.viewpointToneCounts.fill(0);
+    for (let index = 0; index < this.viewpoints.count; index += 1) {
+      const offset = index * 3;
+      const x = (this.viewpoints.positions[offset] ?? 0) - POOL_WORLD.width / 2;
+      const y = this.viewpoints.positions[offset + 1] ?? 0;
+      const z =
+        (this.viewpoints.positions[offset + 2] ?? 0) - POOL_WORLD.depth / 2;
+      this.viewpointTransform.position.set(x, y, z);
+      this.viewpointDirection.set(-x, -y, -z).normalize();
+      this.viewpointTransform.quaternion.setFromUnitVectors(
+        this.viewpointUp,
+        this.viewpointDirection,
+      );
+      this.viewpointTransform.updateMatrix();
+      const tone = Math.min(
+        TONE_COLORS.length - 1,
+        this.viewpoints.tones[index] ?? 0,
+      );
+      const toneSlot = this.viewpointToneCounts[tone] ?? 0;
+      this.viewpointMarkers[tone]?.setMatrixAt(
+        toneSlot,
+        this.viewpointTransform.matrix,
+      );
+      this.viewpointToneCounts[tone] = toneSlot + 1;
+
+      const color = TONE_COLORS[tone] ?? TONE_COLORS[0];
+      const lineOffset = index * 6;
+      this.viewpointLinePositions[lineOffset] = x;
+      this.viewpointLinePositions[lineOffset + 1] = 0;
+      this.viewpointLinePositions[lineOffset + 2] = z;
+      this.viewpointLinePositions[lineOffset + 3] = x;
+      this.viewpointLinePositions[lineOffset + 4] = Math.max(0, y - 27);
+      this.viewpointLinePositions[lineOffset + 5] = z;
+      this.viewpointLineColors[lineOffset] = color.r;
+      this.viewpointLineColors[lineOffset + 1] = color.g;
+      this.viewpointLineColors[lineOffset + 2] = color.b;
+      this.viewpointLineColors[lineOffset + 3] = color.r;
+      this.viewpointLineColors[lineOffset + 4] = color.g;
+      this.viewpointLineColors[lineOffset + 5] = color.b;
+    }
+    for (let tone = 0; tone < this.viewpointMarkers.length; tone += 1) {
+      const markers = this.viewpointMarkers[tone];
+      if (!markers) continue;
+      markers.count = this.viewpointToneCounts[tone] ?? 0;
+      markers.instanceMatrix.needsUpdate = true;
+    }
+    this.viewpointLineGeometry.setDrawRange(0, this.viewpoints.count * 2);
+    this.viewpointLineGeometry.getAttribute("position").needsUpdate = true;
+    this.viewpointLineGeometry.getAttribute("color").needsUpdate = true;
+    return true;
+  }
+
+  private syncBoat(alpha: number): boolean {
+    const changed = this.boatVersion !== this.boat.version;
+    this.boatVersion = this.boat.version;
+    this.boatGroup.visible = this.boat.epoch !== null;
+    if (!this.boatGroup.visible) return changed;
+
+    const previousPosition = this.boat.previousPosition;
+    const currentPosition = this.boat.currentPosition;
+    this.boatGroup.position.set(
+      (previousPosition[0] ?? 0) +
+        ((currentPosition[0] ?? 0) - (previousPosition[0] ?? 0)) * alpha -
+        POOL_WORLD.width / 2,
+      (previousPosition[1] ?? 0) +
+        ((currentPosition[1] ?? 0) - (previousPosition[1] ?? 0)) * alpha,
+      (previousPosition[2] ?? 0) +
+        ((currentPosition[2] ?? 0) - (previousPosition[2] ?? 0)) * alpha -
+        POOL_WORLD.depth / 2,
+    );
+    this.boatPreviousRotation.fromArray(this.boat.previousRotation);
+    this.boatCurrentRotation.fromArray(this.boat.currentRotation);
+    this.boatGroup.quaternion.slerpQuaternions(
+      this.boatPreviousRotation,
+      this.boatCurrentRotation,
+      alpha,
+    );
+    return changed;
+  }
+
+  private applyCameraPose(): void {
+    const radius = this.cameraRadius * this.viewportDistanceScale;
+    const horizontalRadius = Math.cos(this.cameraElevation) * radius;
+    this.camera.position.set(
+      Math.sin(this.cameraAzimuth) * horizontalRadius,
+      Math.sin(this.cameraElevation) * radius,
+      Math.cos(this.cameraAzimuth) * horizontalRadius,
+    );
+    this.camera.lookAt(0, -20, 0);
   }
 
   private createFieldTexture(bytes: Uint8Array): DataTexture {
@@ -483,6 +726,42 @@ export class PoolRenderer implements PoolProjector {
       wall.position.set(0, wallY, z);
       this.scene.add(wall);
     }
+  }
+
+  private addBoat(): void {
+    const hullGeometry = new SphereGeometry(1, 20, 12);
+    const deckGeometry = new BoxGeometry(76, 12, 112);
+    const cabinGeometry = new BoxGeometry(42, 30, 48);
+    const hullMaterial = new MeshStandardMaterial({
+      color: 0xff9c6e,
+      roughness: 0.46,
+      metalness: 0.08,
+    });
+    const deckMaterial = new MeshStandardMaterial({
+      color: 0xf9da7f,
+      roughness: 0.62,
+      metalness: 0.04,
+    });
+    const cabinMaterial = new MeshStandardMaterial({
+      color: 0x172d38,
+      roughness: 0.34,
+      metalness: 0.18,
+    });
+
+    const hull = new Mesh(hullGeometry, hullMaterial);
+    hull.scale.set(52, 25, 102);
+    hull.position.y = 2;
+    const deck = new Mesh(deckGeometry, deckMaterial);
+    deck.position.y = 22;
+    const cabin = new Mesh(cabinGeometry, cabinMaterial);
+    cabin.position.set(0, 43, -10);
+
+    this.boatGeometries.push(hullGeometry, deckGeometry, cabinGeometry);
+    this.boatMaterials.push(hullMaterial, deckMaterial, cabinMaterial);
+    this.boatGroup.add(hull, deck, cabin);
+    this.boatGroup.visible = false;
+    this.boatGroup.renderOrder = 2;
+    this.scene.add(this.boatGroup);
   }
 }
 

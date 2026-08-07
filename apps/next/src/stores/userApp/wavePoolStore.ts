@@ -1,41 +1,38 @@
-import { POOL_ROOM_ID, POOL_WORLD } from "@kingstack/shared";
+import type { PoolViewpoint } from "@kingstack/shared";
 import { browserLogger } from "@/lib/browser-logger";
+import { BoatBuffer } from "@/lib/pool/boat-buffer";
 import { CursorBuffer } from "@/lib/pool/cursor-buffer";
 import { PoolField } from "@/lib/pool/pool-field";
+import { ViewpointBuffer } from "@/lib/pool/viewpoint-buffer";
 import type { RealtimeTransport } from "@/lib/realtime-manager";
 import type {
   PresenceParticipant,
   PresenceServerEvent,
 } from "@/lib/realtime/presence-room";
 import { StoreDemand } from "@/lib/store-lifecycle";
-import { SharedCursorStore } from "./sharedCursorStore";
+import { PoolBoatResetStore } from "./poolBoatResetStore";
+import { PoolPresenceStore } from "./poolPresenceStore";
 
 const logger = browserLogger.child({ component: "WavePoolStore" });
-
-function poolProjection(x: number, z: number): { x: number; y: number } {
-  return {
-    x: Math.min(POOL_WORLD.width, Math.max(0, x)),
-    y: Math.min(POOL_WORLD.depth, Math.max(0, z)),
-  };
-}
 
 /** Owns the one global pool's field, pointer stream, and room lease. */
 export class WavePoolStore {
   readonly field = new PoolField();
+  readonly boat = new BoatBuffer();
   readonly cursorBuffer = new CursorBuffer();
-  readonly cursors: SharedCursorStore;
+  readonly viewpointBuffer = new ViewpointBuffer();
+  readonly boatReset = new PoolBoatResetStore();
+  readonly cursors: PoolPresenceStore;
 
   private readonly demand: StoreDemand;
   private releasePool: (() => void) | null = null;
+  private releaseBoat: (() => void) | null = null;
   private releasePresence: (() => void) | null = null;
   private releaseCursors: (() => void) | null = null;
   private disposed = false;
 
   constructor(private readonly transport: RealtimeTransport) {
-    this.cursors = new SharedCursorStore(transport, POOL_ROOM_ID, {
-      projection: poolProjection,
-      trackRipples: false,
-    });
+    this.cursors = new PoolPresenceStore(transport);
     this.demand = new StoreDemand(() => this.syncDemand());
   }
 
@@ -45,6 +42,7 @@ export class WavePoolStore {
 
   setParticipant(participant: PresenceParticipant): void {
     this.cursorBuffer.setSelfParticipantId(participant.id);
+    this.viewpointBuffer.setSelfParticipantId(participant.id);
     this.cursors.setParticipant(participant);
   }
 
@@ -60,12 +58,22 @@ export class WavePoolStore {
     this.cursors.emitTap(x, z);
   }
 
+  setViewpoint(viewpoint: PoolViewpoint): void {
+    this.cursors.setViewpoint(viewpoint);
+  }
+
+  resetBoat(): void {
+    if (!this.boatReset.beginRequest()) return;
+    if (!this.cursors.emitBoatReset()) this.boatReset.cancelPending();
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
     this.disconnect();
     this.demand.dispose();
     this.cursors.dispose();
+    this.boatReset.dispose();
   }
 
   private syncDemand(): void {
@@ -83,9 +91,23 @@ export class WavePoolStore {
           logger.debug("wave_pool.frame_ignored", { reason: result.reason });
         }
       });
+      this.releaseBoat = this.transport.subscribe<unknown>(
+        "pool:boat",
+        (event) => {
+          if (!this.boat.apply(event) || !this.boat.epoch) return;
+          this.boatReset.observeFrame(
+            this.boat.epoch,
+            this.boat.resetSeq,
+            this.boat.resetCooldownMs,
+          );
+        },
+      );
       this.releasePresence = this.transport.subscribe<
         PresenceServerEvent<unknown>
-      >("presence", (event) => this.cursorBuffer.apply(event));
+      >("presence", (event) => {
+        this.cursorBuffer.apply(event);
+        this.viewpointBuffer.apply(event);
+      });
       this.releaseCursors = this.cursors.activate();
       return;
     }
@@ -99,9 +121,14 @@ export class WavePoolStore {
     this.releaseCursors = null;
     this.releasePresence?.();
     this.releasePresence = null;
+    this.releaseBoat?.();
+    this.releaseBoat = null;
     this.releasePool?.();
     this.releasePool = null;
     this.field.reset();
+    this.boat.reset();
+    this.boatReset.reset();
     this.cursorBuffer.clear();
+    this.viewpointBuffer.clear();
   }
 }

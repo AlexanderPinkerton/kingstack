@@ -6,9 +6,11 @@ import {
   POOL_ROOM_ID,
   POOL_TILE_COUNT,
   applyPoolTiles,
+  decodePoolBoatFrame,
   decodePoolFrame,
   extractPoolTiles,
   normalizePoolPoint,
+  normalizePoolPresenceState,
 } from "@kingstack/shared";
 
 describe("pool protocol validation", () => {
@@ -20,6 +22,52 @@ describe("pool protocol validation", () => {
     expect(normalizePoolPoint({ x: -1, y: 500 })).toBeNull();
     expect(normalizePoolPoint({ x: 500, y: 1001 })).toBeNull();
     expect(normalizePoolPoint({ x: Number.NaN, y: 500 })).toBeNull();
+  });
+
+  it("validates combined pointer and viewpoint presence", () => {
+    const state = {
+      pointer: { x: 400, y: 500 },
+      viewpoint: { x: -300, y: 900, z: 1_500 },
+    };
+    expect(normalizePoolPresenceState(state)).toEqual(state);
+    expect(normalizePoolPresenceState({ ...state, pointer: null })).toEqual({
+      ...state,
+      pointer: null,
+    });
+    expect(
+      normalizePoolPresenceState({
+        ...state,
+        viewpoint: { ...state.viewpoint, y: 99 },
+      }),
+    ).toBeNull();
+  });
+
+  it("validates and normalizes authoritative boat poses", () => {
+    const decoded = decodePoolBoatFrame({
+      type: "pool:boat",
+      version: POOL_PROTOCOL_VERSION,
+      roomId: POOL_ROOM_ID,
+      epoch: "epoch-a",
+      seq: 3,
+      position: { x: 800, y: 8, z: 500 },
+      rotation: { x: 0, y: 0, z: 0, w: 0.95 },
+      resetSeq: 1,
+      resetCooldownMs: 4_000,
+    });
+    expect(decoded?.rotation).toEqual({ x: 0, y: 0, z: 0, w: 1 });
+    expect(decoded?.resetCooldownMs).toBe(4_000);
+    expect(
+      decodePoolBoatFrame({
+        ...decoded,
+        rotation: { x: 0, y: 0, z: 0, w: 0 },
+      }),
+    ).toBeNull();
+    expect(
+      decodePoolBoatFrame({
+        ...decoded,
+        resetCooldownMs: 5_001,
+      }),
+    ).toBeNull();
   });
 
   it("preserves the exact byte range of a keyframe view", () => {

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { AppLogger } from "@kingstack/logger";
 import {
   POOL_BROADCAST_INTERVAL_MS,
+  POOL_BOAT_BROADCAST_INTERVAL_MS,
+  POOL_BOAT_RESET_COOLDOWN_MS,
   POOL_CELL_COUNT,
   POOL_GRID,
   POOL_KEYFRAME_INTERVAL_MS,
@@ -11,15 +13,20 @@ import {
   extractPoolTiles,
   normalizePoolPoint,
   type PoolFrame,
+  type PoolBoatFrame,
   type PoolKeyframe,
   type PoolPoint,
   type PoolTileFrame,
 } from "@kingstack/shared";
 import { WaveField } from "./wave-field";
+import { BoatSimulation } from "./boat-simulation";
 
 const TICK_INTERVAL_MS = 1000 / 60;
-const BROADCAST_EVERY_TICKS = Math.round(
+const FIELD_BROADCAST_EVERY_TICKS = Math.round(
   POOL_BROADCAST_INTERVAL_MS / TICK_INTERVAL_MS,
+);
+const BOAT_BROADCAST_EVERY_TICKS = Math.round(
+  POOL_BOAT_BROADCAST_INTERVAL_MS / TICK_INTERVAL_MS,
 );
 const SLEEP_ENERGY_THRESHOLD = 0.01;
 const MIN_POINTER_SAMPLE_MS = 8;
@@ -41,12 +48,17 @@ interface PointerSample {
 
 export interface PoolSocket {
   id: string;
-  emit(event: "pool", frame: PoolKeyframe): unknown;
+  emit(
+    event: "pool" | "pool:boat",
+    frame: PoolKeyframe | PoolBoatFrame,
+  ): unknown;
 }
 
 export interface GlobalPoolTransport {
   broadcastVolatile(frame: PoolFrame): void;
   broadcastReliable(frame: PoolKeyframe): void;
+  broadcastBoatVolatile(frame: PoolBoatFrame): void;
+  broadcastBoatReliable(frame: PoolBoatFrame): void;
   unwritableSocketCount(): number;
 }
 
@@ -62,6 +74,7 @@ export interface GlobalPoolOptions {
   scheduler?: GlobalPoolScheduler;
   createEpoch?: () => string;
   waveField?: WaveField;
+  boat?: BoatSimulation;
 }
 
 const DEFAULT_SCHEDULER: GlobalPoolScheduler = {
@@ -76,6 +89,7 @@ export class GlobalPool {
   private readonly logger: AppLogger;
   private readonly scheduler: GlobalPoolScheduler;
   private readonly field: WaveField;
+  private readonly boat: BoatSimulation;
   private readonly epoch: string;
   private readonly members = new Set<string>();
   private readonly pointerSamples = new Map<string, PointerSample>();
@@ -85,6 +99,9 @@ export class GlobalPool {
   private tickHandle: unknown = null;
   private tickNumber = 0;
   private seq = 0;
+  private boatSeq = 0;
+  private boatResetSeq = 0;
+  private boatResetAvailableAtMs = 0;
   private lastTickAtMs = 0;
   private lastBroadcastKeyframeAtMs = 0;
   private missedFixedSteps = 0;
@@ -99,6 +116,7 @@ export class GlobalPool {
     this.logger = options.logger;
     this.scheduler = options.scheduler ?? DEFAULT_SCHEDULER;
     this.field = options.waveField ?? new WaveField();
+    this.boat = options.boat ?? new BoatSimulation();
     this.epoch = options.createEpoch?.() ?? randomUUID();
     this.lastBroadcastKeyframeAtMs = this.scheduler.now();
     this.logger.info("realtime.pool_created", { epoch: this.epoch });
@@ -117,6 +135,7 @@ export class GlobalPool {
     this.members.add(socket.id);
     this.field.quantise(this.quantised);
     socket.emit("pool", this.keyframe());
+    socket.emit("pool:boat", this.boatFrame());
     this.logger.debug("realtime.pool_joined", {
       connectionId: socket.id,
       memberCount: this.members.size,
@@ -131,6 +150,7 @@ export class GlobalPool {
     if (this.members.size === 0) {
       this.stopTimer("empty");
       this.field.reset();
+      this.boat.reset();
       this.quantised.fill(0);
       this.liveTiles.fill(0);
       this.tickNumber = 0;
@@ -198,6 +218,33 @@ export class GlobalPool {
     this.startTimer("tap");
   }
 
+  resetBoat(nowMs = this.scheduler.now()): {
+    status: "reset" | "cooldown";
+    retryAfterMs: number;
+  } {
+    if (!Number.isFinite(nowMs)) {
+      return { status: "cooldown", retryAfterMs: 0 };
+    }
+    const retryAfterMs = Math.max(0, this.boatResetAvailableAtMs - nowMs);
+    if (this.disposed || this.members.size === 0 || retryAfterMs > 0) {
+      return { status: "cooldown", retryAfterMs };
+    }
+
+    this.boat.reset();
+    this.boatResetSeq += 1;
+    this.boatResetAvailableAtMs = nowMs + POOL_BOAT_RESET_COOLDOWN_MS;
+    this.broadcastReliableBoat();
+    this.logger.info("realtime.pool_boat_reset", {
+      resetSeq: this.boatResetSeq,
+      memberCount: this.members.size,
+      cooldownMs: POOL_BOAT_RESET_COOLDOWN_MS,
+    });
+    return {
+      status: "reset",
+      retryAfterMs: POOL_BOAT_RESET_COOLDOWN_MS,
+    };
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
@@ -205,6 +252,7 @@ export class GlobalPool {
     this.members.clear();
     this.pointerSamples.clear();
     this.field.reset();
+    this.boat.reset();
     this.quantised.fill(0);
     this.liveTiles.fill(0);
   }
@@ -245,19 +293,29 @@ export class GlobalPool {
 
     try {
       this.field.step();
+      this.boat.step(this.field);
     } catch (error) {
       this.logger.error("realtime.pool_solver_reset", { error });
       this.field.reset();
+      this.boat.reset();
       this.quantised.fill(0);
       this.liveTiles.fill(0);
       this.broadcastReliableKeyframe();
+      this.broadcastReliableBoat();
       this.stopTimer("fault");
       return;
     }
 
     this.tickNumber += 1;
-    if (this.tickNumber % BROADCAST_EVERY_TICKS === 0)
+    if (this.tickNumber % FIELD_BROADCAST_EVERY_TICKS === 0) {
       this.broadcastState(startedAt);
+    }
+    if (
+      this.tickHandle !== null &&
+      this.tickNumber % BOAT_BROADCAST_EVERY_TICKS === 0
+    ) {
+      this.broadcastVolatileBoat();
+    }
 
     const duration = this.scheduler.now() - startedAt;
     this.recordTickDuration(duration);
@@ -266,9 +324,14 @@ export class GlobalPool {
   private broadcastState(nowMs: number): void {
     this.field.quantise(this.quantised);
     const allZero = this.quantised.every((value) => value === 0);
-    if (allZero && this.field.energy() < SLEEP_ENERGY_THRESHOLD) {
+    if (
+      allZero &&
+      this.field.energy() < SLEEP_ENERGY_THRESHOLD &&
+      this.boat.isSettled()
+    ) {
       this.liveTiles.fill(0);
       this.broadcastReliableKeyframe();
+      this.broadcastReliableBoat();
       this.stopTimer("sleep");
       return;
     }
@@ -283,23 +346,26 @@ export class GlobalPool {
       this.transport.broadcastVolatile(frame);
       this.lastBroadcastKeyframeAtMs = nowMs;
       this.logBroadcast(frame, POOL_CELL_COUNT);
-      return;
+    } else if (tiles) {
+      this.seq += 1;
+      const frame: PoolTileFrame = {
+        type: "pool",
+        version: POOL_PROTOCOL_VERSION,
+        roomId: POOL_ROOM_ID,
+        epoch: this.epoch,
+        seq: this.seq,
+        action: "tiles",
+        mask: tiles.mask,
+        data: tiles.data,
+      };
+      this.transport.broadcastVolatile(frame);
+      this.logBroadcast(frame, tiles.data.byteLength);
     }
+  }
 
-    if (!tiles) return;
-    this.seq += 1;
-    const frame: PoolTileFrame = {
-      type: "pool",
-      version: POOL_PROTOCOL_VERSION,
-      roomId: POOL_ROOM_ID,
-      epoch: this.epoch,
-      seq: this.seq,
-      action: "tiles",
-      mask: tiles.mask,
-      data: tiles.data,
-    };
-    this.transport.broadcastVolatile(frame);
-    this.logBroadcast(frame, tiles.data.byteLength);
+  private broadcastVolatileBoat(): void {
+    this.boatSeq += 1;
+    this.transport.broadcastBoatVolatile(this.boatFrame());
   }
 
   private broadcastReliableKeyframe(): void {
@@ -308,6 +374,11 @@ export class GlobalPool {
     this.transport.broadcastReliable(frame);
     this.lastBroadcastKeyframeAtMs = this.scheduler.now();
     this.logBroadcast(frame, POOL_CELL_COUNT);
+  }
+
+  private broadcastReliableBoat(): void {
+    this.boatSeq += 1;
+    this.transport.broadcastBoatReliable(this.boatFrame());
   }
 
   private keyframe(): PoolKeyframe {
@@ -320,6 +391,25 @@ export class GlobalPool {
       action: "keyframe",
       grid: POOL_GRID,
       data: this.quantised.slice(),
+    };
+  }
+
+  private boatFrame(): PoolBoatFrame {
+    const pose = this.boat.pose();
+    const resetCooldownMs = Math.max(
+      0,
+      this.boatResetAvailableAtMs - this.scheduler.now(),
+    );
+    return {
+      type: "pool:boat",
+      version: POOL_PROTOCOL_VERSION,
+      roomId: POOL_ROOM_ID,
+      epoch: this.epoch,
+      seq: this.boatSeq,
+      position: pose.position,
+      rotation: pose.rotation,
+      resetSeq: this.boatResetSeq,
+      resetCooldownMs,
     };
   }
 

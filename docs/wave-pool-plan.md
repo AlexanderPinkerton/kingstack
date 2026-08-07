@@ -1,8 +1,8 @@
 # Shared Wave Pool — Implementation Plan and Status
 
 A tech demo: a 3D pool of water rendered in every connected client's browser,
-simulated on the server, where moving your cursor through the surface creates
-ripples that everyone sees.
+simulated on the server, where people make waves to move one shared buoyant
+boat and can see where the other clients are watching from.
 
 The pitch is not the water. It is that the generic room protocol landed in
 `aug-5-collab` can carry a server-authoritative physics simulation without a
@@ -14,14 +14,15 @@ There is exactly **one** pool: `pool:global`. Every authenticated site user who
 opens the demo joins that same surface. Multiple pool scopes, private pool
 sessions, and horizontal simulation scaling are deliberately out of scope.
 
-**Implementation status (2026-08-06):** the shared protocol, authoritative
-solver, exact global-room admission, gateway wiring, structural roster, client
-store, bounded cursor projection, Three.js renderer, controller, route, and
-automated tests are implemented. Automated verification is recorded in §9.
-The remaining acceptance work is intentionally browser-driven: visual tuning,
-two-browser interaction, React Profiler confirmation, and bandwidth/compression
-measurement. Per repository guidance, the implementation did not start the dev
-server or claim visual verification.
+**Implementation status (2026-08-07):** the shared protocol, authoritative wave
+and boat simulation, exact global-room admission, gateway wiring, pool-specific
+pointer/viewpoint presence, structural roster, fixed-capacity scene buffers,
+orbit controller, Three.js renderer, route, and automated tests are implemented.
+Automated verification is recorded in §9. The remaining acceptance work is
+intentionally browser-driven: visual/physics tuning, two-browser interaction,
+React Profiler confirmation, and bandwidth/compression measurement. Per
+repository guidance, the implementation did not start the dev server or claim
+visual verification.
 
 ---
 
@@ -55,8 +56,9 @@ its state does not survive the network.
 
 - **Pros:** ~40 lines of solver; ~0.5 ms/tick at 128×128; state is a flat array,
   trivially serialisable; looks exactly like a wave pool.
-- **Cons:** no splashes, no breaking waves, no interaction with submerged
-  geometry. Accepted — none of those are what the demo is showing.
+- **Cons:** no splashes, no breaking waves, and no volumetric hull displacement.
+  The shared boat samples the height field instead (§2.7), which is sufficient
+  for this interaction but is not full fluid/geometry coupling.
 
 ### 2.2 Server-authoritative, streamed to clients
 
@@ -112,15 +114,21 @@ pool, not per client.
 The cost TCP brings instead is head-of-line blocking: a stalled client backs up
 its stream and socket.io buffers unboundedly. Handled in §5.4.
 
-### 2.5 Cursors publish 2D, render 3D
+### 2.5 Pointers publish 2D; viewpoints publish 3D
 
 The pointer raycasts onto the water plane, so its meaningful position is 2D. Its
 rendered height is looked up from the field the client already has.
 
 - Zero extra bytes on the wire.
-- The presence payload is byte-identical to today's `canvas` namespace, so
-  `PresenceRoom<CursorState>` and `SharedCursorStore` keep the same state shape.
+- Pool presence wraps the optional pointer and required viewpoint in one state:
+  `{ pointer: { x, y } | null, viewpoint: { x, y, z } }`. One throttled
+  presence stream therefore covers both inputs without another room or socket.
 - Cursors visually bob on the waves for free.
+
+The viewpoint is the Three.js camera position in the same zero-based pool-world
+coordinates. Remote viewpoints render as color-coded 3D cones aimed at the
+pool, so a client across the table is visibly across the table. The local
+viewpoint is excluded from that client's marker buffer.
 
 Full 6DOF cursors are deliberately out of scope: a mouse has no depth axis, so
 there is no honest mapping.
@@ -142,6 +150,22 @@ The room still requires the existing authenticated realtime connection.
 Anonymous socket access is a separate product/auth decision, not implied by
 "global."
 
+### 2.7 One sampled rigid-body boat, not a particle fluid simulation
+
+The server advances one lightweight six-degree-of-freedom rigid body after each
+wave step. Six fixed probes under the hull sample height, vertical velocity,
+and slope from the field. Distributed buoyancy and drag at those points create
+translation, pitch, and roll; the sampled surface normal supplies the lateral
+force that lets waves push the boat.
+
+- **Pros:** one deterministic source of truth; no large physics dependency; the
+  60 Hz hot path stays allocation-free TypeScript; late joiners receive the
+  exact current pose; enough coupling for the intended wave-pushing game.
+- **Cons:** arcade physics, not naval architecture; no planing, capsizing,
+  splashes, wake generation, or collision geometry. Probe gains and hull shape
+  require browser tuning. A particle solver would add large cost without fixing
+  the more important multiplayer-authority problem.
+
 ---
 
 ## 3. Shared protocol and coordinate system
@@ -156,8 +180,10 @@ export const POOL_ROOM_ID = "pool:global" as const;
 export const POOL_WORLD = { width: 1600, depth: 1000 } as const;
 export const POOL_GRID = { cols: 64, rows: 40, tile: 8 } as const;
 export const POOL_HEIGHT_MAX = 80;
+export const POOL_PRESENTATION_HEIGHT_SCALE = 2.2;
 export const POOL_PROTOCOL_VERSION = 1;
 export const POOL_BROADCAST_INTERVAL_MS = 100;
+export const POOL_BOAT_BROADCAST_INTERVAL_MS = 1000 / 30;
 ```
 
 `64 × 40` cells over a `1600 × 1000` world is 25 world-units per cell, and
@@ -165,10 +191,12 @@ divides evenly into `8 × 5 = 40` tiles of `8 × 8`.
 
 The protocol's pool surface is `x = 0…1600`, `z = 0…1000`; Y is height. The
 three.js mesh may be centred internally, but `PoolRenderer.project()`
-must convert back to that zero-based protocol space before publishing.
-Presence state stays `{ x, y }`, where `y` means **depth along Z**, matching the
-existing `CursorState` wire shape. The pool namespace gets an exact-bounds
-validator rather than the wider `CANVAS_WORLD_LIMIT` validator.
+must convert back to that zero-based protocol space before publishing. The pool
+pointer stays `{ x, y }`, where `y` means **depth along Z**, but pool presence
+is `{ pointer, viewpoint }`. `viewpoint` uses real 3D coordinates; its X/Z
+range deliberately extends beyond the basin because cameras sit around the
+table. The pool namespace validates the complete envelope rather than using the
+wider generic `CANVAS_WORLD_LIMIT` validator.
 
 ---
 
@@ -216,6 +244,23 @@ so a gap is expected under backpressure: the client logs the gap, continues
 applying later absolute tiles, and becomes fully authoritative again at the
 next keyframe. It is not an ack — nothing is acked.
 
+**Boat frame** — sent reliably to one socket on join and at sleep, and
+broadcast volatile at 30 Hz while the simulation is active.
+
+```ts
+{ type: "pool:boat", version: 1, roomId: "pool:global",
+  epoch: string, seq: number,
+  position: { x: number, y: number, z: number },
+  rotation: { x: number, y: number, z: number, w: number },
+  resetSeq: number, resetCooldownMs: number }
+```
+
+Boat frames have their own sequence within the same epoch. The client retains
+the previous and current pose and interpolates both position and quaternion.
+`resetSeq` changes only after an accepted global reset; cooldown remaining lets
+late joiners reconstruct the same five-second button state. The decoder rejects
+non-finite/out-of-world positions, non-unit rotations, and invalid cooldowns.
+
 ---
 
 ## 5. Server work (`apps/nest/src/realtime/pool/`)
@@ -230,6 +275,7 @@ export class WaveField {
   constructor(cols: number, rows: number, opts?: WaveFieldOptions);
   step(dt: number): void;              // discrete wave equation + damping
   impulse(x: number, z: number, strength: number, radius: number): void;
+  sample(x: number, z: number, out: WaveSample): WaveSample;
   quantise(out: Int8Array): void;      // world height -> Int8
   energy(): number;                    // displacement + velocity
   reset(): void;
@@ -240,14 +286,26 @@ Two `Float32Array` buffers (current, previous), standard second-order update
 with a damping factor. Reflecting boundaries at the pool walls. The wave speed,
 cell spacing, and fixed `1 / 60` timestep must satisfy the 2D Courant stability
 condition; the constructor rejects unstable options instead of relying only on
-a long-running test to discover them.
+a long-running test to discover them. `sample()` bilinearly reads height,
+vertical velocity, and finite-difference slopes into a caller-owned object for
+the allocation-free boat path.
+
+### 5.1a `boat-simulation.ts` — sampled rigid body
+
+Pure TypeScript, no Nest and no socket dependency. `BoatSimulation.step(field)`
+runs after `WaveField.step()` at 60 Hz. Six submerged hull probes apply
+buoyancy, vertical/horizontal water drag, and force-at-point torque; a normalized
+quaternion integrates angular velocity. Air damping, speed caps, pool-wall
+response, finite-value checks, and a reset height bound keep hostile input from
+making the global simulation unstable.
 
 ### 5.2 `global-pool.ts` — the one simulation and its lifecycle
 
 One `GlobalPool` is constructed with the gateway. There is no pool registry and
-no map keyed by scope. It owns one `WaveField`, one quantised frame, a
-`Set<socketId>` of members, a `Map<socketId, PointerSample>`, the monotonic
-sequence, and the tick handle.
+no map keyed by scope. It owns one `WaveField`, one `BoatSimulation`, one
+quantised frame, a `Set<socketId>` of members, a
+`Map<socketId, PointerSample>`, monotonic field/boat sequences, and the tick
+handle.
 
 ```ts
 class GlobalPool {
@@ -260,22 +318,25 @@ class GlobalPool {
 ```
 
 Membership is idempotent and independent from `RoomRegistry` retractions. Every
-join receives a freshly quantised current keyframe, including a late join that
-lands between 10 Hz broadcasts. Joining a flat pool does not start a wasteful
-60 Hz timer: the first accepted pointer movement or tap wakes it. The last leave
-stops the timer, clears pointer history, and resets the unseen field to flat so
-a later first visitor does not resume a wave frozen in time.
+join receives a freshly quantised current keyframe and current boat frame,
+including a late join that lands between 10 Hz broadcasts. Joining a flat pool
+does not start a wasteful 60 Hz timer: the first accepted pointer movement or
+tap wakes it. The last leave stops the timer, clears pointer history, and resets
+the unseen field and boat so a later first visitor does not resume frozen state.
 
-Simulation runs at **60 Hz** with a fixed timestep; broadcast runs at **10 Hz**
-every sixth step. A delayed Node event loop never passes a large wall-clock
-`dt` into the solver or performs an unbounded catch-up loop. It records missed
-simulation time for instrumentation and continues from the next fixed step.
+Simulation runs at **60 Hz** with a fixed timestep. The spatially larger field
+broadcasts at **10 Hz** every sixth step; the single small boat pose broadcasts
+at **30 Hz** every other step. A delayed Node event loop never passes a large
+wall-clock `dt` into the solver or performs an unbounded catch-up loop. It
+records missed simulation time for instrumentation and continues from the next
+fixed step.
 
-With members present, a flat field sleeps instead of ticking. Sleep requires
-both total displacement-plus-velocity energy below threshold and an all-zero
-quantised frame; a zero-height crossing with live velocity must not sleep.
-Before sleeping, send one reliable all-zero keyframe. The next pointer impulse
-or tap wakes the fixed-step timer.
+With members present, a flat field and settled boat sleep instead of ticking.
+Sleep requires total displacement-plus-velocity energy below threshold, an
+all-zero quantised frame, and low boat linear/angular velocity; a zero-height
+crossing or coasting boat must not sleep. Before sleeping, send one reliable
+all-zero keyframe and final reliable boat pose. The next pointer impulse or tap
+wakes the fixed-step timer.
 
 ### 5.3 Input contract and gateway wiring
 
@@ -290,6 +351,7 @@ all relevant paths:
 | `handlePresenceSet` with `null` | clear that socket's motion baseline |
 | `handlePresenceClear` | clear that socket's motion baseline |
 | accepted `room:signal/ripple` | inject one fixed, bounded tap before peer fan-out |
+| accepted `room:signal/reset-boat` | enforce the global five-second cooldown, reset pose/velocity, and reliably broadcast it |
 | `handleRoomLeave` | `leave(client.id)` even if no presence was published |
 | `handleDisconnect` | `leave(client.id)` unconditionally, not from `leaveAll()` results |
 
@@ -302,10 +364,17 @@ from server arrival time.
 
 Every input is bounded before touching `WaveField`: exact world bounds, minimum
 and maximum sample interval, maximum speed, maximum impulse strength/radius,
-and maximum absolute field height. A non-finite solver value is a logged reset,
-not a value allowed to contaminate all future frames. Tests cover teleports,
-re-entry, malformed points, and a client alternating opposite pool corners at
-the presence rate limit.
+and maximum absolute field height. Pool presence validation extracts only the
+nested `pointer`; viewpoint movement never injects a wave. A non-finite solver
+or rigid-body value is a logged reset, not a value allowed to contaminate all
+future frames. Tests cover teleports, re-entry, malformed points, and a client
+alternating opposite pool corners at the presence rate limit.
+
+Boat reset is a server rule, not a disabled-button convention. `GlobalPool`
+accepts one reset every 5,000 ms across all sockets, increments `resetSeq`, and
+reliably broadcasts the centered pose immediately. Rejected attempts do not
+move the boat. The latest remaining cooldown is included in join and live boat
+frames, so another tab and a late join cannot bypass or misrepresent it.
 
 ### 5.4 Backpressure
 
@@ -340,7 +409,7 @@ one pool entry in `room-namespaces.ts`:
 pool: {
   requiresAuth: true,
   allowsRoomId: (roomId) => roomId === POOL_ROOM_ID,
-  validateState: validatePoolPoint,             // exact 1600×1000 bounds
+  validateState: validatePoolPresenceState,
   validateSignal: (kind, data) =>
     kind === "ripple" ? validatePoolPoint(data) : null,
 },
@@ -415,7 +484,7 @@ sampling the same interpolation endpoints.
 `version`, which ticks at 10 Hz — is the single worst thing we could do to this
 scene. The renderer polls `version` and timestamps from its plain rAF loop.
 
-### 6.2 `apps/next/src/lib/pool/cursor-buffer.ts`
+### 6.2 Fixed-capacity scene buffers
 
 The renderer must not read `SharedCursorStore.cursors` in the loop. That is a
 MobX `computed`, and **a computed read outside a reaction is recomputed on every
@@ -441,6 +510,12 @@ are not drawn in 3D. When a visible participant leaves, the deterministic slot
 rebuild promotes overflow, so a stationary overflow cursor cannot remain hidden
 forever.
 
+`ViewpointBuffer` follows the same bounded pattern with `[x, y, z]` positions,
+excludes the local participant, and deliberately ignores pointer-only presence
+updates. `BoatBuffer` retains adjacent validated positions/quaternions and snaps
+both endpoints when the server epoch changes. None of these buffers is MobX
+observable.
+
 ### 6.3 `apps/next/src/lib/pool/pool-renderer.ts`
 
 Pure TypeScript class with no React or MobX imports. Owns the three.js renderer,
@@ -448,8 +523,18 @@ scene, camera, water mesh, cursor pool, and the rAF loop.
 
 ```ts
 export class PoolRenderer {
-  constructor(canvas: HTMLCanvasElement, field: PoolField, cursors: CursorBuffer);
+  constructor(
+    canvas: HTMLCanvasElement,
+    field: PoolField,
+    cursors: CursorBuffer,
+    viewpoints: ViewpointBuffer,
+    boat: BoatBuffer,
+    options?: PoolRendererOptions,
+  );
   project(fractionX: number, fractionY: number): { x: number; z: number } | null;
+  orbit(deltaX: number, deltaY: number): void;
+  zoom(deltaY: number): void;
+  viewpoint(): PoolViewpoint;
   start(): void;
   stop(): void;
   dispose(): void;
@@ -473,6 +558,13 @@ Per frame, in plain TS:
   colour buffer with a draw range bounded by `count`. Y comes from
   `field.heightAt(x, z, alpha)`, using the exact same interpolation factor as
   the surface. This is one draw call rather than 64 sprite draw calls.
+- Interpolate the one boat's position and quaternion between 30 Hz poses using
+  an interval adapted from observed arrivals, then mutate a prebuilt
+  hull/deck/cabin group.
+- Update five preallocated instanced cone batches (one explicit unlit material
+  per presence tone) from `ViewpointBuffer` only when its version changes.
+  Matching vertical lines anchor camera positions to the pool plane; cone
+  orientation points toward the pool.
 
 The whole loop is allocation-free after mount.
 
@@ -484,12 +576,11 @@ Replaces `CursorSurfaceController` for this scene. Same lifecycle (`attach` /
 plane. The controller caches the canvas rectangle and converts DOM coordinates
 to fractions; Three.js camera/matrix knowledge stays in the renderer.
 
-`UserStoreManager` creates the pool's `SharedCursorStore` with a dedicated
-projection that accepts these world units and returns `{ x, y: z }`, clamped to
-the exact protocol world. Do not use the default fraction projection or
-`worldProjection`, which would respectively clamp to `1` or scale the point a
-second time. Widen `CursorProjection`/`setPointer` comments from "surface
-fraction" to "controller input mapped into the room's coordinate space."
+The pool-specific presence store accepts these world units and publishes them
+inside `pointer`. Right-drag captures the pointer and calls `orbit`; the mouse
+wheel calls `zoom`. Each camera change republishes `renderer.viewpoint()` in
+the same throttled presence state. Secondary dragging clears the surface
+pointer so moving the camera cannot accidentally manufacture waves.
 
 The renderer computes the ray/plane intersection analytically rather than
 traversing mesh geometry, then converts its centred mesh coordinates to the
@@ -510,7 +601,13 @@ export const WavePoolCanvas = memo(function WavePoolCanvas({
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    const renderer = new PoolRenderer(canvas, pool.field, pool.cursorBuffer);
+    const renderer = new PoolRenderer(
+      canvas,
+      pool.field,
+      pool.cursorBuffer,
+      pool.viewpointBuffer,
+      pool.boat,
+    );
     const surface = new PoolSurfaceController(pool, renderer);
     renderer.start();
     surface.attach(canvas);
@@ -528,6 +625,12 @@ rendering the canvas component again.
 Surrounding chrome (`PresenceFacepile`, participant count, copy) stays ordinary
 React **outside** this component, driven by the structural roster of §6.6 rather
 than by the presence map directly.
+
+The reset button observes a dedicated MobX projection that changes at most once
+per displayed countdown second. The 30 Hz `BoatBuffer` remains plain data and
+never becomes a React dependency. Clicking publishes one validated room signal;
+the button enters a short pending state until the reliable authoritative boat
+frame supplies the accepted reset generation and five-second deadline.
 
 `RippleLayer` and `CursorOverlay` are DOM/SVG and do not carry over; their job is
 done in-scene now. `PresenceFacepile` carries over unchanged because §6.6 makes
@@ -552,10 +655,12 @@ readonly roster: PresenceSummary[];
 ```
 
 `PresenceRoom` updates `entries` for every coordinate, but replaces `roster`
-only when participant metadata or `state === null` changes. `participants` and
-`hasPointer` in `SharedCursorStore` read this cached projection rather than the
-hot entries map. Merely reading an observable-map-derived computed behind a
-`rosterKey` would still track that map and is explicitly not the implementation.
+only when participant metadata or a feature-selected active bit changes. Its
+generic `structuralHasState` option defaults to `state !== null`; pool presence
+selects `state.pointer !== null`, so viewpoint-only movement does not make the
+facepile claim that someone is pointing. Merely reading an observable-map-
+derived computed behind a `rosterKey` would still track that map and is
+explicitly not the implementation.
 
 Thus the facepile renders on join/leave/rename and when someone starts or stops
 publishing a pointer, but never for non-null coordinate-to-coordinate movement.
@@ -570,8 +675,10 @@ no scope argument and no map:
 ```ts
 class WavePoolStore {
   readonly field: PoolField;
+  readonly boat: BoatBuffer;
   readonly cursorBuffer: CursorBuffer;
-  readonly cursors: SharedCursorStore;
+  readonly viewpointBuffer: ViewpointBuffer;
+  readonly cursors: PoolPresenceStore;
   activate(): () => void;
   dispose(): void;
 }
@@ -580,8 +687,9 @@ class WavePoolStore {
 On first activation it performs this order synchronously:
 
 1. subscribe to `pool` frames;
-2. subscribe to raw `presence` frames for `CursorBuffer`;
-3. activate `SharedCursorStore`, whose `PresenceRoom` installs its own listeners
+2. subscribe to `pool:boat` frames;
+3. subscribe to raw `presence` frames for `CursorBuffer` and `ViewpointBuffer`;
+4. activate `PoolPresenceStore`, whose `PresenceRoom` installs its own listeners
    and performs the one ref-counted `room:join` for `pool:global`.
 
 This ordering guarantees the direct join keyframe cannot arrive before its
@@ -661,14 +769,17 @@ Following existing conventions — `*.spec.ts` beside source in `apps/nest`,
 
 - `wave-field.spec.ts` — impulse propagates outward; energy falls below the
   sleep threshold; boundaries reflect; unstable Courant options are rejected;
-  bounded hostile impulses remain finite over 10k ticks.
+  bounded hostile impulses remain finite over 10k ticks; continuous sampling
+  exposes height, velocity, and slope.
+- `boat-simulation.spec.ts` — the body remains finite and settles on flat water;
+  a sloped surface produces horizontal motion and rotation.
 - Shared `pool-codec` specs — quantise → encode → decode → reconstruct is
   bit-exact; tile masks include live tiles plus trailing zero; wrong version,
   room, mask, ordering, and byte length are rejected; a new epoch requires and
   accepts a new keyframe even when its sequence is below the previous epoch.
 - `global-pool.spec.ts` — membership is idempotent; every join gets a current
-  keyframe without waking a flat pool; first input starts it; last leave stops
-  and resets; idle sleep sends final zero;
+  field and boat frame without waking a flat pool; first input starts it; last
+  leave stops and resets; idle sleep sends final field/boat state;
   pointer baselines, null/re-entry, long gaps, teleports, taps, and disconnects
   obey the bounded input contract.
 - Namespace/gateway specs — only `pool:global` joins; valid pointer/tap events
@@ -679,6 +790,14 @@ Following existing conventions — `*.spec.ts` beside source in `apps/nest`,
   are ignored, sequence gaps are applied and logged, and a later keyframe repairs
   a deliberately dropped trailing-zero frame; an unknown epoch's tile is ignored
   until its keyframe; previous/current interpolation and height sampling agree.
+- Client scene-buffer specs — pointer and viewpoint projections exclude self,
+  update in place, bound overflow deterministically, and ignore unrelated state
+  changes; boat frames retain adjacent interpolation endpoints and reject stale
+  or malformed poses.
+- Boat-reset specs — the server accepts exactly one global reset per five
+  seconds, broadcasts the centered pose reliably, protocol validation carries
+  the cooldown, and the low-frequency client projection counts down without
+  observing hot pose frames.
 - `wave-pool-store.test.ts` — pool and raw-presence listeners exist before the
   single room join, ref counts release symmetrically, and reconnect receives a
   keyframe without a second lease.
@@ -694,15 +813,16 @@ Following existing conventions — `*.spec.ts` beside source in `apps/nest`,
 | 1 | Shared constants/types/codec + exact-room namespace policy | Implemented | Protocol and admission specs |
 | 2 | `WaveField` solver + bounded-input specs | Implemented | Solver unit/long-run tests |
 | 3 | `GlobalPool`, gateway wiring, volatile recovery, instrumentation | Implemented | Realtime suite + Nest typecheck |
-| 4 | Structural roster, `WavePoolStore`, `PoolField`, `CursorBuffer` | Implemented | Client lifecycle/codec tests |
-| 5 | `PoolRenderer`, two-snapshot shader, derived normals | Implemented | Next typecheck + lint; visual check pending |
-| 6 | Pointer projection, point-cloud cursors, collaboration chrome | Implemented | Controller tests; two-browser check pending |
-| 7 | Reduced motion, compression decision, final profiling | Partial | Reduced motion implemented; profiling/A-B remains manual |
+| 4 | Sampled buoyant boat + authoritative pose stream | Implemented | Solver/lifecycle/codec tests |
+| 5 | Structural roster, pool presence, field/cursor/viewpoint/boat buffers | Implemented | Client lifecycle/codec tests |
+| 6 | `PoolRenderer`, water shader, boat, viewpoint markers | Implemented | Next typecheck; visual check pending |
+| 7 | Pointer projection, orbit/zoom controller, collaboration chrome | Implemented | Native controller tests; two-browser check pending |
+| 8 | Reduced motion, compression decision, final profiling | Partial | Reduced motion implemented; profiling/A-B remains manual |
 
-Current automated result: the realtime Nest suite passes, the focused Next
-pool/presence suite passes, both package typechecks pass, and targeted ESLint is
-clean. The final section is not silently treated as complete: compression stays
-off until the §7 A/B measurement justifies it.
+Current automated result: 34 focused Nest tests and 44 focused Next
+pool/presence tests pass, and both package typechecks pass. The final section is
+not silently treated as complete: browser/Profiler acceptance remains manual,
+and compression stays off until the §7 A/B measurement justifies it.
 
 ---
 
@@ -729,6 +849,9 @@ off until the §7 A/B measurement justifies it.
    tests.
 6. **Compression affects the entire gateway.** It remains off unless the A/B
    measurement in §7 shows a net benefit.
+7. **Boat dynamics are intentionally approximate.** Distributed probes create
+   convincing buoyancy and wave force, but gain/hull tuning is visual work and
+   the model does not promise real-world displacement, wakes, or capsizing.
 
 ---
 

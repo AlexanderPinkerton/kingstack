@@ -15,6 +15,8 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { AppLogger, LogContext } from "@kingstack/logger";
 import {
   POOL_ROOM_ID,
+  normalizePoolPresenceState,
+  type PoolBoatFrame,
   type PoolFrame,
   type PoolKeyframe,
   type PoolPoint,
@@ -105,6 +107,12 @@ export class RealtimeGateway
         },
         broadcastReliable: (frame: PoolKeyframe) => {
           this.server.to(POOL_ROOM_ID).emit("pool", frame);
+        },
+        broadcastBoatVolatile: (frame: PoolBoatFrame) => {
+          this.server.to(POOL_ROOM_ID).volatile.emit("pool:boat", frame);
+        },
+        broadcastBoatReliable: (frame: PoolBoatFrame) => {
+          this.server.to(POOL_ROOM_ID).emit("pool:boat", frame);
         },
         unwritableSocketCount: () => this.unwritablePoolSocketCount(),
       },
@@ -305,12 +313,14 @@ export class RealtimeGateway
     if (!result) return { status: "error", message: "Not a room member" };
 
     if (roomId === POOL_ROOM_ID) {
+      const poolState =
+        state === null ? null : normalizePoolPresenceState(state);
       if (result.supersededParticipantId) {
         this.globalPool.clearPointer(client.id);
       }
       this.globalPool.observePointer(
         client.id,
-        state as PoolPoint | null,
+        poolState?.pointer ?? null,
         performance.now(),
       );
     }
@@ -396,6 +406,16 @@ export class RealtimeGateway
 
     if (roomId === POOL_ROOM_ID && kind === "ripple") {
       this.globalPool.tap(data as PoolPoint);
+    }
+    if (roomId === POOL_ROOM_ID && kind === "reset-boat") {
+      const result = this.globalPool.resetBoat();
+      if (result.status === "cooldown") {
+        return {
+          status: "error",
+          message: "Boat reset is cooling down",
+          retryAfterMs: result.retryAfterMs,
+        };
+      }
     }
 
     // Nothing is stored: a signal that arrives after the moment has passed is

@@ -106,16 +106,31 @@ describe("global pool namespace", () => {
     expect(config.allowsRoomId?.("pool:private")).toBe(false);
   });
 
-  it("validates exact pool bounds for pointers and taps", () => {
-    expect(config.validateState({ x: 1600, y: 1000 })).toEqual({
-      x: 1600,
-      y: 1000,
+  it("validates the pool pointer and 3D viewpoint envelope", () => {
+    const state = {
+      pointer: { x: 1600, y: 1000 },
+      viewpoint: { x: 800, y: 960, z: 1_820 },
+    };
+    expect(config.validateState(state)).toEqual(state);
+    expect(
+      config.validateState({ ...state, pointer: { x: 1601, y: 1000 } }),
+    ).toBeNull();
+    expect(config.validateState({ ...state, pointer: null })).toEqual({
+      pointer: null,
+      viewpoint: state.viewpoint,
     });
-    expect(config.validateState({ x: 1601, y: 1000 })).toBeNull();
+    expect(
+      config.validateState({
+        ...state,
+        viewpoint: { x: 800, y: Number.NaN, z: 1_820 },
+      }),
+    ).toBeNull();
     expect(config.validateSignal?.("ripple", { x: 20, y: 30 })).toEqual({
       x: 20,
       y: 30,
     });
+    expect(config.validateSignal?.("reset-boat", true)).toBe(true);
+    expect(config.validateSignal?.("reset-boat", false)).toBeNull();
     expect(config.validateSignal?.("explode", { x: 20, y: 30 })).toBeNull();
   });
 });

@@ -61,11 +61,12 @@ describe("WavePoolStore", () => {
 
     expect(transport.activity.slice(0, 5)).toEqual([
       "subscribe:pool",
+      "subscribe:pool:boat",
       "subscribe:presence",
       "subscribe:presence",
       "subscribe:signal",
-      `join:${POOL_ROOM_ID}`,
     ]);
+    expect(transport.activity.slice(5, 6)).toEqual([`join:${POOL_ROOM_ID}`]);
     expect(
       transport.activity.filter((value) => value.startsWith("join:")),
     ).toHaveLength(1);
@@ -102,8 +103,22 @@ describe("WavePoolStore", () => {
       action: "upsert",
       entry: {
         participant: { id: "maya", name: "Maya", tone: "cyan" },
-        state: { x: 25, y: 40 },
+        state: {
+          pointer: { x: 25, y: 40 },
+          viewpoint: { x: 100, y: 800, z: 1_500 },
+        },
       },
+    });
+    transport.deliver("pool:boat", {
+      type: "pool:boat",
+      version: POOL_PROTOCOL_VERSION,
+      roomId: POOL_ROOM_ID,
+      epoch: "test",
+      seq: 0,
+      position: { x: 800, y: 8, z: 500 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      resetSeq: 0,
+      resetCooldownMs: 0,
     });
 
     expect(store.field.current[0]).toBe(8);
@@ -111,6 +126,10 @@ describe("WavePoolStore", () => {
     expect(Array.from(store.cursorBuffer.positions.slice(0, 2))).toEqual([
       25, 40,
     ]);
+    expect(Array.from(store.viewpointBuffer.positions.slice(0, 3))).toEqual([
+      100, 800, 1_500,
+    ]);
+    expect(Array.from(store.boat.currentPosition)).toEqual([800, 8, 500]);
     expect(
       store.cursors.participants.map((participant) => participant.id),
     ).toEqual(expect.arrayContaining(["ada", "maya"]));
@@ -124,16 +143,29 @@ describe("WavePoolStore", () => {
     const store = new WavePoolStore(transport);
     const release = store.activate();
     store.setParticipant(ada);
+    store.setViewpoint({ x: 800, y: 960, z: 1_820 });
     store.setPointer(2_000, -10);
 
     const publication = transport.published
       .filter((call) => call.eventType === "presence:set")
       .at(-1)?.event as { state: unknown };
-    expect(publication.state).toEqual({ x: 1600, y: 0 });
+    expect(publication.state).toEqual({
+      pointer: { x: 1600, y: 0 },
+      viewpoint: { x: 800, y: 960, z: 1_820 },
+    });
     expect(store.cursorBuffer.count).toBe(0);
 
+    store.resetBoat();
+    store.resetBoat();
+    expect(
+      transport.published.filter(
+        (call) =>
+          call.eventType === "room:signal" &&
+          (call.event as { kind?: string }).kind === "reset-boat",
+      ),
+    ).toHaveLength(1);
+
     store.emitTap(100, 200);
-    expect(store.cursors.ripples).toHaveLength(0);
     expect(
       transport.published.some((call) => call.eventType === "room:signal"),
     ).toBe(true);

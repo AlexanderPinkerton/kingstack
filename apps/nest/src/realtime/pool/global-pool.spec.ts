@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createNoopLogger } from "@kingstack/logger/testing";
 import {
   POOL_CELL_COUNT,
+  type PoolBoatFrame,
   type PoolFrame,
   type PoolKeyframe,
 } from "@kingstack/shared";
@@ -42,6 +43,8 @@ class FakeScheduler implements GlobalPoolScheduler {
 class FakeTransport implements GlobalPoolTransport {
   readonly volatile: PoolFrame[] = [];
   readonly reliable: PoolKeyframe[] = [];
+  readonly volatileBoats: PoolBoatFrame[] = [];
+  readonly reliableBoats: PoolBoatFrame[] = [];
   unwritable = 0;
 
   broadcastVolatile(frame: PoolFrame): void {
@@ -52,6 +55,14 @@ class FakeTransport implements GlobalPoolTransport {
     this.reliable.push(frame);
   }
 
+  broadcastBoatVolatile(frame: PoolBoatFrame): void {
+    this.volatileBoats.push(frame);
+  }
+
+  broadcastBoatReliable(frame: PoolBoatFrame): void {
+    this.reliableBoats.push(frame);
+  }
+
   unwritableSocketCount(): number {
     return this.unwritable;
   }
@@ -59,11 +70,15 @@ class FakeTransport implements GlobalPoolTransport {
 
 function socket(id: string) {
   const keyframes: PoolKeyframe[] = [];
+  const boats: PoolBoatFrame[] = [];
   const value: PoolSocket = {
     id,
-    emit: (_event, frame) => keyframes.push(frame),
+    emit: (event, frame) => {
+      if (event === "pool") keyframes.push(frame as PoolKeyframe);
+      else boats.push(frame as PoolBoatFrame);
+    },
   };
-  return { value, keyframes };
+  return { value, keyframes, boats };
 }
 
 function setup() {
@@ -93,6 +108,7 @@ describe("GlobalPool lifecycle", () => {
     expect(second.keyframes).toHaveLength(1);
     expect(first.keyframes[0].epoch).toBe("test-epoch");
     expect(first.keyframes[0].data).toHaveLength(POOL_CELL_COUNT);
+    expect(first.boats).toHaveLength(2);
   });
 
   it("stops and resets when the last socket leaves", () => {
@@ -125,6 +141,30 @@ describe("GlobalPool lifecycle", () => {
 });
 
 describe("GlobalPool input and broadcast", () => {
+  it("enforces one global boat reset every five seconds", () => {
+    const { pool, scheduler, transport } = setup();
+    pool.join(socket("a").value);
+
+    expect(pool.resetBoat()).toEqual({
+      status: "reset",
+      retryAfterMs: 5_000,
+    });
+    expect(transport.reliableBoats.at(-1)?.position).toEqual({
+      x: 800,
+      y: 8,
+      z: 500,
+    });
+    const reliableCount = transport.reliableBoats.length;
+    expect(pool.resetBoat().status).toBe("cooldown");
+    expect(transport.reliableBoats).toHaveLength(reliableCount);
+
+    scheduler.advanceTicks(299);
+    expect(pool.resetBoat().status).toBe("cooldown");
+    scheduler.advanceTicks(1);
+    expect(pool.resetBoat().status).toBe("reset");
+    expect(transport.reliableBoats).toHaveLength(reliableCount + 1);
+  });
+
   it("establishes a pointer baseline, injects bounded motion, and emits tiles", () => {
     const { pool, scheduler, transport } = setup();
     pool.join(socket("a").value);
@@ -136,6 +176,9 @@ describe("GlobalPool input and broadcast", () => {
 
     scheduler.advanceTicks(6);
     expect(transport.volatile.at(-1)?.action).toBe("tiles");
+    expect(transport.volatileBoats.map((frame) => frame.seq)).toEqual([
+      1, 2, 3,
+    ]);
   });
 
   it("treats null, re-entry, long gaps, and teleports as new baselines", () => {
@@ -167,5 +210,29 @@ describe("GlobalPool input and broadcast", () => {
     expect(transport.reliable.at(-1)?.data.every((value) => value === 0)).toBe(
       true,
     );
+    expect(transport.reliableBoats.length).toBeGreaterThan(0);
+  });
+
+  it("couples an off-centre wave into the authoritative boat pose", () => {
+    const { pool, scheduler, transport } = setup();
+    pool.join(socket("a").value);
+    pool.tap({ x: 620, y: 500 });
+
+    scheduler.advanceTicks(240);
+    const horizontalTravel = Math.max(
+      ...transport.volatileBoats.map((boat) =>
+        Math.hypot(boat.position.x - 800, boat.position.z - 500),
+      ),
+    );
+    const tilt = Math.max(
+      ...transport.volatileBoats.map((boat) =>
+        Math.hypot(boat.rotation.x, boat.rotation.z),
+      ),
+    );
+
+    // A technically non-zero response is not enough: at this world scale the
+    // displacement needs to be plainly visible from the default camera.
+    expect(horizontalTravel).toBeGreaterThan(15);
+    expect(tilt).toBeGreaterThan(0.02);
   });
 });

@@ -5,7 +5,11 @@
 // collaborative example means adding one entry to this table, not another
 // handler on the gateway.
 
-import { POOL_ROOM_ID, normalizePoolPoint } from "@kingstack/shared";
+import {
+  POOL_ROOM_ID,
+  normalizePoolPoint,
+  normalizePoolPresenceState,
+} from "@kingstack/shared";
 
 export interface RoomNamespaceConfig {
   /** Reject joins from sockets that only completed `register_public`. */
@@ -127,9 +131,12 @@ const ROOM_NAMESPACES: Record<string, RoomNamespaceConfig> = {
   pool: {
     requiresAuth: true,
     allowsRoomId: (roomId) => roomId === POOL_ROOM_ID,
-    validateState: normalizePoolPoint,
-    validateSignal: (kind, data) =>
-      kind === "ripple" ? normalizePoolPoint(data) : null,
+    validateState: normalizePoolPresenceState,
+    validateSignal: (kind, data) => {
+      if (kind === "ripple") return normalizePoolPoint(data);
+      if (kind === "reset-boat" && data === true) return true;
+      return null;
+    },
   },
   // Entity fan-out only; the post feed carries no presence of its own.
   posts: {
