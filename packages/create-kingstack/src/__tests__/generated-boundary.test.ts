@@ -182,7 +182,12 @@ describe("generated project boundary", () => {
     ]);
     expect(
       readdirSync(join(generatedRoot, "scripts", "deploy")).sort(),
-    ).toEqual(["nest-digitalocean", "nest-digitalocean.ts"]);
+    ).toEqual([
+      "nest-digitalocean",
+      "nest-digitalocean.ts",
+      "supabase",
+      "supabase.ts",
+    ]);
     expect(
       readdirSync(
         join(generatedRoot, "scripts", "deploy", "nest-digitalocean"),
@@ -198,6 +203,9 @@ describe("generated project boundary", () => {
       "provision.ts",
       "remote-host.ts",
     ]);
+    expect(
+      readdirSync(join(generatedRoot, "scripts", "deploy", "supabase")).sort(),
+    ).toEqual(["options.ts", "provision.test.ts", "provision.ts"]);
 
     const rootPackage = JSON.parse(
       readFileSync(join(generatedRoot, "package.json"), "utf8"),
@@ -205,6 +213,10 @@ describe("generated project boundary", () => {
     expect(rootPackage.scripts["deploy:nest"]).toBe(
       "bun scripts/deploy/nest-digitalocean.ts",
     );
+    expect(rootPackage.scripts["supabase:provision"]).toBe(
+      "bun scripts/deploy/supabase.ts",
+    );
+    expect(rootPackage.devDependencies.supabase).toBe("2.112.0");
     expect(rootPackage.scripts["prisma:deploy"]).toBe(
       "yarn workspace @boundary-check/prisma prisma migrate deploy",
     );

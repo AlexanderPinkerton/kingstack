@@ -3,6 +3,21 @@
 KingStack deploys the Next.js application to Vercel and can deploy the NestJS
 application as a Docker container on one or more DigitalOcean Droplets.
 
+## Supabase
+
+Provision a hosted Supabase project through the checked-in CLI with an explicit
+cost review and confirmation:
+
+```bash
+yarn supabase:provision
+```
+
+Use `--dry-run` with a project name, organization, and region to inspect a
+repeatable plan without changing cloud resources. Project creation is separate
+from configuration and schema deployment. See the
+[hosted Supabase provisioning guide](../supabase/hosted-project-provisioning.md)
+for billing details and the post-provisioning handoff.
+
 ## NestJS on DigitalOcean
 
 The Nest deployment tool has two explicit operations:
