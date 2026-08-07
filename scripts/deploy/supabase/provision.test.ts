@@ -70,6 +70,8 @@ describe("Supabase project provisioning CLI", () => {
     expect(args).toEqual([
       "exec",
       "supabase",
+      "--agent",
+      "no",
       "projects",
       "create",
       "example-app",
@@ -79,10 +81,10 @@ describe("Supabase project provisioning CLI", () => {
       "us-east-1",
       "--size",
       "small",
-      "--output",
-      "json",
     ]);
     expect(args.join(" ")).not.toContain("password");
+    expect(args.join(" ")).not.toContain("output");
+    expect(args).toContain("no");
   });
 
   it("explains automatic and explicit compute pricing", () => {

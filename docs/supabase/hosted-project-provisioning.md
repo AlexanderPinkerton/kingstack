@@ -68,7 +68,21 @@ before confirming a billable project.
 
 The KingStack wrapper never accepts or logs the database password. After the
 final confirmation, Supabase CLI requests it through its own secure terminal
-prompt and stores it using the credential storage supported by the CLI.
+prompt.
+
+Enter and save a password instead of leaving the prompt blank. CLI `2.112.0`
+generates a password for a blank response but does not return or persist that
+generated value after project creation.
+
+Project creation deliberately uses Supabase's interactive text output. CLI
+`2.112.0` disables missing-value prompts when structured output is requested,
+so adding `--output json` would require exposing the database password as a
+command argument. Supabase prints the new project reference in its text output
+instead.
+
+The command also passes `--agent no`. Supabase CLI otherwise auto-detects agent
+environments and changes them to non-interactive output even when a person is
+using a real terminal through an automation wrapper.
 
 For that reason, project creation requires an interactive terminal even when
 `--yes` skips KingStack's final confirmation. `--dry-run` can run

@@ -16,13 +16,6 @@ interface Organization {
   name: string;
 }
 
-interface CreatedProject {
-  id?: string;
-  name?: string;
-  organization_id?: string;
-  region?: string;
-}
-
 interface Choice<T> {
   label: string;
   value: T;
@@ -39,16 +32,13 @@ function runYarn(
   options: {
     capture?: boolean;
     display?: string;
-    inheritStderr?: boolean;
   } = {},
 ): string {
   if (options.display) console.log(`> ${options.display}`);
   const result = spawnSync("yarn", args, {
     cwd: process.cwd(),
     encoding: "utf8",
-    stdio: options.capture
-      ? ["inherit", "pipe", options.inheritStderr ? "inherit" : "pipe"]
-      : "inherit",
+    stdio: options.capture ? ["inherit", "pipe", "pipe"] : "inherit",
     maxBuffer: 10 * 1024 * 1024,
   });
 
@@ -284,49 +274,34 @@ async function confirm(interface_: Interface, yes: boolean): Promise<void> {
   if (!/^y(?:es)?$/i.test(answer)) throw new Error("Cancelled.");
 }
 
-function createProject(plan: ProvisionPlan): CreatedProject | undefined {
+function createProject(plan: ProvisionPlan): void {
   const args = buildCreateArgs(plan);
+  console.log();
+  console.log(
+    "Important: enter and save a database password. Do not leave the Supabase prompt blank; CLI 2.112.0 does not return its generated password.",
+  );
   console.log();
   console.log(
     `> yarn ${args.join(" ")} (Supabase will securely prompt for the database password)`,
   );
-  const output = runYarn(args, { capture: true, inheritStderr: true });
-  if (!output) return undefined;
-
-  try {
-    return JSON.parse(output) as CreatedProject;
-  } catch {
-    console.log(output);
-    return undefined;
-  }
+  runYarn(args);
 }
 
-function printNextSteps(project: CreatedProject | undefined): void {
+function printNextSteps(): void {
   console.log();
-  if (project?.id) {
-    console.log(
-      `Created Supabase project ${project.name || project.id} (${project.id}).`,
-    );
-    console.log();
-    console.log("Next steps:");
-    console.log(
-      `1. Link this workspace: yarn exec supabase link --project-ref ${project.id}`,
-    );
-    console.log(
-      `2. Inspect API keys: yarn exec supabase projects api-keys --project-ref ${project.id}`,
-    );
-    console.log(
-      "3. Add the hosted values to config/<environment>.ts and run yarn env:<environment>.",
-    );
-    console.log("4. Apply schema migrations with yarn prisma:deploy.");
-  } else {
-    console.log(
-      "Supabase reported success, but its JSON response was not recognized.",
-    );
-    console.log(
-      "Open the Supabase dashboard to copy the project reference and continue.",
-    );
-  }
+  console.log("Created the Supabase project. Its reference is printed above.");
+  console.log();
+  console.log("Next steps:");
+  console.log(
+    "1. Link this workspace: yarn exec supabase link --project-ref <project-ref>",
+  );
+  console.log(
+    "2. Inspect API keys: yarn exec supabase projects api-keys --project-ref <project-ref>",
+  );
+  console.log(
+    "3. Add the hosted values to config/<environment>.ts and run yarn env:<environment>.",
+  );
+  console.log("4. Apply schema migrations with yarn prisma:deploy.");
   console.log(
     "See docs/supabase/hosted-project-provisioning.md for the full handoff.",
   );
@@ -359,6 +334,6 @@ export async function provisionSupabase(options: CliOptions): Promise<void> {
     interface_?.close();
   }
 
-  const project = createProject(plan);
-  printNextSteps(project);
+  createProject(plan);
+  printNextSteps();
 }

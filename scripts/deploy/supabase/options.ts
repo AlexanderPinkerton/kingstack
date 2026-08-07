@@ -162,6 +162,8 @@ export function buildCreateArgs(plan: ProvisionPlan): string[] {
   const args = [
     "exec",
     "supabase",
+    "--agent",
+    "no",
     "projects",
     "create",
     plan.projectName,
@@ -171,7 +173,6 @@ export function buildCreateArgs(plan: ProvisionPlan): string[] {
     plan.region,
   ];
   if (plan.size) args.push("--size", plan.size);
-  args.push("--output", "json");
   return args;
 }
 
