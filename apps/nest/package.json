@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@kingstack/logger": "workspace:*",
+    "@kingstack/shared": "workspace:*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",

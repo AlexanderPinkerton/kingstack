@@ -41,4 +41,25 @@ export default defineConfig(
       "no-console": "off",
     },
   },
+  {
+    name: "kingstack/pool-hot-path",
+    files: ["src/lib/pool/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "react",
+              message: "Keep the wave-pool hot path in pure TypeScript.",
+            },
+            {
+              name: "mobx-react-lite",
+              message: "Keep the wave-pool hot path in pure TypeScript.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

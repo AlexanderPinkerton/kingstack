@@ -1,0 +1,450 @@
+// Reusable client half of the room presence protocol.
+//
+// One instance tracks who else is in a room and where they are. It is generic
+// over the feature-specific `state` payload, so a checkbox grid, a cursor
+// surface, and a comment thread all share this code and differ only in the
+// shape they put on the wire.
+//
+// Pure MobX with no React dependency: components observe `entries` and never
+// drive the transport themselves.
+
+import { observable, runInAction } from "mobx";
+import type { PublishOptions, RealtimeTransport } from "@/lib/realtime-manager";
+import { StoreDemand } from "@/lib/store-lifecycle";
+
+export const PRESENCE_TONES = [
+  "lime",
+  "violet",
+  "cyan",
+  "amber",
+  "coral",
+] as const;
+
+export type PresenceTone = (typeof PRESENCE_TONES)[number];
+
+export interface PresenceParticipant {
+  id: string;
+  name: string;
+  tone: PresenceTone;
+}
+
+export interface PresenceEntry<TState> {
+  participant: PresenceParticipant;
+  /** `null` means present in the room but not pointing at anything. */
+  state: TState | null;
+}
+
+/** React-safe projection that deliberately excludes hot coordinate values. */
+export interface PresenceSummary {
+  participant: PresenceParticipant;
+  hasState: boolean;
+}
+
+export type PresenceServerEvent<TState> = {
+  type?: string;
+  roomId?: string;
+  action?: "sync" | "upsert" | "remove";
+  entries?: PresenceEntry<TState>[];
+  entry?: PresenceEntry<TState>;
+  participantId?: string;
+};
+
+export type DecodedPresence<TState> =
+  | { operation: "sync"; entries: PresenceEntry<TState>[] }
+  | { operation: "upsert"; entry: PresenceEntry<TState> }
+  | { operation: "remove"; participantId: string };
+
+/**
+ * A one-shot event in the room. Unlike presence it is never retained, so it
+ * carries no meaning after the instant it arrives.
+ */
+export interface RoomSignal<TData> {
+  kind: string;
+  participant: PresenceParticipant;
+  data: TData;
+}
+
+export type RoomSignalEvent<TData> = {
+  type?: string;
+  roomId?: string;
+  kind?: string;
+  participant?: unknown;
+  data?: TData;
+};
+
+export function decodeRoomSignal<TData>(
+  roomId: string,
+  event: RoomSignalEvent<TData>,
+): RoomSignal<TData> | null {
+  if (event.type && event.type !== "signal") return null;
+  if (event.roomId !== roomId) return null;
+  if (typeof event.kind !== "string" || event.kind.length === 0) return null;
+  if (!isParticipant(event.participant)) return null;
+  if (event.data === undefined) return null;
+
+  return { kind: event.kind, participant: event.participant, data: event.data };
+}
+
+/**
+ * A presence identity is per tab, not per user: two tabs belonging to one
+ * person are two independent cursors and must not overwrite each other.
+ */
+export function createParticipantId(prefix = "participant"): string {
+  const random =
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${random}`;
+}
+
+/**
+ * Deterministic tone for a participant, so the same person keeps the same
+ * colour across reloads and looks identical to every other client.
+ */
+export function toneForParticipantId(participantId: string): PresenceTone {
+  let hash = 0;
+  for (let index = 0; index < participantId.length; index += 1) {
+    hash = (hash * 31 + participantId.charCodeAt(index)) | 0;
+  }
+  return PRESENCE_TONES[Math.abs(hash) % PRESENCE_TONES.length];
+}
+
+function isParticipant(value: unknown): value is PresenceParticipant {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === "string" &&
+    candidate.id.length > 0 &&
+    typeof candidate.name === "string" &&
+    typeof candidate.tone === "string" &&
+    (PRESENCE_TONES as readonly string[]).includes(candidate.tone)
+  );
+}
+
+function isEntry<TState>(value: unknown): value is PresenceEntry<TState> {
+  if (typeof value !== "object" || value === null) return false;
+  return isParticipant((value as Record<string, unknown>).participant);
+}
+
+/**
+ * Turns a raw transport frame into a change to apply, or `null` when the frame
+ * belongs to another room or fails validation. Exported for direct testing.
+ */
+export function decodePresenceEvent<TState>(
+  roomId: string,
+  event: PresenceServerEvent<TState>,
+): DecodedPresence<TState> | null {
+  if (event.type && event.type !== "presence") return null;
+  if (event.roomId !== roomId) return null;
+
+  if (event.action === "sync") {
+    const entries = Array.isArray(event.entries) ? event.entries : [];
+    return { operation: "sync", entries: entries.filter(isEntry<TState>) };
+  }
+
+  if (event.action === "upsert" && isEntry<TState>(event.entry)) {
+    return { operation: "upsert", entry: event.entry };
+  }
+
+  if (
+    event.action === "remove" &&
+    typeof event.participantId === "string" &&
+    event.participantId.length > 0
+  ) {
+    return { operation: "remove", participantId: event.participantId };
+  }
+
+  return null;
+}
+
+export interface PresenceRoomOptions<TState = unknown> {
+  /**
+   * Coalescing interval for outbound state. Leave unset for low-frequency
+   * presence; set it for pointer-rate streams.
+   */
+  throttleMs?: number;
+  /** Defines the structural active/inactive bit exposed to React chrome. */
+  structuralHasState?: (state: TState | null) => boolean;
+}
+
+export class PresenceRoom<TState> {
+  /** Everyone in the room, including this client once it publishes. */
+  readonly entries = observable.map<string, PresenceEntry<TState>>();
+  /** Changes only on membership, identity, or null/non-null state transitions. */
+  readonly roster = observable.array<PresenceSummary>([], { deep: false });
+
+  private readonly demand: StoreDemand;
+  private readonly throttleMs: number;
+  private readonly structuralHasState: (state: TState | null) => boolean;
+  private readonly signalListeners = new Set<
+    (signal: RoomSignal<any>) => void
+  >();
+  private releaseRoom: (() => void) | null = null;
+  private releaseSubscription: (() => void) | null = null;
+  private releaseSignalSubscription: (() => void) | null = null;
+  private self: PresenceParticipant | null = null;
+  private selfState: TState | null = null;
+  private readonly summaryById = new Map<string, PresenceSummary>();
+
+  constructor(
+    private readonly transport: RealtimeTransport,
+    readonly roomId: string,
+    options: PresenceRoomOptions<TState> = {},
+  ) {
+    this.throttleMs = options.throttleMs ?? 0;
+    this.structuralHasState =
+      options.structuralHasState ?? ((state) => state !== null);
+    this.demand = new StoreDemand(() => this.syncSubscription());
+  }
+
+  /** Ref-counted; the room is joined while at least one consumer holds it. */
+  activate(): () => void {
+    return this.demand.activate();
+  }
+
+  dispose(): void {
+    this.leave();
+    this.demand.dispose();
+  }
+
+  // ---------- Reads ----------
+
+  /** Everyone in the room, including participants publishing no state. */
+  get participants(): PresenceParticipant[] {
+    return this.roster.map((summary) => summary.participant);
+  }
+
+  get selfParticipant(): PresenceParticipant | null {
+    return this.self;
+  }
+
+  stateOf(participantId: string): TState | null {
+    return this.entries.get(participantId)?.state ?? null;
+  }
+
+  hasState(participantId: string): boolean {
+    return this.summaryById.get(participantId)?.hasState ?? false;
+  }
+
+  /** Everyone except the local participant, which the UI usually draws itself. */
+  peers(): PresenceEntry<TState>[] {
+    return Array.from(this.entries.values()).filter(
+      (entry) => entry.participant.id !== this.self?.id,
+    );
+  }
+
+  peersWhere(
+    predicate: (state: TState | null) => boolean,
+  ): PresenceEntry<TState>[] {
+    return this.peers().filter((entry) => predicate(entry.state));
+  }
+
+  // ---------- Writes ----------
+
+  /**
+   * Publishes this client's position. Applied locally first so the local UI
+   * never waits on a round trip; the server echoes only to peers.
+   */
+  setSelf(participant: PresenceParticipant, state: TState | null): void {
+    this.self = participant;
+    this.selfState = state;
+
+    runInAction(() => {
+      const entry = { participant, state };
+      this.entries.set(participant.id, entry);
+      this.upsertSummary(entry);
+    });
+
+    this.transport.publish(
+      "presence:set",
+      { roomId: this.roomId, participant, state },
+      this.publishOptions(),
+    );
+  }
+
+  /** Stays in the room but stops pointing at anything. */
+  clearSelfState(): void {
+    if (!this.self) return;
+    this.setSelf(this.self, null);
+  }
+
+  /**
+   * Fires a one-shot event at every peer. Never retained and never throttled:
+   * a signal is a deliberate action, and coalescing two taps into one would
+   * lose the second entirely.
+   */
+  sendSignal<TData>(kind: string, data: TData): void {
+    if (!this.self) return;
+
+    this.transport.publish("room:signal", {
+      roomId: this.roomId,
+      kind,
+      participant: this.self,
+      data,
+    });
+  }
+
+  /** Listeners receive peer signals only; the sender echoes its own locally. */
+  onSignal<TData>(listener: (signal: RoomSignal<TData>) => void): () => void {
+    const typed = listener as (signal: RoomSignal<any>) => void;
+    this.signalListeners.add(typed);
+    return () => {
+      this.signalListeners.delete(typed);
+    };
+  }
+
+  /** Removes this client from the room roster without leaving the room. */
+  clearSelf(): void {
+    const participant = this.self;
+    if (!participant) return;
+
+    this.self = null;
+    this.selfState = null;
+    runInAction(() => {
+      this.entries.delete(participant.id);
+      this.removeSummary(participant.id);
+    });
+
+    this.transport.publish("presence:clear", { roomId: this.roomId });
+  }
+
+  private get latestKey(): string {
+    // Keyed per room so two rooms sharing one socket do not overwrite each
+    // other's reconnect state.
+    return `presence:${this.roomId}`;
+  }
+
+  private publishOptions(): PublishOptions {
+    return { latestKey: this.latestKey, throttleMs: this.throttleMs };
+  }
+
+  /**
+   * Releases the room. The server retracts our presence on `room:leave`, so no
+   * explicit clear is sent; the local identity is kept so a remount can
+   * re-announce it.
+   */
+  private leave(): void {
+    this.transport.dropLatest(this.latestKey);
+    this.releaseSubscription?.();
+    this.releaseSubscription = null;
+    this.releaseSignalSubscription?.();
+    this.releaseSignalSubscription = null;
+    this.releaseRoom?.();
+    this.releaseRoom = null;
+    runInAction(() => {
+      this.entries.clear();
+      this.summaryById.clear();
+      this.roster.clear();
+    });
+  }
+
+  private syncSubscription(): void {
+    const shouldJoin = this.demand.isActive;
+
+    if (shouldJoin && !this.releaseRoom) {
+      this.releaseSubscription = this.transport.subscribe<
+        PresenceServerEvent<TState>
+      >("presence", (event) => this.applyEvent(event));
+      this.releaseSignalSubscription = this.transport.subscribe<
+        RoomSignalEvent<unknown>
+      >("signal", (event) => this.applySignal(event));
+      this.releaseRoom = this.transport.joinRoom(this.roomId);
+
+      // Re-announce after a remount so peers that missed the gap see us again.
+      if (this.self) {
+        this.setSelf(this.self, this.selfState);
+      }
+      return;
+    }
+
+    if (!shouldJoin && this.releaseRoom) {
+      this.leave();
+    }
+  }
+
+  private applySignal(event: RoomSignalEvent<unknown>): void {
+    const signal = decodeRoomSignal(this.roomId, event);
+    if (!signal) return;
+    this.signalListeners.forEach((listener) => listener(signal));
+  }
+
+  private applyEvent(event: PresenceServerEvent<TState>): void {
+    const change = decodePresenceEvent<TState>(this.roomId, event);
+    if (!change) return;
+
+    runInAction(() => {
+      if (change.operation === "sync") {
+        // A sync is authoritative for peers only; the local entry is owned by
+        // this client and would otherwise vanish on every reconnect.
+        const selfEntry = this.self
+          ? this.entries.get(this.self.id)
+          : undefined;
+        this.entries.clear();
+        change.entries.forEach((entry) => {
+          this.entries.set(entry.participant.id, entry);
+        });
+        if (this.self && selfEntry) {
+          this.entries.set(this.self.id, selfEntry);
+        }
+        this.replaceRoster(Array.from(this.entries.values()));
+        return;
+      }
+
+      if (change.operation === "remove") {
+        if (change.participantId === this.self?.id) return;
+        this.entries.delete(change.participantId);
+        this.removeSummary(change.participantId);
+        return;
+      }
+
+      if (change.entry.participant.id === this.self?.id) return;
+      this.entries.set(change.entry.participant.id, change.entry);
+      this.upsertSummary(change.entry);
+    });
+  }
+
+  private upsertSummary(entry: PresenceEntry<TState>): void {
+    const participant = entry.participant;
+    const next: PresenceSummary = {
+      participant,
+      hasState: this.structuralHasState(entry.state),
+    };
+    const previous = this.summaryById.get(participant.id);
+    if (
+      previous?.hasState === next.hasState &&
+      previous.participant.name === participant.name &&
+      previous.participant.tone === participant.tone
+    ) {
+      return;
+    }
+
+    this.summaryById.set(participant.id, next);
+    const index = this.roster.findIndex(
+      (summary) => summary.participant.id === participant.id,
+    );
+    if (index === -1) {
+      this.roster.push(next);
+    } else {
+      this.roster[index] = next;
+    }
+  }
+
+  private removeSummary(participantId: string): void {
+    if (!this.summaryById.delete(participantId)) return;
+    const index = this.roster.findIndex(
+      (summary) => summary.participant.id === participantId,
+    );
+    if (index !== -1) this.roster.splice(index, 1);
+  }
+
+  private replaceRoster(entries: PresenceEntry<TState>[]): void {
+    this.summaryById.clear();
+    const summaries = entries.map((entry) => ({
+      participant: entry.participant,
+      hasState: this.structuralHasState(entry.state),
+    }));
+    summaries.forEach((summary) => {
+      this.summaryById.set(summary.participant.id, summary);
+    });
+    this.roster.replace(summaries);
+  }
+}

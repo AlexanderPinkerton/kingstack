@@ -43,7 +43,7 @@ jobs:
       - name: Check formatting
         run: yarn format:check
       - name: Lint
-        run: yarn lint
+        run: yarn lint:check
       - name: Typecheck
         run: yarn typecheck
       - name: Test

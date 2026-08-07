@@ -7,6 +7,13 @@ import { OptimisticPostDemoController } from "./optimisticPostDemoController";
 import { RealtimeCheckboxStore } from "./checkboxStore";
 import { CurrentUserStore } from "./currentUserStore";
 import { PublicTodoStore } from "./publicTodoStore";
+import {
+  SharedCursorStore,
+  worldProjection,
+  type SharedCursorStoreOptions,
+} from "./sharedCursorStore";
+import { CANVAS_WORLD } from "@/lib/realtime/canvas-world";
+import { WavePoolStore } from "./wavePoolStore";
 
 interface UserStoreManagerOptions {
   queryClient: QueryClient;
@@ -27,6 +34,9 @@ export class UserStoreManager {
   readonly publicTodoStore: PublicTodoStore;
   readonly currentUserStore: CurrentUserStore;
 
+  private readonly realtimeSource: RealtimeTransport;
+  private readonly cursorStores = new Map<string, SharedCursorStore>();
+  private wavePoolStoreInstance: WavePoolStore | null = null;
   private releaseCurrentUser: (() => void) | null = null;
   private isDisposed = false;
 
@@ -35,6 +45,7 @@ export class UserStoreManager {
     browserId,
     realtimeSource,
   }: UserStoreManagerOptions) {
+    this.realtimeSource = realtimeSource;
     this.optimisticPostDemoController = new OptimisticPostDemoController(
       createHttpPostRepository(),
     );
@@ -50,6 +61,44 @@ export class UserStoreManager {
     );
     this.publicTodoStore = new PublicTodoStore(queryClient);
     this.currentUserStore = new CurrentUserStore(queryClient);
+  }
+
+  /**
+   * Cursor rooms are scoped per surface rather than per app, so they are made
+   * on demand. One store is shared by every consumer of the same room; the
+   * manager keeps them so page unmounts cannot leak a socket subscription.
+   *
+   * Positions are fractions of the bound surface, which only agree between
+   * clients rendering the same layout. Use `canvasCursorStore` for a surface
+   * that needs to agree across devices.
+   */
+  cursorStore(scope: string): SharedCursorStore {
+    return this.sharedCursorStore(`cursors:${scope}`);
+  }
+
+  /** Positions are absolute units in the fixed canvas world. */
+  canvasCursorStore(scope: string): SharedCursorStore {
+    return this.sharedCursorStore(`canvas:${scope}`, {
+      projection: worldProjection(CANVAS_WORLD.width, CANVAS_WORLD.height),
+    });
+  }
+
+  /** The site has exactly one shared wave pool, created only when requested. */
+  wavePoolStore(): WavePoolStore {
+    this.wavePoolStoreInstance ??= new WavePoolStore(this.realtimeSource);
+    return this.wavePoolStoreInstance;
+  }
+
+  private sharedCursorStore(
+    roomId: string,
+    options?: SharedCursorStoreOptions,
+  ): SharedCursorStore {
+    const existing = this.cursorStores.get(roomId);
+    if (existing) return existing;
+
+    const store = new SharedCursorStore(this.realtimeSource, roomId, options);
+    this.cursorStores.set(roomId, store);
+    return store;
   }
 
   updateSession(session: SupabaseSession): void {
@@ -85,5 +134,9 @@ export class UserStoreManager {
     this.checkboxStore.dispose();
     this.publicTodoStore.dispose();
     this.currentUserStore.dispose();
+    this.cursorStores.forEach((store) => store.dispose());
+    this.cursorStores.clear();
+    this.wavePoolStoreInstance?.dispose();
+    this.wavePoolStoreInstance = null;
   }
 }

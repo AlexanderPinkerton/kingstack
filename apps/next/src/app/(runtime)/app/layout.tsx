@@ -13,6 +13,8 @@ const navLinks = [
   { title: "Overview", href: "/app" },
   { title: "Optimistic", href: "/app/optimistic" },
   { title: "Realtime", href: "/app/realtime" },
+  { title: "Canvas", href: "/app/canvas" },
+  { title: "Wave pool", href: "/app/wave-pool" },
   { title: "Theme", href: "/app/theme-builder" },
 ] as const;
 

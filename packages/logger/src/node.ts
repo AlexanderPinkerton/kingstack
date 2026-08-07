@@ -191,9 +191,21 @@ function parseEnvironment(
 function normalizeError(error: unknown): Error {
   if (error instanceof Error) return error;
 
-  return new NonErrorThrown(
-    typeof error === "string" ? error : "A non-Error value was thrown",
-  );
+  if (typeof error === "string") return new NonErrorThrown(error);
+
+  // Many libraries reject with a plain object rather than an Error — Supabase
+  // returns `{ message, details, hint, code }`. Discarding it leaves a log line
+  // that says only that something failed, so keep the payload.
+  if (typeof error === "object" && error !== null) {
+    const record = error as Record<string, unknown>;
+    const message =
+      typeof record.message === "string" && record.message.length > 0
+        ? record.message
+        : "A non-Error value was thrown";
+    return new NonErrorThrown(message, record);
+  }
+
+  return new NonErrorThrown("A non-Error value was thrown");
 }
 
 function serializeError(value: unknown, depth = 0): Record<string, unknown> {
@@ -203,6 +215,9 @@ function serializeError(value: unknown, depth = 0): Record<string, unknown> {
     message: error.message,
   };
 
+  if (error instanceof NonErrorThrown && error.payload) {
+    serialized.payload = error.payload;
+  }
   if (error.stack) serialized.stack = error.stack;
   if (error.cause !== undefined && depth < 3) {
     serialized.cause = serializeError(error.cause, depth + 1);
@@ -213,6 +228,14 @@ function serializeError(value: unknown, depth = 0): Record<string, unknown> {
 
 class NonErrorThrown extends Error {
   override readonly name = "NonErrorThrown";
+
+  constructor(
+    message: string,
+    /** The original thrown value's own properties, when it was an object. */
+    readonly payload?: Record<string, unknown>,
+  ) {
+    super(message);
+  }
 }
 
 async function flushPino(logger: PinoLogger): Promise<void> {

@@ -379,7 +379,7 @@ export function prepareGeneratedProject(targetDir: string): number {
         delete rootPackage.scripts?.[script];
       }
       if (rootPackage.scripts?.["king-config"]) {
-        rootPackage.scripts["king-config"] = "bun king-config";
+        rootPackage.scripts["king-config"] = "yarn exec king-config";
       }
       delete rootPackage.devDependencies?.["@changesets/cli"];
       writeFileSync(

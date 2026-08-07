@@ -105,21 +105,25 @@ describe("RealtimeManager", () => {
     expect(socketFactory).toHaveBeenCalledOnce();
   });
 
-  it("publishes domain events through the active socket", () => {
+  it("replays the latest keyed publication after a reconnect", () => {
     const socket = new FakeSocket();
     const manager = new RealtimeManager({
       browserId: "browser-a",
       socketFactory: () => socket.asSocket(),
     });
 
-    manager.setup("token-a");
-    manager.publishLatest("checkbox_presence", {
-      action: "focus",
+    const presence = {
+      roomId: "checkboxes:global",
       participant: { id: "a", name: "Ada", tone: "lime" },
-      checkboxIndex: 3,
+      state: { checkboxIndex: 3 },
+    };
+
+    manager.setup("token-a");
+    manager.publish("presence:set", presence, {
+      latestKey: "presence:checkboxes:global",
     });
     expect(socket.emitted).not.toContainEqual(
-      expect.objectContaining({ event: "checkbox_presence" }),
+      expect.objectContaining({ event: "presence:set" }),
     );
 
     socket.connected = true;
@@ -130,16 +134,7 @@ describe("RealtimeManager", () => {
         event: "register",
         args: [{ token: "token-a", browserId: "browser-a" }],
       },
-      {
-        event: "checkbox_presence",
-        args: [
-          {
-            action: "focus",
-            participant: { id: "a", name: "Ada", tone: "lime" },
-            checkboxIndex: 3,
-          },
-        ],
-      },
+      { event: "presence:set", args: [presence] },
     ]);
 
     socket.connected = false;
@@ -148,6 +143,126 @@ describe("RealtimeManager", () => {
     socket.trigger("connect");
 
     expect(socket.emitted.slice(-2)).toEqual(socket.emitted.slice(0, 2));
+  });
+
+  it("stops replaying a dropped latest key", () => {
+    const socket = new FakeSocket();
+    const manager = new RealtimeManager({
+      browserId: "browser-a",
+      socketFactory: () => socket.asSocket(),
+    });
+
+    manager.setup("token-a");
+    socket.connected = true;
+    socket.trigger("connect");
+
+    manager.publish(
+      "presence:set",
+      { roomId: "cursors:demo" },
+      {
+        latestKey: "presence:cursors:demo",
+      },
+    );
+    manager.dropLatest("presence:cursors:demo");
+
+    socket.connected = false;
+    socket.trigger("disconnect", "transport close");
+    socket.connected = true;
+    socket.trigger("connect");
+
+    expect(
+      socket.emitted
+        .slice(-1)
+        .filter((entry) => entry.event === "presence:set"),
+    ).toEqual([]);
+  });
+
+  it("joins rooms once, re-joins them on reconnect, and leaves on last release", () => {
+    const socket = new FakeSocket();
+    const manager = new RealtimeManager({
+      browserId: "browser-a",
+      socketFactory: () => socket.asSocket(),
+    });
+
+    manager.setup("token-a");
+    socket.connected = true;
+    socket.trigger("connect");
+
+    const releaseFirst = manager.joinRoom("checkboxes:global");
+    const releaseSecond = manager.joinRoom("checkboxes:global");
+
+    expect(
+      socket.emitted.filter((entry) => entry.event === "room:join"),
+    ).toEqual([
+      { event: "room:join", args: [{ roomId: "checkboxes:global" }] },
+    ]);
+
+    socket.connected = false;
+    socket.trigger("disconnect", "transport close");
+    socket.connected = true;
+    socket.trigger("connect");
+
+    // Rooms are restored before any keyed presence so the server sees the join
+    // first.
+    const restored = socket.emitted.slice(-2).map((entry) => entry.event);
+    expect(restored).toEqual(["register", "room:join"]);
+
+    releaseFirst();
+    expect(
+      socket.emitted.filter((entry) => entry.event === "room:leave"),
+    ).toEqual([]);
+
+    releaseSecond();
+    expect(
+      socket.emitted.filter((entry) => entry.event === "room:leave"),
+    ).toEqual([
+      { event: "room:leave", args: [{ roomId: "checkboxes:global" }] },
+    ]);
+  });
+
+  it("coalesces throttled publishes to one leading and one trailing frame", () => {
+    const socket = new FakeSocket();
+    let now = 0;
+    const scheduled: Array<{ callback: () => void; delayMs: number }> = [];
+    const manager = new RealtimeManager({
+      browserId: "browser-a",
+      socketFactory: () => socket.asSocket(),
+      now: () => now,
+      scheduleFlush: (callback, delayMs) => {
+        scheduled.push({ callback, delayMs });
+        return scheduled.length;
+      },
+      cancelFlush: () => undefined,
+    });
+
+    manager.setup("token-a");
+    socket.connected = true;
+    socket.trigger("connect");
+
+    const publishAt = (x: number) =>
+      manager.publish(
+        "presence:set",
+        { roomId: "cursors:demo", state: { x, y: 0 } },
+        { latestKey: "presence:cursors:demo", throttleMs: 50 },
+      );
+
+    publishAt(0.1); // leading edge, emitted immediately
+    now = 10;
+    publishAt(0.2);
+    now = 20;
+    publishAt(0.3); // only the newest frame survives the window
+
+    const emittedStates = () =>
+      socket.emitted
+        .filter((entry) => entry.event === "presence:set")
+        .map((entry) => (entry.args[0] as { state: { x: number } }).state.x);
+
+    expect(emittedStates()).toEqual([0.1]);
+    expect(scheduled).toHaveLength(1);
+
+    now = 50;
+    scheduled[0].callback();
+    expect(emittedStates()).toEqual([0.1, 0.3]);
   });
 
   it("exposes transport lifecycle and connection errors", () => {
@@ -200,6 +315,7 @@ describe("RealtimeManager", () => {
     expect(() => manager.subscribe("event", () => undefined)).toThrow(
       "disposed",
     );
-    expect(() => manager.publishLatest("event", {})).toThrow("disposed");
+    expect(() => manager.publish("event", {})).toThrow("disposed");
+    expect(() => manager.joinRoom("cursors:demo")).toThrow("disposed");
   });
 });

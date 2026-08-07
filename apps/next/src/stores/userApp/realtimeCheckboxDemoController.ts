@@ -210,8 +210,8 @@ export class RealtimeCheckboxDemoController {
     if (this.disposed) return;
     this.disposed = true;
 
-    this.primaryStore.leavePresence(this.primaryParticipant);
-    this.collaboratorStore.leavePresence(this.collaboratorParticipant);
+    this.primaryStore.leavePresence();
+    this.collaboratorStore.leavePresence();
 
     this.releasePrimary?.();
     this.releasePrimary = null;
