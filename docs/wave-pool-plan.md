@@ -549,18 +549,20 @@ Per frame, in plain TS:
   clamped to `0…1`, so 10 Hz snapshots read as smooth at 60 fps. No client-side
   solver or extrapolation exists.
 - Displace the water plane's Y in the vertex shader by sampling and mixing both
-  textures. Derive normals from neighbouring height samples so lighting reveals
-  the wave instead of shading a displaced surface as a flat plane.
-- Render the translucent surface above a recessed lit basin, with a 2.2×
-  presentation-only height scale and view-dependent specular/Fresnel light. The
-  exaggeration never feeds back into the authoritative field or wire format.
+  textures. Render the displaced 64×40 geometry as a white wireframe, with line
+  opacity and brightness increasing slightly at energetic crests and troughs.
+- Render the surface above a recessed, low-contrast wireframe basin, with a
+  2.2× presentation-only height scale. The monochrome, unlit treatment avoids
+  specular flashes and keeps the simulation legible as a field rather than a
+  solid sheet of water. The exaggeration never feeds back into the
+  authoritative field or wire format.
 - Walk `cursors.positions` and update one preallocated point-cloud position and
   colour buffer with a draw range bounded by `count`. Y comes from
   `field.heightAt(x, z, alpha)`, using the exact same interpolation factor as
   the surface. This is one draw call rather than 64 sprite draw calls.
 - Interpolate the one boat's position and quaternion between 30 Hz poses using
   an interval adapted from observed arrivals, then mutate a prebuilt
-  hull/deck/cabin group.
+  white wireframe hull/deck/cabin group.
 - Update five preallocated instanced cone batches (one explicit unlit material
   per presence tone) from `ViewpointBuffer` only when its version changes.
   Matching vertical lines anchor camera positions to the pool plane; cone
@@ -624,7 +626,9 @@ rendering the canvas component again.
 
 Surrounding chrome (`PresenceFacepile`, participant count, copy) stays ordinary
 React **outside** this component, driven by the structural roster of §6.6 rather
-than by the presence map directly.
+than by the presence map directly. The route breaks out of the application
+content column so the canvas fills the viewport; the title, instructions,
+presence, and reset control float over it without intercepting pointer input.
 
 The reset button observes a dedicated MobX projection that changes at most once
 per displayed countdown second. The 30 Hz `BoatBuffer` remains plain data and
@@ -708,12 +712,14 @@ singleton if it was constructed.
 ### 6.8 Design-system, accessibility, and reduced motion
 
 Reuse the existing collaboration chrome, `PresenceFacepile`, presence-tone
-palette, typography, spacing, borders, and radii rather than inventing a second
-visual language for the demo. The implementation follows
-`apps/next/src/components/ui/ui-design.md`, the CSS accent variables in
-`globals.css`, and the existing canvas/presence components. The pure renderer
-uses the same established cyan, violet, and lime palette without importing
-React or MobX.
+palette, typography, spacing, and borders rather than inventing a second visual
+language for the demo. The implementation follows
+`apps/next/src/components/ui/ui-design.md` and the existing canvas/presence
+components, but gives this experiment a deliberately stark black-and-white
+field aesthetic: the viewport, basin, water, boat, copy, and controls are
+monochrome. Established presence tones remain only on participant cursors,
+camera markers, guide lines, and facepile identities so collaborators can still
+be matched across the UI and 3D scene.
 
 The canvas gets an accessible label and adjacent explanatory fallback text.
 For `prefers-reduced-motion: reduce`, draw only when field/cursor state or size

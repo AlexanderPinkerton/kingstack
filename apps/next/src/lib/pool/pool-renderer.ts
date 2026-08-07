@@ -1,5 +1,4 @@
 import {
-  AmbientLight,
   BoxGeometry,
   BufferAttribute,
   BufferGeometry,
@@ -7,8 +6,6 @@ import {
   Color,
   ConeGeometry,
   DataTexture,
-  DoubleSide,
-  DirectionalLight,
   Group,
   InstancedMesh,
   LinearFilter,
@@ -16,7 +13,6 @@ import {
   LineSegments,
   Mesh,
   MeshBasicMaterial,
-  MeshStandardMaterial,
   Object3D,
   PerspectiveCamera,
   Plane,
@@ -56,8 +52,6 @@ const VERTEX_SHADER = /* glsl */ `
   uniform float visualHeightScale;
 
   varying float vHeight;
-  varying vec2 vPoolUv;
-  varying vec3 vWorldPosition;
 
   float decodeHeight(sampler2D field, vec2 poolUv) {
     float quantised = texture2D(field, poolUv).r * 255.0 - 128.0;
@@ -75,64 +69,19 @@ const VERTEX_SHADER = /* glsl */ `
     vec3 transformed = position;
     transformed.y += height;
     vHeight = height / (heightMax * visualHeightScale);
-    vPoolUv = poolUv;
     vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);
-    vWorldPosition = worldPosition.xyz;
     gl_Position = projectionMatrix * viewMatrix * worldPosition;
   }
 `;
 
 const FRAGMENT_SHADER = /* glsl */ `
-  uniform sampler2D previousField;
-  uniform sampler2D currentField;
-  uniform float frameMix;
-  uniform float heightMax;
-  uniform float visualHeightScale;
-  uniform vec2 fieldTexel;
-  uniform vec2 cellSize;
-  uniform vec3 deepColor;
-  uniform vec3 crestColor;
-  uniform vec3 accentColor;
-
   varying float vHeight;
-  varying vec2 vPoolUv;
-  varying vec3 vWorldPosition;
-
-  float sampleHeight(vec2 poolUv) {
-    float previous = texture2D(previousField, poolUv).r * 255.0 - 128.0;
-    float current = texture2D(currentField, poolUv).r * 255.0 - 128.0;
-    float quantised = mix(previous, current, frameMix);
-    return clamp(quantised / 127.0, -1.0, 1.0) * heightMax * visualHeightScale;
-  }
 
   void main() {
-    float crest = smoothstep(-0.15, 0.85, vHeight);
-    float trough = smoothstep(0.0, 0.9, -vHeight);
-    vec3 color = mix(deepColor, crestColor, crest * 0.72);
-    color = mix(color, deepColor * 0.48, trough * 0.5);
-
-    float left = sampleHeight(vPoolUv - vec2(fieldTexel.x, 0.0));
-    float right = sampleHeight(vPoolUv + vec2(fieldTexel.x, 0.0));
-    float nearHeight = sampleHeight(vPoolUv - vec2(0.0, fieldTexel.y));
-    float farHeight = sampleHeight(vPoolUv + vec2(0.0, fieldTexel.y));
-    vec3 normal = normalize(vec3(
-      -(right - left) / (2.0 * cellSize.x) * 0.62,
-      1.0,
-      -(farHeight - nearHeight) / (2.0 * cellSize.y) * 0.62
-    ));
-    vec3 lightDirection = normalize(vec3(-0.35, 0.86, 0.38));
-    vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
-    vec3 halfVector = normalize(lightDirection + viewDirection);
-    float diffuse = 0.5 + max(dot(normal, lightDirection), 0.0) * 0.5;
-    float specular = pow(max(dot(normal, halfVector), 0.0), 28.0);
-    float fresnel = pow(1.0 - max(dot(normal, viewDirection), 0.0), 3.0);
-
-    color *= diffuse;
-    color += mix(accentColor, vec3(0.72, 0.9, 0.96), 0.35) * specular * 0.26;
-    color += accentColor * fresnel * 0.2;
-    color = min(color, vec3(0.68, 0.9, 0.96));
-    float alpha = 0.82 + fresnel * 0.14 + specular * 0.02;
-    gl_FragColor = vec4(color, alpha);
+    float energy = smoothstep(0.02, 0.72, abs(vHeight));
+    float brightness = mix(0.68, 1.0, energy);
+    float alpha = mix(0.2, 0.88, energy);
+    gl_FragColor = vec4(vec3(brightness), alpha);
   }
 `;
 
@@ -187,7 +136,7 @@ export class PoolRenderer implements PoolViewController {
   private readonly cursorColors: Float32Array;
   private readonly cursorTexture = createCursorTexture();
   private readonly cursorMaterial = new PointsMaterial({
-    size: 13,
+    size: 8,
     sizeAttenuation: false,
     map: this.cursorTexture,
     transparent: true,
@@ -217,19 +166,25 @@ export class PoolRenderer implements PoolViewController {
   private readonly viewpointUp = new Vector3(0, 1, 0);
   private readonly boatGroup = new Group();
   private readonly boatGeometries: BufferGeometry[] = [];
-  private readonly boatMaterials: MeshStandardMaterial[] = [];
+  private readonly boatMaterials: MeshBasicMaterial[] = [];
   private readonly boatPreviousRotation = new Quaternion();
   private readonly boatCurrentRotation = new Quaternion();
   private readonly basinGeometries: BufferGeometry[] = [];
-  private readonly basinMaterial = new MeshStandardMaterial({
-    color: 0x111c24,
-    roughness: 0.58,
-    metalness: 0.32,
+  private readonly basinMaterial = new MeshBasicMaterial({
+    color: 0xffffff,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.13,
+    depthWrite: false,
+    toneMapped: false,
   });
-  private readonly floorMaterial = new MeshStandardMaterial({
-    color: 0x06131b,
-    roughness: 0.82,
-    metalness: 0.12,
+  private readonly floorMaterial = new MeshBasicMaterial({
+    color: 0xffffff,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.055,
+    depthWrite: false,
+    toneMapped: false,
   });
   private readonly raycaster = new Raycaster();
   private readonly ndc = new Vector2();
@@ -268,15 +223,11 @@ export class PoolRenderer implements PoolViewController {
       alpha: false,
       powerPreference: "high-performance",
     });
-    this.renderer.setClearColor(0x070b11, 1);
+    this.renderer.setClearColor(0x000000, 1);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
     this.applyCameraPose();
 
-    this.scene.add(new AmbientLight(0x77a6b8, 0.72));
-    const keyLight = new DirectionalLight(0xc8f5ff, 2.4);
-    keyLight.position.set(-520, 900, 620);
-    this.scene.add(keyLight);
     this.addBasin();
 
     this.poolMaterial = new ShaderMaterial({
@@ -286,27 +237,12 @@ export class PoolRenderer implements PoolViewController {
         frameMix: { value: 1 },
         heightMax: { value: POOL_HEIGHT_MAX },
         visualHeightScale: { value: this.visualHeightScale },
-        fieldTexel: {
-          value: new Vector2(
-            1 / (POOL_GRID.cols - 1),
-            1 / (POOL_GRID.rows - 1),
-          ),
-        },
-        cellSize: {
-          value: new Vector2(
-            POOL_WORLD.width / (POOL_GRID.cols - 1),
-            POOL_WORLD.depth / (POOL_GRID.rows - 1),
-          ),
-        },
-        deepColor: { value: new Color(0x071c28) },
-        crestColor: { value: new Color(0x2e9cb5) },
-        accentColor: { value: new Color(0x8ee8ff) },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
-      side: DoubleSide,
       transparent: true,
       depthWrite: false,
+      wireframe: true,
     });
     // The geometry is already horizontal, so the shader displaces its Y axis.
     this.poolGeometry.rotateX(-Math.PI / 2);
@@ -332,6 +268,7 @@ export class PoolRenderer implements PoolViewController {
     for (const color of TONE_COLORS) {
       const material = new MeshBasicMaterial({
         color,
+        wireframe: true,
         transparent: true,
         opacity: 0.96,
         depthTest: false,
@@ -691,7 +628,7 @@ export class PoolRenderer implements PoolViewController {
     const halfWidth = POOL_WORLD.width / 2;
     const halfDepth = POOL_WORLD.depth / 2;
 
-    const floor = new PlaneGeometry(POOL_WORLD.width, POOL_WORLD.depth);
+    const floor = new PlaneGeometry(POOL_WORLD.width, POOL_WORLD.depth, 16, 10);
     floor.rotateX(-Math.PI / 2);
     const floorMesh = new Mesh(floor, this.floorMaterial);
     floorMesh.position.y = -basinDepth;
@@ -732,32 +669,26 @@ export class PoolRenderer implements PoolViewController {
     const hullGeometry = new SphereGeometry(1, 20, 12);
     const deckGeometry = new BoxGeometry(76, 12, 112);
     const cabinGeometry = new BoxGeometry(42, 30, 48);
-    const hullMaterial = new MeshStandardMaterial({
-      color: 0xff9c6e,
-      roughness: 0.46,
-      metalness: 0.08,
-    });
-    const deckMaterial = new MeshStandardMaterial({
-      color: 0xf9da7f,
-      roughness: 0.62,
-      metalness: 0.04,
-    });
-    const cabinMaterial = new MeshStandardMaterial({
-      color: 0x172d38,
-      roughness: 0.34,
-      metalness: 0.18,
+    const boatMaterial = new MeshBasicMaterial({
+      color: 0xffffff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.92,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
     });
 
-    const hull = new Mesh(hullGeometry, hullMaterial);
+    const hull = new Mesh(hullGeometry, boatMaterial);
     hull.scale.set(52, 25, 102);
     hull.position.y = 2;
-    const deck = new Mesh(deckGeometry, deckMaterial);
+    const deck = new Mesh(deckGeometry, boatMaterial);
     deck.position.y = 22;
-    const cabin = new Mesh(cabinGeometry, cabinMaterial);
+    const cabin = new Mesh(cabinGeometry, boatMaterial);
     cabin.position.set(0, 43, -10);
 
     this.boatGeometries.push(hullGeometry, deckGeometry, cabinGeometry);
-    this.boatMaterials.push(hullMaterial, deckMaterial, cabinMaterial);
+    this.boatMaterials.push(boatMaterial);
     this.boatGroup.add(hull, deck, cabin);
     this.boatGroup.visible = false;
     this.boatGroup.renderOrder = 2;

@@ -1,13 +1,7 @@
 "use client";
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Activity,
-  MousePointerClick,
-  Radio,
-  RotateCcw,
-  Waves,
-} from "lucide-react";
+import { Radio, RotateCcw } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { PresenceFacepile } from "@/components/collaboration/presence-facepile";
 import { Button } from "@/components/ui/button";
@@ -102,6 +96,7 @@ const PoolBoatReset = observer(function PoolBoatReset({
       disabled={!store.boatReset.canReset}
       onClick={() => store.resetBoat()}
       title="Reset the shared boat to the center of the pool"
+      className="border-white/20 bg-black/60 text-white backdrop-blur-md hover:bg-white hover:text-black"
     >
       <RotateCcw aria-hidden="true" />
       <span aria-live="polite">{store.boatReset.label}</span>
@@ -129,83 +124,64 @@ export const WavePool = observer(function WavePool() {
   const store = useWavePool(participant);
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#111216]/85 p-4 shadow-2xl shadow-black/20 sm:p-8">
+    <section className="relative left-1/2 -mb-20 -mt-28 min-h-[100svh] w-screen -translate-x-1/2 overflow-hidden bg-black text-white">
+      <div className="absolute inset-0">
+        <PoolScene store={store} participantId={participantId} />
+      </div>
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-80 opacity-70"
-        style={{
-          background:
-            "radial-gradient(circle at 90% 0%, color-mix(in oklch, var(--accent-1-m) 22%, transparent), transparent 38%), radial-gradient(circle at 8% 4%, color-mix(in oklch, var(--accent-2-m) 12%, transparent), transparent 30%)",
-        }}
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(255,255,255,0.07),transparent_26%),linear-gradient(to_bottom,rgba(0,0,0,0.16),transparent_45%,rgba(0,0,0,0.68))]"
       />
 
-      <div className="relative">
-        <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 text-xs text-white/55">
-            <Radio
-              className="size-3 text-[var(--accent-1-m)]"
-              aria-hidden="true"
-            />
-            One global simulation
-          </div>
-          <h2 className="mt-5 text-3xl font-semibold leading-tight tracking-[-0.045em] sm:text-5xl">
-            Make a wave. Share the water.
-            <span className="block font-gambetta font-normal italic text-white/45">
-              Everyone changes the same pool.
-            </span>
-          </h2>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-white/50 sm:text-lg sm:leading-8">
-            Make waves to push the shared boat, or right-drag to watch from a
-            different side. The Nest server advances one authoritative field and
-            boat for the entire site, so every person here changes the same
-            water. Colored 3D markers show where everyone else is watching from.
-          </p>
-        </div>
-
-        <div className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-3">
-          {[
-            {
-              icon: Waves,
-              label: "One field",
-              detail: "64×40 authoritative cells",
-            },
-            {
-              icon: Activity,
-              label: "Smooth playback",
-              detail: "60Hz render, 30Hz boat",
-            },
-            {
-              icon: MousePointerClick,
-              label: "Shared boat",
-              detail: "Buoyancy, pitch, and roll",
-            },
-          ].map(({ icon: Icon, label, detail }) => (
-            <div key={label} className="bg-[#0c0d10] px-5 py-4">
-              <Icon
-                className="size-4 text-[var(--accent-1-m)]"
-                aria-hidden="true"
-              />
-              <p className="mt-3 text-sm font-medium">{label}</p>
-              <p className="mt-1 text-xs text-white/35">{detail}</p>
+      <div className="pointer-events-none relative z-10 flex min-h-[100svh] flex-col px-5 pb-5 pt-24 sm:px-8 sm:pb-8 sm:pt-28 lg:px-12">
+        <div className="flex items-start justify-between gap-8">
+          <header className="max-w-xl">
+            <div className="inline-flex items-center gap-2 border border-white/20 bg-black/45 px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.2em] text-white/70 backdrop-blur-md">
+              <Radio className="size-3" aria-hidden="true" />
+              Global simulation / live
             </div>
-          ))}
-        </div>
+            <h1 className="mt-5 text-5xl font-semibold leading-[0.88] tracking-[-0.065em] sm:text-7xl lg:text-8xl">
+              Make
+              <br />a wave.
+            </h1>
+            <p className="mt-5 max-w-md text-sm leading-6 text-white/60 sm:text-base sm:leading-7">
+              One wireframe surface. One buoyant boat. Everyone on the site
+              changes the same water.
+            </p>
+            <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-white/45">
+              <div>
+                <dt className="sr-only">Field resolution</dt>
+                <dd>64 × 40 field</dd>
+              </div>
+              <div>
+                <dt className="sr-only">Render frequency</dt>
+                <dd>60 Hz render</dd>
+              </div>
+              <div>
+                <dt className="sr-only">Boat frequency</dt>
+                <dd>30 Hz boat</dd>
+              </div>
+            </dl>
+          </header>
 
-        <div
-          className="relative mt-6 aspect-[16/9] min-h-72 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#070b11] shadow-inner shadow-black/50"
-          role="group"
-          aria-label="Wave pool controls"
-        >
-          <PoolScene store={store} participantId={participantId} />
-          <div className="pointer-events-none absolute bottom-3 left-3 rounded-full border border-white/10 bg-black/45 px-3 py-1.5 text-[0.68rem] text-white/45 backdrop-blur-md">
-            Move to stir · Click for a pulse · Right-drag to orbit · Wheel to
-            zoom
+          <div className="hidden border-r border-white/20 pr-4 text-right font-mono text-[0.6rem] uppercase leading-6 tracking-[0.16em] text-white/45 md:block">
+            <p>Move / stir</p>
+            <p>Click / pulse</p>
+            <p>Right drag / orbit</p>
+            <p>Wheel / zoom</p>
           </div>
         </div>
 
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <PoolPresence store={store} />
-          <PoolBoatReset store={store} />
+        <div className="mt-auto flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
+          <div className="max-w-full border border-white/15 bg-black/60 p-3 backdrop-blur-md">
+            <PoolPresence store={store} />
+          </div>
+          <div className="pointer-events-auto flex flex-col items-start gap-2 sm:items-end">
+            <p className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-white/40 md:hidden">
+              Move · click · right-drag · wheel
+            </p>
+            <PoolBoatReset store={store} />
+          </div>
         </div>
       </div>
     </section>
