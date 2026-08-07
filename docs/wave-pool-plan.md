@@ -551,6 +551,12 @@ Per frame, in plain TS:
 - Displace the water plane's Y in the vertex shader by sampling and mixing both
   textures. Render the displaced 64×40 geometry as a white wireframe, with line
   opacity and brightness increasing slightly at energetic crests and troughs.
+  Draw one shaded gray point sprite at every grid intersection from the same
+  geometry and shader uniforms; the 2,560 round markers add one draw call rather
+  than 2,560 sphere meshes. Their luminance stays below the white boat, rising
+  modestly with wave energy. A local-only display toggle makes either the
+  wireframe or point layer visible, never both, without rebuilding the renderer
+  or publishing presence state.
 - Render the surface above a recessed, low-contrast wireframe basin, with a
   2.2× presentation-only height scale. The monochrome, unlit treatment avoids
   specular flashes and keeps the simulation legible as a field rather than a

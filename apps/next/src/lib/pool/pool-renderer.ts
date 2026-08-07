@@ -50,6 +50,7 @@ const VERTEX_SHADER = /* glsl */ `
   uniform float frameMix;
   uniform float heightMax;
   uniform float visualHeightScale;
+  uniform float pointSize;
 
   varying float vHeight;
 
@@ -70,7 +71,13 @@ const VERTEX_SHADER = /* glsl */ `
     transformed.y += height;
     vHeight = height / (heightMax * visualHeightScale);
     vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);
-    gl_Position = projectionMatrix * viewMatrix * worldPosition;
+    vec4 viewPosition = viewMatrix * worldPosition;
+    gl_Position = projectionMatrix * viewPosition;
+    gl_PointSize = clamp(
+      pointSize * (800.0 / max(1.0, -viewPosition.z)),
+      2.0,
+      10.0
+    );
   }
 `;
 
@@ -81,6 +88,23 @@ const FRAGMENT_SHADER = /* glsl */ `
     float energy = smoothstep(0.02, 0.72, abs(vHeight));
     float brightness = mix(0.68, 1.0, energy);
     float alpha = mix(0.2, 0.88, energy);
+    gl_FragColor = vec4(vec3(brightness), alpha);
+  }
+`;
+
+const POINT_FRAGMENT_SHADER = /* glsl */ `
+  varying float vHeight;
+
+  void main() {
+    vec2 centered = gl_PointCoord * 2.0 - 1.0;
+    float radiusSquared = dot(centered, centered);
+    if (radiusSquared > 1.0) discard;
+
+    float sphere = sqrt(1.0 - radiusSquared);
+    float edge = 1.0 - smoothstep(0.72, 1.0, radiusSquared);
+    float energy = smoothstep(0.02, 0.72, abs(vHeight));
+    float brightness = mix(0.22, 0.52, sphere);
+    float alpha = edge * mix(0.3, 0.65, energy);
     gl_FragColor = vec4(vec3(brightness), alpha);
   }
 `;
@@ -113,6 +137,8 @@ export interface PoolRendererOptions {
   initialAzimuth?: number;
 }
 
+export type PoolSurfaceMode = "mesh" | "points";
+
 /** Owns all WebGL resources for one canvas. No React or MobX dependency. */
 export class PoolRenderer implements PoolViewController {
   private readonly renderer: WebGLRenderer;
@@ -131,6 +157,9 @@ export class PoolRenderer implements PoolViewController {
     POOL_GRID.rows - 1,
   );
   private readonly poolMaterial: ShaderMaterial;
+  private readonly poolPointMaterial: ShaderMaterial;
+  private readonly poolMesh: Mesh;
+  private readonly poolPoints: Points;
   private readonly cursorGeometry = new BufferGeometry();
   private readonly cursorPositions: Float32Array;
   private readonly cursorColors: Float32Array;
@@ -224,29 +253,43 @@ export class PoolRenderer implements PoolViewController {
       powerPreference: "high-performance",
     });
     this.renderer.setClearColor(0x000000, 1);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    this.renderer.setPixelRatio(pixelRatio);
 
     this.applyCameraPose();
 
     this.addBasin();
 
+    const poolUniforms = {
+      previousField: { value: this.previousTexture },
+      currentField: { value: this.currentTexture },
+      frameMix: { value: 1 },
+      heightMax: { value: POOL_HEIGHT_MAX },
+      visualHeightScale: { value: this.visualHeightScale },
+      pointSize: { value: 8 * pixelRatio },
+    };
     this.poolMaterial = new ShaderMaterial({
-      uniforms: {
-        previousField: { value: this.previousTexture },
-        currentField: { value: this.currentTexture },
-        frameMix: { value: 1 },
-        heightMax: { value: POOL_HEIGHT_MAX },
-        visualHeightScale: { value: this.visualHeightScale },
-      },
+      uniforms: poolUniforms,
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
       transparent: true,
       depthWrite: false,
       wireframe: true,
     });
+    this.poolPointMaterial = new ShaderMaterial({
+      uniforms: poolUniforms,
+      vertexShader: VERTEX_SHADER,
+      fragmentShader: POINT_FRAGMENT_SHADER,
+      transparent: true,
+      depthWrite: false,
+    });
     // The geometry is already horizontal, so the shader displaces its Y axis.
     this.poolGeometry.rotateX(-Math.PI / 2);
-    this.scene.add(new Mesh(this.poolGeometry, this.poolMaterial));
+    this.poolMesh = new Mesh(this.poolGeometry, this.poolMaterial);
+    this.poolPoints = new Points(this.poolGeometry, this.poolPointMaterial);
+    this.poolPoints.renderOrder = 1;
+    this.scene.add(this.poolMesh, this.poolPoints);
+    this.setSurfaceMode("mesh");
 
     this.cursorPositions = new Float32Array(cursors.capacity * 3);
     this.cursorColors = new Float32Array(cursors.capacity * 3);
@@ -310,6 +353,12 @@ export class PoolRenderer implements PoolViewController {
     this.addBoat();
 
     this.resize();
+  }
+
+  setSurfaceMode(mode: PoolSurfaceMode): void {
+    this.poolMesh.visible = mode === "mesh";
+    this.poolPoints.visible = mode === "points";
+    this.cameraDirty = true;
   }
 
   start(): void {
@@ -387,6 +436,7 @@ export class PoolRenderer implements PoolViewController {
     this.disposed = true;
     this.poolGeometry.dispose();
     this.poolMaterial.dispose();
+    this.poolPointMaterial.dispose();
     this.previousTexture.dispose();
     this.currentTexture.dispose();
     this.cursorGeometry.dispose();

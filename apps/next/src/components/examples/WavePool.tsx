@@ -5,10 +5,11 @@ import { Radio, RotateCcw } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { PresenceFacepile } from "@/components/collaboration/presence-facepile";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useRootStore } from "@/hooks/useRootStore";
 import { useWavePool } from "@/hooks/useWavePool";
 import { browserLogger } from "@/lib/browser-logger";
-import { PoolRenderer } from "@/lib/pool/pool-renderer";
+import { PoolRenderer, type PoolSurfaceMode } from "@/lib/pool/pool-renderer";
 import { PoolSurfaceController } from "@/lib/pool/pool-surface";
 import {
   createParticipantId,
@@ -21,11 +22,14 @@ const logger = browserLogger.child({ component: "WavePool" });
 const PoolScene = memo(function PoolScene({
   store,
   participantId,
+  surfaceMode,
 }: {
   store: WavePoolStore;
   participantId: string;
+  surfaceMode: PoolSurfaceMode;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rendererRef = useRef<PoolRenderer | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -46,6 +50,7 @@ const PoolScene = memo(function PoolScene({
           initialAzimuth: azimuthForParticipantId(participantId),
         },
       );
+      rendererRef.current = renderer;
       surface = new PoolSurfaceController(store, renderer);
       surface.attach(canvas);
       renderer.start();
@@ -56,8 +61,13 @@ const PoolScene = memo(function PoolScene({
     return () => {
       surface?.dispose();
       renderer?.dispose();
+      if (rendererRef.current === renderer) rendererRef.current = null;
     };
   }, [participantId, store]);
+
+  useEffect(() => {
+    rendererRef.current?.setSurfaceMode(surfaceMode);
+  }, [surfaceMode]);
 
   return (
     <canvas
@@ -67,6 +77,43 @@ const PoolScene = memo(function PoolScene({
     />
   );
 });
+
+function PoolSurfaceModeToggle({
+  value,
+  onChange,
+}: {
+  value: PoolSurfaceMode;
+  onChange: (mode: PoolSurfaceMode) => void;
+}) {
+  return (
+    <ToggleGroup
+      type="single"
+      value={value}
+      onValueChange={(nextValue) => {
+        if (nextValue === "mesh" || nextValue === "points") {
+          onChange(nextValue);
+        }
+      }}
+      aria-label="Water surface display"
+      className="border border-white/20 bg-black/60 p-1 backdrop-blur-md"
+    >
+      <ToggleGroupItem
+        value="mesh"
+        aria-label="Show wireframe mesh"
+        className="h-7 min-w-16 px-2 font-mono text-[0.58rem] uppercase tracking-[0.14em] text-white/45 hover:bg-white/10 hover:text-white data-[state=on]:bg-white data-[state=on]:text-black"
+      >
+        Mesh
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value="points"
+        aria-label="Show intersection points"
+        className="h-7 min-w-16 px-2 font-mono text-[0.58rem] uppercase tracking-[0.14em] text-white/45 hover:bg-white/10 hover:text-white data-[state=on]:bg-white data-[state=on]:text-black"
+      >
+        Points
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
+}
 
 const PoolPresence = observer(function PoolPresence({
   store,
@@ -122,11 +169,16 @@ export const WavePool = observer(function WavePool() {
     [displayName, participantId],
   );
   const store = useWavePool(participant);
+  const [surfaceMode, setSurfaceMode] = useState<PoolSurfaceMode>("mesh");
 
   return (
     <section className="relative left-1/2 -mb-20 -mt-28 min-h-[100svh] w-screen -translate-x-1/2 overflow-hidden bg-black text-white">
       <div className="absolute inset-0">
-        <PoolScene store={store} participantId={participantId} />
+        <PoolScene
+          store={store}
+          participantId={participantId}
+          surfaceMode={surfaceMode}
+        />
       </div>
       <div
         aria-hidden="true"
@@ -145,8 +197,8 @@ export const WavePool = observer(function WavePool() {
               <br />a wave.
             </h1>
             <p className="mt-5 max-w-md text-sm leading-6 text-white/60 sm:text-base sm:leading-7">
-              One wireframe surface. One buoyant boat. Everyone on the site
-              changes the same water.
+              One shared surface. One buoyant boat. Everyone on the site changes
+              the same water.
             </p>
             <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-white/45">
               <div>
@@ -180,7 +232,13 @@ export const WavePool = observer(function WavePool() {
             <p className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-white/40 md:hidden">
               Move · click · right-drag · wheel
             </p>
-            <PoolBoatReset store={store} />
+            <div className="flex items-center gap-2">
+              <PoolSurfaceModeToggle
+                value={surfaceMode}
+                onChange={setSurfaceMode}
+              />
+              <PoolBoatReset store={store} />
+            </div>
           </div>
         </div>
       </div>
