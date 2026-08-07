@@ -162,7 +162,7 @@ describe("node logger", () => {
     // Shape of a Supabase PostgrestError, which is not an Error instance.
     runtime.logger.error("query.failed", {
       error: {
-        message: "relation \"post\" does not exist",
+        message: 'relation "post" does not exist',
         details: null,
         hint: null,
         code: "42P01",

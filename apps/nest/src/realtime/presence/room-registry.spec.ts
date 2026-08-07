@@ -21,7 +21,9 @@ describe("RoomRegistry membership", () => {
   it("refuses presence from a socket that never joined", () => {
     const registry = new RoomRegistry();
 
-    expect(registry.setPresence("socket-a", "cursors:demo", entry("a"))).toBeNull();
+    expect(
+      registry.setPresence("socket-a", "cursors:demo", entry("a")),
+    ).toBeNull();
   });
 });
 
@@ -30,8 +32,16 @@ describe("RoomRegistry presence", () => {
     const registry = new RoomRegistry();
     registry.join("socket-a", "cursors:demo");
     registry.join("socket-b", "cursors:demo");
-    registry.setPresence("socket-a", "cursors:demo", entry("a", { x: 0, y: 0 }));
-    registry.setPresence("socket-b", "cursors:demo", entry("b", { x: 1, y: 1 }));
+    registry.setPresence(
+      "socket-a",
+      "cursors:demo",
+      entry("a", { x: 0, y: 0 }),
+    );
+    registry.setPresence(
+      "socket-b",
+      "cursors:demo",
+      entry("b", { x: 1, y: 1 }),
+    );
 
     expect(registry.snapshot("cursors:demo", "socket-a")).toEqual([
       entry("b", { x: 1, y: 1 }),

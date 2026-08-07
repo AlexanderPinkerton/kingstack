@@ -50,14 +50,22 @@ describe("roomNamespaceOf", () => {
 describe("normalizeParticipant", () => {
   it("trims the display name and preserves identity", () => {
     expect(
-      normalizeParticipant({ id: "participant-a", name: "  Maya  ", tone: "violet" }),
+      normalizeParticipant({
+        id: "participant-a",
+        name: "  Maya  ",
+        tone: "violet",
+      }),
     ).toEqual({ id: "participant-a", name: "Maya", tone: "violet" });
   });
 
   it("rejects empty names, unknown tones, and oversized identifiers", () => {
     expect(normalizeParticipant(null)).toBeNull();
-    expect(normalizeParticipant({ id: "a", name: "   ", tone: "lime" })).toBeNull();
-    expect(normalizeParticipant({ id: "a", name: "Maya", tone: "gold" })).toBeNull();
+    expect(
+      normalizeParticipant({ id: "a", name: "   ", tone: "lime" }),
+    ).toBeNull();
+    expect(
+      normalizeParticipant({ id: "a", name: "Maya", tone: "gold" }),
+    ).toBeNull();
     expect(
       normalizeParticipant({ id: "a".repeat(200), name: "Maya", tone: "lime" }),
     ).toBeNull();

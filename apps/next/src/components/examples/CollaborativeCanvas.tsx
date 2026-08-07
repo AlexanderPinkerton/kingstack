@@ -186,12 +186,12 @@ export const CollaborativeCanvas = observer(function CollaborativeCanvas() {
           </h2>
           <p className="mt-5 max-w-2xl text-base leading-7 text-white/50 sm:text-lg sm:leading-8">
             Cursors here are published in {CANVAS_WORLD.width}×
-            {CANVAS_WORLD.height} world units, not as a fraction of anyone&rsquo;s
-            viewport. The stage is locked to the world&rsquo;s aspect ratio, so a
-            point lands on the same gridline whether you are on a laptop or a
-            phone. Compare the readout on two devices. Tap anywhere to leave a
-            ripple — the one thing a touch client can say when it has no pointer
-            to publish.
+            {CANVAS_WORLD.height} world units, not as a fraction of
+            anyone&rsquo;s viewport. The stage is locked to the world&rsquo;s
+            aspect ratio, so a point lands on the same gridline whether you are
+            on a laptop or a phone. Compare the readout on two devices. Tap
+            anywhere to leave a ripple — the one thing a touch client can say
+            when it has no pointer to publish.
           </p>
         </div>
 
@@ -226,7 +226,9 @@ export const CollaborativeCanvas = observer(function CollaborativeCanvas() {
           className="relative mt-6 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b0e]"
           // The one constraint that makes world coordinates agree: the stage
           // is always the world's shape, so scaling it is uniform.
-          style={{ aspectRatio: `${CANVAS_WORLD.width} / ${CANVAS_WORLD.height}` }}
+          style={{
+            aspectRatio: `${CANVAS_WORLD.width} / ${CANVAS_WORLD.height}`,
+          }}
         >
           <GridLines />
           <RippleLayer store={store} space={CANVAS_WORLD} />

@@ -76,9 +76,24 @@ export function normalizeSignalKind(kind: unknown): string | null {
 
 /** Server -> client, single `presence` channel with a discriminated action. */
 export type PresenceServerEvent<TState = unknown> =
-  | { type: "presence"; roomId: string; action: "sync"; entries: PresenceEntry<TState>[] }
-  | { type: "presence"; roomId: string; action: "upsert"; entry: PresenceEntry<TState> }
-  | { type: "presence"; roomId: string; action: "remove"; participantId: string };
+  | {
+      type: "presence";
+      roomId: string;
+      action: "sync";
+      entries: PresenceEntry<TState>[];
+    }
+  | {
+      type: "presence";
+      roomId: string;
+      action: "upsert";
+      entry: PresenceEntry<TState>;
+    }
+  | {
+      type: "presence";
+      roomId: string;
+      action: "remove";
+      participantId: string;
+    };
 
 export const PARTICIPANT_ID_MAX_LENGTH = 100;
 export const PARTICIPANT_NAME_MAX_LENGTH = 40;

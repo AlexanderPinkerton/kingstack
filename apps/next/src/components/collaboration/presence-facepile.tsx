@@ -80,7 +80,9 @@ export function PresenceFacepile({
               )}
               <Indicator
                 className={`size-3 ${pointing ? "text-white/35" : "text-white/20"}`}
-                aria-label={pointing ? "Sharing a cursor" : "Present, no cursor"}
+                aria-label={
+                  pointing ? "Sharing a cursor" : "Present, no cursor"
+                }
               />
             </li>
           );

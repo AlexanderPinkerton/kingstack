@@ -156,9 +156,13 @@ describe("RealtimeManager", () => {
     socket.connected = true;
     socket.trigger("connect");
 
-    manager.publish("presence:set", { roomId: "cursors:demo" }, {
-      latestKey: "presence:cursors:demo",
-    });
+    manager.publish(
+      "presence:set",
+      { roomId: "cursors:demo" },
+      {
+        latestKey: "presence:cursors:demo",
+      },
+    );
     manager.dropLatest("presence:cursors:demo");
 
     socket.connected = false;
@@ -189,7 +193,9 @@ describe("RealtimeManager", () => {
 
     expect(
       socket.emitted.filter((entry) => entry.event === "room:join"),
-    ).toEqual([{ event: "room:join", args: [{ roomId: "checkboxes:global" }] }]);
+    ).toEqual([
+      { event: "room:join", args: [{ roomId: "checkboxes:global" }] },
+    ]);
 
     socket.connected = false;
     socket.trigger("disconnect", "transport close");

@@ -55,7 +55,12 @@ describe("CursorSurfaceController", () => {
   it("normalizes pointer position against the surface bounds", () => {
     const { store, setPointer } = fakeStore();
     const controller = new CursorSurfaceController(store);
-    const element = surfaceElement({ left: 20, top: 10, width: 200, height: 100 });
+    const element = surfaceElement({
+      left: 20,
+      top: 10,
+      width: 200,
+      height: 100,
+    });
 
     controller.attach(element);
     pointerMove(element, 120, 60);

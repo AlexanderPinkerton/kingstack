@@ -157,9 +157,7 @@ describe("SharedCursorStore", () => {
     });
 
     expect(store.cursors).toEqual([]);
-    expect(store.participants).toEqual(
-      expect.arrayContaining([ada, maya]),
-    );
+    expect(store.participants).toEqual(expect.arrayContaining([ada, maya]));
     expect(store.participants).toHaveLength(2);
     expect(store.hasPointer(maya.id)).toBe(false);
     expect(store.hasPointer(ada.id)).toBe(false);
