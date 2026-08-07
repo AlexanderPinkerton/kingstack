@@ -466,6 +466,9 @@ Per frame, in plain TS:
 - Displace the water plane's Y in the vertex shader by sampling and mixing both
   textures. Derive normals from neighbouring height samples so lighting reveals
   the wave instead of shading a displaced surface as a flat plane.
+- Render the translucent surface above a recessed lit basin, with a 2.2×
+  presentation-only height scale and view-dependent specular/Fresnel light. The
+  exaggeration never feeds back into the authoritative field or wire format.
 - Walk `cursors.positions` and update one preallocated point-cloud position and
   colour buffer with a draw range bounded by `count`. Y comes from
   `field.heightAt(x, z, alpha)`, using the exact same interpolation factor as

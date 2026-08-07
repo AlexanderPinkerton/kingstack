@@ -11,7 +11,9 @@ export interface WaveFieldOptions {
 
 const DEFAULT_STEP_SECONDS = 1 / 60;
 const DEFAULT_WAVE_SPEED = 500;
-const DEFAULT_DAMPING_PER_STEP = 0.996;
+// Applied at 60 Hz. This deliberately dissipates reflected waves within a few
+// seconds so the shared pool returns to a calm baseline between interactions.
+const DEFAULT_DAMPING_PER_STEP = 0.985;
 
 export class WaveField {
   private current: Float32Array;

@@ -21,12 +21,12 @@ describe("WaveField", () => {
     );
   });
 
-  it("decays below the visible threshold over a long run", () => {
+  it("settles below the visible threshold within ten seconds", () => {
     const field = new WaveField();
     const quantised = new Int8Array(POOL_CELL_COUNT);
     field.impulse(40, 40, -40, 100);
 
-    for (let index = 0; index < 10_000; index += 1) field.step();
+    for (let index = 0; index < 600; index += 1) field.step();
     field.quantise(quantised);
 
     expect(field.energy()).toBeLessThan(0.01);

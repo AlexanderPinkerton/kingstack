@@ -1,14 +1,16 @@
 import {
+  AmbientLight,
+  BoxGeometry,
   BufferAttribute,
   BufferGeometry,
   CanvasTexture,
   Color,
   DataTexture,
   DoubleSide,
+  DirectionalLight,
   LinearFilter,
-  Line,
-  LineBasicMaterial,
   Mesh,
+  MeshStandardMaterial,
   PerspectiveCamera,
   Plane,
   PlaneGeometry,
@@ -38,9 +40,11 @@ const VERTEX_SHADER = /* glsl */ `
   uniform sampler2D currentField;
   uniform float frameMix;
   uniform float heightMax;
+  uniform float visualHeightScale;
 
   varying float vHeight;
   varying vec2 vPoolUv;
+  varying vec3 vWorldPosition;
 
   float decodeHeight(sampler2D field, vec2 poolUv) {
     float quantised = texture2D(field, poolUv).r * 255.0 - 128.0;
@@ -53,13 +57,15 @@ const VERTEX_SHADER = /* glsl */ `
     vec2 poolUv = vec2(uv.x, 1.0 - uv.y);
     float previousHeight = decodeHeight(previousField, poolUv);
     float currentHeight = decodeHeight(currentField, poolUv);
-    float height = mix(previousHeight, currentHeight, frameMix);
+    float height = mix(previousHeight, currentHeight, frameMix) * visualHeightScale;
 
     vec3 transformed = position;
     transformed.y += height;
-    vHeight = height / heightMax;
+    vHeight = height / (heightMax * visualHeightScale);
     vPoolUv = poolUv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+    vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);
+    vWorldPosition = worldPosition.xyz;
+    gl_Position = projectionMatrix * viewMatrix * worldPosition;
   }
 `;
 
@@ -68,6 +74,7 @@ const FRAGMENT_SHADER = /* glsl */ `
   uniform sampler2D currentField;
   uniform float frameMix;
   uniform float heightMax;
+  uniform float visualHeightScale;
   uniform vec2 fieldTexel;
   uniform vec2 cellSize;
   uniform vec3 deepColor;
@@ -76,40 +83,43 @@ const FRAGMENT_SHADER = /* glsl */ `
 
   varying float vHeight;
   varying vec2 vPoolUv;
+  varying vec3 vWorldPosition;
 
   float sampleHeight(vec2 poolUv) {
     float previous = texture2D(previousField, poolUv).r * 255.0 - 128.0;
     float current = texture2D(currentField, poolUv).r * 255.0 - 128.0;
     float quantised = mix(previous, current, frameMix);
-    return clamp(quantised / 127.0, -1.0, 1.0) * heightMax;
+    return clamp(quantised / 127.0, -1.0, 1.0) * heightMax * visualHeightScale;
   }
 
   void main() {
     float crest = smoothstep(-0.15, 0.85, vHeight);
     float trough = smoothstep(0.0, 0.9, -vHeight);
-    vec3 color = mix(deepColor, crestColor, crest * 0.78);
-    color = mix(color, deepColor * 0.58, trough * 0.48);
+    vec3 color = mix(deepColor, crestColor, crest * 0.72);
+    color = mix(color, deepColor * 0.48, trough * 0.5);
 
     float left = sampleHeight(vPoolUv - vec2(fieldTexel.x, 0.0));
     float right = sampleHeight(vPoolUv + vec2(fieldTexel.x, 0.0));
     float nearHeight = sampleHeight(vPoolUv - vec2(0.0, fieldTexel.y));
     float farHeight = sampleHeight(vPoolUv + vec2(0.0, fieldTexel.y));
     vec3 normal = normalize(vec3(
-      -(right - left) / (2.0 * cellSize.x),
+      -(right - left) / (2.0 * cellSize.x) * 0.62,
       1.0,
-      -(farHeight - nearHeight) / (2.0 * cellSize.y)
+      -(farHeight - nearHeight) / (2.0 * cellSize.y) * 0.62
     ));
     vec3 lightDirection = normalize(vec3(-0.35, 0.86, 0.38));
-    float diffuse = 0.58 + max(dot(normal, lightDirection), 0.0) * 0.42;
-    float highlight = pow(max(dot(normal, normalize(vec3(0.0, 1.0, 0.3))), 0.0), 18.0);
-    color *= diffuse;
-    color += accentColor * highlight * 0.16;
+    vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
+    vec3 halfVector = normalize(lightDirection + viewDirection);
+    float diffuse = 0.5 + max(dot(normal, lightDirection), 0.0) * 0.5;
+    float specular = pow(max(dot(normal, halfVector), 0.0), 28.0);
+    float fresnel = pow(1.0 - max(dot(normal, viewDirection), 0.0), 3.0);
 
-    vec2 grid = abs(fract(vPoolUv * vec2(16.0, 10.0)) - 0.5);
-    float gridLine = 1.0 - smoothstep(0.46, 0.495, max(grid.x, grid.y));
-    color += accentColor * gridLine * 0.045;
-    color += accentColor * pow(max(vHeight, 0.0), 3.0) * 0.22;
-    gl_FragColor = vec4(color, 1.0);
+    color *= diffuse;
+    color += mix(accentColor, vec3(0.72, 0.9, 0.96), 0.35) * specular * 0.26;
+    color += accentColor * fresnel * 0.2;
+    color = min(color, vec3(0.68, 0.9, 0.96));
+    float alpha = 0.82 + fresnel * 0.14 + specular * 0.02;
+    gl_FragColor = vec4(color, alpha);
   }
 `;
 
@@ -132,6 +142,8 @@ export interface PoolProjector {
 
 export interface PoolRendererOptions {
   reducedMotion?: boolean;
+  /** Presentation-only exaggeration; authoritative heights remain unchanged. */
+  visualHeightScale?: number;
 }
 
 /** Owns all WebGL resources for one canvas. No React or MobX dependency. */
@@ -167,18 +179,23 @@ export class PoolRenderer implements PoolProjector {
     depthWrite: false,
   });
   private readonly cursorPoints: Points;
-  private readonly borderGeometry: BufferGeometry;
-  private readonly borderMaterial = new LineBasicMaterial({
-    color: 0x8ee8ff,
-    transparent: true,
-    opacity: 0.24,
+  private readonly basinGeometries: BufferGeometry[] = [];
+  private readonly basinMaterial = new MeshStandardMaterial({
+    color: 0x111c24,
+    roughness: 0.58,
+    metalness: 0.32,
   });
-  private readonly border: Line;
+  private readonly floorMaterial = new MeshStandardMaterial({
+    color: 0x06131b,
+    roughness: 0.82,
+    metalness: 0.12,
+  });
   private readonly raycaster = new Raycaster();
   private readonly ndc = new Vector2();
   private readonly intersection = new Vector3();
   private readonly surfacePlane = new Plane(new Vector3(0, 1, 0), 0);
   private readonly reducedMotion: boolean;
+  private readonly visualHeightScale: number;
 
   private animationFrame: number | null = null;
   private fieldVersion = -1;
@@ -194,6 +211,10 @@ export class PoolRenderer implements PoolProjector {
     options: PoolRendererOptions = {},
   ) {
     this.reducedMotion = options.reducedMotion ?? false;
+    this.visualHeightScale = Math.min(
+      3,
+      Math.max(1, options.visualHeightScale ?? 2.2),
+    );
     this.renderer = new WebGLRenderer({
       canvas,
       antialias: true,
@@ -203,8 +224,14 @@ export class PoolRenderer implements PoolProjector {
     this.renderer.setClearColor(0x070b11, 1);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-    this.camera.position.set(0, 1_180, 1_150);
-    this.camera.lookAt(0, 0, 0);
+    this.camera.position.set(0, 960, 1_320);
+    this.camera.lookAt(0, -20, 0);
+
+    this.scene.add(new AmbientLight(0x77a6b8, 0.72));
+    const keyLight = new DirectionalLight(0xc8f5ff, 2.4);
+    keyLight.position.set(-520, 900, 620);
+    this.scene.add(keyLight);
+    this.addBasin();
 
     this.poolMaterial = new ShaderMaterial({
       uniforms: {
@@ -212,6 +239,7 @@ export class PoolRenderer implements PoolProjector {
         currentField: { value: this.currentTexture },
         frameMix: { value: 1 },
         heightMax: { value: POOL_HEIGHT_MAX },
+        visualHeightScale: { value: this.visualHeightScale },
         fieldTexel: {
           value: new Vector2(
             1 / (POOL_GRID.cols - 1),
@@ -231,6 +259,8 @@ export class PoolRenderer implements PoolProjector {
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
       side: DoubleSide,
+      transparent: true,
+      depthWrite: false,
     });
     // The geometry is already horizontal, so the shader displaces its Y axis.
     this.poolGeometry.rotateX(-Math.PI / 2);
@@ -251,17 +281,6 @@ export class PoolRenderer implements PoolProjector {
     this.cursorPoints.renderOrder = 2;
     this.scene.add(this.cursorPoints);
 
-    const halfWidth = POOL_WORLD.width / 2;
-    const halfDepth = POOL_WORLD.depth / 2;
-    this.borderGeometry = new BufferGeometry().setFromPoints([
-      new Vector3(-halfWidth, 2, -halfDepth),
-      new Vector3(halfWidth, 2, -halfDepth),
-      new Vector3(halfWidth, 2, halfDepth),
-      new Vector3(-halfWidth, 2, halfDepth),
-      new Vector3(-halfWidth, 2, -halfDepth),
-    ]);
-    this.border = new Line(this.borderGeometry, this.borderMaterial);
-    this.scene.add(this.border);
     this.resize();
   }
 
@@ -315,8 +334,9 @@ export class PoolRenderer implements PoolProjector {
     this.cursorGeometry.dispose();
     this.cursorMaterial.dispose();
     this.cursorTexture.dispose();
-    this.borderGeometry.dispose();
-    this.borderMaterial.dispose();
+    this.basinGeometries.forEach((geometry) => geometry.dispose());
+    this.basinMaterial.dispose();
+    this.floorMaterial.dispose();
     this.renderer.dispose();
   }
 
@@ -354,8 +374,8 @@ export class PoolRenderer implements PoolProjector {
     // Pull back on portrait surfaces so the fixed-width world is never
     // cropped merely because the canvas is taller on a phone.
     const distanceScale = Math.max(1, 16 / 9 / aspect);
-    this.camera.position.set(0, 1_180 * distanceScale, 1_150 * distanceScale);
-    this.camera.lookAt(0, 0, 0);
+    this.camera.position.set(0, 960 * distanceScale, 1_320 * distanceScale);
+    this.camera.lookAt(0, -20, 0);
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
     return true;
@@ -383,7 +403,7 @@ export class PoolRenderer implements PoolProjector {
       const z = this.cursors.positions[sourceOffset + 1] ?? 0;
       this.cursorPositions[targetOffset] = x - POOL_WORLD.width / 2;
       this.cursorPositions[targetOffset + 1] =
-        this.field.heightAt(x, z, alpha) + 18;
+        this.field.heightAt(x, z, alpha) * this.visualHeightScale + 22;
       this.cursorPositions[targetOffset + 2] = z - POOL_WORLD.depth / 2;
 
       if (cursorChanged) {
@@ -418,6 +438,51 @@ export class PoolRenderer implements PoolProjector {
     texture.unpackAlignment = 1;
     texture.needsUpdate = true;
     return texture;
+  }
+
+  private addBasin(): void {
+    const basinDepth = 125;
+    const wallThickness = 34;
+    const wallHeight = basinDepth + 12;
+    const wallY = -basinDepth / 2 + 3;
+    const halfWidth = POOL_WORLD.width / 2;
+    const halfDepth = POOL_WORLD.depth / 2;
+
+    const floor = new PlaneGeometry(POOL_WORLD.width, POOL_WORLD.depth);
+    floor.rotateX(-Math.PI / 2);
+    const floorMesh = new Mesh(floor, this.floorMaterial);
+    floorMesh.position.y = -basinDepth;
+    this.basinGeometries.push(floor);
+    this.scene.add(floorMesh);
+
+    const sideGeometry = new BoxGeometry(
+      wallThickness,
+      wallHeight,
+      POOL_WORLD.depth + wallThickness * 2,
+    );
+    const endGeometry = new BoxGeometry(
+      POOL_WORLD.width + wallThickness * 2,
+      wallHeight,
+      wallThickness,
+    );
+    this.basinGeometries.push(sideGeometry, endGeometry);
+
+    for (const x of [
+      -halfWidth - wallThickness / 2,
+      halfWidth + wallThickness / 2,
+    ]) {
+      const wall = new Mesh(sideGeometry, this.basinMaterial);
+      wall.position.set(x, wallY, 0);
+      this.scene.add(wall);
+    }
+    for (const z of [
+      -halfDepth - wallThickness / 2,
+      halfDepth + wallThickness / 2,
+    ]) {
+      const wall = new Mesh(endGeometry, this.basinMaterial);
+      wall.position.set(0, wallY, z);
+      this.scene.add(wall);
+    }
   }
 }
 
