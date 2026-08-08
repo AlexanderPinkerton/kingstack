@@ -94,6 +94,11 @@ describe("generated project boundary", () => {
     expect(example).not.toContain("KINGSTACK_ENVIRONMENT:");
     expect(schema).not.toContain("ENVIRONMENT_TYPE");
     expect(example).not.toContain("ENVIRONMENT_TYPE");
+    expect(schema).toContain("SUPABASE_PUBLISHABLE_KEY");
+    expect(schema).toContain("SUPABASE_SECRET_KEY");
+    expect(schema).not.toContain("SUPA_JWT_SECRET");
+    expect(schema).not.toContain("SUPABASE_ANON_KEY");
+    expect(schema).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
   });
 
   it("excludes maintainer and release infrastructure", () => {

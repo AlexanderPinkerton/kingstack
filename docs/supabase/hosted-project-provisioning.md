@@ -99,7 +99,9 @@ deploying a schema. After Supabase returns the project reference:
    yarn exec supabase link --project-ref <project-ref>
    ```
 
-2. Inspect the project's API keys:
+2. Inspect the project's API keys and use its `sb_publishable_...` and
+   `sb_secret_...` values. Do not copy the legacy `anon`, `service_role`, or JWT
+   secret values:
 
    ```bash
    yarn exec supabase projects api-keys --project-ref <project-ref>
@@ -107,16 +109,21 @@ deploying a schema. After Supabase returns the project reference:
 
 3. Create `config/development.ts` or `config/production.ts` from
    `config/example.ts`, then set the hosted Supabase project reference, region,
-   database password, and API keys.
+   database password, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY`.
 
-4. Generate service environment files and apply Prisma migrations:
+4. In **Authentication → Signing Keys**, confirm the project uses an
+   asymmetric signing key. If migrating an older project, deploy KingStack's
+   JWKS-capable verifier before rotating the key and follow Supabase's waiting
+   period before revoking the legacy key.
+
+5. Generate service environment files and apply Prisma migrations:
 
    ```bash
    yarn env:development
    yarn prisma:deploy
    ```
 
-5. Inspect external secret changes before syncing them:
+6. Inspect external secret changes before syncing them:
 
    ```bash
    yarn deploy:sync-secrets:dry-run

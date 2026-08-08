@@ -3,17 +3,21 @@ import { SessionManager } from "../src/lib/session-manager";
 import { isSupabaseBrowserConfigured } from "../src/lib/supabase/browserClient";
 
 const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const originalSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const originalSupabasePublishableKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 describe("Supabase-free session initialization", () => {
   beforeEach(() => {
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   });
 
   afterEach(() => {
     restoreEnv("NEXT_PUBLIC_SUPABASE_URL", originalSupabaseUrl);
-    restoreEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", originalSupabaseAnonKey);
+    restoreEnv(
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      originalSupabasePublishableKey,
+    );
   });
 
   it("reports that the browser client is not configured", () => {
@@ -22,7 +26,7 @@ describe("Supabase-free session initialization", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
     expect(isSupabaseBrowserConfigured()).toBe(false);
 
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
     expect(isSupabaseBrowserConfigured()).toBe(true);
   });
 

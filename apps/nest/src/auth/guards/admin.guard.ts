@@ -6,11 +6,15 @@ import {
 import { JwtAuthGuard } from "./jwt.auth.guard";
 import { AdminService } from "../services/admin.service";
 import { FastifyRequest } from "fastify";
+import { SupabaseTokenVerifier } from "../services/supabase-token-verifier";
 
 @Injectable()
 export class AdminGuard extends JwtAuthGuard {
-  constructor(private readonly adminService: AdminService) {
-    super();
+  constructor(
+    tokenVerifier: SupabaseTokenVerifier,
+    private readonly adminService: AdminService,
+  ) {
+    super(tokenVerifier);
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

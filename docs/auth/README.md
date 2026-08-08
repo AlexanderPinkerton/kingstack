@@ -15,13 +15,15 @@ KingStack uses **explicit JWT token passing** instead of relying on cookies or l
    - Next.js API routes (server-side) extract token from `Authorization` header and validate with Supabase
 
 3. **Backend (NestJS)**:
-   - Uses `SupabaseStrategy` (Passport JWT) to extract token from `Authorization: Bearer <token>` header
-   - Validates token using `SUPA_JWT_SECRET` environment variable
+   - `JwtAuthGuard` extracts the token from the `Authorization: Bearer <token>` header
+   - `SupabaseTokenVerifier` verifies it with `supabase.auth.getClaims()`
+   - Asymmetric tokens are verified locally against Supabase's cached JWKS; legacy/local HS256 tokens fall back to the Supabase Auth server
+   - User tokens must include a subject and the `authenticated` audience
    - Protected routes use `@UseGuards(JwtAuthGuard)` decorator
 
 4. **Realtime (Socket.io)**:
    - Client sends token via `socket.emit("register", { token, browserId })`
-   - Gateway verifies token using `jwtService.verify()` with `SUPA_JWT_SECRET`
+   - Gateway uses the same `SupabaseTokenVerifier` as HTTP routes
    - Socket connection is rejected if token is invalid
 
 ## `fetchWithAuth` Utility
@@ -86,10 +88,30 @@ export async function GET(request: NextRequest) {
 
 ## Environment Variables
 
-All services use the same JWT secret for validation:
+KingStack does not copy a JWT signing secret into application configuration.
+It uses the project URL and publishable key to discover public signing keys or,
+for a legacy/local HS256 token, ask Supabase Auth to validate the token.
+
 ```env
-SUPA_JWT_SECRET=your-supabase-jwt-secret  # Used by NestJS and realtime gateway
+SUPABASE_API_URL=https://your-project-ref.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_SECRET_KEY=sb_secret_... # Server-only; never expose to the browser
 ```
+
+The publishable and secret API keys identify application components; they do
+not sign user JWTs. Supabase Auth issues user access tokens with a separate
+signing key.
+
+## Hosted signing-key migration
+
+For an existing hosted project, deploy this verifier before changing signing
+keys. Then open **Authentication → Signing Keys** in the Supabase dashboard,
+create an asymmetric signing key (ES256 is Supabase's recommendation), and
+rotate it into use. Keep the previously used key available until the longest
+access-token lifetime plus 15 minutes has elapsed before revoking it.
+
+Supabase documents the current process in [JWT Signing Keys](https://supabase.com/docs/guides/auth/signing-keys).
+Publishable and secret API keys are a separate migration; see [Migrating to publishable and secret API keys](https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys).
 
 ## Supabase Auth User Projection
 

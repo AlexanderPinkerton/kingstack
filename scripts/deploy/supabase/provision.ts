@@ -296,12 +296,15 @@ function printNextSteps(): void {
     "1. Link this workspace: yarn exec supabase link --project-ref <project-ref>",
   );
   console.log(
-    "2. Inspect API keys: yarn exec supabase projects api-keys --project-ref <project-ref>",
+    "2. Inspect publishable/secret keys: yarn exec supabase projects api-keys --project-ref <project-ref>",
   );
   console.log(
     "3. Add the hosted values to config/<environment>.ts and run yarn env:<environment>.",
   );
-  console.log("4. Apply schema migrations with yarn prisma:deploy.");
+  console.log(
+    "4. Confirm an asymmetric Auth signing key is active in the Supabase dashboard.",
+  );
+  console.log("5. Apply schema migrations with yarn prisma:deploy.");
   console.log(
     "See docs/supabase/hosted-project-provisioning.md for the full handoff.",
   );
