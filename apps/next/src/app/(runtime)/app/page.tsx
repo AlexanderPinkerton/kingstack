@@ -18,13 +18,11 @@ const examples = [
     href: "/app/optimistic",
     title: "Optimistic UI",
     description:
-      "The interface and an in-memory repository side by side, with the production mutation pipeline between them. Add latency or reject a request to watch reconciliation and rollback.",
+      "The interface and real post database side by side, with the production mutation pipeline between them. Add latency or reject a request to watch reconciliation and rollback.",
     icon: DatabaseZap,
     accent: "text-[#d8ff70] bg-[#d8ff70]/10 border-[#d8ff70]/20",
     glow: "rgba(216, 255, 112, 0.12)",
     tags: ["MobX", "TanStack Query", "advanced-optimistic-store"],
-    access: "Open demo",
-    accessNote: "Runs in browser memory and resets on reload.",
     featured: true,
   },
   {
@@ -36,8 +34,6 @@ const examples = [
     accent: "text-[#bdb5ff] bg-[#8d7cff]/10 border-[#8d7cff]/25",
     glow: "rgba(141, 124, 255, 0.12)",
     tags: ["Supabase Realtime", "Presence"],
-    access: "No signup",
-    accessNote: "Uses a temporary guest for the bounded shared grid.",
   },
   {
     href: "/app/canvas",
@@ -48,8 +44,6 @@ const examples = [
     accent: "text-[#8ee8ff] bg-cyan-400/10 border-cyan-300/20",
     glow: "rgba(142, 232, 255, 0.12)",
     tags: ["World space", "Presence"],
-    access: "No signup",
-    accessNote: "Uses a temporary guest for ephemeral presence only.",
   },
   {
     href: "/app/wave-pool",
@@ -61,8 +55,6 @@ const examples = [
       "text-[var(--accent-1-l)] bg-[color-mix(in_oklch,var(--accent-1-m)_10%,transparent)] border-[color-mix(in_oklch,var(--accent-1-m)_22%,transparent)]",
     glow: "color-mix(in oklch, var(--accent-1-m) 13%, transparent)",
     tags: ["Three.js", "Authoritative realtime"],
-    access: "No signup",
-    accessNote: "Creates a temporary guest only for the live connection.",
   },
   {
     href: "/app/theme-builder",
@@ -73,8 +65,6 @@ const examples = [
     accent: "text-[#8ee8ff] bg-cyan-400/10 border-cyan-300/20",
     glow: "rgba(142, 232, 255, 0.12)",
     tags: ["Design tokens", "CSS variables"],
-    access: "Open demo",
-    accessNote: "Runs entirely in the browser with no session.",
   },
 ] as const;
 
@@ -98,10 +88,8 @@ export default function ApplicationPage() {
           </h1>
         </div>
         <p className="max-w-xl text-lg leading-8 text-white/55">
-          Every card is a runnable KingStack demo. The catalog is public, and
-          every demo runs without creating a permanent account. Browser-local
-          examples open directly; collaborative examples create one temporary
-          guest session.
+          Every card is a runnable KingStack demo, from browser-only tooling to
+          full-stack collaboration backed by the real application runtime.
         </p>
       </section>
 
@@ -109,7 +97,11 @@ export default function ApplicationPage() {
         {[
           { icon: Gauge, label: "Runtime", value: "Full stack" },
           { icon: Bot, label: "Agent guidance", value: "Repository-owned" },
-          { icon: ShieldCheck, label: "Demo access", value: "Clearly labeled" },
+          {
+            icon: ShieldCheck,
+            label: "Boundaries",
+            value: "Production-shaped",
+          },
         ].map((item) => {
           const Icon = item.icon;
 
@@ -138,9 +130,9 @@ export default function ApplicationPage() {
             Pick a feature and run the real implementation.
           </h2>
           <p className="mt-5 leading-7 text-white/50">
-            These are working examples, not screenshots. Live collaboration
-            still exercises the real authentication boundary, but KingStack
-            creates the temporary identity without a login form.
+            These are working examples, not screenshots. Each one runs the real
+            implementation and the same architectural boundaries used by the
+            application.
           </p>
         </div>
 
@@ -179,9 +171,6 @@ export default function ApplicationPage() {
                   >
                     {example.title}
                   </h3>
-                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 font-mono text-[0.58rem] uppercase tracking-[0.12em] text-white/40">
-                    {example.access}
-                  </span>
                   <ArrowRight
                     className="size-4 shrink-0 text-white/25 transition duration-200 group-hover:translate-x-0.5 group-hover:text-white"
                     aria-hidden="true"
@@ -194,13 +183,6 @@ export default function ApplicationPage() {
                   }`}
                 >
                   {example.description}
-                </p>
-
-                <p className="relative mt-5 border-l border-white/15 pl-3 text-xs leading-5 text-white/40">
-                  <span className="font-medium text-white/65">
-                    {example.access}.
-                  </span>{" "}
-                  {example.accessNote}
                 </p>
 
                 <div className="relative mt-auto flex flex-wrap gap-1.5 pt-5">

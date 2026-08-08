@@ -457,7 +457,8 @@ const PostCard = observer(function PostCard({
 }) {
   const optimistic = post.id.startsWith("temp-");
   const divergent = viewModel.isDivergent(post);
-  const disabled = optimistic || viewModel.isMutationPending;
+  const canManage = viewModel.canManage(post);
+  const disabled = !canManage || optimistic || viewModel.isMutationPending;
 
   return (
     <article
@@ -506,9 +507,14 @@ const PostCard = observer(function PostCard({
       )}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-2.5">
-        <span className="font-mono text-[0.6rem] text-white/25">
-          {post.id.startsWith("temp-") ? post.id : post.id.slice(0, 8)}
-        </span>
+        <div className="min-w-0">
+          <span className="block truncate text-[0.65rem] text-white/35">
+            By {post.author.displayName}
+          </span>
+          <span className="block font-mono text-[0.6rem] text-white/20">
+            {post.id.startsWith("temp-") ? post.id : post.id.slice(0, 8)}
+          </span>
+        </div>
         <div className="flex items-center gap-1.5">
           <button
             type="button"

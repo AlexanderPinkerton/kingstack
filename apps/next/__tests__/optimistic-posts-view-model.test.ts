@@ -71,6 +71,23 @@ function createHarness() {
 }
 
 describe("optimistic vs confirmed data", () => {
+  it("allows mutations only for posts owned by the current user", async () => {
+    const { store, viewModel, dispose } = createHarness();
+
+    try {
+      await store.api.refetch();
+      const post = store.ui.list[0];
+
+      expect(post).toBeDefined();
+      expect(viewModel.canManage(post)).toBe(true);
+      expect(viewModel.canManage({ ...post, author_id: "another-user" })).toBe(
+        false,
+      );
+    } finally {
+      dispose();
+    }
+  });
+
   it("keeps optimistic records out of the confirmed cache until the server agrees", async () => {
     const { controller, store, viewModel, syncConfirmed, dispose } =
       createHarness();

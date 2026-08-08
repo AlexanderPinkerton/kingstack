@@ -6,10 +6,7 @@ import { RealtimeCheckboxes } from "@/components/examples/RealtimeCheckboxes";
 
 export default function RealtimePage() {
   return (
-    <GuestDemoGate
-      title="Join the shared realtime grid."
-      description="KingStack creates a temporary guest identity, then uses its real JWT for Socket.IO presence and bounded checkbox mutations."
-    >
+    <GuestDemoGate>
       <>
         <AppPageHeader
           eyebrow="Live guest demo"

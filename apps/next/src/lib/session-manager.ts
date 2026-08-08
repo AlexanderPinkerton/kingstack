@@ -90,6 +90,17 @@ export class SessionManager {
     // session mutation path for permanent and anonymous users alike.
   }
 
+  async signOut(): Promise<void> {
+    const supabase = this.supabase;
+    if (!supabase) return;
+
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+
+    // SIGNED_OUT flows through the existing auth-state listener so stores and
+    // realtime connections are torn down through the normal session path.
+  }
+
   dispose(): void {
     this.authUnsubscribe?.();
     this.authUnsubscribe = null;

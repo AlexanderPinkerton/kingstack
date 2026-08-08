@@ -121,6 +121,10 @@ export class RootStore {
     await this.sessionManager.signInAnonymously();
   }
 
+  async signOut(): Promise<void> {
+    await this.sessionManager.signOut();
+  }
+
   dispose(): void {
     if (this.disposed) return;
 

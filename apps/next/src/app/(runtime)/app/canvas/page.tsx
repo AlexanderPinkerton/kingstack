@@ -6,10 +6,7 @@ import { GuestDemoGate } from "@/components/examples/guest-access/guest-demo-gat
 
 export default function CanvasPage() {
   return (
-    <GuestDemoGate
-      title="Step into the shared canvas."
-      description="A temporary guest JWT opens the live presence room without asking for an email, password, or permanent account."
-    >
+    <GuestDemoGate>
       <>
         <AppPageHeader
           eyebrow="Live guest demo"

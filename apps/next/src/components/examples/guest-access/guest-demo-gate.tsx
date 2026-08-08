@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowRight, Radio } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, LogIn, Radio } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,15 +9,13 @@ import { useRootStore } from "@/hooks/useRootStore";
 
 interface GuestDemoGateProps {
   children: ReactNode;
-  description: string;
-  title: string;
+  requiresPermanentAccount?: boolean;
 }
 
-/** One explicit entry action shared by JWT-backed collaborative demos. */
+/** One account entry surface shared by every JWT-backed live demo. */
 export const GuestDemoGate = observer(function GuestDemoGate({
   children,
-  description,
-  title,
+  requiresPermanentAccount = false,
 }: GuestDemoGateProps) {
   const rootStore = useRootStore();
   const [pending, setPending] = useState(false);
@@ -30,7 +29,9 @@ export const GuestDemoGate = observer(function GuestDemoGate({
     );
   }
 
-  if (rootStore.session) return children;
+  if (rootStore.session && (!requiresPermanentAccount || !rootStore.isGuest)) {
+    return children;
+  }
 
   async function startDemo(): Promise<void> {
     if (pending) return;
@@ -63,32 +64,55 @@ export const GuestDemoGate = observer(function GuestDemoGate({
           <Radio className="size-5 text-[#d8ff70]" aria-hidden="true" />
         </span>
         <p className="mt-6 font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[#d8ff70]">
-          Live guest demo · no signup
+          {requiresPermanentAccount
+            ? "Permanent account required"
+            : "Account required"}
         </p>
         <h2 className="mt-4 text-4xl font-semibold tracking-[-0.045em] sm:text-6xl">
-          {title}
+          {requiresPermanentAccount
+            ? "This demo requires a permanent account."
+            : "This demo require an account."}
         </h2>
         <p className="mx-auto mt-5 max-w-xl leading-7 text-white/50">
-          {description}
+          {requiresPermanentAccount
+            ? "The optimistic UI demo writes to the real post database. Log in or register to continue."
+            : "Join with a temporary guest account, or log in or register for a permanent one."}
         </p>
-        <Button
-          type="button"
-          size="lg"
-          disabled={pending}
-          onClick={() => void startDemo()}
-          className="mt-8 bg-[#d8ff70] text-[#11130d] hover:bg-[#e3ff98]"
-        >
-          {pending ? "Starting demo…" : "Start guest demo"}
-          {!pending && <ArrowRight aria-hidden="true" />}
-        </Button>
+        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+          {!requiresPermanentAccount && (
+            <Button
+              type="button"
+              size="lg"
+              disabled={pending}
+              onClick={() => void startDemo()}
+              className="bg-[#d8ff70] text-[#11130d] hover:bg-[#e3ff98]"
+            >
+              {pending ? "Joining as guest…" : "Join as guest"}
+              {!pending && <ArrowRight aria-hidden="true" />}
+            </Button>
+          )}
+          <Button
+            asChild
+            type="button"
+            size="lg"
+            variant="outline"
+            className="border-white/15 bg-white/[0.04] text-white hover:bg-white/10 hover:text-white"
+          >
+            <Link href="/login">
+              <LogIn aria-hidden="true" />
+              Log in or register
+            </Link>
+          </Button>
+        </div>
         {error && (
           <p role="alert" className="mt-5 text-sm text-[#ffb6ac]">
             {error}
           </p>
         )}
         <p className="mt-6 font-mono text-[0.6rem] uppercase leading-5 tracking-[0.12em] text-white/30">
-          The temporary identity authenticates the realtime connection. It is
-          not a permanent KingStack account.
+          {requiresPermanentAccount
+            ? "Guest sessions cannot access persisted post data."
+            : "Guest accounts are temporary and limited to the live demos."}
         </p>
       </div>
     </section>

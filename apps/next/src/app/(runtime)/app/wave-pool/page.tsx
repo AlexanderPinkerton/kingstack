@@ -1,5 +1,10 @@
-import { WavePoolEntry } from "@/components/examples/wave-pool/wave-pool-entry";
+import { GuestDemoGate } from "@/components/examples/guest-access/guest-demo-gate";
+import { WavePool } from "@/components/examples/WavePool";
 
 export default function WavePoolPage() {
-  return <WavePoolEntry />;
+  return (
+    <GuestDemoGate>
+      <WavePool />
+    </GuestDemoGate>
+  );
 }
