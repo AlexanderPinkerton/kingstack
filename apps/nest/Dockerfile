@@ -40,6 +40,7 @@ COPY . .
 RUN node .yarn/releases/yarn-4.10.2.cjs workspace @kingstack/prisma prisma generate
 
 # 👇 Build the nestjs app
+RUN node .yarn/releases/yarn-4.10.2.cjs workspace @kingstack/shared build
 RUN node .yarn/releases/yarn-4.10.2.cjs workspace @kingstack/logger build
 RUN node .yarn/releases/yarn-4.10.2.cjs workspace @kingstack/nest build
 
@@ -57,6 +58,8 @@ WORKDIR /app
 
 COPY --from=build /app/apps/nest/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
+COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/logger/package.json ./packages/logger/package.json
 COPY --from=build /app/packages/logger/dist ./packages/logger/dist
 COPY --from=build /app/apps/nest/package.json ./

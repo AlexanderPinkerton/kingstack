@@ -77,6 +77,10 @@ describe("generated project boundary", () => {
     );
     expect(nestDockerfile).not.toContain("packages/logger");
     expect(nestDockerfile).not.toContain("workspace @kingstack/logger build");
+    expect(nestDockerfile).toContain("workspace @boundary-check/shared build");
+    expect(nestDockerfile).toContain(
+      "COPY --from=build /app/packages/shared/dist ./packages/shared/dist",
+    );
   });
 
   it("uses one canonical environment setting", () => {
