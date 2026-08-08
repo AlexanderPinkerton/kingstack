@@ -42,7 +42,6 @@ enabled = true
 enabled = true
 port = 54324
 api_url = "http://127.0.0.1"
-openai_api_key = "env(OPENAI_API_KEY)"
 
 [inbucket]
 enabled = true

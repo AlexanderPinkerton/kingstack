@@ -539,9 +539,6 @@ export default function LandingPage() {
           <Link href="/app" className="transition-colors hover:text-white">
             Demo
           </Link>
-          <Link href="/chat" className="transition-colors hover:text-white">
-            AI chat
-          </Link>
         </div>
       </footer>
     </main>

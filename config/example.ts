@@ -51,13 +51,6 @@ export const values = defineValues({
   VERCEL_PROJECT_ID: "",
 
   // ============================================================================
-  // Optional: AI Providers (leave empty if not using)
-  // ============================================================================
-  OPENAI_API_KEY: "",
-  ANTHROPIC_API_KEY: "",
-  GEMINI_API_KEY: "",
-
-  // ============================================================================
   // Runtime Environment and Logging
   // ============================================================================
   // The CLI derives KINGSTACK_ENVIRONMENT from the selected environment name.

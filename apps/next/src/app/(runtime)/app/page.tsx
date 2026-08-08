@@ -7,7 +7,6 @@ import {
   DatabaseZap,
   Frame,
   Gauge,
-  MessageSquare,
   Palette,
   Radio,
   ShieldCheck,
@@ -57,16 +56,6 @@ const examples = [
       "text-[var(--accent-1-l)] bg-[color-mix(in_oklch,var(--accent-1-m)_10%,transparent)] border-[color-mix(in_oklch,var(--accent-1-m)_22%,transparent)]",
     glow: "color-mix(in oklch, var(--accent-1-m) 13%, transparent)",
     tags: ["Three.js", "Authoritative realtime"],
-  },
-  {
-    href: "/chat",
-    title: "AI chat",
-    description:
-      "Streamed responses through a provider-backed chat surface, with model selection and image input.",
-    icon: MessageSquare,
-    accent: "text-[#ffb494] bg-[#ff9c6e]/10 border-[#ff9c6e]/20",
-    glow: "rgba(255, 156, 110, 0.12)",
-    tags: ["Streaming", "Model selection"],
   },
   {
     href: "/app/theme-builder",

@@ -220,14 +220,7 @@ Authentication proves identity; authorization remains feature-specific:
 
 - ordinary protected routes use the verified `sub` as the user ID;
 - admin routes verify the token and query the `admin_emails` allowlist;
-- realtime namespaces decide whether public registration is sufficient; and
-- AI routes require a verified user and apply process-local per-user limits.
-
-The AI limits are a deployment safety belt: 20 text requests and 3 image
-requests per user per minute. They coordinate only within one warm Next.js
-process. A horizontally scaled or serverless production deployment that needs
-a hard global budget must replace this with a shared Redis/database-backed
-limiter and provider-side spending limits.
+- realtime namespaces decide whether public registration is sufficient.
 
 ## Logging and operational rules
 
