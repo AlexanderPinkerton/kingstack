@@ -138,6 +138,18 @@ yarn supabase:provision:get-secrets development \
   --pooler-region aws-1-us-east-2
 ```
 
+KingStack uses both modes of Supabase's shared Supavisor pooler:
+
+- pooled application traffic uses transaction mode on port `6543` with
+  `?pgbouncer=true`;
+- Prisma's `directUrl` and shadow URL use session mode on port `5432`.
+
+Both hosted forms use the pooler-qualified `postgres.<project-ref>` username
+and the selected `<pooler-region>.pooler.supabase.com` hostname. Despite the
+historical `SUPABASE_DB_DIRECT_URL` name, it is the non-transaction-pooled URL
+Prisma uses for migrations, not Supabase's literal IPv6 direct endpoint. This
+keeps migrations usable from IPv4-only developer and CI networks.
+
 For non-interactive automation, pass the database password through the process
 environment rather than an argument, and acknowledge the write explicitly:
 

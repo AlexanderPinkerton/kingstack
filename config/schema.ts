@@ -217,11 +217,7 @@ export const schema = defineSchema({
       ? "localhost"
       : `${core.SUPABASE_REGION}.pooler.supabase.com`;
 
-    const dbDirectHost = isLocal
-      ? "localhost"
-      : `db.${core.SUPABASE_PROJECT_REF}.supabase.co`;
-
-    // Database username (remote uses postgres.{PROJECT_REF} format)
+    // Supavisor identifies hosted projects through postgres.{PROJECT_REF}.
     const dbUser = isLocal
       ? "postgres"
       : `postgres.${core.SUPABASE_PROJECT_REF}`;
@@ -255,11 +251,11 @@ export const schema = defineSchema({
       // Pooler connection (for connection pooling via PgBouncer)
       SUPABASE_DB_POOL_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbPoolerHost}:${dbPoolerPort}/postgres?pgbouncer=true`,
 
-      // Direct connection (for migrations)
-      SUPABASE_DB_DIRECT_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbDirectHost}:${dbDirectPort}/postgres`,
+      // Prisma's directUrl: Supavisor session mode for IPv4-safe migrations.
+      SUPABASE_DB_DIRECT_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbPoolerHost}:${dbDirectPort}/postgres`,
 
-      // Shadow DB connection (for migrations)
-      SUPABASE_DB_SHADOW_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbDirectHost}:${dbDirectPort}/shadow_db`,
+      // Shadow DB connection through the same session-mode endpoint.
+      SUPABASE_DB_SHADOW_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbPoolerHost}:${dbDirectPort}/shadow_db`,
 
       // Environment identity comes from the CLI argument, never duplicated in values files.
       KINGSTACK_ENVIRONMENT: environment.environment,
