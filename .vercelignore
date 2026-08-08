@@ -25,7 +25,7 @@ coverage/
 .env.*
 **/.env
 **/.env.*
-config/
+/config/
 *.previous
 supabase/.temp/
 
