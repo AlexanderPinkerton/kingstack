@@ -19,10 +19,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit -p tsconfig.json && turbo run typecheck",
-    "test": "yarn test:workbranch && yarn test:deploy && yarn test:supabase-provision && turbo run test",
+    "test": "yarn test:workbranch && yarn test:deploy && yarn test:supabase-provision && yarn test:vercel-config && turbo run test",
     "test:workbranch": "bun test scripts/utils/create-workbranch.test.ts",
     "test:deploy": "bun test scripts/deploy/nest-digitalocean/deployment.test.ts",
     "test:supabase-provision": "bun test scripts/deploy/supabase/*.test.ts",
+    "test:vercel-config": "bun test scripts/deploy/vercel/*.test.ts",
     "test:create-kingstack": "bun scripts/test-create-kingstack.ts",
     "backend:enable": "bun scripts/enable-backend.ts",
     "local": "yarn env:local && yarn supabase:start",
@@ -46,6 +47,7 @@
     "supabase:auth:backfill": "bun --env-file=apps/nest/.env apps/nest/src/scripts/backfill-user-data.ts",
     "vercel": "vercel deploy",
     "vercel:prod": "vercel deploy --prod",
+    "vercel:config:pull": "bun scripts/deploy/vercel/get-config.ts",
     "king-config": "bun packages/config/src/cli/index.ts",
     "env:local": "yarn king-config generate local",
     "env:development": "yarn king-config generate development",
@@ -82,6 +84,6 @@
     "supabase": "2.113.0",
     "turbo": "2.10.7",
     "typescript": "5.9.3",
-    "vercel": "^49.1.0"
+    "vercel": "58.1.0"
   }
 }

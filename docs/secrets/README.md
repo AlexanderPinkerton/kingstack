@@ -32,6 +32,15 @@ yarn deploy:sync-secrets:dev
 yarn deploy:sync-secrets:prod
 ```
 
+Vercel project metadata can be bootstrapped after the first deployment:
+
+```bash
+yarn vercel:config:pull production
+```
+
+That command imports the production hostname and linked project identifiers;
+it does not pull application environment variables or recover access tokens.
+
 Never commit environment value files containing credentials. Never place a
 database password, Supabase secret key, refresh token, user access token, or AI
 provider key in a `NEXT_PUBLIC_*` value.

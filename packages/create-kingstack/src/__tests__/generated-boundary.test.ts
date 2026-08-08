@@ -188,10 +188,12 @@ describe("generated project boundary", () => {
     expect(
       readdirSync(join(generatedRoot, "scripts", "deploy")).sort(),
     ).toEqual([
+      "environment-file.ts",
       "nest-digitalocean",
       "nest-digitalocean.ts",
       "supabase",
       "supabase.ts",
+      "vercel",
     ]);
     expect(
       readdirSync(
@@ -210,7 +212,17 @@ describe("generated project boundary", () => {
     ]);
     expect(
       readdirSync(join(generatedRoot, "scripts", "deploy", "supabase")).sort(),
-    ).toEqual(["options.ts", "provision.test.ts", "provision.ts"]);
+    ).toEqual([
+      "get-secrets-options.ts",
+      "get-secrets.test.ts",
+      "get-secrets.ts",
+      "options.ts",
+      "provision.test.ts",
+      "provision.ts",
+    ]);
+    expect(
+      readdirSync(join(generatedRoot, "scripts", "deploy", "vercel")).sort(),
+    ).toEqual(["get-config-options.ts", "get-config.test.ts", "get-config.ts"]);
 
     const rootPackage = JSON.parse(
       readFileSync(join(generatedRoot, "package.json"), "utf8"),
@@ -221,7 +233,14 @@ describe("generated project boundary", () => {
     expect(rootPackage.scripts["supabase:provision"]).toBe(
       "bun scripts/deploy/supabase.ts",
     );
-    expect(rootPackage.devDependencies.supabase).toBe("2.112.0");
+    expect(rootPackage.scripts["supabase:provision:get-secrets"]).toBe(
+      "bun scripts/deploy/supabase/get-secrets.ts",
+    );
+    expect(rootPackage.scripts["vercel:config:pull"]).toBe(
+      "bun scripts/deploy/vercel/get-config.ts",
+    );
+    expect(rootPackage.devDependencies.supabase).toBe("2.113.0");
+    expect(rootPackage.devDependencies.vercel).toBe("58.1.0");
     expect(rootPackage.scripts["prisma:deploy"]).toBe(
       "yarn workspace @boundary-check/prisma prisma migrate deploy",
     );

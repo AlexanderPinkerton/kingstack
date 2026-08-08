@@ -83,6 +83,9 @@ yarn deploy:nest deploy production
 # Deploy Next.js through Vercel
 yarn vercel
 yarn vercel:prod
+
+# Import the linked Vercel host and project IDs into KingStack config
+yarn vercel:config:pull production
 ```
 
 Provisioning and deployment remain separate so an ordinary release cannot

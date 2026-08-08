@@ -223,6 +223,40 @@ ssh root@DROPLET_IP 'caddy validate --config /etc/caddy/Caddyfile'
 
 ## Next.js on Vercel
 
+### Import linked project configuration
+
+After the first production deployment, import Vercel-owned project metadata
+into the corresponding KingStack environment:
+
+```bash
+yarn vercel:config:pull production
+```
+
+The command reads the project and organization IDs created by Vercel in
+`.vercel/project.json`, retrieves the project's verified production domains,
+and surgically updates these values in `config/production.ts`:
+
+- `NEXT_HOST`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+If the project has multiple production domains, choose the public hostname the
+application should treat as canonical. A verified custom domain is preferred;
+otherwise the stable project `*.vercel.app` domain is appropriate. For
+repeatable use, pass it explicitly with `--host <hostname> --yes`. Use
+`--print` to inspect a TypeScript values block without modifying a file.
+
+This is intentionally not a reverse environment-variable sync. KingStack's
+ignored `config/<environment>.ts` file remains the source of truth, and
+`yarn king-config sync` sends its generated runtime values to Vercel. Pulling
+those generated values back would create two competing sources and could
+overwrite newer Supabase or application configuration.
+
+`VERCEL_TOKEN` is also left unchanged. Vercel access tokens are displayed only
+when created and cannot be retrieved later; create one from Vercel's account
+settings when CI needs it and store it in the ignored environment file or the
+CI secret store.
+
 ### First deployment through the Vercel dashboard
 
 The recommended Vercel project root is `apps/next`:
