@@ -250,6 +250,7 @@ yarn supabase:start     # Start this project's Supabase services
 yarn supabase:status    # Inspect this project's Supabase state
 yarn supabase:list      # List local Supabase projects
 yarn supabase:check     # Validate Supabase configuration
+yarn supabase:auth:configure production # Configure hosted Auth URL and signup policy
 yarn supabase:reset     # Drop local data and reapply migrations
 yarn supabase:stop      # Stop this project's Supabase services
 ```

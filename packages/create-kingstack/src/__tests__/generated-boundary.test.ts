@@ -218,6 +218,10 @@ describe("generated project boundary", () => {
     expect(
       readdirSync(join(generatedRoot, "scripts", "deploy", "supabase")).sort(),
     ).toEqual([
+      "auth-config.test.ts",
+      "auth-config.ts",
+      "auth-options.ts",
+      "configure-auth.ts",
       "get-secrets-options.ts",
       "get-secrets.test.ts",
       "get-secrets.ts",
@@ -240,6 +244,9 @@ describe("generated project boundary", () => {
     );
     expect(rootPackage.scripts["supabase:provision:get-secrets"]).toBe(
       "bun scripts/deploy/supabase/get-secrets.ts",
+    );
+    expect(rootPackage.scripts["supabase:auth:configure"]).toBe(
+      "bun scripts/deploy/supabase/configure-auth.ts",
     );
     expect(rootPackage.scripts["vercel:config:pull"]).toBe(
       "bun scripts/deploy/vercel/get-config.ts",

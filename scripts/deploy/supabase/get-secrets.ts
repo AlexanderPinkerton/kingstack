@@ -253,6 +253,9 @@ async function getSecrets(options: GetSecretsCliOptions): Promise<void> {
   console.log(
     `4. Validate provider readiness: yarn king-config sync --env ${environment} --dry-run`,
   );
+  console.log(
+    `5. After NEXT_HOST is configured, run: yarn supabase:auth:configure ${environment}`,
+  );
 }
 
 function listProjects(): HostedProject[] {

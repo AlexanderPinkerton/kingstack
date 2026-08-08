@@ -169,6 +169,40 @@ yarn supabase:provision:get-secrets --print \
   --project-ref <project-ref>
 ```
 
+## Configure hosted authentication
+
+After `NEXT_HOST` contains the deployed frontend hostname, synchronize the two
+hosted Auth settings KingStack owns:
+
+```bash
+yarn supabase:auth:configure production
+```
+
+The command derives the project reference and `https://` Site URL from the
+selected KingStack environment. It patches only `site_url` and
+`mailer_autoconfirm`, reads the settings back, and fails unless they match.
+Other Auth providers, templates, SMTP settings, and security controls are
+preserved. This uses Supabase's narrowly scoped
+[Auth configuration endpoint](https://supabase.com/docs/reference/api/v1-update-auth-service-config).
+
+KingStack defaults to immediate email/password signup, matching local
+development's `auth.email.enable_confirmations = false`. To require ownership
+verification instead:
+
+```bash
+yarn supabase:auth:configure production --require-email-confirmation
+```
+
+Disabling confirmation reduces signup friction but does not prove that a user
+owns the supplied email address. Public applications should add CAPTCHA or
+another abuse control before accepting untrusted registration at scale.
+Supabase's [password-authentication guide](https://supabase.com/docs/guides/auth/passwords)
+describes the hosted confirmation behavior.
+
+Use `--dry-run` to inspect the target without an API call. For real updates,
+the command uses `SUPABASE_ACCESS_TOKEN` when provided or the access token saved
+by `yarn exec supabase login`; it never prints the token.
+
 ## Complete the application handoff
 
 After importing credentials:
@@ -187,12 +221,19 @@ After importing credentials:
    yarn exec supabase link --project-ref <project-ref>
    ```
 
-3. In **Authentication → Signing Keys**, confirm the project uses an
+3. Configure the hosted Site URL and signup policy after importing the deployed
+   Vercel hostname:
+
+   ```bash
+   yarn supabase:auth:configure <environment>
+   ```
+
+4. In **Authentication → Signing Keys**, confirm the project uses an
    asymmetric signing key. If migrating an older project, deploy KingStack's
    JWKS-capable verifier before rotating the key and follow Supabase's waiting
    period before revoking the legacy key.
 
-4. Generate service environment files and apply Prisma migrations:
+5. Generate service environment files and apply Prisma migrations:
 
    ```bash
    yarn king-config check development
@@ -200,7 +241,7 @@ After importing credentials:
    yarn prisma:deploy
    ```
 
-5. Inspect external secret changes before syncing them:
+6. Inspect external secret changes before syncing them:
 
    ```bash
    yarn deploy:sync-secrets:dry-run

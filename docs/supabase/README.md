@@ -19,6 +19,7 @@ yarn supabase:check       # Verify configuration
 # Hosted project
 yarn supabase:provision               # Review costs and create a hosted project
 yarn supabase:provision:get-secrets   # Import hosted credentials into KingStack config
+yarn supabase:auth:configure production # Configure hosted Auth redirects and signup policy
 
 # Database
 yarn supabase:reset       # Reset database (drops data, re-runs migrations)
@@ -60,13 +61,14 @@ See the [Multi-Project Setup Guide](./multi-project-setup.md) for detailed instr
 
 ### ✅ Helper Scripts
 
-Five TypeScript entry points make Supabase management easier:
+Six TypeScript entry points make Supabase management easier:
 
 1. **`supabase-status.ts`** - Shows running services and connection info
 2. **`supabase-list-instances.ts`** - Lists all Supabase instances across all projects
 3. **`supabase-check-config.ts`** - Validates and displays your configuration
 4. **`deploy/supabase.ts`** - Reviews cost and provisioning choices before creating a hosted project
 5. **`deploy/supabase/get-secrets.ts`** - Imports modern hosted API keys and the saved database password into an ignored environment file
+6. **`deploy/supabase/configure-auth.ts`** - Synchronizes the hosted Site URL and email-confirmation policy
 
 The status helper deliberately reports Docker socket permission failures as
 `unknown`, not `stopped`. Agent sandboxes often cannot inspect host Docker even

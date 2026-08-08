@@ -48,6 +48,34 @@ that one subscription into `RootStore`. Domain stores always read the current
 token when a request runs, while cache identity uses the stable user ID rather
 than the rotating access token.
 
+### Registration and confirmation redirects
+
+KingStack's hosted default is immediate email/password signup. Supabase returns
+a session from `signUp()`, the existing auth-state subscription publishes it,
+and the login page redirects the authenticated user to `/app`.
+
+Projects that require email ownership verification remain supported. Signup
+sets `emailRedirectTo` to the current origin's `/login` route, where the
+Supabase browser client can exchange the returned PKCE code. Do not use the
+marketing home page as the confirmation callback; it does not initialize the
+authenticated application runtime.
+
+The hosted Supabase project must also know the deployment URL. After importing
+`NEXT_HOST` from Vercel, run:
+
+```bash
+yarn supabase:auth:configure production
+```
+
+This sets the hosted Site URL and disables confirmation by default. Pass
+`--require-email-confirmation` when verified email ownership is part of the
+product's security model. Immediate signup is convenient for demos, but it
+allows accounts to claim addresses they do not control; add CAPTCHA or another
+abuse control before exposing open registration at scale.
+
+See Supabase's [redirect URL guide](https://supabase.com/docs/guides/auth/redirect-urls)
+for the Site URL fallback and redirect allow-list behavior.
+
 ### HTTP requests from the browser
 
 Protected requests must use the authenticated transport:

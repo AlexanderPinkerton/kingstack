@@ -26,6 +26,17 @@ See the
 [hosted Supabase provisioning guide](../supabase/hosted-project-provisioning.md)
 for billing details and the post-provisioning handoff.
 
+Once the deployed Vercel hostname is present in `config/<environment>.ts`, set
+the hosted Supabase Site URL and signup policy:
+
+```bash
+yarn supabase:auth:configure production
+```
+
+The default disables signup email confirmation. Use
+`--require-email-confirmation` when the application must prove ownership of the
+submitted email address.
+
 ## NestJS on DigitalOcean
 
 For an interactive first deployment or routine release, start the wizard:

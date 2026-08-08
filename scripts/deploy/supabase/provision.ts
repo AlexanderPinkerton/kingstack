@@ -320,9 +320,12 @@ function printNextSteps(): void {
     "3. Complete the remaining values in config/<environment>.ts and run yarn env:<environment>.",
   );
   console.log(
-    "4. Confirm an asymmetric Auth signing key is active in the Supabase dashboard.",
+    "4. After NEXT_HOST is known, configure hosted Auth with yarn supabase:auth:configure <environment>.",
   );
-  console.log("5. Apply schema migrations with yarn prisma:deploy.");
+  console.log(
+    "5. Confirm an asymmetric Auth signing key is active in the Supabase dashboard.",
+  );
+  console.log("6. Apply schema migrations with yarn prisma:deploy.");
   console.log(
     "See docs/supabase/hosted-project-provisioning.md for the full handoff.",
   );

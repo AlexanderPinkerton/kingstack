@@ -41,6 +41,9 @@ yarn supabase:provision
 
 # Hosted credential import into config/<environment>.ts
 yarn supabase:provision:get-secrets development
+
+# Hosted Site URL and signup confirmation policy
+yarn supabase:auth:configure production
 ```
 
 Auth user projection maintenance:

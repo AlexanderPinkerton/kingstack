@@ -178,6 +178,9 @@ async function getConfig(options: GetVercelConfigCliOptions): Promise<void> {
   console.log(
     `3. Preview outbound provider sync: yarn king-config sync --env ${environment} --dry-run`,
   );
+  console.log(
+    `4. Configure hosted Auth redirects: yarn supabase:auth:configure ${environment}`,
+  );
 }
 
 function assertVercelCli(): void {
