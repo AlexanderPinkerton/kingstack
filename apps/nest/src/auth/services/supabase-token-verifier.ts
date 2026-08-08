@@ -1,46 +1,21 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { JwtPayload } from "@supabase/supabase-js";
 import {
+  InvalidSupabaseAccessTokenError,
+  validateSupabaseUserClaims,
+  type AuthenticatedSupabaseUserClaims,
+} from "@kingstack/shared";
+import {
   SUPABASE_AUTH_CLIENT,
   type SupabaseClaimsClient,
 } from "../supabase-auth-client";
 
-export type SupabaseUserClaims = JwtPayload & {
-  sub: string;
-  email?: string;
-};
+export {
+  InvalidSupabaseAccessTokenError,
+  validateSupabaseUserClaims,
+} from "@kingstack/shared";
 
-export class InvalidSupabaseAccessTokenError extends Error {
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
-    this.name = "InvalidSupabaseAccessTokenError";
-  }
-}
-
-function hasAuthenticatedAudience(audience: unknown): boolean {
-  return (
-    audience === "authenticated" ||
-    (Array.isArray(audience) && audience.includes("authenticated"))
-  );
-}
-
-export function validateSupabaseUserClaims(
-  claims: JwtPayload,
-): SupabaseUserClaims {
-  if (typeof claims.sub !== "string" || claims.sub.length === 0) {
-    throw new InvalidSupabaseAccessTokenError(
-      "Supabase access token is missing a user subject",
-    );
-  }
-
-  if (!hasAuthenticatedAudience(claims.aud)) {
-    throw new InvalidSupabaseAccessTokenError(
-      "Supabase access token does not have the authenticated audience",
-    );
-  }
-
-  return claims;
-}
+export type SupabaseUserClaims = AuthenticatedSupabaseUserClaims<JwtPayload>;
 
 @Injectable()
 export class SupabaseTokenVerifier {

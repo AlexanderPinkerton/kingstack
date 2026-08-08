@@ -13,6 +13,7 @@ import {
 import { UsernameGenerator } from "@kingstack/shared";
 import { APPNAME } from "@kingstack/shared";
 import { browserLogger } from "@/lib/browser-logger";
+import { fetchPublic } from "@/lib/http/public-fetch";
 
 const logger = browserLogger.child({ component: "LoginForm" });
 
@@ -47,7 +48,7 @@ export function LoginForm({
     }
 
     try {
-      const response = await fetch("/api/username/validate", {
+      const response = await fetchPublic("/api/username/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: candidate }),

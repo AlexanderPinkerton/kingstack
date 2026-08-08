@@ -1,259 +1,116 @@
-# 📜 Scripts & Automation
+# Scripts and automation
 
-KingStack uses **TypeScript scripts with Bun** to avoid common pitfalls with transpilation, linting, and script execution.
+KingStack exposes normal workflows through root Yarn commands. Implementation
+scripts are TypeScript executed by Bun, but contributors should prefer the Yarn
+entry point so command names and working-directory assumptions stay stable.
 
-## Why Bun + TypeScript?
-
-Traditional Node.js scripts often require:
-- ❌ Transpilation setup (ts-node, tsx, etc.)
-- ❌ Separate build steps
-- ❌ Complex configuration
-- ❌ Slow startup times
-
-**Bun solves this** by natively executing TypeScript:
-- ✅ No transpilation needed
-- ✅ Fast execution
-- ✅ Built-in TypeScript support
-- ✅ Simple execution: `bun script.ts`
-
-## Available Scripts
-
-### Environment Management
+## Configuration
 
 ```bash
-# Swap to development environment
-bun scripts/swap-env.ts development
-
-# Swap to production environment
-bun scripts/swap-env.ts production
-
-# Check current environment
-bun scripts/swap-env.ts --current
-```
-
-**Yarn shortcuts:**
-```bash
+yarn king-config env list
+yarn king-config check local
+yarn king-config check --all
+yarn king-config diff local
+yarn env:local
 yarn env:development
 yarn env:production
-yarn env:current
 ```
 
-### Parallel Feature Work
+`config/<environment>.ts` is the input. Generated `.env` and TOML files are
+outputs and must not be edited directly. See
+[configuration management](../../config/readme.md).
 
-Create a branch in an isolated Git worktree without changing the current
-checkout:
+## Backend and Supabase
+
+```bash
+# Prepare a draft or incomplete checkout for the full local runtime
+yarn backend:enable
+
+# Local lifecycle and diagnostics
+yarn supabase:start
+yarn supabase:status
+yarn supabase:list
+yarn supabase:check
+yarn supabase:stop
+
+# Destructive local database rebuild
+yarn supabase:reset
+
+# Hosted project creation with cost confirmation
+yarn supabase:provision
+```
+
+Auth user projection maintenance:
+
+```bash
+yarn supabase:auth:trigger:install
+yarn supabase:auth:backfill
+yarn supabase:auth:trigger:remove
+```
+
+These commands load generated service configuration and do not log database
+credentials. See [Supabase management](../supabase/README.md) and
+[authentication](../auth/README.md).
+
+## Prisma
+
+```bash
+yarn prisma:generate
+yarn prisma:migrate
+yarn prisma:deploy
+```
+
+Use `prisma:migrate` while creating local development migrations and
+`prisma:deploy` when applying existing migrations to a deployed environment.
+
+## Deployment
+
+```bash
+# Inspect secret synchronization without external writes
+yarn deploy:sync-secrets:dry-run
+
+# Synchronize configured hosted environments
+yarn deploy:sync-secrets:dev
+yarn deploy:sync-secrets:prod
+
+# Provision or deploy NestJS infrastructure
+yarn deploy:nest provision production --region nyc3
+yarn deploy:nest deploy production
+
+# Deploy Next.js through Vercel
+yarn vercel
+yarn vercel:prod
+```
+
+Provisioning and deployment remain separate so an ordinary release cannot
+silently create billable infrastructure. See the
+[deployment guide](../deployment/README.md).
+
+## Parallel feature work
+
+Create an isolated Git worktree without changing the current checkout:
 
 ```bash
 yarn workbranch feature/config-checks
-```
-
-By default, the new branch starts at the current `HEAD`. Choose another base,
-resume an existing local or known remote-tracking branch, or install dependencies
-immediately:
-
-```bash
 yarn workbranch feature/config-checks --from origin/main
 yarn workbranch feature/config-checks --resume
 yarn workbranch feature/config-checks --install
 ```
 
-Worktrees are grouped beside the repository under
-`<repository>-worktrees/<branch-slug>`. The command prints the exact path and
-safe cleanup commands when it finishes.
+The command does not fetch, copy secrets, reserve new ports, or start services.
+Initialize `config/local.ts` and allocate distinct runtime resources before
+running multiple worktrees simultaneously.
 
-The command does not fetch automatically. Fetch first when you need a newly
-created or updated remote branch.
+## Adding a script
 
-Git worktrees isolate tracked files, the branch, Git index, and build output.
-They do not isolate ignored local configuration, ports, running containers,
-databases, or external services. Initialize `config/local.ts` in a new worktree
-when needed and assign unique runtime resources before running multiple copies
-of the application concurrently. The command never copies secrets or starts
-services automatically.
+1. Put TypeScript implementation under `scripts/` or the owning application.
+2. Keep the script non-interactive unless interaction is intrinsic to its task.
+3. Validate targets before any destructive or billable operation.
+4. Redact credentials from output and errors.
+5. Exit nonzero on failure.
+6. Add a stable Yarn command to the owning `package.json`.
+7. Add focused tests beside the script when it contains parsing, planning, or
+   destructive-target logic.
 
-### Script Structure
-
-All scripts are in the `scripts/` directory:
-
-```
-scripts/
-├── swap-env.ts                 # Environment file swapping
-└── utils/
-    └── create-workbranch.ts    # Isolated branch and worktree creation
-```
-
-## Writing Scripts
-
-### Basic Script Template
-
-```typescript
-#!/usr/bin/env bun
-// Your script description
-
-import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
-
-async function main() {
-  // Your script logic here
-  console.log('Script executed!');
-}
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
-```
-
-### Key Features
-
-1. **Shebang** - `#!/usr/bin/env bun` allows direct execution
-2. **TypeScript** - Full type safety and IntelliSense
-3. **Async/Await** - Modern async patterns
-4. **Error Handling** - Proper error catching and exit codes
-
-### Example: Environment Swapper
-
-```typescript
-// swap-env.ts
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
-
-const ENVIRONMENTS = ["development", "production"];
-
-async function main() {
-  const envArg = process.argv[2];
-  
-  if (!ENVIRONMENTS.includes(envArg)) {
-    console.error(`Unknown environment: ${envArg}`);
-    process.exit(1);
-  }
-
-  // Swap logic here...
-}
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
-```
-
-## Benefits
-
-✅ **No Build Step** - Run TypeScript directly  
-✅ **Fast** - Bun's native execution is fast  
-✅ **Type Safe** - Full TypeScript support  
-✅ **Simple** - Just `bun script.ts`  
-✅ **Reliable** - No transpilation errors  
-
-## Adding New Scripts
-
-1. Create script in `scripts/` directory:
-   ```bash
-   touch scripts/my-script.ts
-   ```
-
-2. Add shebang and implement:
-   ```typescript
-   #!/usr/bin/env bun
-   // My script
-   ```
-
-3. Make executable (optional):
-   ```bash
-   chmod +x scripts/my-script.ts
-   ```
-
-4. Run directly:
-   ```bash
-   bun scripts/my-script.ts
-   ```
-
-5. (Optional) Add yarn shortcut in root `package.json`:
-   ```json
-   {
-     "scripts": {
-       "my-script": "bun scripts/my-script.ts"
-     }
-   }
-   ```
-
-## Common Patterns
-
-### File Operations
-
-```typescript
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-
-if (existsSync('file.txt')) {
-  const content = readFileSync('file.txt', 'utf8');
-  writeFileSync('file.txt', 'new content');
-}
-```
-
-### Environment Variables
-
-```typescript
-const env = process.env.NODE_ENV || 'development';
-const apiUrl = process.env.API_URL;
-```
-
-### Path Handling
-
-```typescript
-import { join, dirname } from 'path';
-
-const filePath = join('apps', 'next', '.env');
-const dir = dirname(filePath);
-```
-
-### Command Line Arguments
-
-```typescript
-const args = process.argv.slice(2);
-const firstArg = args[0];
-```
-
-## Best Practices
-
-1. **Use TypeScript** - Leverage type safety
-2. **Handle Errors** - Always catch and handle errors
-3. **Exit Codes** - Use proper exit codes (0 = success, 1 = error)
-4. **Logging** - Use console.log/error for output
-5. **Shebang** - Include `#!/usr/bin/env bun` for direct execution
-6. **Documentation** - Add comments explaining what scripts do
-
-## NestJS Scripts
-
-NestJS-specific scripts live in `apps/nest/src/scripts/`:
-
-```bash
-# Install or repair the Supabase auth-user projection trigger
-yarn supabase:auth:trigger:install
-
-# Backfill existing Supabase Auth users into public.user
-yarn supabase:auth:backfill
-
-# Deliberately remove the auth-user projection trigger
-yarn supabase:auth:trigger:remove
-```
-
-These commands load `apps/nest/.env` and prefer `SUPABASE_DB_DIRECT_URL`, so
-they work with both local and hosted Supabase projects. They exit nonzero on
-connection or SQL errors and never log database credentials.
-
-## Troubleshooting
-
-### Script Not Found
-- Ensure script is in `scripts/` directory
-- Check file permissions
-- Verify Bun is installed: `bun --version`
-
-### Type Errors
-- Ensure TypeScript is properly configured
-- Check imports are correct
-- Verify file paths are valid
-
-### Execution Errors
-- Check error messages for clues
-- Verify required files exist
-- Ensure environment variables are set
+Use Node's `spawn`/`spawnSync` with argument arrays rather than constructing
+shell command strings from user input.

@@ -65,16 +65,11 @@ export class SessionManager {
     const supabase = this.supabase;
     if (!supabase) return;
 
-    const result = await supabase.auth.getSession();
-    const nextSession = result.data.session;
-    const changed =
-      this.session?.access_token !== nextSession?.access_token ||
-      this.session?.user?.id !== nextSession?.user?.id;
+    const { error } = await supabase.auth.refreshSession();
+    if (error) throw error;
 
-    if (!changed) return;
-
-    this.session = nextSession;
-    this.onSessionChange?.(this.session, "SESSION_REFRESHED");
+    // Supabase emits TOKEN_REFRESHED through the existing auth-state listener,
+    // which remains the only path that mutates application session state.
   }
 
   dispose(): void {

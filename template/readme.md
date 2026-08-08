@@ -184,6 +184,11 @@ Read [Supabase security](./docs/supabase/security.md) before exposing a table.
 Supabase owns authentication identities in `auth.users`. A migration-managed
 trigger projects identities into Prisma's `public.user` model.
 
+The browser persists the Supabase session in project-scoped cookies, while
+protected Next.js, NestJS, and Socket.IO calls carry the current access token
+explicitly. Servers verify signed claims through Supabase's JWKS-capable
+`getClaims()` path; the application does not copy a JWT signing secret.
+
 If the Prisma `user` model gains a required field, update the auth projection
 trigger in the same migration. See
 [Authentication](./docs/auth/README.md) for the complete flow.

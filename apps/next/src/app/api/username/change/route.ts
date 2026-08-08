@@ -1,18 +1,18 @@
 import { type NextRequest } from "next/server";
 import { UsernameGenerator } from "@kingstack/shared";
 import prisma from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/serverClient";
+import {
+  authenticateBearerRequest,
+  bearerAuthenticationErrorResponse,
+} from "@/lib/auth/server-auth";
 import { createRequestLogger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const logger = createRequestLogger(request, "UsernameChangeRoute");
   try {
-    const supabase = await createClient();
-    const jwt = request.headers.get("Authorization")?.replace("Bearer ", "");
-    const { data: userData } = await supabase.auth.getUser(jwt);
-
-    if (!userData?.user?.id) {
-      return Response.json("Unauthorized", { status: 401 });
+    const authentication = await authenticateBearerRequest(request);
+    if (!authentication.ok) {
+      return bearerAuthenticationErrorResponse(authentication);
     }
 
     const { username } = await request.json();
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Get current user data
     const currentUser = await prisma.user.findUnique({
-      where: { id: userData.user.id },
+      where: { id: authentication.userId },
       select: {
         username: true,
         username_changed_at: true,
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       select: { id: true },
     });
 
-    if (existingUser && existingUser.id !== userData.user.id) {
+    if (existingUser && existingUser.id !== authentication.userId) {
       return Response.json(
         { error: "Username is already taken" },
         { status: 409 },
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     await prisma.user.update({
-      where: { id: userData.user.id },
+      where: { id: authentication.userId },
       data: {
         username,
         username_changed_at: now,

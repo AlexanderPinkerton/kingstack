@@ -5,14 +5,10 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
+import { extractBearerToken } from "@kingstack/shared";
 import { SupabaseTokenVerifier } from "../services/supabase-token-verifier";
 
-export function extractBearerToken(
-  authorization: string | undefined,
-): string | null {
-  const match = /^Bearer\s+(\S+)$/i.exec(authorization?.trim() ?? "");
-  return match?.[1] ?? null;
-}
+export { extractBearerToken } from "@kingstack/shared";
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {

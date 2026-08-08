@@ -222,6 +222,12 @@ Supabase owns authentication identities in `auth.users`. A migration-managed
 database trigger projects each identity into Prisma's `public.user` model so
 application code can use a controlled domain record.
 
+The browser client persists the Supabase session in project-scoped cookies and
+publishes auth changes into `RootStore`. Protected Next.js, NestJS, and
+Socket.IO calls then carry the current access token explicitly. Both servers
+verify signed claims through Supabase's JWKS-capable `getClaims()` path; the
+application does not store a JWT signing secret.
+
 When required fields are added to the Prisma `user` model, add a migration that
 updates this trigger as part of the same schema change. The current trigger
 definition is in `20260729030000_repair_auth_user_sync`.

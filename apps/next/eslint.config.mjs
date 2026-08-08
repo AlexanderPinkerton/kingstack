@@ -35,6 +35,24 @@ export default defineConfig(
     },
   },
   {
+    name: "kingstack/explicit-http-auth",
+    files: ["src/**/*.{js,jsx,ts,tsx}"],
+    ignores: [
+      "src/lib/auth/authenticated-fetch.ts",
+      "src/lib/http/public-fetch.ts",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='fetch']",
+          message:
+            "Use fetchWithAuth for protected requests or fetchPublic for deliberately public requests.",
+        },
+      ],
+    },
+  },
+  {
     name: "kingstack/logger-console-adapters",
     files: ["src/lib/browser-logger.ts"],
     rules: {

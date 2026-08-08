@@ -2,7 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { PrismaClient } from "@prisma/client";
 
-import { getUserAuthDetails } from "@/lib/admin-utils";
+import {
+  authenticateBearerRequest,
+  bearerAuthenticationErrorResponse,
+} from "@/lib/auth/server-auth";
 import { createRequestLogger } from "@/lib/logger";
 
 const prisma: PrismaClient = new PrismaClient();
@@ -10,17 +13,9 @@ const prisma: PrismaClient = new PrismaClient();
 export async function GET(request: NextRequest) {
   const logger = createRequestLogger(request, "PostRoute");
   try {
-    // Get the session JWT token from the request headers
-    const jwt =
-      request.headers.get("Authorization")?.replace("Bearer ", "") || null;
-
-    const authDetails = await getUserAuthDetails(jwt, logger);
-
-    if (!authDetails.isAuthenticated) {
-      return NextResponse.json(
-        { error: authDetails.error || "Unauthorized" },
-        { status: 401 },
-      );
+    const authentication = await authenticateBearerRequest(request);
+    if (!authentication.ok) {
+      return bearerAuthenticationErrorResponse(authentication);
     }
 
     const posts = await prisma.post.findMany({
@@ -40,17 +35,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const logger = createRequestLogger(request, "PostRoute");
   try {
-    // Get the session JWT token from the request headers
-    const jwt =
-      request.headers.get("Authorization")?.replace("Bearer ", "") || null;
-
-    const authDetails = await getUserAuthDetails(jwt, logger);
-
-    if (!authDetails.isAuthenticated || !authDetails.userId) {
-      return NextResponse.json(
-        { error: authDetails.error || "Unauthorized" },
-        { status: 401 },
-      );
+    const authentication = await authenticateBearerRequest(request);
+    if (!authentication.ok) {
+      return bearerAuthenticationErrorResponse(authentication);
     }
 
     // Parse the request body
@@ -67,7 +54,7 @@ export async function POST(request: NextRequest) {
         title,
         content: content || null,
         published,
-        author_id: authDetails.userId,
+        author_id: authentication.userId,
       },
     });
 

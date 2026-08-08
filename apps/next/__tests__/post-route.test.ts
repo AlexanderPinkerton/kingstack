@@ -1,26 +1,24 @@
-import { describe, it, beforeEach, expect, vi } from "vitest";
-import { GET as getPosts } from "../src/app/api/post/route";
-import { PrismaClient } from "@prisma/client";
-import { getUserAuthDetails } from "@/lib/admin-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// --- Prisma Mock ---
-vi.mock("@prisma/client", () => {
-  const mockPrisma = {
-    post: {
-      findMany: vi.fn(),
-    },
-  };
-  return {
-    PrismaClient: vi.fn(() => mockPrisma),
-  };
-});
-
-// --- Admin Utils Mock ---
-vi.mock("@/lib/admin-utils", () => ({
-  getUserAuthDetails: vi.fn(),
+const mocks = vi.hoisted(() => ({
+  findMany: vi.fn(),
+  getClaims: vi.fn(),
 }));
 
-// --- Test Data ---
+vi.mock("@prisma/client", () => ({
+  PrismaClient: vi.fn(() => ({
+    post: { findMany: mocks.findMany },
+  })),
+}));
+
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: vi.fn(() => ({
+    auth: { getClaims: mocks.getClaims },
+  })),
+}));
+
+import { GET as getPosts } from "../src/app/api/post/route";
+
 const fakePosts = [
   {
     id: "post1",
@@ -30,216 +28,100 @@ const fakePosts = [
     author_id: "user1",
     created_at: "2023-01-01T00:00:00.000Z",
   },
-  {
-    id: "post2",
-    title: "Test Post 2",
-    content: "This is test content 2",
-    published: false,
-    author_id: "user2",
-    created_at: "2023-01-02T00:00:00.000Z",
-  },
 ];
 
-const fakeAuthDetails = {
-  isAuthenticated: true,
-  userId: "user1",
-  userEmail: "user1@example.com",
-  isAdmin: false,
-};
+function request(authorization?: string) {
+  const headers = new Headers();
+  if (authorization) headers.set("Authorization", authorization);
 
-function mockRequest(headers: Record<string, string> = {}) {
   return {
-    method: "GET",
+    headers,
     url: "http://localhost/api/post",
-    headers: {
-      get: (key: string) => headers[key],
-    },
-  } as any;
+  } as Parameters<typeof getPosts>[0];
 }
 
 describe("GET /api/post", () => {
-  let mockPrisma: any;
-
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "publishable-key";
+    mocks.getClaims.mockImplementation((accessToken: string) => {
+      if (accessToken !== "valid-token") {
+        return Promise.resolve({
+          data: null,
+          error: new Error("invalid token"),
+        });
+      }
 
-    // Get the mocked Prisma instance
-    mockPrisma = new PrismaClient();
-
-    // Setup default mock behavior for getUserAuthDetails
-    (getUserAuthDetails as any).mockResolvedValue({
-      isAuthenticated: false,
-      error: "No JWT token provided",
+      return Promise.resolve({
+        data: {
+          claims: {
+            aud: "authenticated",
+            email: "user@example.com",
+            sub: "user1",
+          },
+        },
+        error: null,
+      });
     });
   });
 
-  it("successfully returns posts when user is authenticated", async () => {
-    // Mock successful authentication
-    (getUserAuthDetails as any).mockResolvedValue(fakeAuthDetails);
+  it("returns posts after the real bearer verifier authenticates the request", async () => {
+    mocks.findMany.mockResolvedValue(fakePosts);
 
-    // Mock successful database query
-    mockPrisma.post.findMany.mockResolvedValue(fakePosts);
+    const response = await getPosts(request("Bearer valid-token"));
 
-    const req = mockRequest({ Authorization: "Bearer mocktoken" });
-    const res = await getPosts(req);
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json).toEqual(fakePosts);
-    expect(getUserAuthDetails).toHaveBeenCalledWith(
-      "mocktoken",
-      expect.anything(),
-    );
-    expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(fakePosts);
+    expect(mocks.getClaims).toHaveBeenCalledWith("valid-token");
+    expect(mocks.findMany).toHaveBeenCalledOnce();
   });
 
-  it("returns 401 when user is not authenticated", async () => {
-    // Mock failed authentication
-    (getUserAuthDetails as any).mockResolvedValue({
-      isAuthenticated: false,
-      error: "Invalid user data",
+  it("rejects a request without a bearer token", async () => {
+    const response = await getPosts(request());
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      error: "Bearer token is required",
     });
-
-    const req = mockRequest({ Authorization: "Bearer invalidtoken" });
-    const res = await getPosts(req);
-    const json = await res.json();
-
-    expect(res.status).toBe(401);
-    expect(json).toEqual({ error: "Invalid user data" });
-    expect(getUserAuthDetails).toHaveBeenCalledWith(
-      "invalidtoken",
-      expect.anything(),
-    );
-    expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
+    expect(mocks.getClaims).not.toHaveBeenCalled();
+    expect(mocks.findMany).not.toHaveBeenCalled();
   });
 
-  it("returns 401 when no authorization header is provided", async () => {
-    const req = mockRequest();
-    const res = await getPosts(req);
-    const json = await res.json();
+  it("rejects a malformed authorization scheme before verification", async () => {
+    const response = await getPosts(request("Basic credentials"));
 
-    expect(res.status).toBe(401);
-    expect(json).toEqual({ error: "No JWT token provided" });
-    expect(getUserAuthDetails).toHaveBeenCalledWith(null, expect.anything());
-    expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
+    expect(response.status).toBe(401);
+    expect(mocks.getClaims).not.toHaveBeenCalled();
   });
 
-  it("returns 401 when authorization header is malformed", async () => {
-    (getUserAuthDetails as any).mockResolvedValue({
-      isAuthenticated: false,
-      error: "Invalid user data",
+  it("rejects an invalid bearer token", async () => {
+    const response = await getPosts(request("Bearer invalid-token"));
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      error: "Invalid or expired bearer token",
     });
-
-    const req = mockRequest({ Authorization: "InvalidFormat" });
-    const res = await getPosts(req);
-    const json = await res.json();
-
-    expect(res.status).toBe(401);
-    expect(json).toEqual({ error: "Invalid user data" });
-    expect(getUserAuthDetails).toHaveBeenCalledWith(
-      "InvalidFormat",
-      expect.anything(),
-    );
-    expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
+    expect(mocks.findMany).not.toHaveBeenCalled();
   });
 
-  it("returns empty array when no posts exist", async () => {
-    // Mock successful authentication
-    (getUserAuthDetails as any).mockResolvedValue(fakeAuthDetails);
+  it("returns an empty list when the database has no posts", async () => {
+    mocks.findMany.mockResolvedValue([]);
 
-    // Mock empty database result
-    mockPrisma.post.findMany.mockResolvedValue([]);
+    const response = await getPosts(request("Bearer valid-token"));
 
-    const req = mockRequest({ Authorization: "Bearer mocktoken" });
-    const res = await getPosts(req);
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json).toEqual([]);
-    expect(getUserAuthDetails).toHaveBeenCalledWith(
-      "mocktoken",
-      expect.anything(),
-    );
-    expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual([]);
   });
 
-  it("handles database errors gracefully", async () => {
-    // Mock successful authentication
-    (getUserAuthDetails as any).mockResolvedValue(fakeAuthDetails);
+  it("does not expose database errors", async () => {
+    mocks.findMany.mockRejectedValue(new Error("database credentials leaked"));
 
-    // Mock database error
-    const dbError = new Error("Database connection failed");
-    mockPrisma.post.findMany.mockRejectedValue(dbError);
+    const response = await getPosts(request("Bearer valid-token"));
 
-    const req = mockRequest({ Authorization: "Bearer mocktoken" });
-    const res = await getPosts(req);
-    const json = await res.json();
-
-    expect(res.status).toBe(500);
-    expect(json).toEqual({ error: "Internal server error" });
-    expect(getUserAuthDetails).toHaveBeenCalledWith(
-      "mocktoken",
-      expect.anything(),
-    );
-    expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
-  });
-
-  it("handles auth errors gracefully", async () => {
-    // Mock auth error
-    (getUserAuthDetails as any).mockResolvedValue({
-      isAuthenticated: false,
-      error: "Supabase auth error",
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Internal server error",
     });
-
-    const req = mockRequest({ Authorization: "Bearer mocktoken" });
-    const res = await getPosts(req);
-    const json = await res.json();
-
-    expect(res.status).toBe(401);
-    expect(json).toEqual({ error: "Supabase auth error" });
-    expect(getUserAuthDetails).toHaveBeenCalledWith(
-      "mocktoken",
-      expect.anything(),
-    );
-    expect(mockPrisma.post.findMany).not.toHaveBeenCalled();
-  });
-
-  it("correctly extracts JWT token from Authorization header", async () => {
-    // Mock successful authentication
-    (getUserAuthDetails as any).mockResolvedValue(fakeAuthDetails);
-
-    // Mock successful database query
-    mockPrisma.post.findMany.mockResolvedValue(fakePosts);
-
-    const req = mockRequest({
-      Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    });
-    const res = await getPosts(req);
-
-    expect(res.status).toBe(200);
-    expect(getUserAuthDetails).toHaveBeenCalledWith(
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-      expect.anything(),
-    );
-  });
-
-  it("handles case when posts array is null", async () => {
-    // Mock successful authentication
-    (getUserAuthDetails as any).mockResolvedValue(fakeAuthDetails);
-
-    // Mock null database result
-    mockPrisma.post.findMany.mockResolvedValue(null);
-
-    const req = mockRequest({ Authorization: "Bearer mocktoken" });
-    const res = await getPosts(req);
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json).toBeNull();
-    expect(getUserAuthDetails).toHaveBeenCalledWith(
-      "mocktoken",
-      expect.anything(),
-    );
-    expect(mockPrisma.post.findMany).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,432 +1,158 @@
-# Local Supabase Development Setup
+# Local Supabase development
 
-This guide walks you through setting up an isolated local Supabase instance for development, ensuring complete database isolation from other projects and perfect parity with cloud deployments.
+KingStack runs an isolated Supabase stack through the checked-in CLI and Docker.
+The configuration source of truth is `config/local.ts`; generated `.env` files
+must not be edited directly.
 
-## Table of Contents
-- [Why Local Supabase?](#why-local-supabase)
-- [Prerequisites](#prerequisites)
-- [Initial Setup](#initial-setup)
-- [Environment Configuration](#environment-configuration)
-- [Database Schema Setup](#database-schema-setup)
-- [Verification](#verification)
-- [Daily Workflow](#daily-workflow)
-- [Troubleshooting](#troubleshooting)
+## Requirements
 
-## Why Local Supabase?
+- Node.js, Yarn, and Bun versions supported by the root `package.json`
+- Docker Desktop or another reachable Docker daemon
+- the Supabase CLI installed through this repository's Yarn dependencies
 
-Running a local Supabase instance provides:
+## Fast path
 
-- **Complete Isolation**: Each project has its own database, preventing conflicts and data pollution
-- **Prisma Migration Safety**: Your migrations only affect your project's database
-- **Cloud Parity**: Local setup mirrors exactly what will deploy to cloud Supabase
-- **Offline Development**: Work without internet connection
-- **Fast Iteration**: No network latency, instant database operations
-
-## Prerequisites
-
-1. **Docker Desktop** - Supabase CLI uses Docker to run the local stack
-2. **Supabase CLI** - Already installed in this project (`yarn add -D supabase`)
-3. **Node.js & Yarn** - For running scripts and Prisma commands
-
-## Initial Setup
-
-### Step 1: Check for Existing Supabase Instances
-
-Before starting, check if Supabase is already running from another project:
+For a generated frontend draft or a checkout whose backend has not been
+prepared, run:
 
 ```bash
-docker ps | grep supabase
+yarn backend:enable
 ```
 
-If you see containers like `supabase_db_turborepo` or similar, you have another instance running.
+The command validates Docker, generates local environment files, starts or
+reuses this project's Supabase stack, prepares Prisma, and applies migrations.
+It is safe to rerun after fixing an interrupted setup.
 
-### Step 2: Stop Other Instances (if needed)
-
-To ensure proper isolation, stop any running Supabase instances:
+Then start the complete development runtime yourself:
 
 ```bash
-# Navigate to the other project directory
-cd /path/to/other/project
-
-# Stop Supabase
-supabase stop
-
-# Return to this project
-cd /path/to/kingstack
-```
-
-### Step 3: Initialize Supabase in This Project
-
-If not already initialized (check for `supabase/config.toml`):
-
-```bash
-supabase init
-```
-
-This creates a `supabase/` directory with configuration files.
-
-### Step 4: Start Local Supabase
-
-```bash
-yarn supabase:start
-# Or directly:
-supabase start
-```
-
-**Note:** The Supabase CLI automatically uses `supabase/config.toml` when run from the project root. No special configuration needed!
-
-This command will:
-- Pull necessary Docker images (first time only)
-- Start all Supabase services (Postgres, GoTrue, PostgREST, etc.)
-- Display connection details and keys
-
-**Important**: Save the output! It contains your local instance keys.
-
-Example output:
-```
-Started supabase local development setup.
-
-         API URL: http://127.0.0.1:54321
-     GraphQL URL: http://127.0.0.1:54321/graphql/v1
-  S3 Storage URL: http://127.0.0.1:54321/storage/v1/s3
-         MCP URL: http://127.0.0.1:54321/mcp
-    Database URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-      Studio URL: http://127.0.0.1:54323
-     Mailpit URL: http://127.0.0.1:54324
- Publishable key: sb_publishable_...
-      Secret key: sb_secret_...
-```
-
-## Environment Configuration
-
-### Understanding the Keys
-
-Supabase CLI provides two key formats:
-
-1. **JWT Format Keys** (what your app uses):
-   - `ANON_KEY`: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
-   - `SERVICE_ROLE_KEY`: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
-   - These are **standard for all local instances** and already configured
-
-2. **New Format Keys** (reference only):
-   - `sb_publishable_...`
-   - `sb_secret_...`
-   - Documented in env files for reference
-
-### Switch to Local Environment
-
-The `local` environment is pre-configured with the correct keys and URLs:
-
-```bash
-# Using the convenient script
-yarn env:local
-
-# Or directly
-bun scripts/swap-env.ts local
-```
-
-This swaps in the environment files from `secrets/local/` to:
-- `apps/next/.env`
-- `apps/nest/.env`
-- `packages/prisma/.env`
-
-### Verify Active Environment
-
-```bash
-yarn env:current
-```
-
-Should output: `Current environment: local`
-
-## Database Schema Setup
-
-### Understanding Your Schema
-
-Your Prisma schema (`packages/prisma/schema.prisma`) includes:
-
-- **user** - Users with email, username, posts, todos
-- **post** - Blog posts linked to users
-- **todo** - Todo items for users
-- **test** - Test table
-- **checkbox** - Realtime checkboxes (0-199)
-- **admin_emails** - Admin email allowlist
-
-### Apply Migrations to Local Database
-
-Run this command to set up your database:
-
-```bash
-# From project root
-yarn prisma:migrate
-
-# Or from prisma package
-cd packages/prisma
-yarn prisma migrate reset --force
-```
-
-This will:
-1. ✅ Drop and recreate the public schema (clean slate)
-2. ✅ Apply all 7 existing migrations in order
-3. ✅ Create migration tracking table (`_prisma_migrations`)
-4. ✅ Generate Prisma Client
-5. ✅ Run seed files (if configured)
-
-**Expected migrations applied:**
-- `20250921183700_init` - Initial setup
-- `20250921183730_essentials` - Core tables
-- `20250921201216_setup_realtime` - Supabase realtime configuration
-- `20250922192555_add_todo_table` - Todo functionality
-- `20250924002942_add_checkbox_table` - Checkbox demo
-- `20250925234850_add_checkbox_realtime` - Realtime subscriptions
-- `20251113164418_add_admin_emails_table` - Admin allowlist
-
-### If You Get "Database Not Empty" Error
-
-If you see `Error: P3005 - The database schema is not empty`:
-
-```bash
-# Force reset and apply migrations
-cd packages/prisma
-yarn prisma migrate reset --force
-```
-
-This is safe for local development and ensures a clean slate.
-
-## Verification
-
-### 1. Check Supabase Status
-
-```bash
-yarn supabase:status
-# Or directly:
-yarn supabase status
-```
-
-The command should say `supabase local development setup is running`. It may
-also list intentionally disabled optional services under `Stopped services`;
-that list does not mean the stack itself is stopped.
-
-Some managed development agents cannot access the host Docker socket. An error
-containing `permission denied` or `operation not permitted` means the status is
-unknown, not stopped. Retry the command with Docker access, or run it directly
-in a host terminal. The `yarn supabase:status` helper preserves this distinction
-instead of reporting all CLI failures as a stopped stack.
-
-### 2. Verify Tables Created
-
-```bash
-psql postgresql://postgres:postgres@127.0.0.1:54322/postgres \
-  -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
-```
-
-Expected tables:
-- `_prisma_migrations`
-- `admin_emails`
-- `checkbox`
-- `post`
-- `test`
-- `todo`
-- `user`
-
-### 3. Verify Migration History
-
-```bash
-psql postgresql://postgres:postgres@127.0.0.1:54322/postgres \
-  -c "SELECT migration_name, finished_at FROM _prisma_migrations ORDER BY finished_at;"
-```
-
-Should show all 7 migrations with timestamps.
-
-### 4. Access Supabase Studio
-
-Open your browser to [http://127.0.0.1:54323](http://127.0.0.1:54323)
-
-You can:
-- Browse tables and data
-- Run SQL queries
-- View realtime subscriptions
-- Test authentication
-
-## Daily Workflow
-
-### Starting Your Dev Session
-
-```bash
-# 1. Start Supabase
-yarn supabase:start
-
-# 2. Switch to local environment (if not already)
-yarn env:local
-
-# 3. Start your app
 yarn dev
 ```
 
-### Stopping Your Dev Session
+## Manual setup
+
+Create the ignored local configuration if it does not exist:
 
 ```bash
-# Stop your app (Ctrl+C)
-
-# Stop Supabase (keeps data)
-yarn supabase:stop
-
-# Or stop and remove all data (fresh start next time)
-supabase stop --no-backup
+cp config/example.ts config/local.ts
+yarn king-config check local
+yarn env:local
 ```
 
-### Making Schema Changes
+Start Supabase and apply the current schema:
 
-1. **Edit** `packages/prisma/schema.prisma`
-2. **Create migration**:
-   ```bash
-   cd packages/prisma
-   yarn prisma migrate dev --name descriptive_name
-   ```
-3. **Commit** the new migration file to git
-4. **Deploy to cloud** when ready:
-   ```bash
-   yarn env:development  # or production
-   yarn prisma:migrate
-   ```
-
-### Switching Between Projects
-
-If you need to work on multiple projects with local Supabase:
-
-**Option 1: One at a time (default)**
 ```bash
-# Stop current project
-yarn supabase:stop
-
-# Switch to other project
-cd /path/to/other/project
 yarn supabase:start
-
-# When returning to this project
-cd /path/to/kingstack
-yarn supabase:start
+yarn prisma:migrate
 ```
 
-**Option 2: Run multiple projects simultaneously**
+`yarn local` is a convenience command that regenerates local environment files
+and starts Supabase. It does not replace Prisma migration work.
 
-Configure different ports in each project's `supabase/config.toml` to run multiple instances at once.
+## Local credentials
 
-📖 **[Multi-Project Setup Guide →](./supabase/multi-project-setup.md)**
+KingStack uses these canonical configuration names in every environment:
 
-**Helper commands:**
+- `SUPABASE_PUBLISHABLE_KEY` for untrusted browser and token-verification use;
+- `SUPABASE_SECRET_KEY` for trusted NestJS Supabase integration; and
+- `SUPABASE_DB_PASSWORD` for database connections.
+
+Hosted projects should use `sb_publishable_...` and `sb_secret_...` API keys.
+The local Supabase stack may expose its development anon and service-role JWT
+values instead; those values still belong under KingStack's canonical
+publishable/secret configuration names. They are local API credentials, not a
+JWT signing secret that application code should copy or verify directly.
+
+Run `yarn supabase:status` to print the exact URLs and development credentials
+for the active local stack. Keep the values in `config/local.ts`, regenerate
+with `yarn env:local`, and never hand-edit the generated app `.env` files.
+
+## Daily lifecycle
+
 ```bash
-# List all running Supabase instances
+# Generate current local config and start Supabase
+yarn local
+
+# Inspect this project's status and endpoints
+yarn supabase:status
+
+# Find all local Supabase instances
 yarn supabase:list
 
-# Check your project's configuration
-yarn supabase:check
+# Stop this project's instance without deleting its data
+yarn supabase:stop
 ```
+
+Each KingStack project reserves a distinct port block and has a unique
+`project_id` in `supabase/config.toml`, so multiple projects can run together.
+See [multi-project setup](./supabase/multi-project-setup.md).
+
+## Schema and auth user projection
+
+Prisma migrations own application tables, grants, RLS defaults, realtime
+publication setup, and the `auth.users` to `public.user` projection trigger.
+
+Use migration commands intentionally:
+
+```bash
+# Create/apply development migrations
+yarn prisma:migrate
+
+# Apply existing migrations without creating one
+yarn prisma:deploy
+
+# Destroy local data and rebuild from migrations
+yarn supabase:reset
+```
+
+`supabase:reset` is destructive. It is appropriate only when the local data can
+be discarded.
+
+Projection repair commands load the generated Nest environment:
+
+```bash
+yarn supabase:auth:trigger:install
+yarn supabase:auth:backfill
+```
+
+See [KingStack authentication](./auth/README.md) before changing session or
+projection behavior.
 
 ## Troubleshooting
 
-### Port Already in Use
+### Docker access is unavailable
 
-If ports 54321-54324 are in use:
+`yarn supabase:status` reports an unknown state when its process cannot access
+the Docker socket; it does not falsely report the stack as stopped. Run it from
+a terminal with Docker access.
 
-```bash
-# Find what's using the ports
-lsof -i :54321
-lsof -i :54322
+### Ports do not match
 
-# Stop the conflicting Supabase instance
-supabase stop
-```
-
-### Docker Issues
+Validate the configuration and compare it with the running stack:
 
 ```bash
-# Restart Docker Desktop
-# Then try again
-supabase start
+yarn king-config check local
+yarn supabase:check
+yarn supabase:status
 ```
 
-If a status check mentions the Docker socket and reports `permission denied` or
-`operation not permitted`, first verify whether the command is running in a
-sandbox. Do not restart Docker or Supabase based on that error alone.
+Regenerate with `yarn env:local` after correcting `config/local.ts`.
 
-### Migration Conflicts
+### Wrong project or conflicting containers
 
-If migrations fail or you want a completely fresh start:
+Use `yarn supabase:list` to identify every running project. Confirm the current
+repository's `SUPABASE_PROJECT_REF` matches `project_id` in
+`supabase/config.toml`, then stop only the conflicting project from its own
+directory.
 
-```bash
-# Reset everything
-cd packages/prisma
-yarn prisma migrate reset --force
+### Auth email is not delivered
 
-# This will:
-# - Drop all tables
-# - Re-apply all migrations
-# - Generate client
-```
+Local Supabase routes confirmation and recovery messages to its local mail UI.
+Find the active Mailpit/Inbucket URL in `yarn supabase:status`.
 
-### Environment Not Switching
+## Related documentation
 
-```bash
-# Check current environment
-yarn env:current
-
-# Force swap to local
-yarn env:local
-
-# Verify .env files were updated
-cat apps/next/.env | grep SUPABASE_URL
-# Should show: http://127.0.0.1:54321
-```
-
-### Database Connection Errors
-
-1. **Check Supabase is running**:
-   ```bash
-   supabase status
-   ```
-
-2. **Verify environment variables**:
-   ```bash
-   cat packages/prisma/.env
-   ```
-   Should contain: `postgresql://postgres:postgres@127.0.0.1:54322/postgres`
-
-3. **Test connection directly**:
-   ```bash
-   psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -c "SELECT 1;"
-   ```
-
-## Key Differences: Local vs Development vs Production
-
-| Aspect | Local | Development | Production |
-|--------|-------|-------------|------------|
-| **Database** | Docker (127.0.0.1:54322) | Remote Supabase Dev Project | Remote Supabase Prod Project |
-| **Isolation** | Complete isolation per project | Shared team database | Live user data |
-| **Data Persistence** | Lost on `supabase stop --no-backup` | Persisted in cloud | Persisted in cloud |
-| **Migrations** | Apply freely, reset anytime | Apply carefully, team coordination | Apply with extreme care |
-| **Cost** | Free (local resources) | Supabase free tier or paid | Supabase paid plan |
-| **Internet Required** | No | Yes | Yes |
-| **Use Case** | Feature development, testing | Team collaboration, staging | Live application |
-
-## Best Practices
-
-1. **Always use `local` environment for feature development** - Complete isolation prevents accidents
-2. **Reset database frequently** - `yarn prisma migrate reset --force` keeps things clean
-3. **Commit migrations to git** - Ensures team has consistent schema
-4. **Test migrations locally first** - Before applying to development or production
-5. **Stop Supabase when not in use** - Frees up Docker resources
-6. **One Supabase instance at a time** - Prevents port conflicts between projects
-
-## Additional Resources
-
-- [Supabase Local Development Docs](https://supabase.com/docs/guides/local-development)
-- [Prisma Migrations Guide](https://www.prisma.io/docs/concepts/components/prisma-migrate)
-- [Project Secrets Management](../secrets/readme.md)
-- [Environment Swap Script](../scripts/swap-env.ts)
-
-## Need Help?
-
-If you encounter issues not covered here:
-1. Check `supabase logs` for detailed error messages
-2. Review Docker Desktop for container status
-3. Consult the Supabase CLI docs: `supabase --help`
+- [Configuration management](../config/readme.md)
+- [Authentication](./auth/README.md)
+- [Supabase management](./supabase/README.md)
+- [Supabase Data API security](./supabase/security.md)

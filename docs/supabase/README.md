@@ -165,10 +165,7 @@ Each project is isolated by:
 
 ### Environment Files
 
-Your environment files (`secrets/local/.env.*`) must match the ports configured in `config.toml`:
-
-- `SUPABASE_URL` → API port
-- `SUPABASE_DB_*_URL` → Database port
-- Studio URL → Studio port (for manual access)
-
-Use `yarn env:local` to ensure your environment matches your Supabase configuration.
+`config/local.ts` is the source of truth for project identity and ports.
+`yarn env:local` generates the matching `supabase/config.toml` assignments and
+Next, Nest, and Prisma environment files together. Do not edit those outputs
+independently.

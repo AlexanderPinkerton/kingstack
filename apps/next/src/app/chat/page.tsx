@@ -3,6 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useState, useMemo } from "react";
+import { observer } from "mobx-react-lite";
 import type { ChatUIMessage } from "../api/ai/openai/route";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useRootStore } from "@/hooks/useRootStore";
+import useAuthGuard from "@/hooks/useAuthGuard";
+import {
+  fetchWithAuth,
+  readJsonResponse,
+} from "@/lib/auth/authenticated-fetch";
 
 type ChatMode = "text" | "image";
 
@@ -27,6 +34,10 @@ interface ImageMessage {
   timestamp: number;
 }
 
+interface ImageResponse {
+  image: string;
+}
+
 // Helper to get provider endpoint for a model
 function getProviderEndpoint(modelId: string): string {
   if (modelId.startsWith("gpt-")) return "/api/ai/openai";
@@ -35,7 +46,11 @@ function getProviderEndpoint(modelId: string): string {
   return "/api/ai/openai"; // fallback
 }
 
-export default function ChatPage() {
+const ChatPage = observer(function ChatPage() {
+  const rootStore = useRootStore();
+  useAuthGuard();
+
+  const accessToken = rootStore.session?.access_token ?? "";
   const [mode, setMode] = useState<ChatMode>("text");
   const [modelId, setModelId] = useState("gpt-5-nano");
   const [imageMessages, setImageMessages] = useState<ImageMessage[]>([]);
@@ -43,15 +58,21 @@ export default function ChatPage() {
 
   // Get the correct provider endpoint based on selected model
   const apiEndpoint = useMemo(() => getProviderEndpoint(modelId), [modelId]);
-
-  const { messages, sendMessage, status, stop, error } = useChat<ChatUIMessage>(
-    {
-      transport: new DefaultChatTransport({
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
         api: apiEndpoint,
         body: {
           modelId,
         },
+        fetch: (input, init) => fetchWithAuth(accessToken, input, init),
       }),
+    [accessToken, apiEndpoint, modelId],
+  );
+
+  const { messages, sendMessage, status, stop, error } = useChat<ChatUIMessage>(
+    {
+      transport,
     },
   );
 
@@ -59,7 +80,7 @@ export default function ChatPage() {
 
   const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim() && status === "ready") {
+    if (accessToken && input.trim() && status === "ready") {
       void sendMessage({ text: input });
       setInput("");
     }
@@ -67,7 +88,7 @@ export default function ChatPage() {
 
   const handleImageSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isGeneratingImage) return;
+    if (!accessToken || !input.trim() || isGeneratingImage) return;
 
     const userMessage: ImageMessage = {
       id: Date.now().toString(),
@@ -82,17 +103,11 @@ export default function ChatPage() {
     setIsGeneratingImage(true);
 
     try {
-      const response = await fetch("/api/ai/openai", {
+      const response = await fetchWithAuth(accessToken, "/api/ai/openai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, type: "image" }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate image");
-      }
-
-      const data = await response.json();
+      const data = await readJsonResponse<ImageResponse>(response);
 
       const assistantMessage: ImageMessage = {
         id: (Date.now() + 1).toString(),
@@ -423,4 +438,6 @@ export default function ChatPage() {
       </div>
     </div>
   );
-}
+});
+
+export default ChatPage;

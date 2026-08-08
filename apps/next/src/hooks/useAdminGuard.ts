@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { comparer, reaction } from "mobx";
 import { useRootStore } from "@/hooks/useRootStore";
-import { fetchWithAuth } from "@/lib/utils";
+import { fetchWithAuth } from "@/lib/auth/authenticated-fetch";
 import { browserLogger } from "@/lib/browser-logger";
 
 const logger = browserLogger.child({ component: "useAdminGuard" });

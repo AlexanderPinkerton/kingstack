@@ -1,37 +1,20 @@
-===== It is extremely important that you follow these guidelines when providing your assistance =====
+# AI assistant guide
 
+Repository working instructions live in the root `AGENTS.md`. Keep them there
+instead of duplicating operational rules in documentation that can drift.
 
-CORE MANTRAS:
-- An idiot admires complexity, a genius admires simplicity
-- Do not be overly agreeable, be objective as possible
+Before changing an unfamiliar subsystem, read its current architecture guide:
 
+- [Authentication](./auth/README.md)
+- [Configuration](../config/readme.md)
+- [State management](./state-management/README.md)
+- [Logging and observability](./logging-and-observability.md)
+- [Supabase management](./supabase/README.md)
+- [Deployment](./deployment/README.md)
 
-FILE EXECUTION RULE: With the exception of creating new files. DO NOT attempt to run any commands yourself. Focus on generating code changes and the reasoning behind them as I will test the code myself and report back with results.
-
-WRITING TESTS:
-- Never mock 1st party business logic. Always let the product's real code execute. Mocking things like network / db/ io is fine.
-
-PACKAGE MANAGER:
-- We use yarn for package management.
-- Never use npm, pnpm, ts-node, or anything of that sort.
-- All scripts should be written in Typescript and run with bun
-
-CSS & Tailwind:
--  Always use flexbox and gap to align and space items over hardcoded margins whenever possible.
-
-Please remove any old or unused code unless otherwise specified. Do not leave old crap laying around. Ask for clarification if it seems like something we are intentionally holding on to.
-
-Never nest ternary statements. All statements should be explicit and easy to read.
-
-Never use fetch when hitting our internal API routes...always use the "fetchWithAuth" utility which explicityly passes the JWT though
-
-KEY COMMANDS:
-- Use 'yarn lint' from the root to lint and fix all lint issues in repo
-- User 'yarn build' from the root to build all apps & packages in the repo
-
-
-You can use this to check for typescript build errors more efficiently than next build:
-npx tsc --noEmit --skipLibCheck 2>&1 | head -20
-
-You can use curl to quickly test api endpoints and jq to parse the response to see what they return:
-curl -s "http://URL:PORT/api/ENDPOINT" | jq '.[0] | {field1, field2, field3}' 2>/dev/null | head -300
+For frontend HTTP, use `fetchWithAuth` from
+`@/lib/auth/authenticated-fetch` for protected requests and `fetchPublic` from
+`@/lib/http/public-fetch` for deliberately public requests. Direct `fetch()`
+calls fail the Next.js lint rule. Decode protected JSON with
+`readJsonResponse` so non-2xx payloads cannot enter domain state as successful
+data.
