@@ -1,99 +1,57 @@
-import { createClient } from "@/lib/supabase/serverClient";
 import prisma from "@/lib/prisma";
 import { serverLogger } from "@/lib/logger";
 import type { AppLogger } from "@kingstack/logger";
+import {
+  authenticateBearerRequest,
+  type RequestWithHeaders,
+} from "@/lib/auth/server-auth";
 
 const logger = serverLogger.child({ component: "AdminUtils" });
 
-export interface UserAuthDetails {
-  isAuthenticated: boolean;
-  userId?: string;
-  userEmail?: string;
-  isAdmin?: boolean;
-  error?: string;
-}
-
-/**
- * Gets comprehensive user authentication details including admin status
- * @param jwt - JWT token from Authorization header
- * @returns Promise<UserAuthDetails>
- */
-export async function getUserAuthDetails(
-  jwt: string | null,
+export async function checkAdminStatus(
+  request: RequestWithHeaders,
   requestLogger: AppLogger = logger,
-): Promise<UserAuthDetails> {
+): Promise<
+  | { isAdmin: true; userEmail: string }
+  | { error: string; isAdmin: false; status: 401 | 403 | 500 }
+> {
+  const authentication = await authenticateBearerRequest(request);
+  if (!authentication.ok) {
+    return {
+      error: authentication.error,
+      isAdmin: false,
+      status: authentication.status,
+    };
+  }
+
+  if (!authentication.email) {
+    return {
+      error: "Authenticated user has no email claim",
+      isAdmin: false,
+      status: 403,
+    };
+  }
+
   try {
-    if (!jwt) {
-      return {
-        isAuthenticated: false,
-        error: "No JWT token provided",
-      };
-    }
-
-    const supabase = await createClient();
-    const { data: userData } = await supabase.auth.getUser(jwt);
-
-    if (!userData?.user?.id || !userData.user?.email) {
-      return {
-        isAuthenticated: false,
-        error: "Invalid user data",
-      };
-    }
-
-    // Check if user email exists in admin_emails table
-    // Verify prisma client has the admin_emails model
-    if (!prisma.admin_emails) {
-      requestLogger.error("admin.prisma_model_missing");
-      return {
-        isAuthenticated: true,
-        userId: userData.user.id,
-        userEmail: userData.user.email,
-        isAdmin: false,
-        error: "Prisma client not properly initialized",
-      };
-    }
-
     const adminRecord = await prisma.admin_emails.findUnique({
-      where: { email: userData.user.email },
-      select: { id: true, email: true },
+      where: { email: authentication.email },
+      select: { id: true },
     });
 
+    if (!adminRecord) {
+      return { error: "Admin access required", isAdmin: false, status: 403 };
+    }
+
     return {
-      isAuthenticated: true,
-      userId: userData.user.id,
-      userEmail: userData.user.email,
-      isAdmin: !!adminRecord,
+      isAdmin: true,
+      userEmail: authentication.email,
     };
   } catch (error) {
-    requestLogger.error("admin.auth_details_failed", { error });
+    requestLogger.error("admin.status_check_failed", { error });
     return {
-      isAuthenticated: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-}
-
-/**
- * Convenience wrapper for admin routes that require admin access
- * @param jwt - JWT token from Authorization header
- * @returns Promise<{ isAdmin: boolean; userEmail?: string; error?: string }>
- */
-export async function checkAdminStatus(
-  jwt: string | null,
-  requestLogger: AppLogger = logger,
-) {
-  const authDetails = await getUserAuthDetails(jwt, requestLogger);
-
-  if (!authDetails.isAuthenticated) {
-    return {
+      error: "Admin status could not be checked",
       isAdmin: false,
-      error: authDetails.error || "Not authenticated",
+      status: 500,
     };
   }
-
-  return {
-    isAdmin: authDetails.isAdmin || false,
-    userEmail: authDetails.userEmail,
-    error: authDetails.isAdmin ? undefined : "Not an admin",
-  };
 }

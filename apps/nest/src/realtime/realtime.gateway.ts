@@ -9,8 +9,8 @@ import {
   ConnectedSocket,
 } from "@nestjs/websockets";
 import { Socket, Server } from "socket.io";
-import { JwtService } from "@nestjs/jwt";
 import { Inject, Injectable, type OnApplicationShutdown } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { AppLogger, LogContext } from "@kingstack/logger";
 import {
@@ -22,6 +22,7 @@ import {
   type PoolPoint,
 } from "@kingstack/shared";
 import { APP_LOGGER } from "../logging";
+import { SupabaseTokenVerifier } from "../auth/services/supabase-token-verifier";
 import {
   normalizeParticipant,
   normalizeRoomId,
@@ -90,12 +91,11 @@ export class RealtimeGateway
   });
   private supabase: SupabaseClient;
   private subscriptionChannel: any = null;
-  private readonly supabaseUrl = process.env.SUPABASE_API_URL!;
-  private readonly supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  private readonly authSecret = process.env.SUPA_JWT_SECRET!;
+  private readonly supabaseUrl: string;
 
   constructor(
-    private readonly jwtService: JwtService,
+    private readonly tokenVerifier: SupabaseTokenVerifier,
+    configService: ConfigService,
     @Inject(APP_LOGGER) logger: AppLogger,
   ) {
     this.logger = logger.child({ component: RealtimeGateway.name });
@@ -117,7 +117,18 @@ export class RealtimeGateway
         unwritableSocketCount: () => this.unwritablePoolSocketCount(),
       },
     });
-    this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
+    this.supabaseUrl = configService.getOrThrow<string>("SUPABASE_API_URL");
+    this.supabase = createClient(
+      this.supabaseUrl,
+      configService.getOrThrow<string>("SUPABASE_SECRET_KEY"),
+      {
+        auth: {
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+          persistSession: false,
+        },
+      },
+    );
     void this.connectSupabase();
   }
 
@@ -157,14 +168,12 @@ export class RealtimeGateway
   // ---------- Registration ----------
 
   @SubscribeMessage("register")
-  handleRegister(
+  async handleRegister(
     @MessageBody() data: RegisterPayload,
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const decoded = this.jwtService.verify<{ sub: string }>(data.token, {
-        secret: this.authSecret,
-      });
+      const decoded = await this.tokenVerifier.verifyAccessToken(data.token);
 
       client.data.userId = decoded.sub;
       client.data.browserId = data.browserId;

@@ -77,6 +77,10 @@ describe("generated project boundary", () => {
     );
     expect(nestDockerfile).not.toContain("packages/logger");
     expect(nestDockerfile).not.toContain("workspace @kingstack/logger build");
+    expect(nestDockerfile).toContain("workspace @boundary-check/shared build");
+    expect(nestDockerfile).toContain(
+      "COPY --from=build /app/packages/shared/dist ./packages/shared/dist",
+    );
   });
 
   it("uses one canonical environment setting", () => {
@@ -94,6 +98,11 @@ describe("generated project boundary", () => {
     expect(example).not.toContain("KINGSTACK_ENVIRONMENT:");
     expect(schema).not.toContain("ENVIRONMENT_TYPE");
     expect(example).not.toContain("ENVIRONMENT_TYPE");
+    expect(schema).toContain("SUPABASE_PUBLISHABLE_KEY");
+    expect(schema).toContain("SUPABASE_SECRET_KEY");
+    expect(schema).not.toContain("SUPA_JWT_SECRET");
+    expect(schema).not.toContain("SUPABASE_ANON_KEY");
+    expect(schema).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
   });
 
   it("excludes maintainer and release infrastructure", () => {
@@ -182,7 +191,14 @@ describe("generated project boundary", () => {
     ]);
     expect(
       readdirSync(join(generatedRoot, "scripts", "deploy")).sort(),
-    ).toEqual(["nest-digitalocean", "nest-digitalocean.ts"]);
+    ).toEqual([
+      "environment-file.ts",
+      "nest-digitalocean",
+      "nest-digitalocean.ts",
+      "supabase",
+      "supabase.ts",
+      "vercel",
+    ]);
     expect(
       readdirSync(
         join(generatedRoot, "scripts", "deploy", "nest-digitalocean"),
@@ -197,7 +213,25 @@ describe("generated project boundary", () => {
       "project-config.ts",
       "provision.ts",
       "remote-host.ts",
+      "wizard.ts",
     ]);
+    expect(
+      readdirSync(join(generatedRoot, "scripts", "deploy", "supabase")).sort(),
+    ).toEqual([
+      "auth-config.test.ts",
+      "auth-config.ts",
+      "auth-options.ts",
+      "configure-auth.ts",
+      "get-secrets-options.ts",
+      "get-secrets.test.ts",
+      "get-secrets.ts",
+      "options.ts",
+      "provision.test.ts",
+      "provision.ts",
+    ]);
+    expect(
+      readdirSync(join(generatedRoot, "scripts", "deploy", "vercel")).sort(),
+    ).toEqual(["get-config-options.ts", "get-config.test.ts", "get-config.ts"]);
 
     const rootPackage = JSON.parse(
       readFileSync(join(generatedRoot, "package.json"), "utf8"),
@@ -205,6 +239,20 @@ describe("generated project boundary", () => {
     expect(rootPackage.scripts["deploy:nest"]).toBe(
       "bun scripts/deploy/nest-digitalocean.ts",
     );
+    expect(rootPackage.scripts["supabase:provision"]).toBe(
+      "bun scripts/deploy/supabase.ts",
+    );
+    expect(rootPackage.scripts["supabase:provision:get-secrets"]).toBe(
+      "bun scripts/deploy/supabase/get-secrets.ts",
+    );
+    expect(rootPackage.scripts["supabase:auth:configure"]).toBe(
+      "bun scripts/deploy/supabase/configure-auth.ts",
+    );
+    expect(rootPackage.scripts["vercel:config:pull"]).toBe(
+      "bun scripts/deploy/vercel/get-config.ts",
+    );
+    expect(rootPackage.devDependencies.supabase).toBe("2.113.0");
+    expect(rootPackage.devDependencies.vercel).toBe("58.1.0");
     expect(rootPackage.scripts["prisma:deploy"]).toBe(
       "yarn workspace @boundary-check/prisma prisma migrate deploy",
     );

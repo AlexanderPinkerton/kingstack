@@ -4,14 +4,12 @@ import { createRequestLogger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   const logger = createRequestLogger(request, "AdminCheckRoute");
-  const jwt = request.headers.get("Authorization")?.replace("Bearer ", "");
-
-  const adminCheck = await checkAdminStatus(jwt ?? null, logger);
+  const adminCheck = await checkAdminStatus(request, logger);
 
   if (!adminCheck.isAdmin) {
     return Response.json(
       { isAdmin: false, error: adminCheck.error },
-      { status: 403 },
+      { status: adminCheck.status },
     );
   }
 

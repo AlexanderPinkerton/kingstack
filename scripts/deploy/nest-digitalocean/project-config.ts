@@ -7,12 +7,16 @@ import {
   type ConfigSchema,
   type ConfigValues,
 } from "@kingstack/config";
-import { parsePort, sanitizeSlug } from "./options.js";
+import { writeEnvironmentFile } from "../environment-file.js";
+import { parsePort, sanitizeSlug, validateDomain } from "./options.js";
 
 interface EnvFileDefinition {
   keys: string[];
   aliases?: Record<string, string>;
 }
+
+const BACKEND_VALUES_DESCRIPTION =
+  "Environment-specific values populated from a successful KingStack NestJS deployment.";
 
 export interface ProjectDeploymentConfig {
   appSlug: string;
@@ -21,6 +25,23 @@ export interface ProjectDeploymentConfig {
   prismaEnv: NodeJS.ProcessEnv;
   port: number;
   backendUrl?: string;
+}
+
+export function getBackendHostConfigValues(
+  domain: string,
+): Readonly<{ NEST_HOST: string }> {
+  return { NEST_HOST: validateDomain(domain) };
+}
+
+export function writeBackendHostConfig(
+  environment: string,
+  domain: string,
+): string {
+  return writeEnvironmentFile(
+    environment,
+    getBackendHostConfigValues(domain),
+    BACKEND_VALUES_DESCRIPTION,
+  );
 }
 
 function readJsonFile<T>(path: string): T {

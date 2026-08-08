@@ -4,7 +4,10 @@ import {
   type DataTransformer,
 } from "@kingstack/advanced-optimistic-store";
 import type { QueryClient } from "@tanstack/react-query";
-import { fetchWithAuth } from "@/lib/utils";
+import {
+  fetchWithAuth,
+  readJsonResponse,
+} from "@/lib/auth/authenticated-fetch";
 import type { SupabaseSession } from "@/lib/session-manager";
 import { StoreDemand } from "@/lib/store-lifecycle";
 
@@ -116,9 +119,8 @@ export class CurrentUserStore {
   private apiQueryFn = async (): Promise<CurrentUserApiData[]> => {
     const token = this.session?.access_token || "";
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3069";
-    const currentUser = await fetchWithAuth(token, `${baseUrl}/api/user`).then(
-      (res) => res.json(),
-    );
+    const response = await fetchWithAuth(token, `${baseUrl}/api/user`);
+    const currentUser = await readJsonResponse<CurrentUserApiData>(response);
     // Wrap single user object in array since optimistic store expects array of entities
     return [currentUser];
   };
@@ -129,10 +131,11 @@ export class CurrentUserStore {
     const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-    return fetchWithAuth(token, `${baseUrl}/api/user`, {
+    const response = await fetchWithAuth(token, `${baseUrl}/api/user`, {
       method: "POST",
       body: JSON.stringify(data),
-    }).then((res) => res.json());
+    });
+    return readJsonResponse<CurrentUserApiData>(response);
   };
 
   private apiUpdateMutation = async ({
@@ -144,10 +147,11 @@ export class CurrentUserStore {
     const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-    return fetchWithAuth(token, `${baseUrl}/api/user`, {
+    const response = await fetchWithAuth(token, `${baseUrl}/api/user`, {
       method: "PUT",
       body: JSON.stringify(data),
-    }).then((res) => res.json());
+    });
+    return readJsonResponse<CurrentUserApiData>(response);
   };
 
   private apiDeleteMutation = async (): Promise<{ id: string }> => {
@@ -157,12 +161,7 @@ export class CurrentUserStore {
     const response = await fetchWithAuth(token, `${baseUrl}/api/user`, {
       method: "DELETE",
     });
-    if (!response.ok) {
-      throw new Error(
-        `Delete failed: ${response.status} ${response.statusText}`,
-      );
-    }
-    return response.json();
+    return readJsonResponse<{ id: string }>(response);
   };
 
   activate(): () => void {

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { buildFirewallRules, selectDeploymentTargets } from "./digitalocean.js";
+import { resolveDeploymentHost } from "./deploy.js";
+import {
+  buildFirewallRules,
+  parseRegions,
+  parseSizes,
+  parseSshKeys,
+  selectDeploymentTargets,
+} from "./digitalocean.js";
 import {
   renderBootstrapScript,
   renderCaddyApplyScript,
@@ -7,6 +14,7 @@ import {
   renderCaddyInstallScript,
   renderCloudInit,
   renderRemoteDeployScript,
+  renderTrustedHttpsProbe,
 } from "./host-scripts.js";
 import {
   getDefaultTag,
@@ -17,10 +25,18 @@ import {
   validateRequiredOptions,
 } from "./options.js";
 import {
+  getBackendHostConfigValues,
   renderEnvFile,
   renderNestDeploymentEnv,
   validateHostedNestConfig,
 } from "./project-config.js";
+import {
+  applyDeploymentMode,
+  availableRegions,
+  availableSizes,
+  parseNumberSelection,
+  suggestedSizes,
+} from "./wizard.js";
 
 describe("DigitalOcean Nest deployment CLI", () => {
   it("parses provision and deploy options", () => {
@@ -46,6 +62,8 @@ describe("DigitalOcean Nest deployment CLI", () => {
       deployAfterProvision: true,
       skipMigrations: true,
       withoutDatabase: true,
+      updateConfig: false,
+      ipHttps: false,
       size: "s-1vcpu-1gb",
     });
 
@@ -67,6 +85,42 @@ describe("DigitalOcean Nest deployment CLI", () => {
       envOnly: true,
       yes: true,
     });
+  });
+
+  it("parses and validates the post-deployment config handoff", () => {
+    expect(
+      parseCliArgs([
+        "deploy",
+        "production",
+        "--domain",
+        "API.Example.com",
+        "--update-config",
+      ]),
+    ).toMatchObject({
+      domain: "API.Example.com",
+      updateConfig: true,
+    });
+    expect(getBackendHostConfigValues("API.Example.com")).toEqual({
+      NEST_HOST: "api.example.com",
+    });
+    expect(
+      parseCliArgs(["deploy", "production", "--ip-https", "--update-config"]),
+    ).toMatchObject({ ipHttps: true, updateConfig: true });
+    expect(getBackendHostConfigValues("104.131.195.113")).toEqual({
+      NEST_HOST: "104.131.195.113",
+    });
+    expect(() =>
+      parseCliArgs(["deploy", "production", "--no-domain", "--update-config"]),
+    ).toThrow("requires Caddy HTTPS");
+    expect(() =>
+      parseCliArgs([
+        "deploy",
+        "production",
+        "--domain",
+        "api.example.com",
+        "--ip-https",
+      ]),
+    ).toThrow("only one routing mode");
   });
 
   it("rejects ambiguous or incomplete commands", () => {
@@ -191,6 +245,99 @@ describe("DigitalOcean Nest deployment CLI", () => {
     ).toThrow("Droplet(s) not found");
   });
 
+  it("parses and filters live DigitalOcean wizard metadata", () => {
+    const regions = availableRegions(
+      parseRegions(
+        JSON.stringify([
+          {
+            slug: "nyc3",
+            name: "New York 3",
+            available: true,
+            sizes: ["s-1vcpu-1gb", "s-2vcpu-2gb"],
+          },
+          {
+            slug: "sfo1",
+            name: "San Francisco 1",
+            sizes: [],
+          },
+        ]),
+      ),
+    );
+    const sizes = parseSizes(
+      JSON.stringify([
+        {
+          slug: "s-2vcpu-2gb",
+          memory: 2048,
+          vcpus: 2,
+          disk: 60,
+          price_monthly: 18,
+          price_hourly: 0.02679,
+          regions: ["nyc3"],
+          available: true,
+          description: "Basic",
+        },
+        {
+          slug: "s-1vcpu-1gb",
+          memory: 1024,
+          vcpus: 1,
+          disk: 25,
+          price_monthly: 6,
+          price_hourly: 0.00893,
+          regions: ["nyc3"],
+          available: true,
+          description: "Basic",
+        },
+        {
+          slug: "unavailable",
+          memory: 1024,
+          vcpus: 1,
+          disk: 25,
+          price_monthly: 5,
+          price_hourly: 0.007,
+          regions: ["ams3"],
+          available: true,
+        },
+      ]),
+    );
+
+    expect(regions.map(({ slug }) => slug)).toEqual(["nyc3"]);
+    expect(availableSizes(regions[0], sizes).map(({ slug }) => slug)).toEqual([
+      "s-1vcpu-1gb",
+      "s-2vcpu-2gb",
+    ]);
+    expect(suggestedSizes(sizes).map(({ slug }) => slug)).toEqual([
+      "s-1vcpu-1gb",
+      "s-2vcpu-2gb",
+    ]);
+    expect(
+      parseSshKeys(
+        JSON.stringify([{ id: 42, name: "Laptop", fingerprint: "aa:bb:cc" }]),
+      ),
+    ).toEqual([{ id: 42, name: "Laptop", fingerprint: "aa:bb:cc" }]);
+  });
+
+  it("parses multi-Droplet choices and maps wizard deployment modes", () => {
+    expect(parseNumberSelection("3, 1, 3", 3)).toEqual([2, 0]);
+    expect(() => parseNumberSelection("4", 3)).toThrow("numbers from 1 to 3");
+
+    const base = parseCliArgs(["deploy", "production"]);
+    expect(applyDeploymentMode(base, "full")).toMatchObject({
+      envOnly: false,
+      skipMigrations: false,
+      withoutDatabase: false,
+    });
+    expect(applyDeploymentMode(base, "env-only")).toMatchObject({
+      envOnly: true,
+      skipMigrations: false,
+      withoutDatabase: false,
+    });
+    expect(applyDeploymentMode(base, "without-database")).toMatchObject({
+      envOnly: false,
+      skipMigrations: false,
+      withoutDatabase: true,
+    });
+  });
+
   it("builds domain and raw-port firewall policies", () => {
     const caddyRules = buildFirewallRules(3099, "api.example.com", [
       "192.0.2.4/32",
@@ -207,6 +354,31 @@ describe("DigitalOcean Nest deployment CLI", () => {
     expect(() => buildFirewallRules(3099, undefined, ["not-a-cidr"])).toThrow(
       "Invalid SSH source CIDR",
     );
+  });
+
+  it("resolves one selected Droplet as the public-IP HTTPS host", () => {
+    const targets = [{ id: 1, name: "api", ip: "104.131.195.113" }];
+    expect(resolveDeploymentHost(true, undefined, targets)).toBe(
+      "104.131.195.113",
+    );
+    expect(resolveDeploymentHost(false, "api.example.com", targets)).toBe(
+      "api.example.com",
+    );
+    expect(resolveDeploymentHost(false, "104.131.195.113", targets)).toBe(
+      "104.131.195.113",
+    );
+    expect(() =>
+      resolveDeploymentHost(true, undefined, [
+        ...targets,
+        { id: 2, name: "api-2", ip: "192.0.2.2" },
+      ]),
+    ).toThrow("requires exactly one Droplet");
+    expect(() =>
+      resolveDeploymentHost(false, "104.131.195.113", [
+        ...targets,
+        { id: 2, name: "api-2", ip: "192.0.2.2" },
+      ]),
+    ).toThrow("requires exactly one Droplet");
   });
 
   it("renders reproducible host bootstrap configuration", () => {
@@ -242,13 +414,17 @@ describe("DigitalOcean Nest deployment CLI", () => {
   });
 
   it("renders isolated, validated Caddy configuration", () => {
-    expect(renderCaddyFragment("api.example.com", 3099)).toContain(
-      "reverse_proxy 127.0.0.1:3099",
-    );
-    const script = renderCaddyApplyScript(
-      "my-app",
-      renderCaddyFragment("api.example.com", 3099),
-    );
+    const domainFragment = renderCaddyFragment("api.example.com", 3099);
+    expect(domainFragment).toContain("reverse_proxy 127.0.0.1:3099");
+    expect(domainFragment).not.toContain("profile shortlived");
+
+    const ipFragment = renderCaddyFragment("104.131.195.113", 3099);
+    expect(ipFragment).toContain("profile shortlived");
+    expect(ipFragment).toContain("acme-v02.api.letsencrypt.org");
+    const probe = renderTrustedHttpsProbe("104.131.195.113");
+    expect(probe).toContain("https://104.131.195.113/");
+    expect(probe).not.toContain("--insecure");
+    const script = renderCaddyApplyScript("my-app", domainFragment);
     expect(script).toContain("/etc/caddy/conf.d/my-app.caddy");
     expect(script).toContain("caddy validate");
     expect(script).toContain("caddy reload");

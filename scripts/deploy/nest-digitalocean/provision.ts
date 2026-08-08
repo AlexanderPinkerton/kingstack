@@ -47,7 +47,7 @@ export async function provision(
   log("Image:       ubuntu-24-04-x64");
   log(`Tag:         ${tag}`);
   log(
-    `Routing:     ${domain ? `Caddy HTTPS for ${domain}` : `public TCP ${project.port}`}`,
+    `Routing:     ${options.ipHttps ? "Caddy HTTPS for the Droplet public IP" : domain ? `Caddy HTTPS for ${domain}` : `public TCP ${project.port}`}`,
   );
   log(`Backups:     ${options.backups ? "enabled" : "disabled"}`);
   log(`Deploy:      ${options.deployAfterProvision ? "after setup" : "no"}`);
@@ -125,6 +125,7 @@ export async function provision(
     throw new Error(`Droplet ${name} is ${droplet.status}, not active.`);
   }
   const target: DeploymentTarget = { id: droplet.id, name, ip };
+  const backendHost = options.ipHttps ? target.ip : domain;
 
   step(nextStep++, totalSteps, "Configuring the DigitalOcean firewall...");
   reconcileFirewall({
@@ -132,7 +133,7 @@ export async function provision(
     targetIds: [target.id],
     useTag: true,
     port: project.port,
-    domain,
+    domain: backendHost,
     sshSources: options.sshSources,
     dryRun: false,
   });
@@ -183,7 +184,7 @@ export async function provision(
   log(`Provisioned ${name}: ${ip}`);
   if (!options.deployAfterProvision) {
     log(
-      `Next: yarn deploy:nest deploy ${options.environment}${options.domain ? ` --domain ${domain}` : options.noDomain ? " --no-domain" : ""}`,
+      `Next: yarn deploy:nest deploy ${options.environment}${options.ipHttps ? " --ip-https" : options.domain ? ` --domain ${domain}` : options.noDomain ? " --no-domain" : ""}`,
     );
   }
   return target;

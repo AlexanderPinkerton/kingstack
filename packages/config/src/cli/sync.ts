@@ -100,8 +100,10 @@ function syncToGitHub(
   isDryRun: boolean,
   cwd: string,
 ): boolean {
-  const secrets = collectSecrets(config, keys);
   console.log(`\n🐙 GitHub environment: ${environment}`);
+
+  const secrets = collectRequiredValues(config, keys, "GitHub secret sync");
+  if (!secrets) return false;
 
   if (isDryRun) {
     console.log(`   Would sync ${secrets.length} secrets`);
@@ -140,13 +142,18 @@ function syncToVercel(
 ): boolean {
   const projectId = config.VERCEL_PROJECT_ID;
   const orgId = config.VERCEL_ORG_ID;
-  const secrets = collectSecrets(config, keys);
   console.log(`\n▲ Vercel project for environment: ${environment}`);
 
   if (!projectId || !orgId) {
     console.error("   ❌ VERCEL_PROJECT_ID and VERCEL_ORG_ID are required");
     return false;
   }
+  const secrets = collectRequiredValues(
+    config,
+    keys,
+    "Vercel environment sync",
+  );
+  if (!secrets) return false;
   if (isDryRun) {
     console.log(
       `   Would link the configured project and sync ${secrets.length} values`,
@@ -188,14 +195,17 @@ function syncToVercel(
   return succeeded;
 }
 
-function collectSecrets(
+function collectRequiredValues(
   config: Record<string, string>,
   keys: string[],
-): Array<{ key: string; value: string }> {
-  return keys.flatMap((key) => {
-    const value = config[key];
-    return value === undefined ? [] : [{ key, value }];
-  });
+  operation: string,
+): Array<{ key: string; value: string }> | undefined {
+  const missing = keys.filter((key) => !config[key]);
+  if (missing.length > 0) {
+    console.error(`   ❌ ${operation} requires: ${missing.join(", ")}`);
+    return undefined;
+  }
+  return keys.map((key) => ({ key, value: config[key] }));
 }
 
 function getDefaultSyncEnvironments(

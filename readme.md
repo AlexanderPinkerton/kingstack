@@ -222,6 +222,12 @@ Supabase owns authentication identities in `auth.users`. A migration-managed
 database trigger projects each identity into Prisma's `public.user` model so
 application code can use a controlled domain record.
 
+The browser client persists the Supabase session in project-scoped cookies and
+publishes auth changes into `RootStore`. Protected Next.js, NestJS, and
+Socket.IO calls then carry the current access token explicitly. Both servers
+verify signed claims through Supabase's JWKS-capable `getClaims()` path; the
+application does not store a JWT signing secret.
+
 When required fields are added to the Prisma `user` model, add a migration that
 updates this trigger as part of the same schema change. The current trigger
 definition is in `20260729030000_repair_auth_user_sync`.
@@ -323,11 +329,18 @@ Provision the first tagged Docker host, then deploy the selected hosted
 configuration:
 
 ```bash
+yarn deploy:nest
+
+# Or use the explicit automation interface:
 yarn deploy:nest provision production --region nyc3 --deploy
 ```
 
-Provisioning and deployment can also be run separately for later fleet work.
-Use `--without-database` when the target database is not ready yet.
+The wizard retrieves current DigitalOcean regions, available sizes, prices,
+SSH keys, and Droplets. Provisioning and deployment can also be run separately
+for later fleet work. Use `--without-database` when the target database is not
+ready yet. Trusted HTTPS over the Droplet public IP is the domainless default.
+After verification, the wizard can update the selected environment's
+`NEST_HOST`, ready for Vercel environment sync.
 
 The deploy command builds locally, applies Prisma production migrations,
 streams the image over SSH, verifies a candidate container, and optionally
@@ -359,6 +372,9 @@ yarn supabase:start        # Start this project's local Supabase stack
 yarn supabase:status       # Report running, stopped, or inaccessible state
 yarn supabase:list         # List local Supabase projects
 yarn supabase:check        # Validate the project's Supabase configuration
+yarn supabase:provision    # Create a hosted Supabase project with cost review
+yarn supabase:provision:get-secrets development # Import its hosted credentials
+yarn supabase:auth:configure production # Configure hosted Auth URL and signup policy
 yarn supabase:reset        # Drop local data and reapply migrations
 yarn supabase:stop         # Stop this project's Supabase stack
 ```

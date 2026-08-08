@@ -1,4 +1,7 @@
-import { fetchWithAuth } from "@/lib/utils";
+import {
+  fetchWithAuth,
+  readJsonResponse,
+} from "@/lib/auth/authenticated-fetch";
 import type {
   PostApiData,
   PostCreateInput,
@@ -9,17 +12,6 @@ import type {
 
 export interface HttpPostRepositoryOptions {
   baseUrl?: string;
-}
-
-async function readJson<T>(response: Response): Promise<T> {
-  if (response.ok) {
-    return response.json() as Promise<T>;
-  }
-
-  const message = await response.text();
-  throw new Error(
-    message || `Post request failed with status ${response.status}`,
-  );
 }
 
 function accessToken(context: PostRepositoryContext): string {
@@ -50,7 +42,7 @@ export function createHttpPostRepository(
         accessToken(context),
         `${baseUrl}/posts`,
       );
-      return readJson<PostApiData[]>(response);
+      return readJsonResponse<PostApiData[]>(response);
     },
 
     async create(data: PostCreateInput, context) {
@@ -66,7 +58,7 @@ export function createHttpPostRepository(
           }),
         },
       );
-      return readJson<PostApiData>(response);
+      return readJsonResponse<PostApiData>(response);
     },
 
     async update({ id, data }: { id: string; data: PostUpdateInput }, context) {
@@ -78,7 +70,7 @@ export function createHttpPostRepository(
           body: JSON.stringify(data),
         },
       );
-      return readJson<PostApiData>(response);
+      return readJsonResponse<PostApiData>(response);
     },
 
     async remove(id, context) {
@@ -89,7 +81,7 @@ export function createHttpPostRepository(
       );
 
       if (!response.ok) {
-        await readJson<never>(response);
+        await readJsonResponse<never>(response);
       }
 
       return { id };

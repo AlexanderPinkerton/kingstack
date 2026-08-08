@@ -15,6 +15,7 @@ import {
   type PresenceParticipant,
 } from "@/lib/realtime/presence-room";
 import { browserLogger } from "@/lib/browser-logger";
+import { fetchPublic } from "@/lib/http/public-fetch";
 
 const logger = browserLogger.child({ component: "CheckboxStore" });
 
@@ -84,7 +85,7 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
 
 async function fetchCheckboxes(): Promise<CheckboxApiData[]> {
-  const response = await fetch(`${API_BASE_URL}/checkboxes`);
+  const response = await fetchPublic(`${API_BASE_URL}/checkboxes`);
   if (!response.ok) {
     throw new Error(`Failed to fetch checkboxes: ${response.statusText}`);
   }
@@ -95,7 +96,7 @@ async function createCheckbox(data: {
   index: number;
   checked: boolean;
 }): Promise<CheckboxApiData> {
-  const response = await fetch(`${API_BASE_URL}/checkboxes`, {
+  const response = await fetchPublic(`${API_BASE_URL}/checkboxes`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -115,7 +116,7 @@ async function updateCheckbox({
   id: string;
   data: { index?: number; checked?: boolean };
 }): Promise<CheckboxApiData> {
-  const response = await fetch(`${API_BASE_URL}/checkboxes/${id}`, {
+  const response = await fetchPublic(`${API_BASE_URL}/checkboxes/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -129,7 +130,7 @@ async function updateCheckbox({
 }
 
 async function deleteCheckbox(id: string): Promise<{ id: string }> {
-  const response = await fetch(`${API_BASE_URL}/checkboxes/${id}`, {
+  const response = await fetchPublic(`${API_BASE_URL}/checkboxes/${id}`, {
     method: "DELETE",
   });
   if (!response.ok) {
@@ -372,7 +373,7 @@ export class RealtimeCheckboxStore {
     try {
       const baseUrl =
         process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-      const response = await fetch(
+      const response = await fetchPublic(
         `${baseUrl}/checkboxes/initialize?count=${count}`,
         {
           method: "POST",

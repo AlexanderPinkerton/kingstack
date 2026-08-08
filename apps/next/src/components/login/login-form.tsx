@@ -13,6 +13,7 @@ import {
 import { UsernameGenerator } from "@kingstack/shared";
 import { APPNAME } from "@kingstack/shared";
 import { browserLogger } from "@/lib/browser-logger";
+import { fetchPublic } from "@/lib/http/public-fetch";
 
 const logger = browserLogger.child({ component: "LoginForm" });
 
@@ -47,7 +48,7 @@ export function LoginForm({
     }
 
     try {
-      const response = await fetch("/api/username/validate", {
+      const response = await fetchPublic("/api/username/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: candidate }),
@@ -113,10 +114,11 @@ export function LoginForm({
           return;
         }
 
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: `${window.location.origin}/login`,
             data: {
               username: username,
             },
@@ -125,19 +127,23 @@ export function LoginForm({
         if (error) {
           setFormError(error.message);
         } else {
+          const confirmationRequired = !data.session;
           setSuccessMsg(
-            "Registration successful! Please check your email to confirm your account before logging in.",
+            confirmationRequired
+              ? "Registration successful! Please check your email to confirm your account."
+              : "Registration successful! You are now signed in.",
           );
           // Clear form fields
           setEmail("");
           setPassword("");
           setUsername("");
           setUsernameError(null);
-          // Optionally switch to login mode after a short delay
-          setTimeout(() => {
-            setMode("login");
-            setSuccessMsg(null);
-          }, 5000);
+          if (confirmationRequired) {
+            setTimeout(() => {
+              setMode("login");
+              setSuccessMsg(null);
+            }, 5000);
+          }
         }
       }
     } catch (err: any) {
@@ -166,7 +172,7 @@ export function LoginForm({
             <div className="mt-2 text-sm text-white/50">
               {mode === "login"
                 ? "Enter your email below to login to your account"
-                : "Sign up with your email to get started. You'll verify your identity after registration."}
+                : "Sign up with your email to get started."}
             </div>
           </div>
           {!supabaseConfigured && (

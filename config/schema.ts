@@ -28,6 +28,16 @@ export const schema = defineSchema({
       sync: false,
       description: "Local development using local services",
     },
+    development: {
+      mode: EnvironmentMode.Hosted,
+      sync: true,
+      description: "Hosted development deployment",
+    },
+    production: {
+      mode: EnvironmentMode.Hosted,
+      sync: true,
+      description: "Hosted production deployment",
+    },
   },
 
   // ============================================================================
@@ -41,17 +51,17 @@ export const schema = defineSchema({
     },
     NEST_HOST: {
       default: "localhost",
-      description: "NestJS backend hostname",
+      description: "NestJS backend hostname or public IP address",
     },
 
     // Application Ports
     NEST_PORT: {
-      required: true,
+      default: "3420",
       description: "NestJS backend port",
       validate: validatePort,
     },
     NEXT_PORT: {
-      required: true,
+      default: "3069",
       description: "Next.js frontend port",
       validate: validatePort,
     },
@@ -67,18 +77,15 @@ export const schema = defineSchema({
       description:
         "Supabase region (e.g., 'aws-1-us-east-2'). Find in project settings.",
     },
-    SUPABASE_ANON_KEY: {
+    SUPABASE_PUBLISHABLE_KEY: {
       required: true,
-      description: "Supabase anonymous key for client-side auth",
+      description:
+        "Supabase publishable key (sb_publishable_...) for client-side access; local Supabase may use its development anon key",
     },
-    SUPABASE_SERVICE_ROLE_KEY: {
+    SUPABASE_SECRET_KEY: {
       required: true,
-      description: "Supabase service role key for server-side operations",
-      sensitive: true,
-    },
-    SUPA_JWT_SECRET: {
-      required: true,
-      description: "JWT secret from Supabase dashboard for token validation",
+      description:
+        "Supabase secret key (sb_secret_...) for trusted server-side operations; local Supabase may use its development service-role key",
       sensitive: true,
     },
     SUPABASE_DB_PASSWORD: {
@@ -135,18 +142,16 @@ export const schema = defineSchema({
       validate: validatePort,
     },
 
-    // Deployment values are required only for hosted environments.
+    // Deployment automation values are optional during runtime configuration.
+    // The secret-sync command validates them when their provider needs them.
     VERCEL_TOKEN: {
-      requiredWhen: ({ mode }) => mode === EnvironmentMode.Hosted,
       description: "Vercel deployment token",
       sensitive: true,
     },
     VERCEL_ORG_ID: {
-      requiredWhen: ({ mode }) => mode === EnvironmentMode.Hosted,
       description: "Vercel organization ID",
     },
     VERCEL_PROJECT_ID: {
-      requiredWhen: ({ mode }) => mode === EnvironmentMode.Hosted,
       description: "Vercel project ID",
     },
 
@@ -212,11 +217,7 @@ export const schema = defineSchema({
       ? "localhost"
       : `${core.SUPABASE_REGION}.pooler.supabase.com`;
 
-    const dbDirectHost = isLocal
-      ? "localhost"
-      : `db.${core.SUPABASE_PROJECT_REF}.supabase.co`;
-
-    // Database username (remote uses postgres.{PROJECT_REF} format)
+    // Supavisor identifies hosted projects through postgres.{PROJECT_REF}.
     const dbUser = isLocal
       ? "postgres"
       : `postgres.${core.SUPABASE_PROJECT_REF}`;
@@ -250,18 +251,18 @@ export const schema = defineSchema({
       // Pooler connection (for connection pooling via PgBouncer)
       SUPABASE_DB_POOL_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbPoolerHost}:${dbPoolerPort}/postgres?pgbouncer=true`,
 
-      // Direct connection (for migrations)
-      SUPABASE_DB_DIRECT_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbDirectHost}:${dbDirectPort}/postgres`,
+      // Prisma's directUrl: Supavisor session mode for IPv4-safe migrations.
+      SUPABASE_DB_DIRECT_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbPoolerHost}:${dbDirectPort}/postgres`,
 
-      // Shadow DB connection (for migrations)
-      SUPABASE_DB_SHADOW_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbDirectHost}:${dbDirectPort}/shadow_db`,
+      // Shadow DB connection through the same session-mode endpoint.
+      SUPABASE_DB_SHADOW_URL: `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(core.SUPABASE_DB_PASSWORD)}@${dbPoolerHost}:${dbDirectPort}/shadow_db`,
 
       // Environment identity comes from the CLI argument, never duplicated in values files.
       KINGSTACK_ENVIRONMENT: environment.environment,
 
       // Public-facing URLs for Next.js
       NEXT_PUBLIC_SUPABASE_URL: supabaseApiUrl,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: core.SUPABASE_ANON_KEY,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: core.SUPABASE_PUBLISHABLE_KEY,
       NEXT_PUBLIC_NEST_BACKEND_URL: nestUrl,
       NEXT_PUBLIC_API_URL: nextUrl,
 
@@ -285,18 +286,12 @@ export const schema = defineSchema({
 
         // Public Supabase config
         "NEXT_PUBLIC_SUPABASE_URL",
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
         "NEXT_PUBLIC_API_URL",
 
-        // Server-side Supabase config
-        "SUPABASE_SERVICE_ROLE_KEY",
+        // Server-side database config
         "SUPABASE_DB_POOL_URL",
         "SUPABASE_DB_DIRECT_URL",
-
-        // Deployment
-        "VERCEL_TOKEN",
-        "VERCEL_ORG_ID",
-        "VERCEL_PROJECT_ID",
 
         // AI Providers
         "OPENAI_API_KEY",
@@ -327,12 +322,11 @@ export const schema = defineSchema({
         "SUPABASE_POOLER_HOST",
         "SUPABASE_POOLER_USER",
         "SUPABASE_API_URL",
-        "SUPABASE_ANON_KEY",
-        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_PUBLISHABLE_KEY",
+        "SUPABASE_SECRET_KEY",
         "SUPABASE_DB_POOL_URL",
         "SUPABASE_DB_DIRECT_URL",
         "SUPABASE_DB_PASSWORD",
-        "SUPA_JWT_SECRET",
 
         // Runtime logging
         "LOG_LEVEL",
@@ -387,7 +381,7 @@ export const schema = defineSchema({
         "SUPABASE_DB_DIRECT_URL",
         "SUPABASE_DB_POOL_URL",
         "NEXT_PUBLIC_SUPABASE_URL",
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
         "VERCEL_TOKEN",
         "VERCEL_ORG_ID",
         "VERCEL_PROJECT_ID",
@@ -397,10 +391,9 @@ export const schema = defineSchema({
       description: "Vercel environment variables for runtime",
       keys: [
         "NEXT_PUBLIC_SUPABASE_URL",
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
         "NEXT_PUBLIC_NEST_BACKEND_URL",
         "NEXT_PUBLIC_API_URL",
-        "SUPABASE_SERVICE_ROLE_KEY",
         "SUPABASE_DB_POOL_URL",
         "SUPABASE_DB_DIRECT_URL",
         "LOG_LEVEL",

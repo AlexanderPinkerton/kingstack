@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createMetadata } from "@/lib/metadata";
+import { AppProviders } from "@/components/providers/QueryClientProvider";
 
 export const metadata: Metadata = createMetadata({
   title: "AI Chat",
@@ -14,5 +15,5 @@ export default function ChatLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <AppProviders>{children}</AppProviders>;
 }

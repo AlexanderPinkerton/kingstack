@@ -43,6 +43,17 @@ yarn env:local
 
 The example uses local Supabase development credentials. Hosted credentials belong only in ignored environment value files or a secret manager.
 
+After linking and deploying a Vercel project, bootstrap its provider-owned
+values without replacing the rest of the environment file:
+
+```bash
+yarn vercel:config:pull production
+```
+
+This imports `NEXT_HOST`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID`. It does not
+pull generated Vercel environment variables back into KingStack and cannot
+retrieve an existing `VERCEL_TOKEN`.
+
 ## Adding staging or another environment
 
 Environment names are not hardcoded in the CLI. Register the environment in `config/schema.ts`:
@@ -87,3 +98,8 @@ yarn deploy:sync-secrets:prod
 ```
 
 Without `--env`, sync processes every schema environment marked `sync: true`. Dry-run performs no writes and reports counts only.
+
+Application configuration can be valid before a deployment provider is
+connected. Provider credentials such as `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and
+`VERCEL_PROJECT_ID` are optional during `check` and `generate`; secret sync
+validates them before making or planning provider changes.

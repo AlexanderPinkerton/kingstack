@@ -1,6 +1,6 @@
 # Supabase Data API Security
 
-KingStack keeps the Supabase Data API enabled for its service-role realtime
+KingStack keeps the Supabase Data API enabled for its server-only realtime
 integration, but application tables are private by default.
 
 The `20260729033000_secure_public_schema_by_default` Prisma migration:
@@ -105,6 +105,7 @@ configures an intentionally nonexistent schema named
 Supabase documents those entries as harmless.
 
 Disabling the API also breaks KingStack's current realtime startup probe because
-the NestJS gateway verifies access with a service-role PostgREST query before
-subscribing. Keep the API enabled when using that bridge, or remove the probe if
-you deliberately choose a fully disabled Data API.
+the NestJS gateway verifies its secret-key PostgREST access before subscribing.
+That trusted client assumes Supabase's PostgreSQL `service_role`. Keep the API
+enabled when using the bridge, or remove the probe if you deliberately choose a
+fully disabled Data API.

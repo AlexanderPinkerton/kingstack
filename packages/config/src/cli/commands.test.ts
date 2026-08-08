@@ -68,6 +68,20 @@ describe("configuration CLI commands", () => {
     expect(existsSync(join(cwd, ".vercel"))).toBe(false);
   });
 
+  it("validates provider values only when synchronizing that provider", async () => {
+    const cwd = createFixture({ PORT: "3000" });
+
+    await expect(checkCommand({ cwd, environment: "local" })).resolves.toBe(
+      true,
+    );
+    await expect(
+      syncCommand({ cwd, dryRun: true, env: "local", target: "github" }),
+    ).resolves.toBe(false);
+    expect(vi.mocked(console.error).mock.calls.flat().join("\n")).toContain(
+      "DEPLOY_TOKEN",
+    );
+  });
+
   it("scaffolds required values for a declared staging environment", async () => {
     const cwd = createFixture({ PORT: "3000" });
 
@@ -109,11 +123,12 @@ describe("configuration CLI commands", () => {
     PORT: { required: true },
     VERCEL_PROJECT_ID: { default: "project" },
     VERCEL_ORG_ID: { default: "org" },
+    DEPLOY_TOKEN: {},
   },
   computed: (_core, context) => ({ ENVIRONMENT: context.environment }),
   envfiles: { app: { path: "app/.env", keys: ["PORT", "ENVIRONMENT"] } },
   services: {
-    github: { description: "test", keys: ["PORT"] },
+    github: { description: "test", keys: ["PORT", "DEPLOY_TOKEN"] },
     vercel: { description: "test", keys: ["PORT"] },
   },
 };

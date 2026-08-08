@@ -1,0 +1,34 @@
+# Keep every Yarn workspace directory, including apps/nest. The immutable
+# lockfile describes the complete workspace graph; omitting a workspace makes
+# Yarn recalculate and reject the lockfile during Vercel's install.
+
+# Local dependency, build, and task caches
+node_modules/
+**/node_modules/
+.turbo/
+**/.turbo/
+.next/
+**/.next/
+dist/
+**/dist/
+coverage/
+**/coverage/
+*.tsbuildinfo
+**/*.tsbuildinfo
+.bun/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/install-state.gz
+
+# Generated and environment-specific credentials
+.env
+.env.*
+**/.env
+**/.env.*
+/config/
+*.previous
+supabase/.temp/
+
+# Local editor and agent state
+.claude/
+.vscode/

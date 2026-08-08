@@ -3,17 +3,25 @@ import type { Socket } from "socket.io-client";
 import { RealtimeManager } from "@/lib/realtime-manager";
 
 type Listener = (...args: any[]) => void;
+type Acknowledgement = (...args: unknown[]) => void;
 
 class FakeSocket {
   connected = false;
   active = true;
   readonly emitted: Array<{ event: string; args: unknown[] }> = [];
+  readonly timeouts: number[] = [];
   readonly disconnect = vi.fn(() => {
     this.connected = false;
     return this;
   });
 
   private readonly listeners = new Map<string, Set<Listener>>();
+  private readonly acknowledgements = new Map<string, Acknowledgement[]>();
+
+  timeout(milliseconds: number): this {
+    this.timeouts.push(milliseconds);
+    return this;
+  }
 
   on(eventType: string, listener: Listener): this {
     const listeners = this.listeners.get(eventType) ?? new Set<Listener>();
@@ -28,6 +36,14 @@ class FakeSocket {
   }
 
   emit(eventType: string, ...args: unknown[]): this {
+    const possibleAcknowledgement = args.at(-1);
+    if (typeof possibleAcknowledgement === "function") {
+      args.pop();
+      const acknowledgements =
+        this.acknowledgements.get(eventType) ?? new Array<Acknowledgement>();
+      acknowledgements.push(possibleAcknowledgement as Acknowledgement);
+      this.acknowledgements.set(eventType, acknowledgements);
+    }
     this.emitted.push({ event: eventType, args });
     return this;
   }
@@ -41,6 +57,18 @@ class FakeSocket {
     this.listeners.get(eventType)?.forEach((listener) => listener(...args));
   }
 
+  acknowledge(eventType: string, ...args: unknown[]): void {
+    const acknowledgements = this.acknowledgements.get(eventType);
+    const acknowledgement = acknowledgements?.shift();
+    if (acknowledgements?.length === 0) {
+      this.acknowledgements.delete(eventType);
+    }
+    if (!acknowledgement) {
+      throw new Error(`No pending acknowledgement for ${eventType}`);
+    }
+    acknowledgement(...args);
+  }
+
   listenerCount(eventType: string): number {
     return this.listeners.get(eventType)?.size ?? 0;
   }
@@ -48,6 +76,20 @@ class FakeSocket {
   asSocket(): Socket {
     return this as unknown as Socket;
   }
+}
+
+function connect(socket: FakeSocket): void {
+  socket.connected = true;
+  socket.trigger("connect");
+}
+
+function acknowledgeRegistration(socket: FakeSocket): void {
+  socket.acknowledge("register", null, { status: "ok" });
+}
+
+function connectAndRegister(socket: FakeSocket): void {
+  connect(socket);
+  acknowledgeRegistration(socket);
 }
 
 describe("RealtimeManager", () => {
@@ -67,8 +109,11 @@ describe("RealtimeManager", () => {
 
     manager.setup("token-a");
     expect(firstSocket.listenerCount("checkbox_update")).toBe(1);
-    firstSocket.connected = true;
-    firstSocket.trigger("connect");
+    connect(firstSocket);
+
+    expect(manager.status).toBe("connecting");
+    expect(manager.connected).toBe(false);
+    acknowledgeRegistration(firstSocket);
 
     expect(manager.status).toBe("connected");
     expect(manager.connected).toBe(true);
@@ -105,6 +150,102 @@ describe("RealtimeManager", () => {
     expect(socketFactory).toHaveBeenCalledOnce();
   });
 
+  it("waits for registration before restoring cold-start rooms and presence", () => {
+    const socket = new FakeSocket();
+    const manager = new RealtimeManager({
+      browserId: "browser-a",
+      socketFactory: () => socket.asSocket(),
+    });
+    const presence = {
+      roomId: "pool:global",
+      participant: { id: "a", name: "Ada", tone: "lime" },
+      state: null,
+    };
+
+    manager.joinRoom("pool:global");
+    manager.publish("presence:set", presence, {
+      latestKey: "presence:pool:global",
+    });
+    manager.setup("token-a");
+    connect(socket);
+
+    expect(manager.status).toBe("connecting");
+    expect(socket.timeouts).toEqual([5_000]);
+    expect(socket.emitted).toEqual([
+      {
+        event: "register",
+        args: [{ token: "token-a", browserId: "browser-a" }],
+      },
+    ]);
+
+    acknowledgeRegistration(socket);
+
+    expect(manager.status).toBe("connected");
+    expect(socket.emitted.slice(1)).toEqual([
+      { event: "room:join", args: [{ roomId: "pool:global" }] },
+      { event: "presence:set", args: [presence] },
+    ]);
+  });
+
+  it("surfaces registration rejection without restoring session state", () => {
+    const socket = new FakeSocket();
+    const manager = new RealtimeManager({
+      browserId: "browser-a",
+      socketFactory: () => socket.asSocket(),
+    });
+
+    manager.joinRoom("pool:global");
+    manager.setup("token-a");
+    connect(socket);
+    socket.acknowledge("register", null, {
+      status: "error",
+      message: "Invalid token",
+    });
+
+    expect(manager.status).toBe("error");
+    expect(manager.error?.message).toBe("Invalid token");
+    expect(socket.disconnect).toHaveBeenCalledOnce();
+    expect(socket.emitted.map((entry) => entry.event)).toEqual(["register"]);
+  });
+
+  it("surfaces a registration acknowledgement timeout", () => {
+    const socket = new FakeSocket();
+    const manager = new RealtimeManager({
+      browserId: "browser-a",
+      socketFactory: () => socket.asSocket(),
+    });
+
+    manager.setup("token-a");
+    connect(socket);
+    socket.acknowledge("register", new Error("operation has timed out"));
+
+    expect(manager.status).toBe("error");
+    expect(manager.error?.message).toContain("operation has timed out");
+    expect(socket.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it("ignores a late registration acknowledgement from an older connection", () => {
+    const socket = new FakeSocket();
+    const manager = new RealtimeManager({
+      browserId: "browser-a",
+      socketFactory: () => socket.asSocket(),
+    });
+
+    manager.setup("token-a");
+    connect(socket);
+    socket.connected = false;
+    socket.trigger("disconnect", "transport close");
+    connect(socket);
+
+    acknowledgeRegistration(socket);
+    expect(manager.status).toBe("reconnecting");
+    expect(manager.connected).toBe(false);
+
+    acknowledgeRegistration(socket);
+    expect(manager.status).toBe("connected");
+    expect(manager.connected).toBe(true);
+  });
+
   it("replays the latest keyed publication after a reconnect", () => {
     const socket = new FakeSocket();
     const manager = new RealtimeManager({
@@ -126,8 +267,16 @@ describe("RealtimeManager", () => {
       expect.objectContaining({ event: "presence:set" }),
     );
 
-    socket.connected = true;
-    socket.trigger("connect");
+    connect(socket);
+
+    expect(socket.emitted).toEqual([
+      {
+        event: "register",
+        args: [{ token: "token-a", browserId: "browser-a" }],
+      },
+    ]);
+
+    acknowledgeRegistration(socket);
 
     expect(socket.emitted).toEqual([
       {
@@ -139,8 +288,8 @@ describe("RealtimeManager", () => {
 
     socket.connected = false;
     socket.trigger("disconnect", "transport close");
-    socket.connected = true;
-    socket.trigger("connect");
+    connect(socket);
+    acknowledgeRegistration(socket);
 
     expect(socket.emitted.slice(-2)).toEqual(socket.emitted.slice(0, 2));
   });
@@ -153,8 +302,7 @@ describe("RealtimeManager", () => {
     });
 
     manager.setup("token-a");
-    socket.connected = true;
-    socket.trigger("connect");
+    connectAndRegister(socket);
 
     manager.publish(
       "presence:set",
@@ -167,8 +315,8 @@ describe("RealtimeManager", () => {
 
     socket.connected = false;
     socket.trigger("disconnect", "transport close");
-    socket.connected = true;
-    socket.trigger("connect");
+    connect(socket);
+    acknowledgeRegistration(socket);
 
     expect(
       socket.emitted
@@ -185,8 +333,7 @@ describe("RealtimeManager", () => {
     });
 
     manager.setup("token-a");
-    socket.connected = true;
-    socket.trigger("connect");
+    connectAndRegister(socket);
 
     const releaseFirst = manager.joinRoom("checkboxes:global");
     const releaseSecond = manager.joinRoom("checkboxes:global");
@@ -199,8 +346,10 @@ describe("RealtimeManager", () => {
 
     socket.connected = false;
     socket.trigger("disconnect", "transport close");
-    socket.connected = true;
-    socket.trigger("connect");
+    connect(socket);
+
+    expect(socket.emitted.at(-1)?.event).toBe("register");
+    acknowledgeRegistration(socket);
 
     // Rooms are restored before any keyed presence so the server sees the join
     // first.
@@ -236,8 +385,7 @@ describe("RealtimeManager", () => {
     });
 
     manager.setup("token-a");
-    socket.connected = true;
-    socket.trigger("connect");
+    connectAndRegister(socket);
 
     const publishAt = (x: number) =>
       manager.publish(
@@ -279,8 +427,9 @@ describe("RealtimeManager", () => {
     expect(manager.status).toBe("error");
     expect(manager.error?.message).toBe("offline");
 
-    socket.connected = true;
-    socket.trigger("connect");
+    connect(socket);
+    expect(manager.connected).toBe(false);
+    acknowledgeRegistration(socket);
     expect(manager.status).toBe("connected");
     expect(manager.error).toBeNull();
 

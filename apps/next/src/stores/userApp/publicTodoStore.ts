@@ -8,6 +8,7 @@ import {
 } from "@kingstack/advanced-optimistic-store";
 import type { QueryClient } from "@tanstack/react-query";
 import { StoreDemand } from "@/lib/store-lifecycle";
+import { fetchPublic } from "@/lib/http/public-fetch";
 
 // ---------- Types ----------
 
@@ -33,7 +34,7 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
 
 async function fetchPublicTodos(): Promise<PublicTodoApiData[]> {
-  const response = await fetch(`${API_BASE_URL}/public/todos`);
+  const response = await fetchPublic(`${API_BASE_URL}/public/todos`);
   if (!response.ok) {
     throw new Error(`Failed to fetch todos: ${response.statusText}`);
   }
@@ -43,7 +44,7 @@ async function fetchPublicTodos(): Promise<PublicTodoApiData[]> {
 async function createPublicTodo(data: {
   title: string;
 }): Promise<PublicTodoApiData> {
-  const response = await fetch(`${API_BASE_URL}/public/todos`, {
+  const response = await fetchPublic(`${API_BASE_URL}/public/todos`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -63,7 +64,7 @@ async function updatePublicTodo({
   id: string;
   data: { title?: string; done?: boolean };
 }): Promise<PublicTodoApiData> {
-  const response = await fetch(`${API_BASE_URL}/public/todos/${id}`, {
+  const response = await fetchPublic(`${API_BASE_URL}/public/todos/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -77,7 +78,7 @@ async function updatePublicTodo({
 }
 
 async function deletePublicTodo(id: string): Promise<{ id: string }> {
-  const response = await fetch(`${API_BASE_URL}/public/todos/${id}`, {
+  const response = await fetchPublic(`${API_BASE_URL}/public/todos/${id}`, {
     method: "DELETE",
   });
   if (!response.ok) {

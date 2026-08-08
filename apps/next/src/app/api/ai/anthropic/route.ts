@@ -10,6 +10,10 @@ import {
 
 import { getModel, getDefaultModelForProvider } from "../models";
 import { createRequestLogger } from "@/lib/logger";
+import {
+  authenticateAiRequest,
+  authorizeAiUsage,
+} from "@/lib/ai/ai-request-guard";
 
 export const maxDuration = 30;
 
@@ -25,8 +29,17 @@ export type ChatUIMessage = UIMessage<ChatMetadata>;
 export async function POST(request: NextRequest) {
   const logger = createRequestLogger(request, "AnthropicRoute");
   try {
+    const authentication = await authenticateAiRequest(request);
+    if (!authentication.ok) return authentication.response;
+
     const body = await request.json();
     const { prompt, modelId, messages } = body;
+    const authorization = authorizeAiUsage(
+      authentication.userId,
+      "text",
+      logger,
+    );
+    if (!authorization.ok) return authorization.response;
 
     // Handle chat streaming (messages array)
     if (messages && Array.isArray(messages)) {

@@ -3,7 +3,10 @@ import {
   type OptimisticStore,
 } from "@kingstack/advanced-optimistic-store";
 import type { QueryClient } from "@tanstack/react-query";
-import { fetchWithAuth } from "@/lib/utils";
+import {
+  fetchWithAuth,
+  readJsonResponse,
+} from "@/lib/auth/authenticated-fetch";
 import type { SupabaseSession } from "@/lib/session-manager";
 import { StoreDemand } from "@/lib/store-lifecycle";
 
@@ -128,9 +131,8 @@ export class AdminMgmtStore {
     const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-    return fetchWithAuth(token, `${baseUrl}/admin/emails`).then((res) =>
-      res.json(),
-    );
+    const response = await fetchWithAuth(token, `${baseUrl}/admin/emails`);
+    return readJsonResponse<AdminEmailApiData[]>(response);
   };
 
   private apiCreateMutation = async (data: {
@@ -139,10 +141,11 @@ export class AdminMgmtStore {
     const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-    return fetchWithAuth(token, `${baseUrl}/admin/emails`, {
+    const response = await fetchWithAuth(token, `${baseUrl}/admin/emails`, {
       method: "POST",
       body: JSON.stringify(data),
-    }).then((res) => res.json());
+    });
+    return readJsonResponse<AdminEmailApiData>(response);
   };
 
   private apiUpdateMutation = async ({
@@ -155,10 +158,15 @@ export class AdminMgmtStore {
     const token = this.session?.access_token || "";
     const baseUrl =
       process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-    return fetchWithAuth(token, `${baseUrl}/admin/emails/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }).then((res) => res.json());
+    const response = await fetchWithAuth(
+      token,
+      `${baseUrl}/admin/emails/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+    );
+    return readJsonResponse<AdminEmailApiData>(response);
   };
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
@@ -173,12 +181,7 @@ export class AdminMgmtStore {
       },
     );
 
-    if (!response.ok) {
-      throw new Error(
-        `Delete failed: ${response.status} ${response.statusText}`,
-      );
-    }
-    return response.json();
+    return readJsonResponse<{ id: string }>(response);
   };
 
   private get sessionIdentity(): string {

@@ -3,9 +3,63 @@
 KingStack deploys the Next.js application to Vercel and can deploy the NestJS
 application as a Docker container on one or more DigitalOcean Droplets.
 
+## Supabase
+
+Provision a hosted Supabase project through the checked-in CLI with an explicit
+cost review and confirmation:
+
+```bash
+yarn supabase:provision
+```
+
+Use `--dry-run` with a project name, organization, and region to inspect a
+repeatable plan without changing cloud resources. After creation, import the
+hosted credentials into an ignored environment file:
+
+```bash
+yarn supabase:provision:get-secrets development \
+  --project-ref <project-ref>
+```
+
+Project creation, credential import, and schema deployment remain separate.
+See the
+[hosted Supabase provisioning guide](../supabase/hosted-project-provisioning.md)
+for billing details and the post-provisioning handoff.
+
+Once the deployed Vercel hostname is present in `config/<environment>.ts`, set
+the hosted Supabase Site URL and signup policy:
+
+```bash
+yarn supabase:auth:configure production
+```
+
+The default disables signup email confirmation. Use
+`--require-email-confirmation` when the application must prove ownership of the
+submitted email address.
+
 ## NestJS on DigitalOcean
 
-The Nest deployment tool has two explicit operations:
+For an interactive first deployment or routine release, start the wizard:
+
+```bash
+yarn deploy:nest
+```
+
+It guides you through provision versus deploy, hosted environment, live
+DigitalOcean regions, region-compatible sizes with current provider prices,
+SSH keys/firewall access, existing Droplet targets, routing, deployment mode,
+and dry-run versus execution. It then hands the result to the same deployment
+planner and safety confirmation used by the explicit commands.
+
+The default hosted route is trusted HTTPS over a single Droplet's public IPv4
+address, so no domain or DNS setup is required. Caddy obtains and renews a
+short-lived public certificate automatically. After the HTTPS endpoint passes
+verification, the wizard offers to update only `NEST_HOST` in the selected
+ignored `config/<environment>.ts` file. Existing Supabase, Vercel, and
+application values are preserved.
+
+The Nest deployment tool also keeps two explicit operations for repeatable
+automation and CI:
 
 ```bash
 # First-time infrastructure
@@ -17,6 +71,13 @@ yarn deploy:nest deploy production
 
 Provisioning and deployment are separate so an ordinary release can never
 silently create billable infrastructure.
+
+In an interactive terminal, this shorter command also opens the provisioning
+wizard with the command and environment already selected:
+
+```bash
+yarn deploy:nest provision production
+```
 
 For a first deployment, run both phases with one confirmation:
 
@@ -58,13 +119,30 @@ When `NEXT_PUBLIC_NEST_BACKEND_URL` resolves to a non-local HTTPS URL, its
 hostname becomes the default Caddy domain. Override that behavior explicitly:
 
 ```bash
+yarn deploy:nest deploy production --ip-https
 yarn deploy:nest deploy production --domain api.example.com
 yarn deploy:nest deploy production --no-domain
 ```
 
+`--ip-https` requires exactly one selected Droplet. It discovers that
+Droplet's public IPv4 address, opens ports 80/443, requests a publicly trusted
+short-lived IP certificate from Let's Encrypt, and verifies the resulting
+HTTPS endpoint without disabling certificate checks.
+
 `--domain` binds Nest to loopback and routes ports 80/443 through Caddy.
 `--no-domain` publishes the configured Nest port and opens only that app port
-in the project-owned DigitalOcean Cloud Firewall.
+in the project-owned DigitalOcean Cloud Firewall. Direct HTTP is useful for
+diagnostics, but it cannot be the browser-facing backend for a Vercel frontend
+served over HTTPS.
+
+For explicit automation, update the KingStack environment only after a
+successful HTTPS deployment:
+
+```bash
+yarn deploy:nest deploy production \
+  --ip-https \
+  --update-config
+```
 
 ### Provision a droplet
 
@@ -179,11 +257,26 @@ remote host:
 yarn deploy:nest deploy production --dry-run
 ```
 
-### DNS and troubleshooting
+### HTTPS and troubleshooting
 
-The script does not create DNS records. Before expecting HTTPS to work, point
-the chosen hostname at the Droplet IPs. Caddy retries certificate issuance when
-DNS becomes available.
+Public-IP HTTPS needs no DNS record or custom domain. The Droplet's public IP
+becomes the hosted `NEST_HOST`, producing a URL such as
+`https://104.131.195.113`. Public IP certificates are intentionally short-lived;
+Caddy manages their frequent renewal.
+
+After initially deploying with a direct port, rerun the wizard against the
+existing host. Choose **Configuration only**, then
+**Trusted HTTPS using the Droplet public IP**, and accept the `NEST_HOST`
+update. The wizard reuses the current image, enables Caddy, verifies the trusted
+endpoint, and then prints the exact Vercel sync and redeployment commands:
+
+```bash
+yarn king-config sync --env production --target vercel
+yarn vercel:prod
+```
+
+The script does not create DNS records when a custom domain is selected. Point
+that hostname at the Droplet before expecting custom-domain HTTPS to work.
 
 ```bash
 # Application logs
@@ -199,6 +292,40 @@ ssh root@DROPLET_IP 'caddy validate --config /etc/caddy/Caddyfile'
 ```
 
 ## Next.js on Vercel
+
+### Import linked project configuration
+
+After the first production deployment, import Vercel-owned project metadata
+into the corresponding KingStack environment:
+
+```bash
+yarn vercel:config:pull production
+```
+
+The command reads the project and organization IDs created by Vercel in
+`.vercel/project.json`, retrieves the project's verified production domains,
+and surgically updates these values in `config/production.ts`:
+
+- `NEXT_HOST`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+If the project has multiple production domains, choose the public hostname the
+application should treat as canonical. A verified custom domain is preferred;
+otherwise the stable project `*.vercel.app` domain is appropriate. For
+repeatable use, pass it explicitly with `--host <hostname> --yes`. Use
+`--print` to inspect a TypeScript values block without modifying a file.
+
+This is intentionally not a reverse environment-variable sync. KingStack's
+ignored `config/<environment>.ts` file remains the source of truth, and
+`yarn king-config sync` sends its generated runtime values to Vercel. Pulling
+those generated values back would create two competing sources and could
+overwrite newer Supabase or application configuration.
+
+`VERCEL_TOKEN` is also left unchanged. Vercel access tokens are displayed only
+when created and cannot be retrieved later; create one from Vercel's account
+settings when CI needs it and store it in the ignored environment file or the
+CI secret store.
 
 ### First deployment through the Vercel dashboard
 
@@ -222,6 +349,33 @@ the Root Directory is `apps/next`; that resolves to the nonexistent
 Vercel automatically detects the repository's Yarn workspace and skips
 unaffected projects using the workspace dependency graph. No custom Ignored
 Build Step is required.
+
+### CLI upload manifest
+
+Manual CLI deployments start from the monorepo root so Vercel can include the
+Next app's internal workspace dependencies. The root `.vercelignore` excludes
+local Turbo, Next, dependency, and compiler caches as well as all generated
+`.env` files and ignored `config/<environment>.ts` credential files. Do not
+remove those credential rules: Vercel CLI's built-in ignore list does not apply
+the repository's `.gitignore` patterns.
+
+With Vercel CLI 54.17.2 or newer, inspect the source manifest without uploading
+or creating a deployment:
+
+```bash
+vercel deploy --dry
+```
+
+The manifest should include `apps/next` and its workspace packages, exclude
+`config/`, and remain only a few megabytes. Investigate any unexpected cache or
+secret-bearing path before deploying.
+
+Keep every declared Yarn workspace in the source manifest, including
+`apps/nest`. Its dependency/build artifacts are ignored and its tracked source
+is small. Removing the workspace directory changes Yarn's resolution graph, so
+an immutable Vercel install rejects the checked-in lockfile. Reducing the
+workspace set requires deliberately splitting the workspace/lockfile boundary;
+it is not a safe `.vercelignore` optimization.
 
 For a backend-connected deployment, configure the variables listed under the
 `vercel` service in `config/schema.ts`. You can inspect the intended changes

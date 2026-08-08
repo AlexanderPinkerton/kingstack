@@ -184,6 +184,11 @@ Read [Supabase security](./docs/supabase/security.md) before exposing a table.
 Supabase owns authentication identities in `auth.users`. A migration-managed
 trigger projects identities into Prisma's `public.user` model.
 
+The browser persists the Supabase session in project-scoped cookies, while
+protected Next.js, NestJS, and Socket.IO calls carry the current access token
+explicitly. Servers verify signed claims through Supabase's JWKS-capable
+`getClaims()` path; the application does not copy a JWT signing secret.
+
 If the Prisma `user` model gains a required field, update the auth projection
 trigger in the same migration. See
 [Authentication](./docs/auth/README.md) for the complete flow.
@@ -245,6 +250,7 @@ yarn supabase:start     # Start this project's Supabase services
 yarn supabase:status    # Inspect this project's Supabase state
 yarn supabase:list      # List local Supabase projects
 yarn supabase:check     # Validate Supabase configuration
+yarn supabase:auth:configure production # Configure hosted Auth URL and signup policy
 yarn supabase:reset     # Drop local data and reapply migrations
 yarn supabase:stop      # Stop this project's Supabase services
 ```
@@ -258,11 +264,19 @@ running NestJS in Docker on DigitalOcean. The CLI can provision a tagged
 Ubuntu Droplet or deploy to one or more existing tagged hosts:
 
 ```bash
+yarn deploy:nest
+
+# Or use the explicit automation interface:
 yarn deploy:nest provision production --region nyc3 --deploy
 ```
 
-Provisioning and deployment can also be run separately. Add
-`--without-database` when the target database is not ready yet.
+The wizard retrieves current DigitalOcean regions, available sizes, prices,
+SSH keys, and Droplets. Provisioning and deployment can also be run separately.
+Add `--without-database` when the target database is not ready yet.
+
+Trusted HTTPS over the Droplet public IP works without a custom domain or DNS.
+After verification, the wizard can update `NEST_HOST` and prints the Vercel
+sync/redeployment handoff.
 
 Nest deployments apply Prisma production migrations, verify a candidate
 container before cutover, optionally configure Caddy from the hosted Nest URL,
