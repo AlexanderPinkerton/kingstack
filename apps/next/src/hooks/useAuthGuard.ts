@@ -10,7 +10,10 @@ export default function useAuthGuard() {
   useEffect(
     () =>
       autorun(() => {
-        if (rootStore.sessionReady && !rootStore.session) {
+        if (
+          rootStore.sessionReady &&
+          (!rootStore.session || rootStore.isGuest)
+        ) {
           router.replace("/login");
         }
       }),

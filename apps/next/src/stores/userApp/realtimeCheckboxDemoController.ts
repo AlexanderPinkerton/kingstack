@@ -135,6 +135,8 @@ export class RealtimeCheckboxDemoController {
     if (this.disposed || this.accessToken === accessToken) return;
 
     this.accessToken = accessToken;
+    this.primaryStore.setAccessToken(accessToken);
+    this.collaboratorStore.setAccessToken(accessToken);
     if (accessToken) {
       this.collaboratorRealtime.setup(accessToken);
 

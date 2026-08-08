@@ -2,15 +2,12 @@
 
 import { AppPageHeader } from "@/components/app-showcase/app-page-header";
 import { ThemeBuilder } from "@/components/theme-builder";
-import useAuthGuard from "@/hooks/useAuthGuard";
 
 export default function ThemeBuilderPage() {
-  useAuthGuard();
-
   return (
     <>
       <AppPageHeader
-        eyebrow="Full-runtime example"
+        eyebrow="Public example"
         title="Theme system"
         description="Choose a preset or edit the application’s color variables directly, then export the result as CSS or JSON."
       />

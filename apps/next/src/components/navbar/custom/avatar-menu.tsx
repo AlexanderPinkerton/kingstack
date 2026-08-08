@@ -40,7 +40,7 @@ export const AvatarMenu = observer(function AvatarMenu({
   }, []);
 
   // Don't render if no user
-  if (!user) {
+  if (!user || rootStore.isGuest) {
     return (
       <Button
         onClick={() => (window.location.href = "/login")}

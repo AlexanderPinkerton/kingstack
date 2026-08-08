@@ -3,14 +3,14 @@ import { type NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 
 import {
-  authenticateBearerRequest,
+  authenticatePermanentBearerRequest,
   bearerAuthenticationErrorResponse,
 } from "@/lib/auth/server-auth";
 import { createRequestLogger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   const logger = createRequestLogger(request, "UserRoute");
-  const authentication = await authenticateBearerRequest(request);
+  const authentication = await authenticatePermanentBearerRequest(request);
   if (!authentication.ok) {
     return bearerAuthenticationErrorResponse(authentication);
   }

@@ -304,10 +304,11 @@ export const RealtimeCheckboxes = observer(function RealtimeCheckboxes() {
   const checkboxStore = rootStore.userStore.checkboxStore;
   const sessionUser = rootStore.session?.user;
   const primaryName =
-    rootStore.userData?.displayName ||
-    sessionUser?.user_metadata?.username ||
-    sessionUser?.email?.split("@")[0] ||
-    "You";
+    (rootStore.isGuest
+      ? `Guest ${sessionUser?.id.slice(0, 4).toUpperCase() || "user"}`
+      : rootStore.userData?.displayName ||
+        sessionUser?.user_metadata?.username ||
+        sessionUser?.email?.split("@")[0]) || "You";
   const [controller] = useState(
     () => new RealtimeCheckboxDemoController(checkboxStore, primaryName),
   );
@@ -328,11 +329,11 @@ export const RealtimeCheckboxes = observer(function RealtimeCheckboxes() {
     cursorParticipant,
   );
 
-  useEffect(() => controller.mount(), [controller]);
-
   useEffect(() => {
     controller.setAccessToken(rootStore.session?.access_token ?? null);
   }, [controller, rootStore.session?.access_token]);
+
+  useEffect(() => controller.mount(), [controller]);
 
   useEffect(() => {
     controller.setPrimaryName(primaryName);

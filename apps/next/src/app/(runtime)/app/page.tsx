@@ -12,18 +12,19 @@ import {
   ShieldCheck,
   Waves,
 } from "lucide-react";
-import useAuthGuard from "@/hooks/useAuthGuard";
 
 const examples = [
   {
     href: "/app/optimistic",
     title: "Optimistic UI",
     description:
-      "The interface and the server side by side, with the mutation pipeline running between them. Add latency or reject a request to watch the optimistic layer reconcile or roll back.",
+      "The interface and an in-memory repository side by side, with the production mutation pipeline between them. Add latency or reject a request to watch reconciliation and rollback.",
     icon: DatabaseZap,
     accent: "text-[#d8ff70] bg-[#d8ff70]/10 border-[#d8ff70]/20",
     glow: "rgba(216, 255, 112, 0.12)",
     tags: ["MobX", "TanStack Query", "advanced-optimistic-store"],
+    access: "Open demo",
+    accessNote: "Runs in browser memory and resets on reload.",
     featured: true,
   },
   {
@@ -35,6 +36,8 @@ const examples = [
     accent: "text-[#bdb5ff] bg-[#8d7cff]/10 border-[#8d7cff]/25",
     glow: "rgba(141, 124, 255, 0.12)",
     tags: ["Supabase Realtime", "Presence"],
+    access: "No signup",
+    accessNote: "Uses a temporary guest for the bounded shared grid.",
   },
   {
     href: "/app/canvas",
@@ -45,6 +48,8 @@ const examples = [
     accent: "text-[#8ee8ff] bg-cyan-400/10 border-cyan-300/20",
     glow: "rgba(142, 232, 255, 0.12)",
     tags: ["World space", "Presence"],
+    access: "No signup",
+    accessNote: "Uses a temporary guest for ephemeral presence only.",
   },
   {
     href: "/app/wave-pool",
@@ -56,6 +61,8 @@ const examples = [
       "text-[var(--accent-1-l)] bg-[color-mix(in_oklch,var(--accent-1-m)_10%,transparent)] border-[color-mix(in_oklch,var(--accent-1-m)_22%,transparent)]",
     glow: "color-mix(in oklch, var(--accent-1-m) 13%, transparent)",
     tags: ["Three.js", "Authoritative realtime"],
+    access: "No signup",
+    accessNote: "Creates a temporary guest only for the live connection.",
   },
   {
     href: "/app/theme-builder",
@@ -66,22 +73,12 @@ const examples = [
     accent: "text-[#8ee8ff] bg-cyan-400/10 border-cyan-300/20",
     glow: "rgba(142, 232, 255, 0.12)",
     tags: ["Design tokens", "CSS variables"],
-  },
-  {
-    href: "/admin/dashboard",
-    title: "Admin workflows",
-    description:
-      "Protected administration, role checks, data tables, and dashboard composition.",
-    icon: ShieldCheck,
-    accent: "text-[#f9da7f] bg-amber-300/10 border-amber-300/20",
-    glow: "rgba(249, 218, 127, 0.12)",
-    tags: ["Role checks", "Data tables"],
+    access: "Open demo",
+    accessNote: "Runs entirely in the browser with no session.",
   },
 ] as const;
 
 export default function ApplicationPage() {
-  useAuthGuard();
-
   return (
     <>
       <section className="grid gap-10 border-b border-white/10 pb-16 lg:grid-cols-[1fr_0.6fr] lg:items-end">
@@ -94,16 +91,17 @@ export default function ApplicationPage() {
             Back to the KingStack guide
           </Link>
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#d8ff70]">
-            Full runtime
+            Live feature demos
           </p>
           <h1 className="mt-4 max-w-4xl text-5xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-7xl">
-            The application workspace.
+            See the stack working.
           </h1>
         </div>
         <p className="max-w-xl text-lg leading-8 text-white/55">
-          Build routes here when they need authentication, persistent data,
-          realtime connections, or backend processes. These examples run inside
-          the complete KingStack runtime.
+          Every card is a runnable KingStack demo. The catalog is public, and
+          every demo runs without creating a permanent account. Browser-local
+          examples open directly; collaborative examples create one temporary
+          guest session.
         </p>
       </section>
 
@@ -111,7 +109,7 @@ export default function ApplicationPage() {
         {[
           { icon: Gauge, label: "Runtime", value: "Full stack" },
           { icon: Bot, label: "Agent guidance", value: "Repository-owned" },
-          { icon: ShieldCheck, label: "Access", value: "Authenticated" },
+          { icon: ShieldCheck, label: "Demo access", value: "Clearly labeled" },
         ].map((item) => {
           const Icon = item.icon;
 
@@ -137,11 +135,12 @@ export default function ApplicationPage() {
             Reference features
           </p>
           <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-5xl">
-            Trace a working pattern before building a new one.
+            Pick a feature and run the real implementation.
           </h2>
           <p className="mt-5 leading-7 text-white/50">
-            Each example is a place for people and agents to inspect how a
-            complete feature is composed inside the full runtime.
+            These are working examples, not screenshots. Live collaboration
+            still exercises the real authentication boundary, but KingStack
+            creates the temporary identity without a login form.
           </p>
         </div>
 
@@ -180,6 +179,9 @@ export default function ApplicationPage() {
                   >
                     {example.title}
                   </h3>
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 font-mono text-[0.58rem] uppercase tracking-[0.12em] text-white/40">
+                    {example.access}
+                  </span>
                   <ArrowRight
                     className="size-4 shrink-0 text-white/25 transition duration-200 group-hover:translate-x-0.5 group-hover:text-white"
                     aria-hidden="true"
@@ -192,6 +194,13 @@ export default function ApplicationPage() {
                   }`}
                 >
                   {example.description}
+                </p>
+
+                <p className="relative mt-5 border-l border-white/15 pl-3 text-xs leading-5 text-white/40">
+                  <span className="font-medium text-white/65">
+                    {example.access}.
+                  </span>{" "}
+                  {example.accessNote}
                 </p>
 
                 <div className="relative mt-auto flex flex-wrap gap-1.5 pt-5">

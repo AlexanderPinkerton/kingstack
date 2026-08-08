@@ -14,6 +14,7 @@ import { ConfigService } from "@nestjs/config";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { AppLogger, LogContext } from "@kingstack/logger";
 import {
+  isAnonymousSupabaseUserClaims,
   POOL_ROOM_ID,
   normalizePoolPresenceState,
   type PoolBoatFrame,
@@ -176,6 +177,7 @@ export class RealtimeGateway
       const decoded = await this.tokenVerifier.verifyAccessToken(data.token);
 
       client.data.userId = decoded.sub;
+      client.data.isAnonymous = isAnonymousSupabaseUserClaims(decoded);
       client.data.browserId = data.browserId;
       this.socketLogger(client).info("realtime.client_registered", {
         browserId: data.browserId,
@@ -195,6 +197,8 @@ export class RealtimeGateway
     @MessageBody() data: { browserId: string },
     @ConnectedSocket() client: Socket,
   ) {
+    delete client.data.userId;
+    delete client.data.isAnonymous;
     client.data.browserId = data.browserId;
     this.socketLogger(client).info("realtime.public_client_registered", {
       browserId: data.browserId,
@@ -404,6 +408,16 @@ export class RealtimeGateway
     }
 
     const config = getRoomNamespaceConfig(roomNamespaceOf(roomId));
+    if (
+      client.data.isAnonymous === true &&
+      !config?.allowsAnonymousSignal?.(kind)
+    ) {
+      this.socketLogger(client).warn("realtime.anonymous_signal_denied", {
+        roomId,
+        kind,
+      });
+      return { status: "error", message: "Signal requires a permanent user" };
+    }
     const data = config?.validateSignal?.(kind, payload?.data) ?? null;
     if (data === null) {
       this.socketLogger(client).warn("realtime.signal_rejected", {
@@ -446,8 +460,11 @@ export class RealtimeGateway
     if (typeof client.data.browserId !== "string") {
       return "Register before joining a room";
     }
-    if (config.requiresAuth && typeof client.data.userId !== "string") {
+    if (config.access !== "public" && typeof client.data.userId !== "string") {
       return "Room requires an authenticated connection";
+    }
+    if (config.access === "permanent" && client.data.isAnonymous === true) {
+      return "Room requires a permanent user";
     }
     if (config.allowsRoomId && !config.allowsRoomId(roomId)) {
       return "Room is not available";

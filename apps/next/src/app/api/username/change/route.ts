@@ -2,7 +2,7 @@ import { type NextRequest } from "next/server";
 import { UsernameGenerator } from "@kingstack/shared";
 import prisma from "@/lib/prisma";
 import {
-  authenticateBearerRequest,
+  authenticatePermanentBearerRequest,
   bearerAuthenticationErrorResponse,
 } from "@/lib/auth/server-auth";
 import { createRequestLogger } from "@/lib/logger";
@@ -10,7 +10,7 @@ import { createRequestLogger } from "@/lib/logger";
 export async function POST(request: NextRequest) {
   const logger = createRequestLogger(request, "UsernameChangeRoute");
   try {
-    const authentication = await authenticateBearerRequest(request);
+    const authentication = await authenticatePermanentBearerRequest(request);
     if (!authentication.ok) {
       return bearerAuthenticationErrorResponse(authentication);
     }

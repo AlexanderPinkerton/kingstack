@@ -11,9 +11,11 @@ import {
   normalizePoolPresenceState,
 } from "@kingstack/shared";
 
+export type RoomAccess = "public" | "guest" | "permanent";
+
 export interface RoomNamespaceConfig {
-  /** Reject joins from sockets that only completed `register_public`. */
-  requiresAuth: boolean;
+  /** Minimum identity required to join this namespace. */
+  access: RoomAccess;
   /** Optional exact room/scope admission policy within this namespace. */
   allowsRoomId?(roomId: string): boolean;
   /**
@@ -26,6 +28,8 @@ export interface RoomNamespaceConfig {
    * which is the default: a room opts in to transient events explicitly.
    */
   validateSignal?(kind: string, data: unknown): unknown | null;
+  /** Signals anonymous users may publish after validation. Defaults to none. */
+  allowsAnonymousSignal?(kind: string): boolean;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -113,23 +117,24 @@ function validateCanvasState(state: unknown): unknown | null {
 
 const ROOM_NAMESPACES: Record<string, RoomNamespaceConfig> = {
   checkboxes: {
-    requiresAuth: true,
+    access: "guest",
     validateState: validateCheckboxState,
   },
   cursors: {
-    requiresAuth: true,
+    access: "guest",
     validateState: validateCursorState,
   },
   canvas: {
-    requiresAuth: true,
+    access: "guest",
     validateState: validateCanvasState,
     // A tap at a world point. Touch clients have no pointer to publish, so
     // this is the only way they are visible on the canvas at all.
     validateSignal: (kind, data) =>
       kind === "ripple" ? validateCanvasState(data) : null,
+    allowsAnonymousSignal: (kind) => kind === "ripple",
   },
   pool: {
-    requiresAuth: true,
+    access: "guest",
     allowsRoomId: (roomId) => roomId === POOL_ROOM_ID,
     validateState: normalizePoolPresenceState,
     validateSignal: (kind, data) => {
@@ -137,10 +142,11 @@ const ROOM_NAMESPACES: Record<string, RoomNamespaceConfig> = {
       if (kind === "reset-boat" && data === true) return true;
       return null;
     },
+    allowsAnonymousSignal: (kind) => kind === "ripple",
   },
   // Entity fan-out only; the post feed carries no presence of its own.
   posts: {
-    requiresAuth: true,
+    access: "permanent",
     validateState: () => null,
   },
 };

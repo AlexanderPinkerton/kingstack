@@ -19,6 +19,7 @@ describe("hosted Supabase Auth options", () => {
     expect(parseAuthConfigCliArgs(["production"])).toEqual({
       environment: "production",
       requireEmailConfirmation: false,
+      enableAnonymousSignIns: true,
       dryRun: false,
       yes: false,
       help: false,
@@ -35,8 +36,15 @@ describe("hosted Supabase Auth options", () => {
     ).toMatchObject({
       environment: "production",
       requireEmailConfirmation: true,
+      enableAnonymousSignIns: true,
       dryRun: true,
     });
+  });
+
+  it("allows guest sessions to be disabled explicitly", () => {
+    expect(
+      parseAuthConfigCliArgs(["production", "--disable-anonymous-sign-ins"]),
+    ).toMatchObject({ enableAnonymousSignIns: false });
   });
 
   it("rejects unknown options", () => {
@@ -52,6 +60,7 @@ describe("hosted Supabase Auth plan", () => {
       projectRef: PROJECT_REF,
       siteUrl: "https://kingstack.vercel.app/",
       requireEmailConfirmation: false,
+      enableAnonymousSignIns: true,
       dryRun: false,
       yes: true,
       help: false,
@@ -60,6 +69,7 @@ describe("hosted Supabase Auth plan", () => {
       projectRef: PROJECT_REF,
       siteUrl: "https://kingstack.vercel.app",
       requireEmailConfirmation: false,
+      enableAnonymousSignIns: true,
     });
   });
 
@@ -83,6 +93,7 @@ describe("hosted Supabase Auth Management API", () => {
     projectRef: PROJECT_REF,
     siteUrl: "https://kingstack.vercel.app",
     requireEmailConfirmation: false,
+    enableAnonymousSignIns: true,
   };
 
   it("maps mailer_autoconfirm to the user-facing confirmation policy", () => {
@@ -90,14 +101,17 @@ describe("hosted Supabase Auth Management API", () => {
       parseHostedAuthConfig({
         site_url: "https://kingstack.vercel.app",
         mailer_autoconfirm: true,
+        external_anonymous_users_enabled: true,
       }),
     ).toEqual({
       siteUrl: "https://kingstack.vercel.app",
       emailConfirmationRequired: false,
+      anonymousSignInsEnabled: true,
     });
     expect(desiredHostedAuthConfig(plan)).toEqual({
       siteUrl: "https://kingstack.vercel.app",
       emailConfirmationRequired: false,
+      anonymousSignInsEnabled: true,
     });
   });
 
@@ -107,13 +121,14 @@ describe("hosted Supabase Auth Management API", () => {
         {
           siteUrl: "https://kingstack.vercel.app/",
           emailConfirmationRequired: false,
+          anonymousSignInsEnabled: true,
         },
         desiredHostedAuthConfig(plan),
       ),
     ).toBe(true);
   });
 
-  it("patches only the Site URL and confirmation mode, then verifies", async () => {
+  it("patches only the declared Auth settings, then verifies", async () => {
     const requests: Array<{ method: string; body?: string }> = [];
     const fetcher: AuthConfigFetcher = (
       _input: string | URL | Request,
@@ -128,6 +143,7 @@ describe("hosted Supabase Auth Management API", () => {
           JSON.stringify({
             site_url: plan.siteUrl,
             mailer_autoconfirm: true,
+            external_anonymous_users_enabled: true,
           }),
           { status: 200 },
         ),
@@ -142,6 +158,7 @@ describe("hosted Supabase Auth Management API", () => {
     expect(updated).toEqual({
       siteUrl: plan.siteUrl,
       emailConfirmationRequired: false,
+      anonymousSignInsEnabled: true,
     });
     expect(requests).toHaveLength(2);
     expect(requests[0]).toEqual({
@@ -149,6 +166,7 @@ describe("hosted Supabase Auth Management API", () => {
       body: JSON.stringify({
         site_url: plan.siteUrl,
         mailer_autoconfirm: true,
+        external_anonymous_users_enabled: true,
       }),
     });
     expect(requests[1]).toEqual({ method: "GET" });
@@ -163,6 +181,7 @@ describe("hosted Supabase Auth Management API", () => {
           JSON.stringify({
             site_url: plan.siteUrl,
             mailer_autoconfirm: request === 1,
+            external_anonymous_users_enabled: true,
           }),
           { status: 200 },
         ),

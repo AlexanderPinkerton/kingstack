@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtAuthGuard } from "./guards/jwt.auth.guard";
+import { PermanentUserGuard } from "./guards/permanent-user.guard";
 import { AdminGuard } from "./guards/admin.guard";
 import { AdminService } from "./services/admin.service";
 import { AdminEmailsController } from "./admin-emails.controller";
@@ -21,9 +22,16 @@ import { SupabaseTokenVerifier } from "./services/supabase-token-verifier";
     },
     SupabaseTokenVerifier,
     JwtAuthGuard,
+    PermanentUserGuard,
     AdminGuard,
     AdminService,
   ],
-  exports: [JwtAuthGuard, AdminGuard, AdminService, SupabaseTokenVerifier],
+  exports: [
+    JwtAuthGuard,
+    PermanentUserGuard,
+    AdminGuard,
+    AdminService,
+    SupabaseTokenVerifier,
+  ],
 })
 export class AuthModule {}

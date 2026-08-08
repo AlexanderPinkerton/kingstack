@@ -4,8 +4,7 @@ import { createMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createMetadata({
   title: "Application",
-  description:
-    "The authenticated KingStack application workspace and full-runtime examples.",
+  description: "Browse KingStack's public showcase and full-runtime examples.",
   canonical: "/app",
 });
 

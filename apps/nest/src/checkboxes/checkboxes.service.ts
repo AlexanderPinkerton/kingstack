@@ -59,7 +59,7 @@ export class CheckboxesService {
 
   async update(
     id: string,
-    updateCheckboxDto: { index?: number; checked?: boolean },
+    updateCheckboxDto: { checked: boolean },
   ): Promise<Checkbox> {
     try {
       const checkbox = await this.prisma.checkbox.update({
@@ -72,6 +72,35 @@ export class CheckboxesService {
     } catch (error) {
       this.logger.error("checkbox.update_failed", {
         context: { checkboxId: id },
+        error,
+      });
+      throw error;
+    }
+  }
+
+  async ensureCheckboxes(
+    count: number,
+  ): Promise<{ message: string; count: number }> {
+    try {
+      const result = await this.prisma.checkbox.createMany({
+        data: Array.from({ length: count }, (_, index) => ({
+          index,
+          checked: false,
+        })),
+        skipDuplicates: true,
+      });
+
+      this.logger.info("checkboxes.bootstrapped", {
+        createdCount: result.count,
+        requestedCount: count,
+      });
+      return {
+        message: `Ensured ${count} demo checkboxes exist`,
+        count: result.count,
+      };
+    } catch (error) {
+      this.logger.error("checkboxes.bootstrap_failed", {
+        context: { requestedCount: count },
         error,
       });
       throw error;

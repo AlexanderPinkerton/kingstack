@@ -1,10 +1,5 @@
-"use client";
-
-import { WavePool } from "@/components/examples/WavePool";
-import useAuthGuard from "@/hooks/useAuthGuard";
+import { WavePoolEntry } from "@/components/examples/wave-pool/wave-pool-entry";
 
 export default function WavePoolPage() {
-  useAuthGuard();
-
-  return <WavePool />;
+  return <WavePoolEntry />;
 }

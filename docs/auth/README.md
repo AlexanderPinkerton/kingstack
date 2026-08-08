@@ -8,6 +8,7 @@ This separation is deliberate:
 
 - Supabase owns login, refresh, logout, and token issuance.
 - `RootStore` owns the current in-memory application session.
+- Anonymous Supabase users are guest identities, not permanent accounts.
 - Each protected HTTP request carries `Authorization: Bearer <access-token>`.
 - Each authenticated Socket.IO connection registers its access token.
 - Every server verifies the token before trusting its claims.
@@ -69,9 +70,13 @@ yarn supabase:auth:configure production
 
 This sets the hosted Site URL and disables confirmation by default. Pass
 `--require-email-confirmation` when verified email ownership is part of the
-product's security model. Immediate signup is convenient for demos, but it
-allows accounts to claim addresses they do not control; add CAPTCHA or another
-abuse control before exposing open registration at scale.
+product's security model. It also enables anonymous sign-ins for one-click live
+demos. Pass `--disable-anonymous-sign-ins` when a project should not offer guest
+sessions.
+
+Immediate signup is convenient for demos, but it allows accounts to claim
+addresses they do not control. This example intentionally favors setup speed;
+review confirmation and abuse controls before using the defaults at scale.
 
 See Supabase's [redirect URL guide](https://supabase.com/docs/guides/auth/redirect-urls)
 for the Site URL fallback and redirect allow-list behavior.
@@ -127,12 +132,25 @@ The helper strictly parses the Bearer scheme, calls
 the `authenticated` audience. It uses a stateless Supabase client configured
 with the publishable key; it does not read or write browser cookies.
 
+Routes backed by persistent application data use
+`authenticatePermanentBearerRequest`. It performs the same verification and
+then returns `403` when the verified token has `is_anonymous: true`.
+
 ### NestJS HTTP
 
-Nest controllers protect routes with `JwtAuthGuard` or `AdminGuard`.
+Nest controllers protect routes with `JwtAuthGuard`, `PermanentUserGuard`, or
+`AdminGuard`.
 `JwtAuthGuard` uses the same parser and claim validator as Next.js, then places
 the verified claims on `request.user`. Authorization code must use this
-verified value, never an unverified JWT decode.
+verified value, never an unverified JWT decode. Persistent post and todo
+endpoints use `PermanentUserGuard` so a guest token cannot mutate application
+data.
+
+The checkbox grid is explicitly demo state. Listing, bounded cell creation,
+boolean toggles, and non-destructive bootstrap use `JwtAuthGuard`, so verified
+guests can participate. Inputs are constrained to the fixed 200-cell grid and
+guest mutations are rate-limited. Deletion and destructive reinitialization use
+`PermanentUserGuard`.
 
 ### Socket.IO
 
@@ -145,8 +163,38 @@ When Supabase refreshes the access token, `RootStore` gives the new token to the
 realtime manager. The manager replaces the authenticated connection and
 restores rooms only after the new registration succeeds.
 
-Public realtime rooms use the separate `register_public` path. A room namespace
-marked `requiresAuth` still requires a verified `userId` on the socket.
+Unauthenticated realtime rooms use the separate `register_public` path. Every
+namespace declares an explicit `access` level: `public`, `guest`, or
+`permanent`. Guest and permanent rooms require a verified `userId`; permanent
+rooms also reject tokens whose verified claims contain `is_anonymous: true`.
+
+The live demo rooms are authenticated but guest-capable.
+`signInAnonymously()` creates a temporary Supabase user, and the socket
+registers its verified access token before joining the wave pool, canvas,
+cursor, or checkbox namespace. Guests may publish validated presence and demo
+signals, but may not reset the shared boat. Application-data namespaces still
+require a permanent user.
+
+### Guest sessions
+
+The catalog, theme builder, and in-memory optimistic demo are public. The wave
+pool, canvas, and collaborative checkbox pages display an explicit entry screen
+rather than creating users on page load; their buttons call
+`SessionManager.signInAnonymously()`. This keeps crawlers and casual page views
+from creating Auth records. One guest session is reused across every live demo.
+
+Supabase anonymous users have the `authenticated` audience and role, so the
+`is_anonymous` claim is an authorization boundary everywhere data can persist.
+`UserStoreManager` does not activate profile, post, or todo data for a guest. It
+does provide the verified guest token to the bounded checkbox demo. A guest may
+sign into an existing account normally. Starting a new registration discards
+the temporary identity first because KingStack stores no guest-owned
+application data.
+
+Supabase does not automatically remove old anonymous users. Plan a periodic
+cleanup policy before guest volume becomes material. See Supabase's
+[anonymous sign-in guide](https://supabase.com/docs/guides/auth/auth-anonymous)
+for access-control guidance and the cleanup query.
 
 ## Verification and signing keys
 
@@ -219,8 +267,10 @@ and [advanced SSR guide](https://supabase.com/docs/guides/auth/server-side/advan
 Authentication proves identity; authorization remains feature-specific:
 
 - ordinary protected routes use the verified `sub` as the user ID;
+- persistent application routes reject `is_anonymous: true` with `403`;
 - admin routes verify the token and query the `admin_emails` allowlist;
-- realtime namespaces decide whether public registration is sufficient.
+- realtime namespaces decide whether unauthenticated, guest, or permanent
+  registration is sufficient.
 
 ## Logging and operational rules
 
@@ -258,10 +308,13 @@ migration and keep the installer and backfill scripts aligned with it.
 When adding or changing an authenticated feature:
 
 1. Decide explicitly whether the endpoint is public or protected.
-2. Use `fetchWithAuth` for protected requests or `fetchPublic` for public ones.
-3. Verify the Bearer token at the first server boundary.
-4. Authorize using verified claims and current application data.
-5. Keep user ID—not the access token—in cache keys.
-6. Define `401`, `403`, and `429` behavior.
-7. Add tests for missing, malformed, invalid, expired, and valid tokens.
-8. Confirm logs and error responses cannot expose credentials.
+2. Decide whether a protected endpoint accepts guests or requires a permanent
+   account.
+3. Use `fetchWithAuth` for protected requests or `fetchPublic` for public ones.
+4. Verify the Bearer token at the first server boundary.
+5. Authorize using verified claims and current application data.
+6. Keep user ID—not the access token—in cache keys.
+7. Define `401`, `403`, and `429` behavior.
+8. Add tests for missing, malformed, invalid, expired, guest, and permanent
+   tokens.
+9. Confirm logs and error responses cannot expose credentials.

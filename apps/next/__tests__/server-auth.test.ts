@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClaimsAuth } from "../src/lib/auth/server-auth";
-import { authenticateBearerRequestWith } from "../src/lib/auth/server-auth";
+import {
+  authenticateBearerRequestWith,
+  authenticatePermanentBearerRequestWith,
+} from "../src/lib/auth/server-auth";
 
 function request(authorization?: string) {
   const headers = new Headers();
@@ -73,5 +76,37 @@ describe("authenticateBearerRequestWith", () => {
       ok: false,
       status: 401,
     });
+  });
+});
+
+describe("authenticatePermanentBearerRequestWith", () => {
+  it("rejects an anonymous Supabase user after verifying the token", async () => {
+    const result = await authenticatePermanentBearerRequestWith(
+      authWithClaims({
+        aud: "authenticated",
+        is_anonymous: true,
+        sub: "guest-123",
+      }),
+      request("Bearer signed-token"),
+    );
+
+    expect(result).toEqual({
+      error: "A permanent account is required",
+      ok: false,
+      status: 403,
+    });
+  });
+
+  it("accepts a permanent Supabase user", async () => {
+    const result = await authenticatePermanentBearerRequestWith(
+      authWithClaims({
+        aud: "authenticated",
+        is_anonymous: false,
+        sub: "user-123",
+      }),
+      request("Bearer signed-token"),
+    );
+
+    expect(result).toMatchObject({ ok: true, userId: "user-123" });
   });
 });

@@ -114,6 +114,14 @@ export function LoginForm({
           return;
         }
 
+        // Guest sessions own no persisted app data, so registration can safely
+        // discard the temporary identity before creating a permanent account.
+        const { data: existingAuth } = await supabase.auth.getSession();
+        if (existingAuth.session?.user.is_anonymous) {
+          const { error: signOutError } = await supabase.auth.signOut();
+          if (signOutError) throw signOutError;
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,

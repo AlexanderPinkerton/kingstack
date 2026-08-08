@@ -1,5 +1,4 @@
-// Public Todo Store - Works without authentication
-// Uses the optimistic store pattern similar to checkboxes
+// Shared todo demo store. Persistence requires a permanent account.
 
 import {
   createOptimisticStore,
@@ -8,7 +7,7 @@ import {
 } from "@kingstack/advanced-optimistic-store";
 import type { QueryClient } from "@tanstack/react-query";
 import { StoreDemand } from "@/lib/store-lifecycle";
-import { fetchPublic } from "@/lib/http/public-fetch";
+import { fetchWithAuth } from "@/lib/auth/authenticated-fetch";
 
 // ---------- Types ----------
 
@@ -33,54 +32,80 @@ export interface PublicTodoUiData extends Entity {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
 
-async function fetchPublicTodos(): Promise<PublicTodoApiData[]> {
-  const response = await fetchPublic(`${API_BASE_URL}/public/todos`);
+async function fetchPublicTodos(
+  accessToken: string,
+): Promise<PublicTodoApiData[]> {
+  const response = await fetchWithAuth(
+    accessToken,
+    `${API_BASE_URL}/public/todos`,
+  );
   if (!response.ok) {
     throw new Error(`Failed to fetch todos: ${response.statusText}`);
   }
   return response.json();
 }
 
-async function createPublicTodo(data: {
-  title: string;
-}): Promise<PublicTodoApiData> {
-  const response = await fetchPublic(`${API_BASE_URL}/public/todos`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+async function createPublicTodo(
+  data: {
+    title: string;
+  },
+  accessToken: string,
+): Promise<PublicTodoApiData> {
+  const response = await fetchWithAuth(
+    accessToken,
+    `${API_BASE_URL}/public/todos`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
+  );
   if (!response.ok) {
     throw new Error(`Failed to create todo: ${response.statusText}`);
   }
   return response.json();
 }
 
-async function updatePublicTodo({
-  id,
-  data,
-}: {
-  id: string;
-  data: { title?: string; done?: boolean };
-}): Promise<PublicTodoApiData> {
-  const response = await fetchPublic(`${API_BASE_URL}/public/todos/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
+async function updatePublicTodo(
+  {
+    id,
+    data,
+  }: {
+    id: string;
+    data: { title?: string; done?: boolean };
+  },
+  accessToken: string,
+): Promise<PublicTodoApiData> {
+  const response = await fetchWithAuth(
+    accessToken,
+    `${API_BASE_URL}/public/todos/${id}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
+  );
   if (!response.ok) {
     throw new Error(`Failed to update todo: ${response.statusText}`);
   }
   return response.json();
 }
 
-async function deletePublicTodo(id: string): Promise<{ id: string }> {
-  const response = await fetchPublic(`${API_BASE_URL}/public/todos/${id}`, {
-    method: "DELETE",
-  });
+async function deletePublicTodo(
+  id: string,
+  accessToken: string,
+): Promise<{ id: string }> {
+  const response = await fetchWithAuth(
+    accessToken,
+    `${API_BASE_URL}/public/todos/${id}`,
+    {
+      method: "DELETE",
+    },
+  );
   if (!response.ok) {
     throw new Error(`Failed to delete todo: ${response.statusText}`);
   }
@@ -134,6 +159,7 @@ export class PublicTodoStore {
     PublicTodoUiData
   >;
   private readonly demand: StoreDemand;
+  private accessToken: string | null = null;
 
   constructor(queryClient: QueryClient) {
     this.demand = new StoreDemand(() => this.optimisticStore.updateOptions());
@@ -152,7 +178,7 @@ export class PublicTodoStore {
         },
         transformer: this.getTransformer(),
         staleTime: 2 * 60 * 1000,
-        enabled: () => this.demand.isActive,
+        enabled: () => this.demand.isActive && this.accessToken !== null,
       },
       queryClient,
     );
@@ -160,6 +186,12 @@ export class PublicTodoStore {
 
   activate(): () => void {
     return this.demand.activate();
+  }
+
+  setAccessToken(accessToken: string | null): void {
+    if (this.accessToken === accessToken) return;
+    this.accessToken = accessToken;
+    this.optimisticStore.updateOptions();
   }
 
   dispose(): void {
@@ -219,13 +251,13 @@ export class PublicTodoStore {
 
   // API Implementations
   private apiQueryFn = async (): Promise<PublicTodoApiData[]> => {
-    return fetchPublicTodos();
+    return fetchPublicTodos(this.requireAccessToken());
   };
 
   private apiCreateMutation = async (data: {
     title: string;
   }): Promise<PublicTodoApiData> => {
-    return createPublicTodo(data);
+    return createPublicTodo(data, this.requireAccessToken());
   };
 
   private apiUpdateMutation = async ({
@@ -235,10 +267,17 @@ export class PublicTodoStore {
     id: string;
     data: { title?: string; done?: boolean };
   }): Promise<PublicTodoApiData> => {
-    return updatePublicTodo({ id, data });
+    return updatePublicTodo({ id, data }, this.requireAccessToken());
   };
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
-    return deletePublicTodo(id);
+    return deletePublicTodo(id, this.requireAccessToken());
   };
+
+  private requireAccessToken(): string {
+    if (!this.accessToken) {
+      throw new Error("A permanent account is required for shared todo data");
+    }
+    return this.accessToken;
+  }
 }

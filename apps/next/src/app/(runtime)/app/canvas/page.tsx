@@ -2,19 +2,22 @@
 
 import { AppPageHeader } from "@/components/app-showcase/app-page-header";
 import { CollaborativeCanvas } from "@/components/examples/CollaborativeCanvas";
-import useAuthGuard from "@/hooks/useAuthGuard";
+import { GuestDemoGate } from "@/components/examples/guest-access/guest-demo-gate";
 
 export default function CanvasPage() {
-  useAuthGuard();
-
   return (
-    <>
-      <AppPageHeader
-        eyebrow="Full-runtime example"
-        title="Collaborative canvas"
-        description="A fixed world with presence in world coordinates. Every client resolves a point to the same place on the grid, whatever the size of its viewport."
-      />
-      <CollaborativeCanvas />
-    </>
+    <GuestDemoGate
+      title="Step into the shared canvas."
+      description="A temporary guest JWT opens the live presence room without asking for an email, password, or permanent account."
+    >
+      <>
+        <AppPageHeader
+          eyebrow="Live guest demo"
+          title="Collaborative canvas"
+          description="A fixed world with presence in world coordinates. Every client resolves a point to the same place on the grid, whatever the size of its viewport."
+        />
+        <CollaborativeCanvas />
+      </>
+    </GuestDemoGate>
   );
 }

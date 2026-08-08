@@ -2,21 +2,18 @@
 
 import { ArrowUpRight } from "lucide-react";
 import { AppPageHeader } from "@/components/app-showcase/app-page-header";
-import useAuthGuard from "@/hooks/useAuthGuard";
 import { AdvancedPostsExample } from "@/lib/examples/advanced-posts-example";
 
 const PACKAGE_URL =
   "https://github.com/AlexanderPinkerton/kingstack/tree/main/packages/advanced-optimistic-store";
 
 export default function OptimisticStorePage() {
-  useAuthGuard();
-
   return (
     <>
       <AppPageHeader
-        eyebrow="Full-runtime example"
+        eyebrow="Open demo · browser-local data"
         title="Optimistic UI"
-        description="The interface and the server, side by side, with the mutation pipeline running between them. Add latency or reject a request to watch the two diverge and converge again."
+        description="The interface and an in-memory repository, side by side, with the real mutation pipeline running between them. Add latency or reject a request to watch the two diverge and converge again without writing permanent data."
       />
       <a
         href={PACKAGE_URL}

@@ -14,10 +14,10 @@ export default observer(function Page() {
   const rootStore = useRootStore();
 
   useEffect(() => {
-    if (rootStore.session) {
+    if (rootStore.session && !rootStore.isGuest) {
       router.replace("/app");
     }
-  }, [rootStore.session, rootStore, router]);
+  }, [rootStore.session, rootStore.isGuest, router]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#090a0c] text-[#f5f2e8]">

@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 import {
-  authenticateBearerRequest,
+  authenticatePermanentBearerRequest,
   bearerAuthenticationErrorResponse,
 } from "@/lib/auth/server-auth";
 import { createRequestLogger } from "@/lib/logger";
@@ -13,7 +13,7 @@ const prisma: PrismaClient = new PrismaClient();
 export async function GET(request: NextRequest) {
   const logger = createRequestLogger(request, "PostRoute");
   try {
-    const authentication = await authenticateBearerRequest(request);
+    const authentication = await authenticatePermanentBearerRequest(request);
     if (!authentication.ok) {
       return bearerAuthenticationErrorResponse(authentication);
     }
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const logger = createRequestLogger(request, "PostRoute");
   try {
-    const authentication = await authenticateBearerRequest(request);
+    const authentication = await authenticatePermanentBearerRequest(request);
     if (!authentication.ok) {
       return bearerAuthenticationErrorResponse(authentication);
     }
