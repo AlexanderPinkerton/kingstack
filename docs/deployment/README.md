@@ -246,6 +246,33 @@ Vercel automatically detects the repository's Yarn workspace and skips
 unaffected projects using the workspace dependency graph. No custom Ignored
 Build Step is required.
 
+### CLI upload manifest
+
+Manual CLI deployments start from the monorepo root so Vercel can include the
+Next app's internal workspace dependencies. The root `.vercelignore` excludes
+local Turbo, Next, dependency, and compiler caches as well as all generated
+`.env` files and ignored `config/<environment>.ts` credential files. Do not
+remove those credential rules: Vercel CLI's built-in ignore list does not apply
+the repository's `.gitignore` patterns.
+
+With Vercel CLI 54.17.2 or newer, inspect the source manifest without uploading
+or creating a deployment:
+
+```bash
+vercel deploy --dry
+```
+
+The manifest should include `apps/next` and its workspace packages, exclude
+`config/`, and remain only a few megabytes. Investigate any unexpected cache or
+secret-bearing path before deploying.
+
+Keep every declared Yarn workspace in the source manifest, including
+`apps/nest`. Its dependency/build artifacts are ignored and its tracked source
+is small. Removing the workspace directory changes Yarn's resolution graph, so
+an immutable Vercel install rejects the checked-in lockfile. Reducing the
+workspace set requires deliberately splitting the workspace/lockfile boundary;
+it is not a safe `.vercelignore` optimization.
+
 For a backend-connected deployment, configure the variables listed under the
 `vercel` service in `config/schema.ts`. You can inspect the intended changes
 before synchronizing them:
