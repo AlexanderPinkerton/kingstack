@@ -87,3 +87,8 @@ yarn deploy:sync-secrets:prod
 ```
 
 Without `--env`, sync processes every schema environment marked `sync: true`. Dry-run performs no writes and reports counts only.
+
+Application configuration can be valid before a deployment provider is
+connected. Provider credentials such as `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and
+`VERCEL_PROJECT_ID` are optional during `check` and `generate`; secret sync
+validates them before making or planning provider changes.

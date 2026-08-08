@@ -38,6 +38,9 @@ yarn supabase:reset
 
 # Hosted project creation with cost confirmation
 yarn supabase:provision
+
+# Hosted credential import into config/<environment>.ts
+yarn supabase:provision:get-secrets development
 ```
 
 Auth user projection maintenance:

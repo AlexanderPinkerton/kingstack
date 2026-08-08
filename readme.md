@@ -365,6 +365,8 @@ yarn supabase:start        # Start this project's local Supabase stack
 yarn supabase:status       # Report running, stopped, or inaccessible state
 yarn supabase:list         # List local Supabase projects
 yarn supabase:check        # Validate the project's Supabase configuration
+yarn supabase:provision    # Create a hosted Supabase project with cost review
+yarn supabase:provision:get-secrets development # Import its hosted credentials
 yarn supabase:reset        # Drop local data and reapply migrations
 yarn supabase:stop         # Stop this project's Supabase stack
 ```

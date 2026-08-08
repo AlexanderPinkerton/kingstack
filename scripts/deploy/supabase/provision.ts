@@ -27,11 +27,12 @@ const COMPUTE_DOCS =
   "https://supabase.com/docs/guides/platform/manage-your-usage/compute";
 const PRICING_PAGE = "https://supabase.com/pricing";
 
-function runYarn(
+export function runYarn(
   args: string[],
   options: {
     capture?: boolean;
     display?: string;
+    sensitive?: boolean;
   } = {},
 ): string {
   if (options.display) console.log(`> ${options.display}`);
@@ -49,7 +50,11 @@ function runYarn(
   }
   if (result.status !== 0) {
     const details = options.capture
-      ? [result.stdout, result.stderr].filter(Boolean).join("\n").trim()
+      ? formatCommandFailureDetails(
+          result.stdout,
+          result.stderr,
+          options.sensitive,
+        )
       : "";
     throw new Error(
       `${options.display || `yarn ${args.join(" ")}`} exited with status ${result.status ?? "unknown"}.${details ? `\n${details}` : ""}`,
@@ -59,7 +64,20 @@ function runYarn(
   return typeof result.stdout === "string" ? result.stdout.trim() : "";
 }
 
-function assertSupabaseCli(): void {
+export function formatCommandFailureDetails(
+  stdout: string | null | undefined,
+  stderr: string | null | undefined,
+  sensitive = false,
+): string {
+  // JSON credentials are written to stdout. Supabase CLI diagnostics are
+  // written to stderr, so retain those while suppressing sensitive stdout.
+  return (sensitive ? [stderr] : [stdout, stderr])
+    .filter((value): value is string => Boolean(value))
+    .join("\n")
+    .trim();
+}
+
+export function assertSupabaseCli(): void {
   try {
     runYarn(["exec", "supabase", "--version"], { capture: true });
   } catch {
@@ -130,7 +148,7 @@ function defaultProjectName(): string {
   return "kingstack-app";
 }
 
-async function promptText(
+export async function promptText(
   interface_: Interface,
   question: string,
   defaultValue?: string,
@@ -142,7 +160,7 @@ async function promptText(
   return value;
 }
 
-async function choose<T>(
+export async function choose<T>(
   interface_: Interface,
   question: string,
   choices: readonly Choice<T>[],
@@ -296,10 +314,10 @@ function printNextSteps(): void {
     "1. Link this workspace: yarn exec supabase link --project-ref <project-ref>",
   );
   console.log(
-    "2. Inspect publishable/secret keys: yarn exec supabase projects api-keys --project-ref <project-ref>",
+    "2. Import its credentials: yarn supabase:provision:get-secrets <environment> --project-ref <project-ref>",
   );
   console.log(
-    "3. Add the hosted values to config/<environment>.ts and run yarn env:<environment>.",
+    "3. Complete the remaining values in config/<environment>.ts and run yarn env:<environment>.",
   );
   console.log(
     "4. Confirm an asymmetric Auth signing key is active in the Supabase dashboard.",

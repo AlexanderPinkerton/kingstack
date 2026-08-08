@@ -28,6 +28,16 @@ export const schema = defineSchema({
       sync: false,
       description: "Local development using local services",
     },
+    development: {
+      mode: EnvironmentMode.Hosted,
+      sync: true,
+      description: "Hosted development deployment",
+    },
+    production: {
+      mode: EnvironmentMode.Hosted,
+      sync: true,
+      description: "Hosted production deployment",
+    },
   },
 
   // ============================================================================
@@ -46,12 +56,12 @@ export const schema = defineSchema({
 
     // Application Ports
     NEST_PORT: {
-      required: true,
+      default: "3420",
       description: "NestJS backend port",
       validate: validatePort,
     },
     NEXT_PORT: {
-      required: true,
+      default: "3069",
       description: "Next.js frontend port",
       validate: validatePort,
     },
@@ -132,18 +142,16 @@ export const schema = defineSchema({
       validate: validatePort,
     },
 
-    // Deployment values are required only for hosted environments.
+    // Deployment automation values are optional during runtime configuration.
+    // The secret-sync command validates them when their provider needs them.
     VERCEL_TOKEN: {
-      requiredWhen: ({ mode }) => mode === EnvironmentMode.Hosted,
       description: "Vercel deployment token",
       sensitive: true,
     },
     VERCEL_ORG_ID: {
-      requiredWhen: ({ mode }) => mode === EnvironmentMode.Hosted,
       description: "Vercel organization ID",
     },
     VERCEL_PROJECT_ID: {
-      requiredWhen: ({ mode }) => mode === EnvironmentMode.Hosted,
       description: "Vercel project ID",
     },
 
@@ -288,11 +296,6 @@ export const schema = defineSchema({
         // Server-side database config
         "SUPABASE_DB_POOL_URL",
         "SUPABASE_DB_DIRECT_URL",
-
-        // Deployment
-        "VERCEL_TOKEN",
-        "VERCEL_ORG_ID",
-        "VERCEL_PROJECT_ID",
 
         // AI Providers
         "OPENAI_API_KEY",

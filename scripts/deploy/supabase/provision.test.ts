@@ -5,7 +5,11 @@ import {
   parseCliArgs,
   REGIONS,
 } from "./options.js";
-import { formatProvisioningPlan, parseOrganizations } from "./provision.js";
+import {
+  formatCommandFailureDetails,
+  formatProvisioningPlan,
+  parseOrganizations,
+} from "./provision.js";
 
 describe("Supabase project provisioning CLI", () => {
   it("parses interactive and repeatable provisioning options", () => {
@@ -116,5 +120,13 @@ describe("Supabase project provisioning CLI", () => {
     ]);
     expect(() => parseOrganizations("{}")).toThrow("unexpected");
     expect(() => parseOrganizations("not-json")).toThrow("invalid");
+  });
+
+  it("keeps diagnostics while suppressing sensitive command output", () => {
+    const stdout = '{"api_key":"sb_secret_do-not-print"}';
+    const stderr = "failed to get api keys: invalid timestamp";
+
+    expect(formatCommandFailureDetails(stdout, stderr, true)).toBe(stderr);
+    expect(formatCommandFailureDetails(stdout, stderr)).toContain(stdout);
   });
 });

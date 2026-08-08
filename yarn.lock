@@ -5287,58 +5287,58 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@supabase/cli-darwin-arm64@npm:2.112.0":
-  version: 2.112.0
-  resolution: "@supabase/cli-darwin-arm64@npm:2.112.0"
+"@supabase/cli-darwin-arm64@npm:2.113.0":
+  version: 2.113.0
+  resolution: "@supabase/cli-darwin-arm64@npm:2.113.0"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@supabase/cli-darwin-x64@npm:2.112.0":
-  version: 2.112.0
-  resolution: "@supabase/cli-darwin-x64@npm:2.112.0"
+"@supabase/cli-darwin-x64@npm:2.113.0":
+  version: 2.113.0
+  resolution: "@supabase/cli-darwin-x64@npm:2.113.0"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@supabase/cli-linux-arm64-musl@npm:2.112.0":
-  version: 2.112.0
-  resolution: "@supabase/cli-linux-arm64-musl@npm:2.112.0"
+"@supabase/cli-linux-arm64-musl@npm:2.113.0":
+  version: 2.113.0
+  resolution: "@supabase/cli-linux-arm64-musl@npm:2.113.0"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@supabase/cli-linux-arm64@npm:2.112.0":
-  version: 2.112.0
-  resolution: "@supabase/cli-linux-arm64@npm:2.112.0"
+"@supabase/cli-linux-arm64@npm:2.113.0":
+  version: 2.113.0
+  resolution: "@supabase/cli-linux-arm64@npm:2.113.0"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@supabase/cli-linux-x64-musl@npm:2.112.0":
-  version: 2.112.0
-  resolution: "@supabase/cli-linux-x64-musl@npm:2.112.0"
+"@supabase/cli-linux-x64-musl@npm:2.113.0":
+  version: 2.113.0
+  resolution: "@supabase/cli-linux-x64-musl@npm:2.113.0"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@supabase/cli-linux-x64@npm:2.112.0":
-  version: 2.112.0
-  resolution: "@supabase/cli-linux-x64@npm:2.112.0"
+"@supabase/cli-linux-x64@npm:2.113.0":
+  version: 2.113.0
+  resolution: "@supabase/cli-linux-x64@npm:2.113.0"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@supabase/cli-windows-arm64@npm:2.112.0":
-  version: 2.112.0
-  resolution: "@supabase/cli-windows-arm64@npm:2.112.0"
+"@supabase/cli-windows-arm64@npm:2.113.0":
+  version: 2.113.0
+  resolution: "@supabase/cli-windows-arm64@npm:2.113.0"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@supabase/cli-windows-x64@npm:2.112.0":
-  version: 2.112.0
-  resolution: "@supabase/cli-windows-x64@npm:2.112.0"
+"@supabase/cli-windows-x64@npm:2.113.0":
+  version: 2.113.0
+  resolution: "@supabase/cli-windows-x64@npm:2.113.0"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -11713,7 +11713,7 @@ __metadata:
     eslint: "npm:10.8.0"
     pg: "npm:^8.16.3"
     prettier: "npm:3.9.6"
-    supabase: "npm:2.112.0"
+    supabase: "npm:2.113.0"
     turbo: "npm:2.10.7"
     typescript: "npm:5.9.3"
     vercel: "npm:^49.1.0"
@@ -15021,18 +15021,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"supabase@npm:2.112.0":
-  version: 2.112.0
-  resolution: "supabase@npm:2.112.0"
+"supabase@npm:2.113.0":
+  version: 2.113.0
+  resolution: "supabase@npm:2.113.0"
   dependencies:
-    "@supabase/cli-darwin-arm64": "npm:2.112.0"
-    "@supabase/cli-darwin-x64": "npm:2.112.0"
-    "@supabase/cli-linux-arm64": "npm:2.112.0"
-    "@supabase/cli-linux-arm64-musl": "npm:2.112.0"
-    "@supabase/cli-linux-x64": "npm:2.112.0"
-    "@supabase/cli-linux-x64-musl": "npm:2.112.0"
-    "@supabase/cli-windows-arm64": "npm:2.112.0"
-    "@supabase/cli-windows-x64": "npm:2.112.0"
+    "@supabase/cli-darwin-arm64": "npm:2.113.0"
+    "@supabase/cli-darwin-x64": "npm:2.113.0"
+    "@supabase/cli-linux-arm64": "npm:2.113.0"
+    "@supabase/cli-linux-arm64-musl": "npm:2.113.0"
+    "@supabase/cli-linux-x64": "npm:2.113.0"
+    "@supabase/cli-linux-x64-musl": "npm:2.113.0"
+    "@supabase/cli-windows-arm64": "npm:2.113.0"
+    "@supabase/cli-windows-x64": "npm:2.113.0"
     eciesjs: "npm:^0.5.0"
     jose: "npm:^6.2.4"
   dependenciesMeta:
@@ -15054,7 +15054,7 @@ __metadata:
       optional: true
   bin:
     supabase: dist/supabase.js
-  checksum: 10c0/ec2304252d9be81c84ab098a764f3a0f038f3e5383591300359a4440c4fc801c9fa4e5360d709566cbf6abee03c2e799e0ca5792c1df02065f1e30bd5ebe2aa7
+  checksum: 10c0/126145c026531f48f4ba5211c54970c0960a862362bf97fa07d10969e22dfadecb0d5ecc0a7e5d7c88f2fbb78981be013f9059f66bdfcc8acdadd1878782ffb5
   languageName: node
   linkType: hard
 

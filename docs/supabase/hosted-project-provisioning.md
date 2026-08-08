@@ -88,46 +88,111 @@ For that reason, project creation requires an interactive terminal even when
 `--yes` skips KingStack's final confirmation. `--dry-run` can run
 non-interactively when the project name, organization, and region are supplied.
 
+## Import the project credentials
+
+Project creation deliberately stops before changing local configuration. The
+credential importer is a separate, rerunnable command, so a failed import never
+requires creating another billable project.
+
+Write the five Supabase inputs into an ignored KingStack environment file:
+
+```bash
+yarn supabase:provision:get-secrets development \
+  --project-ref <project-ref>
+```
+
+Omit `--project-ref` to choose from the projects available through the current
+Supabase login. Omit the environment as well to choose `development`,
+`production`, or an explicit terminal printout interactively.
+
+The importer:
+
+- retrieves the project reference, AWS region, and API keys through the pinned
+  Supabase CLI;
+- requires a modern `sb_publishable_...` and `sb_secret_...` key pair, preferring
+  the pair named `default`;
+- asks for the unrecoverable database password in a masked prompt;
+- updates only the five Supabase properties in an existing values file; and
+- refuses to write a values file that Git does not ignore.
+
+If a project has multiple named API key pairs, select one explicitly:
+
+```bash
+yarn supabase:provision:get-secrets development \
+  --project-ref <project-ref> \
+  --api-key-name kingstack
+```
+
+Older projects may expose only legacy `anon` and `service_role` keys. The
+importer deliberately rejects those. Create a publishable and secret pair in
+**Settings → API Keys**, then rerun the command.
+
+Supabase's project listing exposes the AWS region but not the project's exact
+pooler shard. KingStack defaults `SUPABASE_REGION` to `aws-0-<region>`. Compare
+that with the transaction-pooler hostname in the Dashboard's **Connect** dialog
+and override it when necessary:
+
+```bash
+yarn supabase:provision:get-secrets development \
+  --project-ref <project-ref> \
+  --pooler-region aws-1-us-east-2
+```
+
+For non-interactive automation, pass the database password through the process
+environment rather than an argument, and acknowledge the write explicitly:
+
+```bash
+SUPABASE_DB_PASSWORD='<database-password>' \
+  yarn supabase:provision:get-secrets development \
+  --project-ref <project-ref> \
+  --yes
+```
+
+To inspect a complete TypeScript values block instead of writing a file, use
+`--print`. This prints the secret key and database password to the terminal and
+must not be used in CI logs or copied into a tracked file:
+
+```bash
+yarn supabase:provision:get-secrets --print \
+  --project-ref <project-ref>
+```
+
 ## Complete the application handoff
 
-Project creation deliberately stops before changing local configuration or
-deploying a schema. After Supabase returns the project reference:
+After importing credentials:
 
-1. Link the workspace:
+1. Validate the imported runtime configuration. KingStack supplies its standard
+   application ports, and deployment-provider credentials are validated later
+   when they are used:
+
+   ```bash
+   yarn king-config check <environment>
+   ```
+
+2. Link the workspace when using CLI commands that require a linked project:
 
    ```bash
    yarn exec supabase link --project-ref <project-ref>
    ```
 
-2. Inspect the project's API keys and use its `sb_publishable_...` and
-   `sb_secret_...` values. Do not copy the legacy `anon`, `service_role`, or JWT
-   secret values:
-
-   ```bash
-   yarn exec supabase projects api-keys --project-ref <project-ref>
-   ```
-
-3. Create `config/development.ts` or `config/production.ts` from
-   `config/example.ts`, then set the hosted Supabase project reference, region,
-   database password, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY`.
-
-4. In **Authentication → Signing Keys**, confirm the project uses an
+3. In **Authentication → Signing Keys**, confirm the project uses an
    asymmetric signing key. If migrating an older project, deploy KingStack's
    JWKS-capable verifier before rotating the key and follow Supabase's waiting
    period before revoking the legacy key.
 
-5. Generate service environment files and apply Prisma migrations:
+4. Generate service environment files and apply Prisma migrations:
 
    ```bash
+   yarn king-config check development
    yarn env:development
    yarn prisma:deploy
    ```
 
-6. Inspect external secret changes before syncing them:
+5. Inspect external secret changes before syncing them:
 
    ```bash
    yarn deploy:sync-secrets:dry-run
    ```
 
-Keeping these phases separate ensures a provisioning command cannot silently
-rewrite secrets or deploy a database schema.
+Keeping these phases separate ensures project creation cannot silently rewrite
+secrets or deploy a database schema.

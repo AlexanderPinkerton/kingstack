@@ -157,6 +157,19 @@ The publishable and secret API keys do not sign user access tokens. Never add a
 JWT signing secret, secret key, refresh token, or user access token to a
 `NEXT_PUBLIC_*` variable.
 
+After creating a hosted project, import the modern API key pair without copying
+it through application logs:
+
+```bash
+yarn supabase:provision:get-secrets development \
+  --project-ref <project-ref>
+```
+
+The importer rejects legacy `anon` and `service_role` keys and writes the
+secret key only to the ignored `config/<environment>.ts` source of truth. See
+the [hosted provisioning guide](../supabase/hosted-project-provisioning.md) for
+password and pooler-region handling.
+
 ## Next.js Proxy and server-rendered auth
 
 The current `apps/next/src/proxy.ts` adds request IDs to `/api/*`; it does not

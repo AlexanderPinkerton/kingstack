@@ -44,7 +44,7 @@ export const values = defineValues({
   SUPABASE_DB_PASSWORD: "postgres",
 
   // ============================================================================
-  // Optional: Deployment (leave empty if not deploying)
+  // Optional: CI deployment automation (validated when secrets are synced)
   // ============================================================================
   VERCEL_TOKEN: "",
   VERCEL_ORG_ID: "",

@@ -13,8 +13,16 @@ yarn supabase:provision
 ```
 
 Use `--dry-run` with a project name, organization, and region to inspect a
-repeatable plan without changing cloud resources. Project creation is separate
-from configuration and schema deployment. See the
+repeatable plan without changing cloud resources. After creation, import the
+hosted credentials into an ignored environment file:
+
+```bash
+yarn supabase:provision:get-secrets development \
+  --project-ref <project-ref>
+```
+
+Project creation, credential import, and schema deployment remain separate.
+See the
 [hosted Supabase provisioning guide](../supabase/hosted-project-provisioning.md)
 for billing details and the post-provisioning handoff.
 
