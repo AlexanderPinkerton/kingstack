@@ -1,4 +1,5 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { isIP } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -19,7 +20,11 @@ import {
   selectDeploymentTargets,
   type DeploymentTarget,
 } from "./digitalocean.js";
-import { renderRemoteDeployScript, shellQuote } from "./host-scripts.js";
+import {
+  renderRemoteDeployScript,
+  renderTrustedHttpsProbe,
+  shellQuote,
+} from "./host-scripts.js";
 import type { CliOptions } from "./options.js";
 import {
   renderNestDeploymentEnv,
@@ -27,12 +32,16 @@ import {
 } from "./project-config.js";
 import { applyCaddy, rollbackTarget, verifyRemoteHost } from "./remote-host.js";
 
+export interface DeploymentResult {
+  backendHost?: string;
+}
+
 export async function deploy(
   options: CliOptions,
   project: ProjectDeploymentConfig,
   domain: string | undefined,
   tag: string,
-): Promise<void> {
+): Promise<DeploymentResult> {
   assertTool("doctl", ["version"]);
   assertTool("ssh", ["-V"]);
   assertTool("which", ["scp"]);
@@ -52,14 +61,20 @@ export async function deploy(
       `No active droplets match tag ${tag}. Provision one with: yarn deploy:nest provision ${options.environment} --region <region>`,
     );
   }
+  const backendHost = resolveDeploymentHost(options.ipHttps, domain, targets);
 
   log();
   log("KingStack NestJS deployment");
   log(`Environment: ${options.environment}`);
   log(`Targets:     ${targets.map((target) => target.name).join(", ")}`);
   log(
-    `Routing:     ${domain ? `Caddy HTTPS for ${domain}` : `public TCP ${project.port}`}`,
+    `Routing:     ${backendHost ? `Caddy HTTPS for ${backendHost}` : `public TCP ${project.port}`}`,
   );
+  if (backendHost && isIP(backendHost) === 0) {
+    log(
+      `DNS:         ${backendHost} must resolve to ${targets.map(({ ip }) => ip).join(", ")}`,
+    );
+  }
   log(`Mode:        ${describeDeploymentMode(options)}`);
 
   if (options.dryRun) {
@@ -68,7 +83,7 @@ export async function deploy(
       targetIds: targets.map((target) => target.id),
       useTag: options.droplets.length === 0,
       port: project.port,
-      domain,
+      domain: backendHost,
       sshSources: options.sshSources,
       dryRun: true,
     });
@@ -76,7 +91,7 @@ export async function deploy(
     log(
       "Dry run complete; no Docker, database, cloud, or remote changes were made.",
     );
-    return;
+    return { backendHost };
   }
 
   await confirmOrThrow(
@@ -132,7 +147,7 @@ export async function deploy(
     targetIds: targets.map((target) => target.id),
     useTag: options.droplets.length === 0,
     port: project.port,
-    domain,
+    domain: backendHost,
     sshSources: options.sshSources,
     dryRun: false,
   });
@@ -177,7 +192,7 @@ export async function deploy(
             imageReference: targetImage,
             revision,
             port: project.port,
-            domain,
+            domain: backendHost,
           }),
           { label: "validate candidate and switch containers" },
         );
@@ -185,9 +200,14 @@ export async function deploy(
         caddyTouched = applyCaddy(
           target,
           project.appSlug,
-          domain,
+          backendHost,
           project.port,
         );
+        if (backendHost && isIP(backendHost)) {
+          remoteRun(target, renderTrustedHttpsProbe(backendHost), {
+            label: `verify trusted HTTPS for ${backendHost}`,
+          });
+        }
         successful.push({ target, caddyTouched });
         log(`Deployed ${target.name}.`);
       } catch (error) {
@@ -231,6 +251,22 @@ export async function deploy(
   log();
   log(`Deployment complete: ${targets.length} droplet(s) updated.`);
   log(`Logs: ssh root@<ip> 'docker logs ${project.appSlug}-nest --tail 100'`);
+  return { backendHost };
+}
+
+export function resolveDeploymentHost(
+  ipHttps: boolean,
+  configuredHost: string | undefined,
+  targets: readonly DeploymentTarget[],
+): string | undefined {
+  const usesPublicIp =
+    ipHttps || Boolean(configuredHost && isIP(configuredHost));
+  if (usesPublicIp && targets.length !== 1) {
+    throw new Error(
+      `Public-IP HTTPS requires exactly one Droplet; selected ${targets.length}. Use --domain with DNS or choose one exact Droplet.`,
+    );
+  }
+  return ipHttps ? targets[0].ip : configuredHost;
 }
 
 function describeDeploymentMode(options: CliOptions): string {

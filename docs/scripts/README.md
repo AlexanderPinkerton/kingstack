@@ -82,6 +82,7 @@ yarn deploy:nest
 # Explicit automation
 yarn deploy:nest provision production --region nyc3
 yarn deploy:nest deploy production
+yarn deploy:nest deploy production --ip-https --update-config
 
 # Deploy Next.js through Vercel
 yarn vercel
@@ -92,8 +93,9 @@ yarn vercel:config:pull production
 ```
 
 Provisioning and deployment remain separate so an ordinary release cannot
-silently create billable infrastructure. See the
-[deployment guide](../deployment/README.md).
+silently create billable infrastructure. Public-IP HTTPS needs no domain or
+DNS. Successful HTTPS deployments can safely update `NEST_HOST` before syncing
+the computed URL to Vercel. See the [deployment guide](../deployment/README.md).
 
 ## Parallel feature work
 

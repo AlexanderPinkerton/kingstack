@@ -273,6 +273,10 @@ The wizard retrieves current DigitalOcean regions, available sizes, prices,
 SSH keys, and Droplets. Provisioning and deployment can also be run separately.
 Add `--without-database` when the target database is not ready yet.
 
+Trusted HTTPS over the Droplet public IP works without a custom domain or DNS.
+After verification, the wizard can update `NEST_HOST` and prints the Vercel
+sync/redeployment handoff.
+
 Nest deployments apply Prisma production migrations, verify a candidate
 container before cutover, optionally configure Caddy from the hosted Nest URL,
 and restore the previous container when verification fails.

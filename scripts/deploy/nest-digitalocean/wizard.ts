@@ -95,6 +95,7 @@ export async function runNestWizard(
       options = await configureDeploy(interface_, options, tag);
     }
     options = await configureRouting(interface_, options, project);
+    options = await configureBackendConfigUpdate(interface_, options, project);
 
     if (!options.dryRun) {
       options.dryRun =
@@ -483,10 +484,13 @@ async function configureRouting(
   options: CliOptions,
   project: ProjectDeploymentConfig,
 ): Promise<CliOptions> {
-  if (options.domain || options.noDomain) return options;
+  if (options.domain || options.noDomain || options.ipHttps) return options;
   const configuredDomain = resolveDomain(project.backendUrl);
   const custom = Symbol("custom-domain");
-  const choices: Array<Choice<string | undefined | typeof custom>> = [];
+  const publicIp = Symbol("public-ip");
+  const choices: Array<
+    Choice<string | undefined | typeof custom | typeof publicIp>
+  > = [];
   if (configuredDomain) {
     choices.push({
       label: `Caddy HTTPS using configured ${configuredDomain}`,
@@ -495,12 +499,16 @@ async function configureRouting(
   }
   choices.push(
     {
-      label: `Direct public TCP port ${project.port} (no automatic HTTPS)`,
-      value: undefined,
+      label: "Trusted HTTPS using the Droplet public IP (no domain required)",
+      value: publicIp,
     },
     {
-      label: "Enter a different HTTPS hostname",
+      label: "Enter a custom HTTPS hostname",
       value: custom,
+    },
+    {
+      label: `Direct public TCP port ${project.port} (diagnostics; no HTTPS)`,
+      value: undefined,
     },
   );
   const routing = await choose(
@@ -512,11 +520,68 @@ async function configureRouting(
     const domain = validateDomain(
       await promptText(interface_, "NestJS HTTPS hostname"),
     );
-    return { ...options, domain, noDomain: false };
+    return { ...options, domain, noDomain: false, ipHttps: false };
+  }
+  if (routing === publicIp) {
+    return {
+      ...options,
+      domain: undefined,
+      noDomain: false,
+      ipHttps: true,
+    };
   }
   return routing
-    ? { ...options, domain: routing, noDomain: false }
-    : { ...options, domain: undefined, noDomain: true };
+    ? { ...options, domain: routing, noDomain: false, ipHttps: false }
+    : {
+        ...options,
+        domain: undefined,
+        noDomain: true,
+        ipHttps: false,
+      };
+}
+
+async function configureBackendConfigUpdate(
+  interface_: Interface,
+  options: CliOptions,
+  project: ProjectDeploymentConfig,
+): Promise<CliOptions> {
+  const willDeploy =
+    options.command === "deploy" || options.deployAfterProvision;
+  if (!willDeploy) return options;
+
+  if (options.ipHttps) {
+    if (options.updateConfig) return options;
+    const updateConfig = await confirm(
+      interface_,
+      `After deployment, update config/${options.environment}.ts NEST_HOST to the Droplet public IP?`,
+      true,
+    );
+    return { ...options, updateConfig };
+  }
+
+  const domain = resolveDomain(
+    project.backendUrl,
+    options.domain,
+    options.noDomain,
+  );
+  if (!domain) {
+    log();
+    log(
+      "Direct HTTP is useful for diagnostics, but an HTTPS Next/Vercel frontend cannot use it directly.",
+    );
+    log("NEST_HOST will not be updated without an HTTPS hostname.");
+    return options;
+  }
+
+  if (domain === resolveDomain(project.backendUrl) || options.updateConfig) {
+    return options;
+  }
+  const updateConfig = await confirm(
+    interface_,
+    `After deployment, update config/${options.environment}.ts NEST_HOST to ${domain}?`,
+    true,
+  );
+  return { ...options, updateConfig };
 }
 
 function hasExplicitDeploymentMode(options: CliOptions): boolean {

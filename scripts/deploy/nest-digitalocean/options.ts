@@ -20,6 +20,8 @@ export interface CliOptions {
   deployAfterProvision: boolean;
   skipMigrations: boolean;
   withoutDatabase: boolean;
+  updateConfig: boolean;
+  ipHttps: boolean;
 }
 
 const VALUE_FLAGS = new Set([
@@ -42,6 +44,8 @@ const BOOLEAN_FLAGS = new Set([
   "--deploy",
   "--skip-migrations",
   "--without-database",
+  "--update-config",
+  "--ip-https",
   "--help",
   "-h",
 ]);
@@ -60,6 +64,8 @@ export function parseCliArgs(args: string[]): CliOptions {
     deployAfterProvision: false,
     skipMigrations: false,
     withoutDatabase: false,
+    updateConfig: false,
+    ipHttps: false,
   };
   const positionals: string[] = [];
 
@@ -127,6 +133,12 @@ export function parseCliArgs(args: string[]): CliOptions {
         case "--without-database":
           options.withoutDatabase = true;
           break;
+        case "--update-config":
+          options.updateConfig = true;
+          break;
+        case "--ip-https":
+          options.ipHttps = true;
+          break;
         case "--help":
         case "-h":
           options.help = true;
@@ -156,6 +168,11 @@ export function parseCliArgs(args: string[]): CliOptions {
   }
   if (options.domain && options.noDomain) {
     throw new Error("Use either --domain or --no-domain, not both.");
+  }
+  if (options.ipHttps && (options.domain || options.noDomain)) {
+    throw new Error(
+      "Use only one routing mode: --ip-https, --domain, or --no-domain.",
+    );
   }
   if (options.tag && options.droplets.length > 0) {
     throw new Error("Use either --tag or --droplet, not both.");
@@ -188,6 +205,16 @@ export function parseCliArgs(args: string[]): CliOptions {
   }
   if (options.envOnly && options.skipMigrations) {
     throw new Error("--env-only already skips migrations.");
+  }
+  if (options.updateConfig && options.noDomain) {
+    throw new Error("--update-config requires Caddy HTTPS, not --no-domain.");
+  }
+  if (
+    options.command === "provision" &&
+    options.updateConfig &&
+    !options.deployAfterProvision
+  ) {
+    throw new Error("--update-config requires --deploy when provisioning.");
   }
 
   return options;
@@ -319,8 +346,10 @@ Deploy options:
   --env-only            Upload configuration without building or migrating
   --skip-migrations     Build and deploy without running Prisma migrations
   --without-database    Skip migrations and the Prisma startup connection
+  --update-config       Update NEST_HOST after a successful HTTPS deployment
 
 Shared options:
+  --ip-https            Trusted HTTPS using one Droplet's public IPv4 address
   --domain <hostname>   Configure Caddy for this hostname
   --no-domain           Expose the configured Nest port without Caddy
   --dry-run             Resolve and display the plan without making changes

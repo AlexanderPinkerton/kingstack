@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { resolveDeploymentHost } from "./deploy.js";
 import {
   buildFirewallRules,
   parseRegions,
@@ -13,6 +14,7 @@ import {
   renderCaddyInstallScript,
   renderCloudInit,
   renderRemoteDeployScript,
+  renderTrustedHttpsProbe,
 } from "./host-scripts.js";
 import {
   getDefaultTag,
@@ -23,6 +25,7 @@ import {
   validateRequiredOptions,
 } from "./options.js";
 import {
+  getBackendHostConfigValues,
   renderEnvFile,
   renderNestDeploymentEnv,
   validateHostedNestConfig,
@@ -59,6 +62,8 @@ describe("DigitalOcean Nest deployment CLI", () => {
       deployAfterProvision: true,
       skipMigrations: true,
       withoutDatabase: true,
+      updateConfig: false,
+      ipHttps: false,
       size: "s-1vcpu-1gb",
     });
 
@@ -80,6 +85,42 @@ describe("DigitalOcean Nest deployment CLI", () => {
       envOnly: true,
       yes: true,
     });
+  });
+
+  it("parses and validates the post-deployment config handoff", () => {
+    expect(
+      parseCliArgs([
+        "deploy",
+        "production",
+        "--domain",
+        "API.Example.com",
+        "--update-config",
+      ]),
+    ).toMatchObject({
+      domain: "API.Example.com",
+      updateConfig: true,
+    });
+    expect(getBackendHostConfigValues("API.Example.com")).toEqual({
+      NEST_HOST: "api.example.com",
+    });
+    expect(
+      parseCliArgs(["deploy", "production", "--ip-https", "--update-config"]),
+    ).toMatchObject({ ipHttps: true, updateConfig: true });
+    expect(getBackendHostConfigValues("104.131.195.113")).toEqual({
+      NEST_HOST: "104.131.195.113",
+    });
+    expect(() =>
+      parseCliArgs(["deploy", "production", "--no-domain", "--update-config"]),
+    ).toThrow("requires Caddy HTTPS");
+    expect(() =>
+      parseCliArgs([
+        "deploy",
+        "production",
+        "--domain",
+        "api.example.com",
+        "--ip-https",
+      ]),
+    ).toThrow("only one routing mode");
   });
 
   it("rejects ambiguous or incomplete commands", () => {
@@ -315,6 +356,31 @@ describe("DigitalOcean Nest deployment CLI", () => {
     );
   });
 
+  it("resolves one selected Droplet as the public-IP HTTPS host", () => {
+    const targets = [{ id: 1, name: "api", ip: "104.131.195.113" }];
+    expect(resolveDeploymentHost(true, undefined, targets)).toBe(
+      "104.131.195.113",
+    );
+    expect(resolveDeploymentHost(false, "api.example.com", targets)).toBe(
+      "api.example.com",
+    );
+    expect(resolveDeploymentHost(false, "104.131.195.113", targets)).toBe(
+      "104.131.195.113",
+    );
+    expect(() =>
+      resolveDeploymentHost(true, undefined, [
+        ...targets,
+        { id: 2, name: "api-2", ip: "192.0.2.2" },
+      ]),
+    ).toThrow("requires exactly one Droplet");
+    expect(() =>
+      resolveDeploymentHost(false, "104.131.195.113", [
+        ...targets,
+        { id: 2, name: "api-2", ip: "192.0.2.2" },
+      ]),
+    ).toThrow("requires exactly one Droplet");
+  });
+
   it("renders reproducible host bootstrap configuration", () => {
     const bootstrap = renderBootstrapScript("my-app");
     expect(bootstrap).toContain("download.docker.com/linux/ubuntu");
@@ -348,13 +414,17 @@ describe("DigitalOcean Nest deployment CLI", () => {
   });
 
   it("renders isolated, validated Caddy configuration", () => {
-    expect(renderCaddyFragment("api.example.com", 3099)).toContain(
-      "reverse_proxy 127.0.0.1:3099",
-    );
-    const script = renderCaddyApplyScript(
-      "my-app",
-      renderCaddyFragment("api.example.com", 3099),
-    );
+    const domainFragment = renderCaddyFragment("api.example.com", 3099);
+    expect(domainFragment).toContain("reverse_proxy 127.0.0.1:3099");
+    expect(domainFragment).not.toContain("profile shortlived");
+
+    const ipFragment = renderCaddyFragment("104.131.195.113", 3099);
+    expect(ipFragment).toContain("profile shortlived");
+    expect(ipFragment).toContain("acme-v02.api.letsencrypt.org");
+    const probe = renderTrustedHttpsProbe("104.131.195.113");
+    expect(probe).toContain("https://104.131.195.113/");
+    expect(probe).not.toContain("--insecure");
+    const script = renderCaddyApplyScript("my-app", domainFragment);
     expect(script).toContain("/etc/caddy/conf.d/my-app.caddy");
     expect(script).toContain("caddy validate");
     expect(script).toContain("caddy reload");

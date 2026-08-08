@@ -40,6 +40,13 @@ SSH keys/firewall access, existing Droplet targets, routing, deployment mode,
 and dry-run versus execution. It then hands the result to the same deployment
 planner and safety confirmation used by the explicit commands.
 
+The default hosted route is trusted HTTPS over a single Droplet's public IPv4
+address, so no domain or DNS setup is required. Caddy obtains and renews a
+short-lived public certificate automatically. After the HTTPS endpoint passes
+verification, the wizard offers to update only `NEST_HOST` in the selected
+ignored `config/<environment>.ts` file. Existing Supabase, Vercel, and
+application values are preserved.
+
 The Nest deployment tool also keeps two explicit operations for repeatable
 automation and CI:
 
@@ -101,13 +108,30 @@ When `NEXT_PUBLIC_NEST_BACKEND_URL` resolves to a non-local HTTPS URL, its
 hostname becomes the default Caddy domain. Override that behavior explicitly:
 
 ```bash
+yarn deploy:nest deploy production --ip-https
 yarn deploy:nest deploy production --domain api.example.com
 yarn deploy:nest deploy production --no-domain
 ```
 
+`--ip-https` requires exactly one selected Droplet. It discovers that
+Droplet's public IPv4 address, opens ports 80/443, requests a publicly trusted
+short-lived IP certificate from Let's Encrypt, and verifies the resulting
+HTTPS endpoint without disabling certificate checks.
+
 `--domain` binds Nest to loopback and routes ports 80/443 through Caddy.
 `--no-domain` publishes the configured Nest port and opens only that app port
-in the project-owned DigitalOcean Cloud Firewall.
+in the project-owned DigitalOcean Cloud Firewall. Direct HTTP is useful for
+diagnostics, but it cannot be the browser-facing backend for a Vercel frontend
+served over HTTPS.
+
+For explicit automation, update the KingStack environment only after a
+successful HTTPS deployment:
+
+```bash
+yarn deploy:nest deploy production \
+  --ip-https \
+  --update-config
+```
 
 ### Provision a droplet
 
@@ -222,11 +246,26 @@ remote host:
 yarn deploy:nest deploy production --dry-run
 ```
 
-### DNS and troubleshooting
+### HTTPS and troubleshooting
 
-The script does not create DNS records. Before expecting HTTPS to work, point
-the chosen hostname at the Droplet IPs. Caddy retries certificate issuance when
-DNS becomes available.
+Public-IP HTTPS needs no DNS record or custom domain. The Droplet's public IP
+becomes the hosted `NEST_HOST`, producing a URL such as
+`https://104.131.195.113`. Public IP certificates are intentionally short-lived;
+Caddy manages their frequent renewal.
+
+After initially deploying with a direct port, rerun the wizard against the
+existing host. Choose **Configuration only**, then
+**Trusted HTTPS using the Droplet public IP**, and accept the `NEST_HOST`
+update. The wizard reuses the current image, enables Caddy, verifies the trusted
+endpoint, and then prints the exact Vercel sync and redeployment commands:
+
+```bash
+yarn king-config sync --env production --target vercel
+yarn vercel:prod
+```
+
+The script does not create DNS records when a custom domain is selected. Point
+that hostname at the Droplet before expecting custom-domain HTTPS to work.
 
 ```bash
 # Application logs

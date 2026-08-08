@@ -51,7 +51,7 @@ export const schema = defineSchema({
     },
     NEST_HOST: {
       default: "localhost",
-      description: "NestJS backend hostname",
+      description: "NestJS backend hostname or public IP address",
     },
 
     // Application Ports

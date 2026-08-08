@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import { parsePort, sanitizeSlug, validateDomain } from "./options.js";
 
 export function shellQuote(value: string): string {
@@ -5,7 +6,32 @@ export function shellQuote(value: string): string {
 }
 
 export function renderCaddyFragment(domain: string, port: number): string {
-  return `${validateDomain(domain)} {\n    reverse_proxy 127.0.0.1:${parsePort(port)}\n}\n`;
+  const host = validateDomain(domain);
+  const publicIpTls = isIP(host)
+    ? `    tls {
+        issuer acme https://acme-v02.api.letsencrypt.org/directory {
+            profile shortlived
+        }
+    }
+`
+    : "";
+  return `${host} {\n${publicIpTls}    reverse_proxy 127.0.0.1:${parsePort(port)}\n}\n`;
+}
+
+export function renderTrustedHttpsProbe(hostValue: string): string {
+  const host = validateDomain(hostValue);
+  if (isIP(host) === 0) {
+    throw new Error(`Trusted IP HTTPS probe requires an IP address: ${host}`);
+  }
+  const url = shellQuote(`https://${host}/`);
+  return `for attempt in $(seq 1 30); do
+  if curl --fail --silent --max-time 2 ${url} >/dev/null; then
+    exit 0
+  fi
+  sleep 2
+done
+echo 'Timed out waiting for a publicly trusted IP certificate.' >&2
+exit 1`;
 }
 
 export function renderCloudInit(appSlug: string): string {
