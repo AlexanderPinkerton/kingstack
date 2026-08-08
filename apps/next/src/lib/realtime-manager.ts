@@ -62,6 +62,13 @@ interface ThrottleState {
   pending: PendingPublication | null;
 }
 
+interface RegistrationResponse {
+  status?: string;
+  message?: string;
+}
+
+const REGISTRATION_TIMEOUT_MS = 5_000;
+
 /**
  * Owns the application Socket.IO connection and channel subscriptions.
  *
@@ -270,18 +277,54 @@ export class RealtimeManager implements RealtimeTransport {
     this.setConnectionState("connecting");
 
     const socket = this.socketFactory();
+    let registrationAttempt = 0;
     this.socket = socket;
     this.attachSubscriptions(socket);
 
     socket.on("connect", () => {
       if (this.socket !== socket || this.disposed) return;
+      const attempt = ++registrationAttempt;
 
-      this.setConnectionState("connected");
-      socket.emit("register", {
-        token: this.currentToken,
-        browserId: this.browserId,
-      });
-      this.restoreSessionState(socket);
+      socket.timeout(REGISTRATION_TIMEOUT_MS).emit(
+        "register",
+        {
+          token: this.currentToken,
+          browserId: this.browserId,
+        },
+        (error: Error | null, response: RegistrationResponse | undefined) => {
+          if (
+            this.socket !== socket ||
+            this.disposed ||
+            attempt !== registrationAttempt ||
+            !socket.connected
+          ) {
+            return;
+          }
+
+          if (error) {
+            this.failRegistration(
+              socket,
+              new Error(`Realtime registration failed: ${error.message}`, {
+                cause: error,
+              }),
+            );
+            return;
+          }
+
+          if (response?.status !== "ok") {
+            this.failRegistration(
+              socket,
+              new Error(
+                response?.message || "Realtime registration was rejected",
+              ),
+            );
+            return;
+          }
+
+          this.restoreSessionState(socket);
+          this.setConnectionState("connected");
+        },
+      );
     });
 
     socket.on("disconnect", (reason) => {
@@ -364,6 +407,12 @@ export class RealtimeManager implements RealtimeTransport {
       if (state.handle !== null) this.cancelFlush(state.handle);
     });
     this.throttles.clear();
+  }
+
+  private failRegistration(socket: Socket, error: Error): void {
+    socket.disconnect();
+    if (this.socket !== socket || this.disposed) return;
+    this.setConnectionState("error", error);
   }
 
   private teardownSocket(): void {
