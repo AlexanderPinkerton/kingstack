@@ -329,11 +329,16 @@ Provision the first tagged Docker host, then deploy the selected hosted
 configuration:
 
 ```bash
+yarn deploy:nest
+
+# Or use the explicit automation interface:
 yarn deploy:nest provision production --region nyc3 --deploy
 ```
 
-Provisioning and deployment can also be run separately for later fleet work.
-Use `--without-database` when the target database is not ready yet.
+The wizard retrieves current DigitalOcean regions, available sizes, prices,
+SSH keys, and Droplets. Provisioning and deployment can also be run separately
+for later fleet work. Use `--without-database` when the target database is not
+ready yet.
 
 The deploy command builds locally, applies Prisma production migrations,
 streams the image over SSH, verifies a candidate container, and optionally

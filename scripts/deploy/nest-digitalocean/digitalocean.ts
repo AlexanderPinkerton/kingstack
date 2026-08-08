@@ -7,6 +7,10 @@ export interface DigitalOceanDroplet {
   name: string;
   status: string;
   tags?: string[];
+  region?: {
+    slug?: string;
+    name?: string;
+  };
   networks?: {
     v4?: Array<{
       ip_address?: string;
@@ -21,7 +25,26 @@ export interface DeploymentTarget {
   ip: string;
 }
 
-interface DigitalOceanSshKey {
+export interface DigitalOceanRegion {
+  slug: string;
+  name: string;
+  available?: boolean;
+  sizes?: string[];
+}
+
+export interface DigitalOceanSize {
+  slug: string;
+  memory: number;
+  vcpus: number;
+  disk: number;
+  price_monthly: number;
+  price_hourly: number;
+  regions?: string[];
+  available?: boolean;
+  description?: string;
+}
+
+export interface DigitalOceanSshKey {
   id: number;
   name: string;
   fingerprint: string;
@@ -57,14 +80,117 @@ export function listDroplets(): DigitalOceanDroplet[] {
   );
 }
 
-export function getSshKey(requested?: string): string {
-  const keys = parseJson<DigitalOceanSshKey[]>(
+export function listRegions(): DigitalOceanRegion[] {
+  return parseRegions(
+    runCommand("doctl", ["compute", "region", "list", "--output", "json"], {
+      capture: true,
+      display: "doctl compute region list --output json",
+    }),
+  );
+}
+
+export function listSizes(): DigitalOceanSize[] {
+  return parseSizes(
+    runCommand("doctl", ["compute", "size", "list", "--output", "json"], {
+      capture: true,
+      display: "doctl compute size list --output json",
+    }),
+  );
+}
+
+export function listSshKeys(): DigitalOceanSshKey[] {
+  return parseSshKeys(
     runCommand("doctl", ["compute", "ssh-key", "list", "--output", "json"], {
       capture: true,
       display: "doctl compute ssh-key list --output json",
     }),
-    "DigitalOcean SSH keys",
   );
+}
+
+export function parseRegions(value: string): DigitalOceanRegion[] {
+  const regions = parseJson<unknown>(value, "DigitalOcean regions");
+  if (!Array.isArray(regions)) {
+    throw new Error("DigitalOcean returned an unexpected region response.");
+  }
+  return regions.flatMap((candidate): DigitalOceanRegion[] => {
+    if (!isRecord(candidate)) return [];
+    const slug = stringValue(candidate.slug);
+    const name = stringValue(candidate.name);
+    if (!slug || !name) return [];
+    return [
+      {
+        slug,
+        name,
+        available:
+          typeof candidate.available === "boolean"
+            ? candidate.available
+            : undefined,
+        sizes: stringArray(candidate.sizes),
+      },
+    ];
+  });
+}
+
+export function parseSizes(value: string): DigitalOceanSize[] {
+  const sizes = parseJson<unknown>(value, "DigitalOcean sizes");
+  if (!Array.isArray(sizes)) {
+    throw new Error("DigitalOcean returned an unexpected size response.");
+  }
+  return sizes.flatMap((candidate): DigitalOceanSize[] => {
+    if (!isRecord(candidate)) return [];
+    const slug = stringValue(candidate.slug);
+    const memory = numberValue(candidate.memory);
+    const vcpus = numberValue(candidate.vcpus);
+    const disk = numberValue(candidate.disk);
+    const priceMonthly = numberValue(candidate.price_monthly);
+    const priceHourly = numberValue(candidate.price_hourly);
+    if (
+      !slug ||
+      memory === undefined ||
+      vcpus === undefined ||
+      disk === undefined ||
+      priceMonthly === undefined ||
+      priceHourly === undefined
+    ) {
+      return [];
+    }
+    return [
+      {
+        slug,
+        memory,
+        vcpus,
+        disk,
+        price_monthly: priceMonthly,
+        price_hourly: priceHourly,
+        regions: stringArray(candidate.regions),
+        available:
+          typeof candidate.available === "boolean"
+            ? candidate.available
+            : undefined,
+        description: stringValue(candidate.description),
+      },
+    ];
+  });
+}
+
+export function parseSshKeys(value: string): DigitalOceanSshKey[] {
+  const keys = parseJson<unknown>(value, "DigitalOcean SSH keys");
+  if (!Array.isArray(keys)) {
+    throw new Error("DigitalOcean returned an unexpected SSH key response.");
+  }
+  return keys.flatMap((candidate): DigitalOceanSshKey[] => {
+    if (!isRecord(candidate)) return [];
+    const id = numberValue(candidate.id);
+    const name = stringValue(candidate.name);
+    const fingerprint = stringValue(candidate.fingerprint);
+    return id !== undefined && name && fingerprint
+      ? [{ id, name, fingerprint }]
+      : [];
+  });
+}
+
+export function getSshKey(requested?: string): string {
+  const keys = listSshKeys();
 
   if (keys.length === 0) {
     throw new Error(
@@ -165,7 +291,7 @@ export function buildFirewallRules(
   return { inbound: inbound.join(" "), outbound: outbound.join(" ") };
 }
 
-function validateCidr(value: string): void {
+export function validateCidr(value: string): void {
   const separator = value.lastIndexOf("/");
   const address = separator >= 0 ? value.slice(0, separator) : "";
   const prefix = separator >= 0 ? Number(value.slice(separator + 1)) : NaN;
@@ -174,6 +300,27 @@ function validateCidr(value: string): void {
   if (!Number.isInteger(prefix) || prefix < 0 || prefix > maxPrefix) {
     throw new Error(`Invalid SSH source CIDR: ${value}`);
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value ? value : undefined;
+}
+
+function numberValue(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
+function stringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((candidate): candidate is string =>
+    Boolean(typeof candidate === "string" && candidate),
+  );
 }
 
 export function reconcileFirewall(options: {

@@ -294,8 +294,15 @@ export function formatHelp(): string {
 Deploy the KingStack NestJS Docker image to DigitalOcean droplets.
 
 Usage:
+  yarn deploy:nest
   yarn deploy:nest provision <environment> --region <region> [options]
   yarn deploy:nest deploy <environment> [options]
+
+Interactive wizard:
+  Run without arguments to choose provision/deploy, environment, live
+  DigitalOcean regions and prices, targets, routing, and deployment mode.
+  In an interactive terminal, provision <environment> without --region also
+  opens the wizard. Explicit arguments remain available for automation.
 
 Provision options:
   --region <slug>       Required DigitalOcean region, for example nyc3

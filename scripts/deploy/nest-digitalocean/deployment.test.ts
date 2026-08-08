@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { buildFirewallRules, selectDeploymentTargets } from "./digitalocean.js";
+import {
+  buildFirewallRules,
+  parseRegions,
+  parseSizes,
+  parseSshKeys,
+  selectDeploymentTargets,
+} from "./digitalocean.js";
 import {
   renderBootstrapScript,
   renderCaddyApplyScript,
@@ -21,6 +27,13 @@ import {
   renderNestDeploymentEnv,
   validateHostedNestConfig,
 } from "./project-config.js";
+import {
+  applyDeploymentMode,
+  availableRegions,
+  availableSizes,
+  parseNumberSelection,
+  suggestedSizes,
+} from "./wizard.js";
 
 describe("DigitalOcean Nest deployment CLI", () => {
   it("parses provision and deploy options", () => {
@@ -189,6 +202,99 @@ describe("DigitalOcean Nest deployment CLI", () => {
     expect(() =>
       selectDeploymentTargets(droplets, "unused", ["missing"]),
     ).toThrow("Droplet(s) not found");
+  });
+
+  it("parses and filters live DigitalOcean wizard metadata", () => {
+    const regions = availableRegions(
+      parseRegions(
+        JSON.stringify([
+          {
+            slug: "nyc3",
+            name: "New York 3",
+            available: true,
+            sizes: ["s-1vcpu-1gb", "s-2vcpu-2gb"],
+          },
+          {
+            slug: "sfo1",
+            name: "San Francisco 1",
+            sizes: [],
+          },
+        ]),
+      ),
+    );
+    const sizes = parseSizes(
+      JSON.stringify([
+        {
+          slug: "s-2vcpu-2gb",
+          memory: 2048,
+          vcpus: 2,
+          disk: 60,
+          price_monthly: 18,
+          price_hourly: 0.02679,
+          regions: ["nyc3"],
+          available: true,
+          description: "Basic",
+        },
+        {
+          slug: "s-1vcpu-1gb",
+          memory: 1024,
+          vcpus: 1,
+          disk: 25,
+          price_monthly: 6,
+          price_hourly: 0.00893,
+          regions: ["nyc3"],
+          available: true,
+          description: "Basic",
+        },
+        {
+          slug: "unavailable",
+          memory: 1024,
+          vcpus: 1,
+          disk: 25,
+          price_monthly: 5,
+          price_hourly: 0.007,
+          regions: ["ams3"],
+          available: true,
+        },
+      ]),
+    );
+
+    expect(regions.map(({ slug }) => slug)).toEqual(["nyc3"]);
+    expect(availableSizes(regions[0], sizes).map(({ slug }) => slug)).toEqual([
+      "s-1vcpu-1gb",
+      "s-2vcpu-2gb",
+    ]);
+    expect(suggestedSizes(sizes).map(({ slug }) => slug)).toEqual([
+      "s-1vcpu-1gb",
+      "s-2vcpu-2gb",
+    ]);
+    expect(
+      parseSshKeys(
+        JSON.stringify([{ id: 42, name: "Laptop", fingerprint: "aa:bb:cc" }]),
+      ),
+    ).toEqual([{ id: 42, name: "Laptop", fingerprint: "aa:bb:cc" }]);
+  });
+
+  it("parses multi-Droplet choices and maps wizard deployment modes", () => {
+    expect(parseNumberSelection("3, 1, 3", 3)).toEqual([2, 0]);
+    expect(() => parseNumberSelection("4", 3)).toThrow("numbers from 1 to 3");
+
+    const base = parseCliArgs(["deploy", "production"]);
+    expect(applyDeploymentMode(base, "full")).toMatchObject({
+      envOnly: false,
+      skipMigrations: false,
+      withoutDatabase: false,
+    });
+    expect(applyDeploymentMode(base, "env-only")).toMatchObject({
+      envOnly: true,
+      skipMigrations: false,
+      withoutDatabase: false,
+    });
+    expect(applyDeploymentMode(base, "without-database")).toMatchObject({
+      envOnly: false,
+      skipMigrations: false,
+      withoutDatabase: true,
+    });
   });
 
   it("builds domain and raw-port firewall policies", () => {

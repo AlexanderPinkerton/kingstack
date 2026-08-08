@@ -209,6 +209,7 @@ describe("generated project boundary", () => {
       "project-config.ts",
       "provision.ts",
       "remote-host.ts",
+      "wizard.ts",
     ]);
     expect(
       readdirSync(join(generatedRoot, "scripts", "deploy", "supabase")).sort(),

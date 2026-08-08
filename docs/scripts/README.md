@@ -76,7 +76,10 @@ yarn deploy:sync-secrets:dry-run
 yarn deploy:sync-secrets:dev
 yarn deploy:sync-secrets:prod
 
-# Provision or deploy NestJS infrastructure
+# Guided provision or deployment
+yarn deploy:nest
+
+# Explicit automation
 yarn deploy:nest provision production --region nyc3
 yarn deploy:nest deploy production
 

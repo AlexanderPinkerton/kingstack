@@ -12,18 +12,29 @@ import {
 } from "./nest-digitalocean/options.js";
 import { loadProjectConfig } from "./nest-digitalocean/project-config.js";
 import { provision } from "./nest-digitalocean/provision.js";
+import { runNestWizard } from "./nest-digitalocean/wizard.js";
 
 async function main(): Promise<void> {
-  const options = parseCliArgs(process.argv.slice(2));
+  let options = parseCliArgs(process.argv.slice(2));
   if (options.help) {
     log(formatHelp());
     return;
+  }
+  let project;
+  const needsWizard =
+    !options.command ||
+    !options.environment ||
+    (options.command === "provision" && !options.region);
+  if (needsWizard && process.stdin.isTTY && process.stdout.isTTY) {
+    const result = await runNestWizard(options);
+    options = result.options;
+    project = result.project;
   }
   validateRequiredOptions(options);
   const environment = options.environment;
   if (!environment || !options.command) return;
 
-  const project = await loadProjectConfig(environment);
+  project ||= await loadProjectConfig(environment);
   const tag = sanitizeSlug(
     options.tag || getDefaultTag(project.appSlug, environment),
     63,

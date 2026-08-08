@@ -28,7 +28,20 @@ for billing details and the post-provisioning handoff.
 
 ## NestJS on DigitalOcean
 
-The Nest deployment tool has two explicit operations:
+For an interactive first deployment or routine release, start the wizard:
+
+```bash
+yarn deploy:nest
+```
+
+It guides you through provision versus deploy, hosted environment, live
+DigitalOcean regions, region-compatible sizes with current provider prices,
+SSH keys/firewall access, existing Droplet targets, routing, deployment mode,
+and dry-run versus execution. It then hands the result to the same deployment
+planner and safety confirmation used by the explicit commands.
+
+The Nest deployment tool also keeps two explicit operations for repeatable
+automation and CI:
 
 ```bash
 # First-time infrastructure
@@ -40,6 +53,13 @@ yarn deploy:nest deploy production
 
 Provisioning and deployment are separate so an ordinary release can never
 silently create billable infrastructure.
+
+In an interactive terminal, this shorter command also opens the provisioning
+wizard with the command and environment already selected:
+
+```bash
+yarn deploy:nest provision production
+```
 
 For a first deployment, run both phases with one confirmation:
 
