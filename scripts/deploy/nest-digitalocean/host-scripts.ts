@@ -119,6 +119,7 @@ export function renderRemoteDeployScript(options: {
   revision: string;
   port: number;
   domain?: string;
+  preservePortBinding?: boolean;
 }): string {
   const appSlug = sanitizeSlug(options.appSlug);
   const port = parsePort(options.port);
@@ -126,9 +127,13 @@ export function renderRemoteDeployScript(options: {
   const candidate = `${current}-candidate`;
   const previous = `${current}-previous`;
   const appDir = `/opt/kingstack/${appSlug}`;
-  const publish = options.domain
+  const configuredPublish = options.domain
     ? `127.0.0.1:${port}:${port}`
     : `0.0.0.0:${port}:${port}`;
+  const publishSetup = options.preservePortBinding
+    ? `${renderExistingDeploymentProbe(appSlug, port)}
+publish="$publish:${port}"`
+    : `publish=${shellQuote(configuredPublish)}`;
   const probe = shellQuote(
     `const http=require("node:http");const port=Number(process.env.PORT||${port});const request=http.get({host:"127.0.0.1",port,path:"/"},response=>{response.resume();process.exit(0)});request.setTimeout(1000,()=>{request.destroy();process.exit(1)});request.on("error",()=>process.exit(1));`,
   );
@@ -143,6 +148,7 @@ image=${shellQuote(options.imageReference)}
 revision=${shellQuote(options.revision)}
 staged_env=${shellQuote(`/tmp/${appSlug}.env.next`)}
 active_env="$app_dir/.env"
+${publishSetup}
 
 wait_ready() {
   local container="$1"
@@ -204,7 +210,7 @@ if ! docker run -d --restart=unless-stopped \
   --env-file "$active_env" \
   --label com.kingstack.app=${shellQuote(appSlug)} \
   --label com.kingstack.revision="$revision" \
-  -p ${shellQuote(publish)} \
+  -p "$publish" \
   "$image" >/dev/null; then
   restore_previous
   exit 1
@@ -220,6 +226,24 @@ if [ -n "$old_previous_image" ]; then
   docker image rm "$old_previous_image" >/dev/null 2>&1 || true
 fi
 `;
+}
+
+export function renderExistingDeploymentProbe(
+  appSlugValue: string,
+  portValue: number,
+): string {
+  const current = `${sanitizeSlug(appSlugValue)}-nest`;
+  const port = parsePort(portValue);
+  return `current=${shellQuote(current)}
+if ! docker inspect "$current" >/dev/null 2>&1; then
+  echo "Application-only deployment requires an existing $current container. Use host reconfiguration for a first deployment." >&2
+  exit 1
+fi
+publish="$(docker inspect --format '{{with (index .HostConfig.PortBindings "${port}/tcp")}}{{with (index . 0)}}{{if .HostIp}}{{.HostIp}}{{else}}0.0.0.0{{end}}:{{.HostPort}}{{end}}{{end}}' "$current")"
+if [ -z "$publish" ]; then
+  echo "Could not determine the existing ${port}/tcp port binding for $current; refusing to change its routing." >&2
+  exit 1
+fi`;
 }
 
 export function renderRemoteRollbackScript(appSlugValue: string): string {

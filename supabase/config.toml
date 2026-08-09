@@ -1,8 +1,8 @@
-project_id = "kingstack-local"
+project_id = "ciyhemuisiiqhktuclyo"
 
 [api]
 enabled = true
-port = 10003
+port = 54321
 schemas = [ "public", "graphql_public" ]
 extra_search_path = [ "public", "extensions" ]
 max_rows = 1000
@@ -11,13 +11,13 @@ max_rows = 1000
   enabled = false
 
 [db]
-port = 10004
-shadow_port = 10002
+port = 54322
+shadow_port = 54320
 major_version = 17
 
   [db.pooler]
   enabled = false
-  port = 10004
+  port = 54322
   pool_mode = "transaction"
   default_pool_size = 20
   max_client_conn = 100
@@ -40,12 +40,12 @@ enabled = true
 
 [studio]
 enabled = true
-port = 10005
+port = 54324
 api_url = "http://127.0.0.1"
 
 [inbucket]
 enabled = true
-port = 10006
+port = 54326
 
 [storage]
 enabled = true
@@ -53,7 +53,7 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "http://localhost:10000"
+site_url = "https://kingstack-prod.vercel.app"
 additional_redirect_urls = [ "https://127.0.0.1:3000" ]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
@@ -134,12 +134,12 @@ enabled = false
 [edge_runtime]
 enabled = false
 policy = "per_worker"
-inspector_port = 10008
+inspector_port = 54327
 deno_version = 2
 
 [analytics]
 enabled = true
-port = 10007
+port = 54325
 backend = "postgres"
 
 [experimental]

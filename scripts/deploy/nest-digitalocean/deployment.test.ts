@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { resolveDeploymentHost } from "./deploy.js";
 import {
   buildFirewallRules,
@@ -13,6 +14,7 @@ import {
   renderCaddyFragment,
   renderCaddyInstallScript,
   renderCloudInit,
+  renderExistingDeploymentProbe,
   renderRemoteDeployScript,
   renderTrustedHttpsProbe,
 } from "./host-scripts.js";
@@ -32,6 +34,7 @@ import {
 } from "./project-config.js";
 import {
   applyDeploymentMode,
+  applyExistingHostScope,
   availableRegions,
   availableSizes,
   parseNumberSelection,
@@ -92,6 +95,7 @@ describe("DigitalOcean Nest deployment CLI", () => {
       parseCliArgs([
         "deploy",
         "production",
+        "--reconfigure-host",
         "--domain",
         "API.Example.com",
         "--update-config",
@@ -99,12 +103,19 @@ describe("DigitalOcean Nest deployment CLI", () => {
     ).toMatchObject({
       domain: "API.Example.com",
       updateConfig: true,
+      reconfigureHost: true,
     });
     expect(getBackendHostConfigValues("API.Example.com")).toEqual({
       NEST_HOST: "api.example.com",
     });
     expect(
-      parseCliArgs(["deploy", "production", "--ip-https", "--update-config"]),
+      parseCliArgs([
+        "deploy",
+        "production",
+        "--reconfigure-host",
+        "--ip-https",
+        "--update-config",
+      ]),
     ).toMatchObject({ ipHttps: true, updateConfig: true });
     expect(getBackendHostConfigValues("104.131.195.113")).toEqual({
       NEST_HOST: "104.131.195.113",
@@ -124,6 +135,12 @@ describe("DigitalOcean Nest deployment CLI", () => {
   });
 
   it("rejects ambiguous or incomplete commands", () => {
+    expect(() => parseCliArgs(["deploy", "production", "--ip-https"])).toThrow(
+      "require --reconfigure-host",
+    );
+    expect(() =>
+      parseCliArgs(["provision", "production", "--reconfigure-host"]),
+    ).toThrow("only valid with the deploy command");
     expect(() =>
       parseCliArgs([
         "deploy",
@@ -321,6 +338,13 @@ describe("DigitalOcean Nest deployment CLI", () => {
     expect(() => parseNumberSelection("4", 3)).toThrow("numbers from 1 to 3");
 
     const base = parseCliArgs(["deploy", "production"]);
+    expect(base.reconfigureHost).toBe(false);
+    expect(applyExistingHostScope(base, "application").reconfigureHost).toBe(
+      false,
+    );
+    expect(applyExistingHostScope(base, "reconfigure").reconfigureHost).toBe(
+      true,
+    );
     expect(applyDeploymentMode(base, "full")).toMatchObject({
       envOnly: false,
       skipMigrations: false,
@@ -411,6 +435,33 @@ describe("DigitalOcean Nest deployment CLI", () => {
     expect(script).toContain("127.0.0.1:3099:3099");
     expect(script).toContain('docker image rm "$old_previous_image"');
     expect(script).not.toContain("docker system prune");
+
+    const applicationOnlyScript = renderRemoteDeployScript({
+      appSlug: "my-app",
+      imageReference: "my-app-nest:image-def456",
+      revision: "image-def456",
+      port: parsePort("3099"),
+      preservePortBinding: true,
+    });
+    expect(applicationOnlyScript).toContain(
+      "Application-only deployment requires an existing $current container",
+    );
+    expect(applicationOnlyScript).toContain(
+      '.HostConfig.PortBindings "3099/tcp"',
+    );
+    expect(applicationOnlyScript).toContain('publish="$publish:3099"');
+    expect(
+      spawnSync("bash", ["-n"], { input: applicationOnlyScript }).status,
+    ).toBe(0);
+
+    const existingDeploymentProbe = renderExistingDeploymentProbe(
+      "my-app",
+      3099,
+    );
+    expect(existingDeploymentProbe).toContain("my-app-nest");
+    expect(existingDeploymentProbe).toContain(
+      '.HostConfig.PortBindings "3099/tcp"',
+    );
   });
 
   it("renders isolated, validated Caddy configuration", () => {

@@ -337,10 +337,12 @@ yarn deploy:nest provision production --region nyc3 --deploy
 
 The wizard retrieves current DigitalOcean regions, available sizes, prices,
 SSH keys, and Droplets. Provisioning and deployment can also be run separately
-for later fleet work. Use `--without-database` when the target database is not
-ready yet. Trusted HTTPS over the Droplet public IP is the domainless default.
-After verification, the wizard can update the selected environment's
-`NEST_HOST`, ready for Vercel environment sync.
+for later fleet work. Existing-host releases update only the application by
+default; firewall, SSH, Caddy, port binding, and local config are preserved
+unless host reconfiguration is explicit. Use `--without-database` when the
+target database is not ready yet. Trusted HTTPS over the Droplet public IP is
+available during host setup. After verification, the wizard can update the
+selected environment's `NEST_HOST`, ready for Vercel environment sync.
 
 The deploy command builds locally, applies Prisma production migrations,
 streams the image over SSH, verifies a candidate container, and optionally

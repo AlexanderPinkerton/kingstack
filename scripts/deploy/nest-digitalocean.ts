@@ -64,6 +64,7 @@ async function main(): Promise<void> {
           tag: undefined,
           yes: true,
           deployAfterProvision: false,
+          reconfigureHost: true,
         },
         project,
         domain,

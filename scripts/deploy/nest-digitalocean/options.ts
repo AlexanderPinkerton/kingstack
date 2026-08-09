@@ -22,6 +22,7 @@ export interface CliOptions {
   withoutDatabase: boolean;
   updateConfig: boolean;
   ipHttps: boolean;
+  reconfigureHost: boolean;
 }
 
 const VALUE_FLAGS = new Set([
@@ -46,6 +47,7 @@ const BOOLEAN_FLAGS = new Set([
   "--without-database",
   "--update-config",
   "--ip-https",
+  "--reconfigure-host",
   "--help",
   "-h",
 ]);
@@ -66,6 +68,7 @@ export function parseCliArgs(args: string[]): CliOptions {
     withoutDatabase: false,
     updateConfig: false,
     ipHttps: false,
+    reconfigureHost: false,
   };
   const positionals: string[] = [];
 
@@ -139,6 +142,9 @@ export function parseCliArgs(args: string[]): CliOptions {
         case "--ip-https":
           options.ipHttps = true;
           break;
+        case "--reconfigure-host":
+          options.reconfigureHost = true;
+          break;
         case "--help":
         case "-h":
           options.help = true;
@@ -186,6 +192,11 @@ export function parseCliArgs(args: string[]): CliOptions {
   if (options.command === "deploy" && options.deployAfterProvision) {
     throw new Error("--deploy is only valid with the provision command.");
   }
+  if (options.command === "provision" && options.reconfigureHost) {
+    throw new Error(
+      "--reconfigure-host is only valid with the deploy command.",
+    );
+  }
   if (options.command === "provision" && options.envOnly) {
     throw new Error("--env-only is only valid with the deploy command.");
   }
@@ -215,6 +226,19 @@ export function parseCliArgs(args: string[]): CliOptions {
     !options.deployAfterProvision
   ) {
     throw new Error("--update-config requires --deploy when provisioning.");
+  }
+  if (
+    options.command === "deploy" &&
+    !options.reconfigureHost &&
+    (options.sshSources.length > 0 ||
+      options.domain !== undefined ||
+      options.noDomain ||
+      options.ipHttps ||
+      options.updateConfig)
+  ) {
+    throw new Error(
+      "Host, firewall, routing, and NEST_HOST options require --reconfigure-host with the deploy command.",
+    );
   }
 
   return options;
@@ -327,7 +351,8 @@ Usage:
 
 Interactive wizard:
   Run without arguments to choose provision/deploy, environment, live
-  DigitalOcean regions and prices, targets, routing, and deployment mode.
+  DigitalOcean regions and prices, targets, deployment scope, and mode.
+  Host setup and reconfiguration also ask about SSH access and routing.
   In an interactive terminal, provision <environment> without --region also
   opens the wizard. Explicit arguments remain available for automation.
 
@@ -343,22 +368,27 @@ Provision options:
 Deploy options:
   --tag <tag>           Target every active droplet with this tag
   --droplet <name|id>   Target an exact droplet; repeatable
+  --reconfigure-host    Also reconcile firewall, SSH policy, Caddy, and routing
   --env-only            Upload configuration without building or migrating
   --skip-migrations     Build and deploy without running Prisma migrations
   --without-database    Skip migrations and the Prisma startup connection
   --update-config       Update NEST_HOST after a successful HTTPS deployment
 
 Shared options:
-  --ip-https            Trusted HTTPS using one Droplet's public IPv4 address
-  --domain <hostname>   Configure Caddy for this hostname
-  --no-domain           Expose the configured Nest port without Caddy
+  --ip-https            Trusted HTTPS using one Droplet's public IPv4 address*
+  --domain <hostname>   Configure Caddy for this hostname*
+  --no-domain           Expose the configured Nest port without Caddy*
   --dry-run             Resolve and display the plan without making changes
   --yes                 Skip the confirmation prompt
   --help, -h            Show this help
 
+  * With deploy, routing options require --reconfigure-host.
+
 Defaults:
   The app name comes from package.json. The target tag is
-  <app>-<environment>-nest. Without a domain flag, HTTPS
-  NEXT_PUBLIC_NEST_BACKEND_URL config enables Caddy automatically.
+  <app>-<environment>-nest. Existing-host deploys update only the application
+  and preserve host networking. Use --reconfigure-host to opt into host changes;
+  without a domain flag, HTTPS NEXT_PUBLIC_NEST_BACKEND_URL config then enables
+  Caddy automatically.
 `;
 }

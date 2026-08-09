@@ -184,7 +184,7 @@ export async function provision(
   log(`Provisioned ${name}: ${ip}`);
   if (!options.deployAfterProvision) {
     log(
-      `Next: yarn deploy:nest deploy ${options.environment}${options.ipHttps ? " --ip-https" : options.domain ? ` --domain ${domain}` : options.noDomain ? " --no-domain" : ""}`,
+      `Next: yarn deploy:nest deploy ${options.environment} --reconfigure-host${options.ipHttps ? " --ip-https" : options.domain ? ` --domain ${domain}` : options.noDomain ? " --no-domain" : ""}`,
     );
   }
   return target;

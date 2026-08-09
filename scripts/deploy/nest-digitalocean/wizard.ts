@@ -27,6 +27,7 @@ import {
 
 type DeploymentMode =
   "full" | "skip-migrations" | "env-only" | "without-database";
+type ExistingHostScope = "application" | "reconfigure";
 
 interface Choice<T> {
   label: string;
@@ -94,8 +95,14 @@ export async function runNestWizard(
     } else {
       options = await configureDeploy(interface_, options, tag);
     }
-    options = await configureRouting(interface_, options, project);
-    options = await configureBackendConfigUpdate(interface_, options, project);
+    if (options.command === "provision" || options.reconfigureHost) {
+      options = await configureRouting(interface_, options, project);
+      options = await configureBackendConfigUpdate(
+        interface_,
+        options,
+        project,
+      );
+    }
 
     if (!options.dryRun) {
       options.dryRun =
@@ -185,6 +192,13 @@ export function applyDeploymentMode(
     skipMigrations: mode === "skip-migrations",
     withoutDatabase: mode === "without-database",
   };
+}
+
+export function applyExistingHostScope(
+  options: CliOptions,
+  scope: ExistingHostScope,
+): CliOptions {
+  return { ...options, reconfigureHost: scope === "reconfigure" };
 }
 
 function cloneOptions(options: CliOptions): CliOptions {
@@ -391,13 +405,36 @@ async function configureDeploy(
     }
   }
 
+  if (!options.reconfigureHost) {
+    options = applyExistingHostScope(
+      options,
+      await choose<ExistingHostScope>(
+        interface_,
+        "What should this deployment change?",
+        [
+          {
+            label:
+              "Application only — preserve firewall, SSH policy, HTTPS, and local config",
+            value: "application",
+          },
+          {
+            label:
+              "Reconfigure host — also manage firewall, SSH policy, HTTPS, and local config",
+            value: "reconfigure",
+          },
+        ],
+      ),
+    );
+  }
   if (!hasExplicitDeploymentMode(options)) {
     options = applyDeploymentMode(
       options,
       await chooseDeploymentMode(interface_),
     );
   }
-  return configureSshFirewall(interface_, options);
+  return options.reconfigureHost
+    ? configureSshFirewall(interface_, options)
+    : options;
 }
 
 async function chooseDroplets(

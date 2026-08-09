@@ -21,6 +21,7 @@ import {
   type DeploymentTarget,
 } from "./digitalocean.js";
 import {
+  renderExistingDeploymentProbe,
   renderRemoteDeployScript,
   renderTrustedHttpsProbe,
   shellQuote,
@@ -61,32 +62,41 @@ export async function deploy(
       `No active droplets match tag ${tag}. Provision one with: yarn deploy:nest provision ${options.environment} --region <region>`,
     );
   }
-  const backendHost = resolveDeploymentHost(options.ipHttps, domain, targets);
+  const backendHost = options.reconfigureHost
+    ? resolveDeploymentHost(options.ipHttps, domain, targets)
+    : undefined;
 
   log();
   log("KingStack NestJS deployment");
   log(`Environment: ${options.environment}`);
   log(`Targets:     ${targets.map((target) => target.name).join(", ")}`);
+  log(`Mode:        ${describeDeploymentMode(options)}`);
   log(
-    `Routing:     ${backendHost ? `Caddy HTTPS for ${backendHost}` : `public TCP ${project.port}`}`,
+    `Scope:       ${options.reconfigureHost ? "application + host networking" : "application only"}`,
   );
-  if (backendHost && isIP(backendHost) === 0) {
+  log(
+    options.reconfigureHost
+      ? `Routing:     ${backendHost ? `Caddy HTTPS for ${backendHost}` : `public TCP ${project.port}`}`
+      : "Preserving:  firewall, SSH policy, Caddy, port binding, and local config",
+  );
+  if (options.reconfigureHost && backendHost && isIP(backendHost) === 0) {
     log(
       `DNS:         ${backendHost} must resolve to ${targets.map(({ ip }) => ip).join(", ")}`,
     );
   }
-  log(`Mode:        ${describeDeploymentMode(options)}`);
 
   if (options.dryRun) {
-    reconcileFirewall({
-      tag,
-      targetIds: targets.map((target) => target.id),
-      useTag: options.droplets.length === 0,
-      port: project.port,
-      domain: backendHost,
-      sshSources: options.sshSources,
-      dryRun: true,
-    });
+    if (options.reconfigureHost) {
+      reconcileFirewall({
+        tag,
+        targetIds: targets.map((target) => target.id),
+        useTag: options.droplets.length === 0,
+        port: project.port,
+        domain: backendHost,
+        sshSources: options.sshSources,
+        dryRun: true,
+      });
+    }
     log();
     log(
       "Dry run complete; no Docker, database, cloud, or remote changes were made.",
@@ -95,17 +105,30 @@ export async function deploy(
   }
 
   await confirmOrThrow(
-    `Deploy ${options.environment} to ${targets.length} droplet(s)?`,
+    options.reconfigureHost
+      ? `Deploy and reconfigure ${options.environment} on ${targets.length} droplet(s)?`
+      : `Deploy ${options.environment} to ${targets.length} droplet(s) while preserving host networking?`,
     options.yes,
   );
 
   const migrationsSkipped = options.skipMigrations || options.withoutDatabase;
-  const totalSteps = options.envOnly ? 3 : migrationsSkipped ? 4 : 5;
+  const applicationSteps = options.envOnly ? 2 : migrationsSkipped ? 3 : 4;
+  const totalSteps = applicationSteps + (options.reconfigureHost ? 1 : 0);
   let nextStep = 1;
   step(nextStep++, totalSteps, "Checking remote hosts...");
   for (const target of targets) {
     await waitForSsh(target);
     verifyRemoteHost(target);
+    if (!options.reconfigureHost) {
+      remoteRun(
+        target,
+        renderExistingDeploymentProbe(project.appSlug, project.port),
+        {
+          capture: true,
+          label: "verify existing deployment routing",
+        },
+      );
+    }
   }
 
   let image = "";
@@ -141,16 +164,18 @@ export async function deploy(
     }
   }
 
-  step(nextStep++, totalSteps, "Reconciling the DigitalOcean firewall...");
-  reconcileFirewall({
-    tag,
-    targetIds: targets.map((target) => target.id),
-    useTag: options.droplets.length === 0,
-    port: project.port,
-    domain: backendHost,
-    sshSources: options.sshSources,
-    dryRun: false,
-  });
+  if (options.reconfigureHost) {
+    step(nextStep++, totalSteps, "Reconciling the DigitalOcean firewall...");
+    reconcileFirewall({
+      tag,
+      targetIds: targets.map((target) => target.id),
+      useTag: options.droplets.length === 0,
+      port: project.port,
+      domain: backendHost,
+      sshSources: options.sshSources,
+      dryRun: false,
+    });
+  }
 
   step(nextStep, totalSteps, "Rolling out and verifying containers...");
   const temporaryDirectory = mkdtempSync(join(tmpdir(), "kingstack-deploy-"));
@@ -193,20 +218,23 @@ export async function deploy(
             revision,
             port: project.port,
             domain: backendHost,
+            preservePortBinding: !options.reconfigureHost,
           }),
           { label: "validate candidate and switch containers" },
         );
         appSwapped = true;
-        caddyTouched = applyCaddy(
-          target,
-          project.appSlug,
-          backendHost,
-          project.port,
-        );
-        if (backendHost && isIP(backendHost)) {
-          remoteRun(target, renderTrustedHttpsProbe(backendHost), {
-            label: `verify trusted HTTPS for ${backendHost}`,
-          });
+        if (options.reconfigureHost) {
+          caddyTouched = applyCaddy(
+            target,
+            project.appSlug,
+            backendHost,
+            project.port,
+          );
+          if (backendHost && isIP(backendHost)) {
+            remoteRun(target, renderTrustedHttpsProbe(backendHost), {
+              label: `verify trusted HTTPS for ${backendHost}`,
+            });
+          }
         }
         successful.push({ target, caddyTouched });
         log(`Deployed ${target.name}.`);
