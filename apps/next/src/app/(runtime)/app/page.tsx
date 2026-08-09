@@ -60,7 +60,7 @@ const examples = [
     href: "/app/theme-builder",
     title: "Theme system",
     description:
-      "Edit the design tokens, preview the result live, and export a reusable theme.",
+      "Change a handful of semantic CSS variables and watch a complete application interface update instantly—colors, surfaces, charts, spacing, and shape.",
     icon: Palette,
     accent: "text-[#8ee8ff] bg-cyan-400/10 border-cyan-300/20",
     glow: "rgba(142, 232, 255, 0.12)",

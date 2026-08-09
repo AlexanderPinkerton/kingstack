@@ -7,13 +7,11 @@ export default function ThemeBuilderPage() {
   return (
     <>
       <AppPageHeader
-        eyebrow="Public example"
-        title="Theme system"
-        description="Choose a preset or edit the application’s color variables directly, then export the result as CSS or JSON."
+        eyebrow="Live CSS variable system"
+        title="One token. Every component."
+        description="Direct a complete application theme in real time. A small set of semantic CSS variables cascades through surfaces, typography, controls, charts, spacing, and shape without a refresh or theme props."
       />
-      <section className="rounded-[2rem] border border-white/10 bg-[#111216]/85 p-4 shadow-2xl shadow-black/20 sm:p-8">
-        <ThemeBuilder />
-      </section>
+      <ThemeBuilder />
     </>
   );
 }
