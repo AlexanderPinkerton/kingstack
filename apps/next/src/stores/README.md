@@ -97,10 +97,10 @@ repository and without the network controls.
 
 | Store | Activation |
 | --- | --- |
-| `CurrentUserStore` | Automatically while a session exists |
+| `CurrentUserStore` | Automatically while a permanent session exists |
 | `AdvancedPostStore` | While the posts feature is mounted |
-| `PublicTodoStore` | While the public-todos feature is mounted |
-| `RealtimeCheckboxStore` | While the checkbox feature is mounted; realtime follows the same demand |
+| `PublicTodoStore` | While the todo feature is mounted with a permanent session |
+| `RealtimeCheckboxStore` | While the checkbox demo is mounted with a verified guest or permanent session; realtime follows the same demand |
 | `SharedCursorStore` | While a surface is bound to its room; holds no query at all |
 | `AdminMgmtStore` | While the admin-management feature is mounted and an authorized session exists |
 
@@ -112,6 +112,12 @@ Fresh confirmed cache data can be reused without an unconditional refetch.
 RootStore forwards every session event to both store groups. Admin stores do
 not fetch merely because they received a session; their feature must also be
 active.
+
+Anonymous Supabase sessions are demo credentials, not application-data
+credentials. RootStore gives their access token to RealtimeManager and the
+bounded checkbox demo, while UserStoreManager withholds it from profile, post,
+and todo stores. Canvas, cursor, and wave-pool stores are transport-only and
+remain available.
 
 Authenticated query keys use data identity:
 

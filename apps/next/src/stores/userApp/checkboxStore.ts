@@ -15,7 +15,7 @@ import {
   type PresenceParticipant,
 } from "@/lib/realtime/presence-room";
 import { browserLogger } from "@/lib/browser-logger";
-import { fetchPublic } from "@/lib/http/public-fetch";
+import { fetchWithAuth } from "@/lib/auth/authenticated-fetch";
 
 const logger = browserLogger.child({ component: "CheckboxStore" });
 
@@ -84,55 +84,81 @@ export function decodeCheckboxRemoteChange(
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
 
-async function fetchCheckboxes(): Promise<CheckboxApiData[]> {
-  const response = await fetchPublic(`${API_BASE_URL}/checkboxes`);
+async function fetchCheckboxes(
+  accessToken: string,
+): Promise<CheckboxApiData[]> {
+  const response = await fetchWithAuth(
+    accessToken,
+    `${API_BASE_URL}/checkboxes`,
+  );
   if (!response.ok) {
     throw new Error(`Failed to fetch checkboxes: ${response.statusText}`);
   }
   return response.json();
 }
 
-async function createCheckbox(data: {
-  index: number;
-  checked: boolean;
-}): Promise<CheckboxApiData> {
-  const response = await fetchPublic(`${API_BASE_URL}/checkboxes`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+async function createCheckbox(
+  data: {
+    index: number;
+    checked: boolean;
+  },
+  accessToken: string,
+): Promise<CheckboxApiData> {
+  const response = await fetchWithAuth(
+    accessToken,
+    `${API_BASE_URL}/checkboxes`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
+  );
   if (!response.ok) {
     throw new Error(`Failed to create checkbox: ${response.statusText}`);
   }
   return response.json();
 }
 
-async function updateCheckbox({
-  id,
-  data,
-}: {
-  id: string;
-  data: { index?: number; checked?: boolean };
-}): Promise<CheckboxApiData> {
-  const response = await fetchPublic(`${API_BASE_URL}/checkboxes/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
+async function updateCheckbox(
+  {
+    id,
+    data,
+  }: {
+    id: string;
+    data: { checked: boolean };
+  },
+  accessToken: string,
+): Promise<CheckboxApiData> {
+  const response = await fetchWithAuth(
+    accessToken,
+    `${API_BASE_URL}/checkboxes/${id}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
+  );
   if (!response.ok) {
     throw new Error(`Failed to update checkbox: ${response.statusText}`);
   }
   return response.json();
 }
 
-async function deleteCheckbox(id: string): Promise<{ id: string }> {
-  const response = await fetchPublic(`${API_BASE_URL}/checkboxes/${id}`, {
-    method: "DELETE",
-  });
+async function deleteCheckbox(
+  id: string,
+  accessToken: string,
+): Promise<{ id: string }> {
+  const response = await fetchWithAuth(
+    accessToken,
+    `${API_BASE_URL}/checkboxes/${id}`,
+    {
+      method: "DELETE",
+    },
+  );
   if (!response.ok) {
     throw new Error(`Failed to delete checkbox: ${response.statusText}`);
   }
@@ -190,6 +216,7 @@ export class RealtimeCheckboxStore {
   private releaseCheckboxRealtime: (() => void) | null = null;
   private releaseRoom: (() => void) | null = null;
   private releasePresence: (() => void) | null = null;
+  private accessToken: string | null = null;
 
   constructor(
     queryClient: QueryClient,
@@ -219,7 +246,7 @@ export class RealtimeCheckboxStore {
         },
         transformer: this.getTransformer(),
         staleTime: 2 * 60 * 1000,
-        enabled: () => this.demand.isActive,
+        enabled: () => this.demand.isActive && this.accessToken !== null,
         remote: {
           localOriginId: browserId,
         },
@@ -230,6 +257,12 @@ export class RealtimeCheckboxStore {
 
   activate(): () => void {
     return this.demand.activate();
+  }
+
+  setAccessToken(accessToken: string | null): void {
+    if (this.accessToken === accessToken) return;
+    this.accessToken = accessToken;
+    this.optimisticStore.updateOptions();
   }
 
   dispose(): void {
@@ -373,8 +406,9 @@ export class RealtimeCheckboxStore {
     try {
       const baseUrl =
         process.env.NEXT_PUBLIC_NEST_BACKEND_URL || "http://localhost:3000";
-      const response = await fetchPublic(
-        `${baseUrl}/checkboxes/initialize?count=${count}`,
+      const response = await fetchWithAuth(
+        this.requireAccessToken(),
+        `${baseUrl}/checkboxes/bootstrap?count=${count}`,
         {
           method: "POST",
         },
@@ -430,14 +464,14 @@ export class RealtimeCheckboxStore {
 
   // API Implementations
   private apiQueryFn = async (): Promise<CheckboxApiData[]> => {
-    return fetchCheckboxes();
+    return fetchCheckboxes(this.requireAccessToken());
   };
 
   private apiCreateMutation = async (data: {
     index: number;
     checked: boolean;
   }): Promise<CheckboxApiData> => {
-    return createCheckbox(data);
+    return createCheckbox(data, this.requireAccessToken());
   };
 
   private apiUpdateMutation = async ({
@@ -445,12 +479,19 @@ export class RealtimeCheckboxStore {
     data,
   }: {
     id: string;
-    data: { index?: number; checked?: boolean };
+    data: { checked: boolean };
   }): Promise<CheckboxApiData> => {
-    return updateCheckbox({ id, data });
+    return updateCheckbox({ id, data }, this.requireAccessToken());
   };
 
   private apiDeleteMutation = async (id: string): Promise<{ id: string }> => {
-    return deleteCheckbox(id);
+    return deleteCheckbox(id, this.requireAccessToken());
   };
+
+  private requireAccessToken(): string {
+    if (!this.accessToken) {
+      throw new Error("A permanent account is required for checkbox data");
+    }
+    return this.accessToken;
+  }
 }

@@ -3,6 +3,7 @@ export interface AuthConfigCliOptions {
   projectRef?: string;
   siteUrl?: string;
   requireEmailConfirmation: boolean;
+  enableAnonymousSignIns: boolean;
   dryRun: boolean;
   yes: boolean;
   help: boolean;
@@ -11,6 +12,7 @@ export interface AuthConfigCliOptions {
 const VALUE_FLAGS = new Set(["--project-ref", "--site-url"]);
 const BOOLEAN_FLAGS = new Set([
   "--require-email-confirmation",
+  "--disable-anonymous-sign-ins",
   "--dry-run",
   "--yes",
   "--help",
@@ -20,6 +22,7 @@ const BOOLEAN_FLAGS = new Set([
 export function parseAuthConfigCliArgs(args: string[]): AuthConfigCliOptions {
   const options: AuthConfigCliOptions = {
     requireEmailConfirmation: false,
+    enableAnonymousSignIns: true,
     dryRun: false,
     yes: false,
     help: false,
@@ -43,6 +46,9 @@ export function parseAuthConfigCliArgs(args: string[]): AuthConfigCliOptions {
     if (BOOLEAN_FLAGS.has(arg)) {
       if (arg === "--require-email-confirmation") {
         options.requireEmailConfirmation = true;
+      }
+      if (arg === "--disable-anonymous-sign-ins") {
+        options.enableAnonymousSignIns = false;
       }
       if (arg === "--dry-run") options.dryRun = true;
       if (arg === "--yes") options.yes = true;
@@ -82,6 +88,8 @@ Options:
   --site-url <url>                Override the computed NEXT_URL
   --require-email-confirmation    Require signup email verification
                                   (default: immediately confirm new users)
+  --disable-anonymous-sign-ins    Disable one-click guest sessions
+                                  (default: enabled for the live demo)
   --dry-run                       Print the intended settings only
   --yes                           Skip the final confirmation
   -h, --help                      Show this help
@@ -92,7 +100,8 @@ Examples:
   yarn supabase:auth:configure production --require-email-confirmation
   yarn supabase:auth:configure --project-ref abcdefghijklmnopqrst --site-url https://example.vercel.app --yes
 
-The command updates only Supabase Auth's Site URL and email-confirmation mode.
+The command updates Supabase Auth's Site URL, email-confirmation mode, and
+anonymous-sign-in setting.
 It uses SUPABASE_ACCESS_TOKEN when set, otherwise the credentials saved by
 \`yarn exec supabase login\`. The access token is never printed.
 `;

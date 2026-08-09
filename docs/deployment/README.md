@@ -33,9 +33,10 @@ the hosted Supabase Site URL and signup policy:
 yarn supabase:auth:configure production
 ```
 
-The default disables signup email confirmation. Use
-`--require-email-confirmation` when the application must prove ownership of the
-submitted email address.
+The default disables signup email confirmation and enables temporary guest
+sessions for live collaborative demos. Use `--require-email-confirmation` when the
+application must prove ownership of the submitted email address, or
+`--disable-anonymous-sign-ins` when the project should not create guest users.
 
 ## NestJS on DigitalOcean
 

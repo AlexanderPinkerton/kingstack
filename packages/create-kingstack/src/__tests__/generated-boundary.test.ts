@@ -252,11 +252,26 @@ describe("generated project boundary", () => {
       "bun scripts/deploy/vercel/get-config.ts",
     );
     expect(rootPackage.devDependencies.supabase).toBe("2.113.0");
+    expect(rootPackage.devDependencies.supabase).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(rootPackage.scripts["supabase:start"]).toBe("supabase start");
+    expect(rootPackage.scripts["supabase:survey"]).toBe(
+      "bun scripts/supabase-list-instances.ts",
+    );
+    expect(rootPackage.scripts["docker:disk-usage"]).toBe("docker system df");
+    expect(rootPackage.scripts["docker:trim-build-cache"]).toBe(
+      "docker buildx prune --force --max-used-space 5GB",
+    );
     expect(rootPackage.devDependencies.vercel).toBe("58.1.0");
     expect(rootPackage.scripts["prisma:deploy"]).toBe(
       "yarn workspace @boundary-check/prisma prisma migrate deploy",
     );
     expect(rootPackage.devDependencies["@types/bun"]).toBeDefined();
+
+    const supabaseConfig = readFileSync(
+      join(generatedRoot, "supabase", "config.toml"),
+      "utf8",
+    );
+    expect(supabaseConfig).toContain("enable_anonymous_sign_ins = true");
 
     for (const workflow of ["deploy-next-dev.yml", "deploy-next-prod.yml"]) {
       const deployment = readFileSync(

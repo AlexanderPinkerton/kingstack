@@ -60,9 +60,12 @@ async function main(): Promise<void> {
     console.log(
       `Email confirmation: ${confirmationDescription(verified.emailConfirmationRequired)}`,
     );
+    console.log(
+      `Guest sessions:     ${guestDescription(verified.anonymousSignInsEnabled)}`,
+    );
     console.log();
     console.log(
-      "New registrations now follow this setting. Existing confirmation links are not rewritten.",
+      "New signups and guest sessions now follow these settings. Existing confirmation links are not rewritten.",
     );
   } finally {
     interface_?.close();
@@ -113,9 +116,12 @@ function printPlan(plan: HostedAuthPlan): void {
   console.log(
     `Email confirmation: ${confirmationDescription(plan.requireEmailConfirmation)}`,
   );
+  console.log(
+    `Guest sessions:     ${guestDescription(plan.enableAnonymousSignIns)}`,
+  );
   console.log();
   console.log(
-    "Only site_url and mailer_autoconfirm will be changed; other Auth settings are preserved.",
+    "Only site_url, mailer_autoconfirm, and external_anonymous_users_enabled will be changed; other Auth settings are preserved.",
   );
   if (!plan.requireEmailConfirmation) {
     console.log(
@@ -131,10 +137,17 @@ function printCurrent(current: HostedAuthConfig): void {
   console.log(
     `Email confirmation: ${confirmationDescription(current.emailConfirmationRequired)}`,
   );
+  console.log(
+    `Guest sessions:     ${guestDescription(current.anonymousSignInsEnabled)}`,
+  );
 }
 
 function confirmationDescription(required: boolean): string {
   return required ? "required" : "disabled (immediate signup)";
+}
+
+function guestDescription(enabled: boolean): string {
+  return enabled ? "enabled (temporary anonymous users)" : "disabled";
 }
 
 async function confirmUpdate(

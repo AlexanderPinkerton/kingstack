@@ -6,7 +6,9 @@ import {
   Put,
   Delete,
   Param,
+  UseGuards,
 } from "@nestjs/common";
+import { PermanentUserGuard } from "../auth/guards/permanent-user.guard";
 import { PrismaService } from "../prisma/prisma.service";
 
 export interface CreatePublicTodoDto {
@@ -19,6 +21,7 @@ export interface UpdatePublicTodoDto {
 }
 
 @Controller("public/todos")
+@UseGuards(PermanentUserGuard)
 export class PublicTodosController {
   constructor(private readonly prisma: PrismaService) {}
 

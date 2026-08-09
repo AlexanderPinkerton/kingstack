@@ -50,6 +50,19 @@ describe("validateSupabaseUserClaims", () => {
       validateSupabaseUserClaims({ ...validClaims, aud: "anon" }),
     ).toThrow(InvalidSupabaseAccessTokenError);
   });
+
+  it("accepts a boolean anonymous-user claim and rejects malformed values", () => {
+    expect(
+      validateSupabaseUserClaims({ ...validClaims, is_anonymous: true })
+        .is_anonymous,
+    ).toBe(true);
+    expect(() =>
+      validateSupabaseUserClaims({
+        ...validClaims,
+        is_anonymous: "true",
+      }),
+    ).toThrow(InvalidSupabaseAccessTokenError);
+  });
 });
 
 describe("SupabaseTokenVerifier", () => {

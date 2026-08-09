@@ -1,10 +1,10 @@
-"use client";
-
+import { GuestDemoGate } from "@/components/examples/guest-access/guest-demo-gate";
 import { WavePool } from "@/components/examples/WavePool";
-import useAuthGuard from "@/hooks/useAuthGuard";
 
 export default function WavePoolPage() {
-  useAuthGuard();
-
-  return <WavePool />;
+  return (
+    <GuestDemoGate>
+      <WavePool />
+    </GuestDemoGate>
+  );
 }

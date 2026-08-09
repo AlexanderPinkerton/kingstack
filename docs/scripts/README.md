@@ -30,8 +30,13 @@ yarn backend:enable
 yarn supabase:start
 yarn supabase:status
 yarn supabase:list
+yarn supabase:survey
 yarn supabase:check
 yarn supabase:stop
+
+# Docker disk diagnostics and bounded build-cache cleanup
+yarn docker:disk-usage
+yarn docker:trim-build-cache
 
 # Destructive local database rebuild
 yarn supabase:reset
@@ -42,7 +47,7 @@ yarn supabase:provision
 # Hosted credential import into config/<environment>.ts
 yarn supabase:provision:get-secrets development
 
-# Hosted Site URL and signup confirmation policy
+# Hosted Site URL, signup confirmation, and guest-session policy
 yarn supabase:auth:configure production
 ```
 

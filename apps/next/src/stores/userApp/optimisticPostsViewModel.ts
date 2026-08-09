@@ -167,6 +167,10 @@ export class OptimisticPostsViewModel {
     );
   }
 
+  canManage(post: PostUiData): boolean {
+    return post.author_id === this.currentUserId;
+  }
+
   setConfirmedPosts(posts: readonly PostApiData[]): void {
     this.confirmedPosts = posts;
   }

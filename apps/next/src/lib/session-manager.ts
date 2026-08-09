@@ -8,10 +8,15 @@ export type SupabaseSession = {
   user: {
     email?: string;
     id: string;
+    is_anonymous?: boolean;
     [key: string]: any;
   };
   [key: string]: any;
 } | null;
+
+export function isAnonymousSession(session: SupabaseSession): boolean {
+  return session?.user.is_anonymous === true;
+}
 
 export type SessionChangeCallback = (
   session: SupabaseSession,
@@ -70,6 +75,30 @@ export class SessionManager {
 
     // Supabase emits TOKEN_REFRESHED through the existing auth-state listener,
     // which remains the only path that mutates application session state.
+  }
+
+  async signInAnonymously(): Promise<void> {
+    const supabase = this.supabase;
+    if (!supabase) {
+      throw new Error("Supabase Auth is not configured for this build");
+    }
+
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) throw error;
+
+    // SIGNED_IN flows through the existing auth-state listener, preserving one
+    // session mutation path for permanent and anonymous users alike.
+  }
+
+  async signOut(): Promise<void> {
+    const supabase = this.supabase;
+    if (!supabase) return;
+
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+
+    // SIGNED_OUT flows through the existing auth-state listener so stores and
+    // realtime connections are torn down through the normal session path.
   }
 
   dispose(): void {

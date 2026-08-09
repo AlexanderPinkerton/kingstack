@@ -7,20 +7,18 @@ import {
   DatabaseZap,
   Frame,
   Gauge,
-  MessageSquare,
   Palette,
   Radio,
   ShieldCheck,
   Waves,
 } from "lucide-react";
-import useAuthGuard from "@/hooks/useAuthGuard";
 
 const examples = [
   {
     href: "/app/optimistic",
     title: "Optimistic UI",
     description:
-      "The interface and the server side by side, with the mutation pipeline running between them. Add latency or reject a request to watch the optimistic layer reconcile or roll back.",
+      "The interface and real post database side by side, with the production mutation pipeline between them. Add latency or reject a request to watch reconciliation and rollback.",
     icon: DatabaseZap,
     accent: "text-[#d8ff70] bg-[#d8ff70]/10 border-[#d8ff70]/20",
     glow: "rgba(216, 255, 112, 0.12)",
@@ -59,40 +57,18 @@ const examples = [
     tags: ["Three.js", "Authoritative realtime"],
   },
   {
-    href: "/chat",
-    title: "AI chat",
-    description:
-      "Streamed responses through a provider-backed chat surface, with model selection and image input.",
-    icon: MessageSquare,
-    accent: "text-[#ffb494] bg-[#ff9c6e]/10 border-[#ff9c6e]/20",
-    glow: "rgba(255, 156, 110, 0.12)",
-    tags: ["Streaming", "Model selection"],
-  },
-  {
     href: "/app/theme-builder",
     title: "Theme system",
     description:
-      "Edit the design tokens, preview the result live, and export a reusable theme.",
+      "Change a handful of semantic CSS variables and watch a complete application interface update instantly—colors, surfaces, charts, spacing, and shape.",
     icon: Palette,
     accent: "text-[#8ee8ff] bg-cyan-400/10 border-cyan-300/20",
     glow: "rgba(142, 232, 255, 0.12)",
     tags: ["Design tokens", "CSS variables"],
   },
-  {
-    href: "/admin/dashboard",
-    title: "Admin workflows",
-    description:
-      "Protected administration, role checks, data tables, and dashboard composition.",
-    icon: ShieldCheck,
-    accent: "text-[#f9da7f] bg-amber-300/10 border-amber-300/20",
-    glow: "rgba(249, 218, 127, 0.12)",
-    tags: ["Role checks", "Data tables"],
-  },
 ] as const;
 
 export default function ApplicationPage() {
-  useAuthGuard();
-
   return (
     <>
       <section className="grid gap-10 border-b border-white/10 pb-16 lg:grid-cols-[1fr_0.6fr] lg:items-end">
@@ -105,16 +81,15 @@ export default function ApplicationPage() {
             Back to the KingStack guide
           </Link>
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#d8ff70]">
-            Full runtime
+            Live feature demos
           </p>
           <h1 className="mt-4 max-w-4xl text-5xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-7xl">
-            The application workspace.
+            See the stack working.
           </h1>
         </div>
         <p className="max-w-xl text-lg leading-8 text-white/55">
-          Build routes here when they need authentication, persistent data,
-          realtime connections, or backend processes. These examples run inside
-          the complete KingStack runtime.
+          Every card is a runnable KingStack demo, from browser-only tooling to
+          full-stack collaboration backed by the real application runtime.
         </p>
       </section>
 
@@ -122,7 +97,11 @@ export default function ApplicationPage() {
         {[
           { icon: Gauge, label: "Runtime", value: "Full stack" },
           { icon: Bot, label: "Agent guidance", value: "Repository-owned" },
-          { icon: ShieldCheck, label: "Access", value: "Authenticated" },
+          {
+            icon: ShieldCheck,
+            label: "Boundaries",
+            value: "Production-shaped",
+          },
         ].map((item) => {
           const Icon = item.icon;
 
@@ -148,11 +127,12 @@ export default function ApplicationPage() {
             Reference features
           </p>
           <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-5xl">
-            Trace a working pattern before building a new one.
+            Pick a feature and run the real implementation.
           </h2>
           <p className="mt-5 leading-7 text-white/50">
-            Each example is a place for people and agents to inspect how a
-            complete feature is composed inside the full runtime.
+            These are working examples, not screenshots. Each one runs the real
+            implementation and the same architectural boundaries used by the
+            application.
           </p>
         </div>
 

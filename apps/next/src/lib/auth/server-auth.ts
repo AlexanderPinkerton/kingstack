@@ -7,6 +7,7 @@ import {
 } from "@supabase/supabase-js";
 import {
   extractBearerToken,
+  isAnonymousSupabaseUserClaims,
   validateSupabaseUserClaims,
   type AuthenticatedSupabaseUserClaims,
 } from "@kingstack/shared";
@@ -28,7 +29,7 @@ export type AuthenticatedBearerRequest = {
 export type BearerAuthenticationFailure = {
   error: string;
   ok: false;
-  status: 401;
+  status: 401 | 403;
 };
 
 export type BearerAuthenticationResult =
@@ -42,6 +43,12 @@ export async function authenticateBearerRequest(
   request: RequestWithHeaders,
 ): Promise<BearerAuthenticationResult> {
   return authenticateBearerRequestWith(getAuthClient().auth, request);
+}
+
+export async function authenticatePermanentBearerRequest(
+  request: RequestWithHeaders,
+): Promise<BearerAuthenticationResult> {
+  return authenticatePermanentBearerRequestWith(getAuthClient().auth, request);
 }
 
 /** Dependency-injected entry point for exercising the real verifier in tests. */
@@ -74,14 +81,32 @@ export async function authenticateBearerRequestWith(
   }
 }
 
+/** Verifies the JWT and rejects Supabase anonymous users for persisted data. */
+export async function authenticatePermanentBearerRequestWith(
+  auth: SupabaseClaimsAuth,
+  request: RequestWithHeaders,
+): Promise<BearerAuthenticationResult> {
+  const authentication = await authenticateBearerRequestWith(auth, request);
+  if (!authentication.ok) return authentication;
+
+  if (isAnonymousSupabaseUserClaims(authentication.claims)) {
+    return authenticationFailure("A permanent account is required", 403);
+  }
+
+  return authentication;
+}
+
 export function bearerAuthenticationErrorResponse(
   failure: BearerAuthenticationFailure,
 ): Response {
   return Response.json({ error: failure.error }, { status: failure.status });
 }
 
-function authenticationFailure(error: string): BearerAuthenticationFailure {
-  return { error, ok: false, status: 401 };
+function authenticationFailure(
+  error: string,
+  status: 401 | 403 = 401,
+): BearerAuthenticationFailure {
+  return { error, ok: false, status };
 }
 
 function getAuthClient(): SupabaseClient {

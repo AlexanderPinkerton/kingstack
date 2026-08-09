@@ -132,9 +132,13 @@ const PoolPresence = observer(function PoolPresence({
 
 const PoolBoatReset = observer(function PoolBoatReset({
   store,
+  visible,
 }: {
   store: WavePoolStore;
+  visible: boolean;
 }) {
+  if (!visible) return null;
+
   return (
     <Button
       type="button"
@@ -155,10 +159,11 @@ export const WavePool = observer(function WavePool() {
   const rootStore = useRootStore();
   const sessionUser = rootStore.session?.user;
   const displayName =
-    rootStore.userData?.displayName ||
-    sessionUser?.user_metadata?.username ||
-    sessionUser?.email?.split("@")[0] ||
-    "You";
+    (rootStore.isGuest
+      ? `Guest ${sessionUser?.id.slice(0, 4).toUpperCase() || "user"}`
+      : rootStore.userData?.displayName ||
+        sessionUser?.user_metadata?.username ||
+        sessionUser?.email?.split("@")[0]) || "You";
   const [participantId] = useState(() => createParticipantId("pool"));
   const participant = useMemo(
     () => ({
@@ -192,6 +197,11 @@ export const WavePool = observer(function WavePool() {
               <Radio className="size-3" aria-hidden="true" />
               Global simulation / live
             </div>
+            {rootStore.isGuest && (
+              <p className="mt-3 font-mono text-[0.6rem] uppercase tracking-[0.16em] text-[#d8ff70]/70">
+                Temporary guest session
+              </p>
+            )}
             <h1 className="mt-5 text-5xl font-semibold leading-[0.88] tracking-[-0.065em] sm:text-7xl lg:text-8xl">
               Make
               <br />a wave.
@@ -237,7 +247,7 @@ export const WavePool = observer(function WavePool() {
                 value={surfaceMode}
                 onChange={setSurfaceMode}
               />
-              <PoolBoatReset store={store} />
+              <PoolBoatReset store={store} visible={!rootStore.isGuest} />
             </div>
           </div>
         </div>

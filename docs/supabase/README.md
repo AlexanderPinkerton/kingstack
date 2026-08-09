@@ -13,7 +13,8 @@ yarn supabase:stop        # Stop local Supabase
 
 # Status & Info
 yarn supabase:status      # Check status; distinguishes stopped from inaccessible Docker
-yarn supabase:list        # List all running instances (all projects)
+yarn supabase:list        # Survey projects and cached image generations through Docker
+yarn supabase:survey      # Descriptive alias for supabase:list
 yarn supabase:check       # Verify configuration
 
 # Hosted project
@@ -64,11 +65,11 @@ See the [Multi-Project Setup Guide](./multi-project-setup.md) for detailed instr
 Six TypeScript entry points make Supabase management easier:
 
 1. **`supabase-status.ts`** - Shows running services and connection info
-2. **`supabase-list-instances.ts`** - Lists all Supabase instances across all projects
+2. **`supabase-list-instances.ts`** - Surveys retained projects, exact container image tags, volumes, and cached Supabase images without changing Docker
 3. **`supabase-check-config.ts`** - Validates and displays your configuration
 4. **`deploy/supabase.ts`** - Reviews cost and provisioning choices before creating a hosted project
 5. **`deploy/supabase/get-secrets.ts`** - Imports modern hosted API keys and the saved database password into an ignored environment file
-6. **`deploy/supabase/configure-auth.ts`** - Synchronizes the hosted Site URL and email-confirmation policy
+6. **`deploy/supabase/configure-auth.ts`** - Synchronizes the hosted Site URL, email-confirmation policy, and guest-session setting
 
 The status helper deliberately reports Docker socket permission failures as
 `unknown`, not `stopped`. Agent sandboxes often cannot inspect host Docker even
@@ -94,8 +95,8 @@ yarn supabase:stop
 ### Working with Multiple Projects
 
 ```bash
-# Check what's running
-yarn supabase:list
+# Survey retained projects and cached image generations
+yarn supabase:survey
 
 # Verify your project's config
 yarn supabase:check

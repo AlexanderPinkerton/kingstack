@@ -171,7 +171,7 @@ yarn supabase:provision:get-secrets --print \
 
 ## Configure hosted authentication
 
-After `NEXT_HOST` contains the deployed frontend hostname, synchronize the two
+After `NEXT_HOST` contains the deployed frontend hostname, synchronize the
 hosted Auth settings KingStack owns:
 
 ```bash
@@ -179,23 +179,31 @@ yarn supabase:auth:configure production
 ```
 
 The command derives the project reference and `https://` Site URL from the
-selected KingStack environment. It patches only `site_url` and
-`mailer_autoconfirm`, reads the settings back, and fails unless they match.
-Other Auth providers, templates, SMTP settings, and security controls are
-preserved. This uses Supabase's narrowly scoped
+selected KingStack environment. It patches only `site_url`,
+`mailer_autoconfirm`, and `external_anonymous_users_enabled`, reads the settings
+back, and fails unless they match. Other Auth providers, templates, SMTP
+settings, and security controls are preserved. This uses Supabase's narrowly scoped
 [Auth configuration endpoint](https://supabase.com/docs/reference/api/v1-update-auth-service-config).
 
 KingStack defaults to immediate email/password signup, matching local
-development's `auth.email.enable_confirmations = false`. To require ownership
-verification instead:
+development's `auth.email.enable_confirmations = false`. It also enables
+anonymous sign-ins locally and in hosted projects so live demos can create a
+temporary guest. To require ownership verification instead:
 
 ```bash
 yarn supabase:auth:configure production --require-email-confirmation
 ```
 
+To configure the project without guest sessions:
+
+```bash
+yarn supabase:auth:configure production --disable-anonymous-sign-ins
+```
+
 Disabling confirmation reduces signup friction but does not prove that a user
-owns the supplied email address. Public applications should add CAPTCHA or
-another abuse control before accepting untrusted registration at scale.
+owns the supplied email address. This demo intentionally favors low-friction
+setup; revisit confirmation and abuse controls before accepting untrusted
+registration at scale.
 Supabase's [password-authentication guide](https://supabase.com/docs/guides/auth/passwords)
 describes the hosted confirmation behavior.
 

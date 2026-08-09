@@ -45,12 +45,6 @@ const foundations: Foundation[] = [
     tag: "Socket.IO",
   },
   {
-    domain: "Models",
-    covers: "Streaming chat and image generation",
-    detail: "Streaming routes plus a working text and image interface.",
-    tag: "Vercel AI SDK",
-  },
-  {
     domain: "Migrations",
     covers: "Schema changes in production",
     detail: "Versioned migration files and a production deploy command.",

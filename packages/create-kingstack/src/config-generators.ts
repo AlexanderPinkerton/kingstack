@@ -76,11 +76,6 @@ export const values = defineValues({
     VERCEL_ORG_ID: "",
     VERCEL_PROJECT_ID: "",
 
-    // Optional: AI Providers
-    OPENAI_API_KEY: "",
-    ANTHROPIC_API_KEY: "",
-    GEMINI_API_KEY: "",
-
     // Runtime logging. The environment name comes from the CLI argument.
     LOG_LEVEL: "debug",
     LOG_FORMAT: "pretty",

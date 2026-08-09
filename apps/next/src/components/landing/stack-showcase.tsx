@@ -8,7 +8,6 @@ import {
   Palette,
   Radio,
   ScrollText,
-  Sparkles,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -40,15 +39,6 @@ const layers: StackLayer[] = [
     why: "TanStack Query owns the server cache while MobX owns client-side domain state. Each kind of state has one clear home.",
     detail:
       "The posts example covers create, edit, filter, reconciliation, and rollback through the same repository-backed store used by real features.",
-  },
-  {
-    name: "Vercel AI SDK",
-    role: "Model access",
-    accent: "#ff9c6e",
-    icon: Sparkles,
-    why: "A consistent streaming interface keeps provider-specific clients at the route boundary. Switching models does not change the chat UI.",
-    detail:
-      "The chat route supports Anthropic, OpenAI, and Google for text, plus image generation through OpenAI.",
   },
   {
     name: "Socket.IO",

@@ -1,5 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { SupabaseSession } from "@/lib/session-manager";
+import {
+  isAnonymousSession,
+  type SupabaseSession,
+} from "@/lib/session-manager";
 import type { RealtimeTransport } from "@/lib/realtime-manager";
 import { createHttpPostRepository } from "@/repositories/posts/http-post-repository";
 import { AdvancedPostStore } from "./postStore";
@@ -104,15 +107,20 @@ export class UserStoreManager {
   updateSession(session: SupabaseSession): void {
     if (this.isDisposed) return;
 
-    this.postStore.setContext({
-      scope: session?.user.id ?? "anonymous",
-      enabled: Boolean(session?.access_token),
-      accessToken: session?.access_token,
-      currentUser: session?.user ?? null,
-    });
-    this.currentUserStore.setSession(session);
+    const permanentSession = isAnonymousSession(session) ? null : session;
+    const accessToken = permanentSession?.access_token;
 
-    const shouldLoadCurrentUser = Boolean(session?.access_token);
+    this.postStore.setContext({
+      scope: permanentSession?.user.id ?? "anonymous",
+      enabled: Boolean(accessToken),
+      accessToken,
+      currentUser: permanentSession?.user ?? null,
+    });
+    this.checkboxStore.setAccessToken(session?.access_token ?? null);
+    this.publicTodoStore.setAccessToken(accessToken ?? null);
+    this.currentUserStore.setSession(permanentSession);
+
+    const shouldLoadCurrentUser = Boolean(accessToken);
 
     if (shouldLoadCurrentUser && !this.releaseCurrentUser) {
       this.releaseCurrentUser = this.currentUserStore.activate();

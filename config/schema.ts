@@ -155,23 +155,6 @@ export const schema = defineSchema({
       description: "Vercel project ID",
     },
 
-    // Optional: AI Providers
-    OPENAI_API_KEY: {
-      default: "",
-      description: "OpenAI API key",
-      sensitive: true,
-    },
-    ANTHROPIC_API_KEY: {
-      default: "",
-      description: "Anthropic API key",
-      sensitive: true,
-    },
-    GEMINI_API_KEY: {
-      default: "",
-      description: "Google Gemini API key",
-      sensitive: true,
-    },
-
     // Runtime logging. The config generator declares these values; each
     // application validates them again when its logger starts.
     LOG_LEVEL: {
@@ -292,11 +275,6 @@ export const schema = defineSchema({
         // Server-side database config
         "SUPABASE_DB_POOL_URL",
         "SUPABASE_DB_DIRECT_URL",
-
-        // AI Providers
-        "OPENAI_API_KEY",
-        "ANTHROPIC_API_KEY",
-        "GEMINI_API_KEY",
 
         // Runtime logging
         "LOG_LEVEL",

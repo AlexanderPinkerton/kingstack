@@ -46,7 +46,7 @@ describe("GET /api/post", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "publishable-key";
     mocks.getClaims.mockImplementation((accessToken: string) => {
-      if (accessToken !== "valid-token") {
+      if (accessToken !== "valid-token" && accessToken !== "guest-token") {
         return Promise.resolve({
           data: null,
           error: new Error("invalid token"),
@@ -57,8 +57,10 @@ describe("GET /api/post", () => {
         data: {
           claims: {
             aud: "authenticated",
-            email: "user@example.com",
-            sub: "user1",
+            email:
+              accessToken === "guest-token" ? undefined : "user@example.com",
+            is_anonymous: accessToken === "guest-token",
+            sub: accessToken === "guest-token" ? "guest1" : "user1",
           },
         },
         error: null,
@@ -101,6 +103,16 @@ describe("GET /api/post", () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({
       error: "Invalid or expired bearer token",
+    });
+    expect(mocks.findMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects an anonymous user before querying persisted posts", async () => {
+    const response = await getPosts(request("Bearer guest-token"));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({
+      error: "A permanent account is required",
     });
     expect(mocks.findMany).not.toHaveBeenCalled();
   });

@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SessionManager } from "../src/lib/session-manager";
+import {
+  isAnonymousSession,
+  SessionManager,
+  type SupabaseSession,
+} from "../src/lib/session-manager";
 import { isSupabaseBrowserConfigured } from "../src/lib/supabase/browserClient";
 
 const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -43,6 +47,23 @@ describe("Supabase-free session initialization", () => {
     );
 
     sessionManager.dispose();
+  });
+});
+
+describe("isAnonymousSession", () => {
+  it("distinguishes a temporary guest from a permanent session", () => {
+    const permanentSession = {
+      access_token: "permanent-token",
+      user: { id: "user-123", is_anonymous: false },
+    } as SupabaseSession;
+    const guestSession = {
+      access_token: "guest-token",
+      user: { id: "guest-123", is_anonymous: true },
+    } as SupabaseSession;
+
+    expect(isAnonymousSession(null)).toBe(false);
+    expect(isAnonymousSession(permanentSession)).toBe(false);
+    expect(isAnonymousSession(guestSession)).toBe(true);
   });
 });
 

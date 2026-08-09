@@ -407,7 +407,7 @@ one pool entry in `room-namespaces.ts`:
 
 ```ts
 pool: {
-  requiresAuth: true,
+  access: "guest",
   allowsRoomId: (roomId) => roomId === POOL_ROOM_ID,
   validateState: validatePoolPresenceState,
   validateSignal: (kind, data) =>

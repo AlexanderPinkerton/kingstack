@@ -20,16 +20,19 @@ export interface HostedAuthPlan {
   projectRef: string;
   siteUrl: string;
   requireEmailConfirmation: boolean;
+  enableAnonymousSignIns: boolean;
 }
 
 export interface HostedAuthConfig {
   siteUrl: string;
   emailConfirmationRequired: boolean;
+  anonymousSignInsEnabled: boolean;
 }
 
 interface AuthApiResponse {
   site_url?: unknown;
   mailer_autoconfirm?: unknown;
+  external_anonymous_users_enabled?: unknown;
 }
 
 export type AuthConfigFetcher = (
@@ -60,6 +63,7 @@ export async function resolveHostedAuthPlan(
     projectRef: validateProjectRef(projectRef),
     siteUrl: normalizeHostedSiteUrl(siteUrl),
     requireEmailConfirmation: options.requireEmailConfirmation,
+    enableAnonymousSignIns: options.enableAnonymousSignIns,
   };
 }
 
@@ -99,6 +103,7 @@ export function desiredHostedAuthConfig(
   return {
     siteUrl: plan.siteUrl,
     emailConfirmationRequired: plan.requireEmailConfirmation,
+    anonymousSignInsEnabled: plan.enableAnonymousSignIns,
   };
 }
 
@@ -109,7 +114,8 @@ export function authConfigMatches(
   return (
     normalizeComparableUrl(actual.siteUrl) ===
       normalizeComparableUrl(desired.siteUrl) &&
-    actual.emailConfirmationRequired === desired.emailConfirmationRequired
+    actual.emailConfirmationRequired === desired.emailConfirmationRequired &&
+    actual.anonymousSignInsEnabled === desired.anonymousSignInsEnabled
   );
 }
 
@@ -170,6 +176,7 @@ export async function updateHostedAuthConfig(
       body: JSON.stringify({
         site_url: plan.siteUrl,
         mailer_autoconfirm: !plan.requireEmailConfirmation,
+        external_anonymous_users_enabled: plan.enableAnonymousSignIns,
       }),
     },
     fetcher,
@@ -198,15 +205,17 @@ export function parseHostedAuthConfig(value: unknown): HostedAuthConfig {
   const response = value as AuthApiResponse;
   if (
     typeof response.site_url !== "string" ||
-    typeof response.mailer_autoconfirm !== "boolean"
+    typeof response.mailer_autoconfirm !== "boolean" ||
+    typeof response.external_anonymous_users_enabled !== "boolean"
   ) {
     throw new Error(
-      "Supabase Auth configuration is missing site_url or mailer_autoconfirm.",
+      "Supabase Auth configuration is missing site_url, mailer_autoconfirm, or external_anonymous_users_enabled.",
     );
   }
   return {
     siteUrl: response.site_url,
     emailConfirmationRequired: !response.mailer_autoconfirm,
+    anonymousSignInsEnabled: response.external_anonymous_users_enabled,
   };
 }
 

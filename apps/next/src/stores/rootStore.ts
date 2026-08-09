@@ -1,6 +1,10 @@
 import { computed, makeObservable, observable, runInAction } from "mobx";
 import type { QueryClient } from "@tanstack/react-query";
-import { SessionManager, type SupabaseSession } from "@/lib/session-manager";
+import {
+  isAnonymousSession,
+  SessionManager,
+  type SupabaseSession,
+} from "@/lib/session-manager";
 import { RealtimeManager } from "@/lib/realtime-manager";
 import { getBrowserId } from "@/lib/browser-id";
 import { UserStoreManager } from "./userApp/userStoreManager";
@@ -47,6 +51,7 @@ export class RootStore {
       session: observable,
       sessionReady: observable,
       userData: computed,
+      isGuest: computed,
       realtimeStatus: computed,
       realtimeConnected: computed,
     });
@@ -108,6 +113,18 @@ export class RootStore {
     await this.sessionManager.refreshSession();
   }
 
+  get isGuest(): boolean {
+    return isAnonymousSession(this.session);
+  }
+
+  async startGuestSession(): Promise<void> {
+    await this.sessionManager.signInAnonymously();
+  }
+
+  async signOut(): Promise<void> {
+    await this.sessionManager.signOut();
+  }
+
   dispose(): void {
     if (this.disposed) return;
 
@@ -142,7 +159,7 @@ export class RootStore {
     // Inactive feature queries remain inactive; session propagation only
     // updates their authorization and cache identity.
     this.userStore.updateSession(session);
-    this.adminStore.updateSession(session);
+    this.adminStore.updateSession(isAnonymousSession(session) ? null : session);
 
     if (session?.access_token) {
       this.realtimeManager.setup(session.access_token);

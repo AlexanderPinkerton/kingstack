@@ -10,6 +10,11 @@ must not be edited directly.
 - Docker Desktop or another reachable Docker daemon
 - the Supabase CLI installed through this repository's Yarn dependencies
 
+KingStack pins the Supabase CLI to an exact version in `package.json`. Do not
+replace it with a caret, tilde, or `latest` range. The exact pin and committed
+`yarn.lock` ensure an ordinary `yarn install` cannot silently advance the CLI
+to a generation that expects different Docker images.
+
 ## Fast path
 
 For a generated frontend draft or a checkout whose backend has not been
@@ -45,6 +50,63 @@ Start Supabase and apply the current schema:
 yarn supabase:start
 yarn prisma:migrate
 ```
+
+Before relying on the stack offline, verify the exact dependency installation
+and perform a real start while online:
+
+```bash
+yarn install --immutable
+yarn exec supabase --version
+yarn supabase:start
+yarn supabase:stop
+```
+
+Treat any edit to the Supabase dependency as an explicit stack upgrade: stop
+all local projects without `--no-backup`, update active KingStack projects to
+the same exact version, install while online, start one canary project, and
+only then remove the previous unused image generation. The focused
+`supabase-version.test.ts` test rejects accidental dependency ranges.
+
+## Docker storage budget
+
+Docker Desktop's default builder garbage collection retains up to 20 GB. That
+is too large for a 60 GB Docker disk alongside several Supabase projects. In
+Docker Desktop's **Settings > Docker Engine**, merge this into the existing
+daemon JSON and apply the change:
+
+```json
+{
+  "builder": {
+    "gc": {
+      "defaultKeepStorage": "5GB",
+      "enabled": true
+    }
+  }
+}
+```
+
+Applying Docker Engine settings restarts Docker Desktop, so do it at a
+convenient stopping point. To enforce the same ceiling immediately without a
+restart, run:
+
+```bash
+yarn docker:trim-build-cache
+```
+
+Inspect Docker usage and survey retained Supabase projects and cached image
+generations before removing anything:
+
+```bash
+yarn docker:disk-usage
+yarn supabase:survey
+```
+
+The survey is read-only. Running or manually stopped containers retain their
+exact service image tags. A project stopped with `supabase stop` normally has
+only labeled volumes remaining; Docker retains its project ID but not the CLI
+or image version that created it, so the survey reports that mapping as
+unknown instead of guessing. Verify those projects from their repositories
+before manually removing any cached image tag.
 
 `yarn local` is a convenience command that regenerates local environment files
 and starts Supabase. It does not replace Prisma migration work.

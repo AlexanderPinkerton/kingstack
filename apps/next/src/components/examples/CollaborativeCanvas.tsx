@@ -143,10 +143,11 @@ export const CollaborativeCanvas = observer(function CollaborativeCanvas() {
   const rootStore = useRootStore();
   const sessionUser = rootStore.session?.user;
   const displayName =
-    rootStore.userData?.displayName ||
-    sessionUser?.user_metadata?.username ||
-    sessionUser?.email?.split("@")[0] ||
-    "You";
+    (rootStore.isGuest
+      ? `Guest ${sessionUser?.id.slice(0, 4).toUpperCase() || "user"}`
+      : rootStore.userData?.displayName ||
+        sessionUser?.user_metadata?.username ||
+        sessionUser?.email?.split("@")[0]) || "You";
 
   // Identity is per tab, so two tabs of one account read as two people.
   const [participantId] = useState(() => createParticipantId("canvas"));

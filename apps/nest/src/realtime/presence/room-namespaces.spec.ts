@@ -5,6 +5,10 @@ import { getRoomNamespaceConfig } from "./room-namespaces";
 describe("checkboxes namespace", () => {
   const config = getRoomNamespaceConfig("checkboxes")!;
 
+  it("admits verified guest sessions", () => {
+    expect(config.access).toBe("guest");
+  });
+
   it("accepts an in-range grid index", () => {
     expect(config.validateState({ checkboxIndex: 42 })).toEqual({
       checkboxIndex: 42,
@@ -22,6 +26,10 @@ describe("checkboxes namespace", () => {
 
 describe("cursors namespace", () => {
   const config = getRoomNamespaceConfig("cursors")!;
+
+  it("admits verified guest sessions", () => {
+    expect(config.access).toBe("guest");
+  });
 
   it("keeps fractional coordinates inside the surface", () => {
     expect(config.validateState({ x: 0.25, y: 0.75 })).toEqual({
@@ -43,6 +51,11 @@ describe("cursors namespace", () => {
 
 describe("canvas namespace", () => {
   const config = getRoomNamespaceConfig("canvas")!;
+
+  it("admits guest presence and ripple signals", () => {
+    expect(config.access).toBe("guest");
+    expect(config.allowsAnonymousSignal?.("ripple")).toBe(true);
+  });
 
   it("accepts absolute world coordinates", () => {
     expect(config.validateState({ x: 812, y: 460 })).toEqual({
@@ -102,8 +115,14 @@ describe("global pool namespace", () => {
   const config = getRoomNamespaceConfig("pool")!;
 
   it("admits only the one global pool room", () => {
+    expect(config.access).toBe("guest");
     expect(config.allowsRoomId?.(POOL_ROOM_ID)).toBe(true);
     expect(config.allowsRoomId?.("pool:private")).toBe(false);
+  });
+
+  it("lets guests disturb the water without resetting shared state", () => {
+    expect(config.allowsAnonymousSignal?.("ripple")).toBe(true);
+    expect(config.allowsAnonymousSignal?.("reset-boat")).toBe(false);
   });
 
   it("validates the pool pointer and 3D viewpoint envelope", () => {
@@ -138,5 +157,11 @@ describe("global pool namespace", () => {
 describe("unknown namespaces", () => {
   it("has no configuration", () => {
     expect(getRoomNamespaceConfig("kanban")).toBeNull();
+  });
+});
+
+describe("persistent namespaces", () => {
+  it("keeps post fan-out permanent-account only", () => {
+    expect(getRoomNamespaceConfig("posts")?.access).toBe("permanent");
   });
 });

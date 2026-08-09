@@ -10,12 +10,12 @@ import {
 } from "@nestjs/common";
 
 import { UseGuards } from "@nestjs/common";
-import { JwtAuthGuard } from "../auth/guards/jwt.auth.guard";
+import { PermanentUserGuard } from "../auth/guards/permanent-user.guard";
 
 import { PrismaService } from "../prisma/prisma.service";
 
 @Controller("posts")
-@UseGuards(JwtAuthGuard)
+@UseGuards(PermanentUserGuard)
 export class PostsController {
   constructor(private readonly prisma: PrismaService) {}
 

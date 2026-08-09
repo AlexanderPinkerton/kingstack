@@ -1,6 +1,7 @@
 export interface SupabaseUserClaims {
   aud?: unknown;
   email?: unknown;
+  is_anonymous?: unknown;
   sub?: unknown;
   [claim: string]: unknown;
 }
@@ -9,6 +10,7 @@ export type AuthenticatedSupabaseUserClaims<
   TClaims extends SupabaseUserClaims = SupabaseUserClaims,
 > = TClaims & {
   email?: string;
+  is_anonymous?: boolean;
   sub: string;
 };
 
@@ -47,7 +49,22 @@ export function validateSupabaseUserClaims<TClaims extends SupabaseUserClaims>(
     );
   }
 
+  if (
+    claims.is_anonymous !== undefined &&
+    typeof claims.is_anonymous !== "boolean"
+  ) {
+    throw new InvalidSupabaseAccessTokenError(
+      "Supabase access token has an invalid is_anonymous claim",
+    );
+  }
+
   return claims as AuthenticatedSupabaseUserClaims<TClaims>;
+}
+
+export function isAnonymousSupabaseUserClaims(
+  claims: SupabaseUserClaims,
+): boolean {
+  return claims.is_anonymous === true;
 }
 
 function hasAuthenticatedAudience(audience: unknown): boolean {
