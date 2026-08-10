@@ -124,6 +124,7 @@ export const TEMPLATE_PATHS = [
   "packages/prisma",
   "packages/shared",
   "packages/ts-config",
+  "scripts/check-nest-docker-workspaces.ts",
   "scripts/config-schema.test.ts",
   "scripts/enable-backend.ts",
   "scripts/project-mode.ts",

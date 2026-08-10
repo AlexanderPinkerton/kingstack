@@ -1,4 +1,12 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "fs";
+import { spawnSync } from "child_process";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "fs";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -184,6 +192,7 @@ describe("generated project boundary", () => {
       "deploy-next-prod.yml",
     ]);
     expect(readdirSync(join(generatedRoot, "scripts")).sort()).toEqual([
+      "check-nest-docker-workspaces.ts",
       "config-schema.test.ts",
       "enable-backend.ts",
       "project-mode.ts",
@@ -198,6 +207,9 @@ describe("generated project boundary", () => {
       readFileSync(join(generatedRoot, "package.json"), "utf8"),
     );
     expect(rootPackage.scripts["deploy:nest"]).toBe("king-deploy nest");
+    expect(rootPackage.scripts["lint:docker-workspaces"]).toBe(
+      "bun scripts/check-nest-docker-workspaces.ts",
+    );
     expect(rootPackage.scripts["supabase:provision"]).toBe(
       "king-deploy supabase provision",
     );
@@ -250,6 +262,45 @@ describe("generated project boundary", () => {
     expect(
       readFileSync(join(generatedRoot, "tsconfig.json"), "utf8"),
     ).toContain('"types": ["node", "bun"]');
+  });
+
+  it("lints every generated Yarn workspace into the Nest Dockerfile", () => {
+    const script = join(
+      generatedRoot,
+      "scripts",
+      "check-nest-docker-workspaces.ts",
+    );
+    const dockerfilePath = join(generatedRoot, "apps", "nest", "Dockerfile");
+    const dockerfile = readFileSync(dockerfilePath, "utf8");
+
+    const passing = spawnSync("bun", [script], {
+      cwd: generatedRoot,
+      encoding: "utf8",
+    });
+    expect(passing.status).toBe(0);
+
+    try {
+      writeFileSync(
+        dockerfilePath,
+        dockerfile.replace(
+          "COPY packages/shared/package.json packages/shared/package.json\n",
+          "",
+        ),
+      );
+      const failing = spawnSync("bun", [script], {
+        cwd: generatedRoot,
+        encoding: "utf8",
+      });
+      expect(failing.status).toBe(1);
+      expect(failing.stderr).toContain(
+        "COPY packages/shared/package.json packages/shared/package.json",
+      );
+      expect(failing.stderr).toContain(
+        "Docker builds will not work unless this is fixed!!!!",
+      );
+    } finally {
+      writeFileSync(dockerfilePath, dockerfile);
+    }
   });
 
   it("ships one app-rooted Vercel build configuration", () => {
