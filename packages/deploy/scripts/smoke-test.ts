@@ -16,11 +16,24 @@ const temporaryRoot = mkdtempSync(
 const projectRoot = join(temporaryRoot, "project");
 const configArchive = join(temporaryRoot, "kingstack-config.tgz");
 const deployArchive = join(temporaryRoot, "kingstack-deploy.tgz");
-const expectedVersion = (
-  JSON.parse(
-    readFileSync(join(repositoryRoot, "packages/deploy/package.json"), "utf8"),
-  ) as { version: string }
-).version;
+const deployManifest = JSON.parse(
+  readFileSync(join(repositoryRoot, "packages/deploy/package.json"), "utf8"),
+) as {
+  dependencies?: Record<string, string>;
+  version: string;
+};
+const configManifest = JSON.parse(
+  readFileSync(join(repositoryRoot, "packages/config/package.json"), "utf8"),
+) as { version: string };
+const expectedVersion = deployManifest.version;
+
+if (
+  deployManifest.dependencies?.["@kingstack/config"] !== configManifest.version
+) {
+  throw new Error(
+    `@kingstack/deploy must declare the registry version of @kingstack/config (${configManifest.version}); received ${deployManifest.dependencies?.["@kingstack/config"] ?? "no dependency"}.`,
+  );
+}
 
 try {
   run("yarn", ["workspace", "@kingstack/config", "build"], repositoryRoot);

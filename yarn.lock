@@ -2660,7 +2660,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@kingstack/config@workspace:*, @kingstack/config@workspace:packages/config":
+"@kingstack/config@npm:0.3.0, @kingstack/config@workspace:*, @kingstack/config@workspace:packages/config":
   version: 0.0.0-use.local
   resolution: "@kingstack/config@workspace:packages/config"
   dependencies:
@@ -2698,7 +2698,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@kingstack/deploy@workspace:packages/deploy"
   dependencies:
-    "@kingstack/config": "workspace:*"
+    "@kingstack/config": "npm:0.3.0"
     "@kingstack/eslint-config": "workspace:*"
     "@napi-rs/keyring": "npm:1.2.0"
     "@types/bun": "npm:^1.3.14"
