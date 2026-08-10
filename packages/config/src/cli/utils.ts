@@ -1,7 +1,13 @@
 import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { ConfigSchema, ConfigValues } from "../core";
+import {
+  resolveConfig,
+  type ConfigSchema,
+  type ConfigValues,
+  type ResolvedConfig,
+  type ValidationError,
+} from "../core";
 
 const RESERVED_CONFIG_FILES = new Set(["example", "schema"]);
 
@@ -52,6 +58,23 @@ export async function loadUserValues(
     );
   }
   return imported.values as ConfigValues;
+}
+
+export async function loadResolvedEnvironment(
+  environment: string,
+  cwd: string = process.cwd(),
+): Promise<{
+  schema: ConfigSchema;
+  values: ConfigValues;
+  config: ResolvedConfig;
+  errors: ValidationError[];
+}> {
+  const [schema, values] = await Promise.all([
+    loadUserSchema(cwd),
+    loadUserValues(environment, cwd),
+  ]);
+  const { config, errors } = resolveConfig(schema, values, { environment });
+  return { schema, values, config, errors };
 }
 
 export function listEnvironmentNames(

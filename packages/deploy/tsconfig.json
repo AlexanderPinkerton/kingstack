@@ -1,0 +1,12 @@
+{
+  "extends": "../../packages/ts-config/node.json",
+  "compilerOptions": {
+    "composite": false,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "types": ["node", "bun"]
+  },
+  "include": ["src/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

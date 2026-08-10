@@ -64,7 +64,8 @@ export const SKIP_PATTERNS = [
 // Published npm packages that should NOT be renamed
 // These will use their npm versions instead of workspace:*
 export const PUBLISHED_PACKAGES: Record<string, string> = {
-  "@kingstack/config": "^0.2.0",
+  "@kingstack/config": "^0.3.0",
+  "@kingstack/deploy": "0.1.0",
   "@kingstack/advanced-optimistic-store": "^0.1.0",
   "@kingstack/comment-tree": "^0.2.2",
   "@kingstack/dnd-tree": "^0.2.0",
@@ -76,6 +77,7 @@ export const PUBLISHED_PACKAGES: Record<string, string> = {
 // defensive cleanup boundary for older or custom template sources.
 export const PACKAGES_TO_REMOVE = [
   "packages/config", // Published to npm
+  "packages/deploy", // Published to npm
   "packages/advanced-optimistic-store", // Published to npm
   "packages/comment-tree", // Published to npm
   "packages/dnd-tree", // Published to npm
@@ -122,9 +124,10 @@ export const TEMPLATE_PATHS = [
   "packages/prisma",
   "packages/shared",
   "packages/ts-config",
+  "scripts/check-nest-docker-workspaces.ts",
+  "scripts/config-schema.test.ts",
   "scripts/enable-backend.ts",
   "scripts/project-mode.ts",
-  "scripts/deploy",
   "scripts/setup-shadow-db.ts",
   "scripts/supabase-check-config.ts",
   "scripts/supabase-list-instances.ts",

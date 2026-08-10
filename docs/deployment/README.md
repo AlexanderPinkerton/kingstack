@@ -3,9 +3,15 @@
 KingStack deploys the Next.js application to Vercel and can deploy the NestJS
 application as a Docker container on one or more DigitalOcean Droplets.
 
+Hosted deployment commands come from the exact `@kingstack/deploy` version in
+the project manifest and lockfile. The familiar Yarn commands below are stable
+aliases for its compiled `king-deploy` CLI; installing or upgrading the package
+does not contact a provider or deploy anything. Bun 1.2.8 or newer is required.
+See the installed package README and changelog before changing its version.
+
 ## Supabase
 
-Provision a hosted Supabase project through the checked-in CLI with an explicit
+Provision a hosted Supabase project through the versioned CLI with an explicit
 cost review and confirmation:
 
 ```bash
@@ -48,9 +54,10 @@ yarn deploy:nest
 
 It guides you through provision versus deploy, hosted environment, live
 DigitalOcean regions, region-compatible sizes with current provider prices,
-SSH keys/firewall access, existing Droplet targets, routing, deployment mode,
-and dry-run versus execution. It then hands the result to the same deployment
-planner and safety confirmation used by the explicit commands.
+existing Droplet targets, deployment scope and mode, and dry-run versus
+execution. Routine releases preserve the existing host configuration;
+SSH/firewall and routing questions appear only when host reconfiguration is
+explicitly selected.
 
 The default hosted route is trusted HTTPS over a single Droplet's public IPv4
 address, so no domain or DNS setup is required. Caddy obtains and renews a
@@ -66,8 +73,8 @@ automation and CI:
 # First-time infrastructure
 yarn deploy:nest provision production --region nyc3
 
-# Build, migrate, and deploy to every matching droplet
-yarn deploy:nest deploy production
+# First application deployment after separate provisioning
+yarn deploy:nest deploy production --reconfigure-host
 ```
 
 Provisioning and deployment are separate so an ordinary release can never
@@ -116,13 +123,15 @@ Container:      my-app-nest
 Cloud firewall: my-app-production-nest-firewall
 ```
 
-When `NEXT_PUBLIC_NEST_BACKEND_URL` resolves to a non-local HTTPS URL, its
-hostname becomes the default Caddy domain. Override that behavior explicitly:
+Host routing is changed only during provisioning or an explicit host
+reconfiguration. When `NEXT_PUBLIC_NEST_BACKEND_URL` resolves to a non-local
+HTTPS URL, its hostname becomes the default Caddy domain. Override that
+behavior explicitly:
 
 ```bash
-yarn deploy:nest deploy production --ip-https
-yarn deploy:nest deploy production --domain api.example.com
-yarn deploy:nest deploy production --no-domain
+yarn deploy:nest deploy production --reconfigure-host --ip-https
+yarn deploy:nest deploy production --reconfigure-host --domain api.example.com
+yarn deploy:nest deploy production --reconfigure-host --no-domain
 ```
 
 `--ip-https` requires exactly one selected Droplet. It discovers that
@@ -141,6 +150,7 @@ successful HTTPS deployment:
 
 ```bash
 yarn deploy:nest deploy production \
+  --reconfigure-host \
   --ip-https \
   --update-config
 ```
@@ -191,6 +201,21 @@ yarn deploy:nest deploy production \
   --droplet api-production-2
 ```
 
+An existing-host deployment is application-only by default. It builds the
+image, applies pending Prisma migrations unless skipped, refreshes the
+container environment, and performs the candidate/rollback rollout. It does
+not reconcile the DigitalOcean firewall, change the SSH policy, modify Caddy,
+change the active container's port binding, or rewrite local KingStack config.
+The rollout refuses to proceed if there is no existing container whose port
+binding can be preserved.
+
+Use `--reconfigure-host` only for a first deployment to a separately
+provisioned host or when you intentionally want to manage host networking:
+
+```bash
+yarn deploy:nest deploy production --reconfigure-host
+```
+
 When Caddy is required on an existing Ubuntu host, the tool installs it using
 the official package repository without reinstalling Docker. Its configuration
 lives in an app-specific file under `/etc/caddy/conf.d`; unrelated Caddy sites
@@ -206,7 +231,8 @@ A full deployment:
 4. streams the image directly to each host over SSH;
 5. starts and probes a candidate container before cutover;
 6. replaces the active container and verifies it again; and
-7. validates and gracefully reloads Caddy when configured.
+7. validates and gracefully reloads Caddy when host reconfiguration is
+   selected.
 
 Droplets are updated sequentially. If a host fails, its previous container is
 restored and already-updated hosts are rolled back when they have a previous
@@ -266,7 +292,7 @@ becomes the hosted `NEST_HOST`, producing a URL such as
 Caddy manages their frequent renewal.
 
 After initially deploying with a direct port, rerun the wizard against the
-existing host. Choose **Configuration only**, then
+existing host. Choose **Reconfigure host**, **Configuration only**, then
 **Trusted HTTPS using the Droplet public IP**, and accept the `NEST_HOST`
 update. The wizard reuses the current image, enables Caddy, verifies the trusted
 endpoint, and then prints the exact Vercel sync and redeployment commands:

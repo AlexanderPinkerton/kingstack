@@ -1,4 +1,12 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "fs";
+import { spawnSync } from "child_process";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "fs";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -42,6 +50,7 @@ describe("generated project boundary", () => {
       "comment-tree",
       "config",
       "create-kingstack",
+      "deploy",
       "dnd-tree",
       "logger",
     ]) {
@@ -69,13 +78,15 @@ describe("generated project boundary", () => {
       readFileSync(join(generatedRoot, "apps", "nest", "package.json"), "utf8"),
     );
     expect(nestPackage.dependencies["@kingstack/logger"]).toBe("^0.1.0");
-    expect(rootPackage.devDependencies["@kingstack/config"]).toBe("^0.2.0");
+    expect(rootPackage.devDependencies["@kingstack/config"]).toBe("^0.3.0");
+    expect(rootPackage.devDependencies["@kingstack/deploy"]).toBe("0.1.0");
 
     const nestDockerfile = readFileSync(
       join(generatedRoot, "apps", "nest", "Dockerfile"),
       "utf8",
     );
     expect(nestDockerfile).not.toContain("packages/logger");
+    expect(nestDockerfile).not.toContain("packages/deploy");
     expect(nestDockerfile).not.toContain("workspace @kingstack/logger build");
     expect(nestDockerfile).toContain("workspace @boundary-check/shared build");
     expect(nestDockerfile).toContain(
@@ -181,7 +192,8 @@ describe("generated project boundary", () => {
       "deploy-next-prod.yml",
     ]);
     expect(readdirSync(join(generatedRoot, "scripts")).sort()).toEqual([
-      "deploy",
+      "check-nest-docker-workspaces.ts",
+      "config-schema.test.ts",
       "enable-backend.ts",
       "project-mode.ts",
       "setup-shadow-db.ts",
@@ -189,67 +201,26 @@ describe("generated project boundary", () => {
       "supabase-list-instances.ts",
       "supabase-status.ts",
     ]);
-    expect(
-      readdirSync(join(generatedRoot, "scripts", "deploy")).sort(),
-    ).toEqual([
-      "environment-file.ts",
-      "nest-digitalocean",
-      "nest-digitalocean.ts",
-      "supabase",
-      "supabase.ts",
-      "vercel",
-    ]);
-    expect(
-      readdirSync(
-        join(generatedRoot, "scripts", "deploy", "nest-digitalocean"),
-      ).sort(),
-    ).toEqual([
-      "commands.ts",
-      "deploy.ts",
-      "deployment.test.ts",
-      "digitalocean.ts",
-      "host-scripts.ts",
-      "options.ts",
-      "project-config.ts",
-      "provision.ts",
-      "remote-host.ts",
-      "wizard.ts",
-    ]);
-    expect(
-      readdirSync(join(generatedRoot, "scripts", "deploy", "supabase")).sort(),
-    ).toEqual([
-      "auth-config.test.ts",
-      "auth-config.ts",
-      "auth-options.ts",
-      "configure-auth.ts",
-      "get-secrets-options.ts",
-      "get-secrets.test.ts",
-      "get-secrets.ts",
-      "options.ts",
-      "provision.test.ts",
-      "provision.ts",
-    ]);
-    expect(
-      readdirSync(join(generatedRoot, "scripts", "deploy", "vercel")).sort(),
-    ).toEqual(["get-config-options.ts", "get-config.test.ts", "get-config.ts"]);
+    expect(existsSync(join(generatedRoot, "scripts", "deploy"))).toBe(false);
 
     const rootPackage = JSON.parse(
       readFileSync(join(generatedRoot, "package.json"), "utf8"),
     );
-    expect(rootPackage.scripts["deploy:nest"]).toBe(
-      "bun scripts/deploy/nest-digitalocean.ts",
+    expect(rootPackage.scripts["deploy:nest"]).toBe("king-deploy nest");
+    expect(rootPackage.scripts["lint:docker-workspaces"]).toBe(
+      "bun scripts/check-nest-docker-workspaces.ts",
     );
     expect(rootPackage.scripts["supabase:provision"]).toBe(
-      "bun scripts/deploy/supabase.ts",
+      "king-deploy supabase provision",
     );
     expect(rootPackage.scripts["supabase:provision:get-secrets"]).toBe(
-      "bun scripts/deploy/supabase/get-secrets.ts",
+      "king-deploy supabase pull",
     );
     expect(rootPackage.scripts["supabase:auth:configure"]).toBe(
-      "bun scripts/deploy/supabase/configure-auth.ts",
+      "king-deploy supabase auth",
     );
     expect(rootPackage.scripts["vercel:config:pull"]).toBe(
-      "bun scripts/deploy/vercel/get-config.ts",
+      "king-deploy vercel pull",
     );
     expect(rootPackage.devDependencies.supabase).toBe("2.113.0");
     expect(rootPackage.devDependencies.supabase).toMatch(/^\d+\.\d+\.\d+$/);
@@ -291,6 +262,45 @@ describe("generated project boundary", () => {
     expect(
       readFileSync(join(generatedRoot, "tsconfig.json"), "utf8"),
     ).toContain('"types": ["node", "bun"]');
+  });
+
+  it("lints every generated Yarn workspace into the Nest Dockerfile", () => {
+    const script = join(
+      generatedRoot,
+      "scripts",
+      "check-nest-docker-workspaces.ts",
+    );
+    const dockerfilePath = join(generatedRoot, "apps", "nest", "Dockerfile");
+    const dockerfile = readFileSync(dockerfilePath, "utf8");
+
+    const passing = spawnSync("bun", [script], {
+      cwd: generatedRoot,
+      encoding: "utf8",
+    });
+    expect(passing.status).toBe(0);
+
+    try {
+      writeFileSync(
+        dockerfilePath,
+        dockerfile.replace(
+          "COPY packages/shared/package.json packages/shared/package.json\n",
+          "",
+        ),
+      );
+      const failing = spawnSync("bun", [script], {
+        cwd: generatedRoot,
+        encoding: "utf8",
+      });
+      expect(failing.status).toBe(1);
+      expect(failing.stderr).toContain(
+        "COPY packages/shared/package.json packages/shared/package.json",
+      );
+      expect(failing.stderr).toContain(
+        "Docker builds will not work unless this is fixed!!!!",
+      );
+    } finally {
+      writeFileSync(dockerfilePath, dockerfile);
+    }
   });
 
   it("ships one app-rooted Vercel build configuration", () => {

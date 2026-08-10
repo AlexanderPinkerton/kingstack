@@ -2694,6 +2694,30 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@kingstack/deploy@workspace:*, @kingstack/deploy@workspace:packages/deploy":
+  version: 0.0.0-use.local
+  resolution: "@kingstack/deploy@workspace:packages/deploy"
+  dependencies:
+    "@kingstack/config": "workspace:*"
+    "@kingstack/eslint-config": "workspace:*"
+    "@napi-rs/keyring": "npm:1.2.0"
+    "@types/bun": "npm:^1.3.14"
+    "@types/node": "npm:^24.10.1"
+    eslint: "npm:10.8.0"
+    typescript: "npm:5.9.3"
+  peerDependencies:
+    supabase: ">=2.113.0 <3"
+    vercel: ">=58.1.0 <59"
+  peerDependenciesMeta:
+    supabase:
+      optional: true
+    vercel:
+      optional: true
+  bin:
+    king-deploy: bin/king-deploy
+  languageName: unknown
+  linkType: soft
+
 "@kingstack/dnd-tree@workspace:*, @kingstack/dnd-tree@workspace:packages/dnd-tree":
   version: 0.0.0-use.local
   resolution: "@kingstack/dnd-tree@workspace:packages/dnd-tree"
@@ -11652,8 +11676,8 @@ __metadata:
     "@changesets/cli": "npm:^2.29.8"
     "@iarna/toml": "npm:^2.2.5"
     "@kingstack/config": "workspace:*"
+    "@kingstack/deploy": "workspace:*"
     "@kingstack/eslint-config": "workspace:*"
-    "@napi-rs/keyring": "npm:1.2.0"
     "@types/bun": "npm:^1.3.14"
     "@types/node": "npm:^24.10.1"
     "@types/pg": "npm:^8.15.4"

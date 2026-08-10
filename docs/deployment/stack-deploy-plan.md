@@ -11,6 +11,11 @@ a working hosted deployment across Supabase, Vercel, and DigitalOcean:
 yarn deploy:stack production
 ```
 
+This is deferred follow-on work after `@kingstack/deploy` has extracted and
+packaged the existing provider commands. The compatibility alias above
+delegates to `king-deploy stack production`; the orchestrator itself lives
+inside the deployment package.
+
 The command should feel magical, but its implementation should remain a small
 orchestrator over independently usable provider operations. A failure must be
 diagnosable, and rerunning the command must continue safely without creating
@@ -108,7 +113,8 @@ confirmation and allowing SSH from any address, remain visible.
 Initial command surface:
 
 ```text
-yarn deploy:stack [environment]
+king-deploy stack [environment]
+yarn deploy:stack [environment]  # compatibility alias
 
 --dry-run    Inspect providers and print the plan without making changes
 --yes        Accept the final plan in a non-interactive terminal
@@ -368,28 +374,30 @@ Do not create a persistent demo user merely to declare deployment success.
 Proposed files:
 
 ```text
-scripts/deploy/stack.ts
-scripts/deploy/stack/
-  options.ts
-  plan.ts
-  runner.ts
-  verify.ts
-  stack-deployment.test.ts
+packages/deploy/src/
+  stack/
+    cli.ts
+    options.ts
+    plan.ts
+    runner.ts
+    verify.ts
+    stack-deployment.test.ts
 ```
 
-Provider implementations remain in their existing folders. Refactor CLI-only
-functions into exported operations without changing the standalone command
-behavior:
+Provider implementations remain internal siblings in the same package. Reuse
+their typed operations without changing the standalone command behavior:
 
 ```text
-scripts/deploy/supabase/
-scripts/deploy/vercel/
-scripts/deploy/nest-digitalocean/
+packages/deploy/src/supabase/
+packages/deploy/src/vercel/
+packages/deploy/src/nest/digitalocean/
 ```
 
 Keep the hot orchestration path in plain TypeScript. Provider command execution
 should sit behind small injected adapters so tests can use deterministic fakes.
 Avoid subprocess output parsing when a JSON CLI or API response is available.
+The provider operations remain internal package APIs; adding the stack command
+does not require publishing provider import paths for external consumers.
 
 ## Safety rules
 
@@ -469,9 +477,10 @@ Automated tests must not create live provider resources.
 
 ### Phase 1: reusable operations
 
-- Extract callable Supabase credential import and Auth configuration.
-- Extract callable Vercel config import and sync.
-- Normalize existing NestJS result types.
+- Start after the deployment package extraction is complete.
+- Reuse callable Supabase credential import and Auth configuration.
+- Reuse callable Vercel config import and sync.
+- Refine existing NestJS result types only where orchestration requires it.
 - Preserve all current standalone command behavior and tests.
 
 Exit condition: each provider operation can be invoked without parsing its
@@ -542,5 +551,4 @@ The completed deployment must support:
    in the exact CLI/API flow we choose?
 6. Should the orchestrator create Vercel projects through `vercel link`,
    `vercel project add`, or the API through `vercel api`?
-
 

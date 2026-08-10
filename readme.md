@@ -26,7 +26,7 @@ project is a deliberate subset, not a clone of every upstream workspace.
 
 | Upstream category        | Examples                                                          | Generated-project behavior                           |
 | ------------------------ | ----------------------------------------------------------------- | ---------------------------------------------------- |
-| Published primitives     | `config`, `advanced-optimistic-store`, `comment-tree`, `dnd-tree` | Installed from npm; implementation source excluded   |
+| Published primitives     | `config`, `deploy`, `advanced-optimistic-store`, component packages | Installed from npm; implementation source excluded   |
 | Project-owned workspaces | `prisma`, `shared`, `eslint-config`, `ts-config`                  | Source included and renamed to the project namespace |
 | Maintainer tooling       | `create-kingstack`, Changesets, release and smoke-test tooling    | Excluded                                             |
 
@@ -184,9 +184,9 @@ authoritative cache until a repository confirms them.
 
 The reusable optimistic engine is published as
 `@kingstack/advanced-optimistic-store`. Generated projects also consume
-`@kingstack/config`, `@kingstack/comment-tree`, and `@kingstack/dnd-tree` from
-npm while keeping application-level stores and repository adapters in their
-own source tree.
+`@kingstack/config`, `@kingstack/deploy`, `@kingstack/comment-tree`, and
+`@kingstack/dnd-tree` from npm while keeping application-level stores,
+deployment artifacts, and repository adapters in their own source tree.
 
 ### Supabase and Prisma
 
@@ -337,10 +337,12 @@ yarn deploy:nest provision production --region nyc3 --deploy
 
 The wizard retrieves current DigitalOcean regions, available sizes, prices,
 SSH keys, and Droplets. Provisioning and deployment can also be run separately
-for later fleet work. Use `--without-database` when the target database is not
-ready yet. Trusted HTTPS over the Droplet public IP is the domainless default.
-After verification, the wizard can update the selected environment's
-`NEST_HOST`, ready for Vercel environment sync.
+for later fleet work. Existing-host releases update only the application by
+default; firewall, SSH, Caddy, port binding, and local config are preserved
+unless host reconfiguration is explicit. Use `--without-database` when the
+target database is not ready yet. Trusted HTTPS over the Droplet public IP is
+available during host setup. After verification, the wizard can update the
+selected environment's `NEST_HOST`, ready for Vercel environment sync.
 
 The deploy command builds locally, applies Prisma production migrations,
 streams the image over SSH, verifies a candidate container, and optionally
