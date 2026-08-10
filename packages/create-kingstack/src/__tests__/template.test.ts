@@ -211,7 +211,23 @@ describe("replaceWorkspaceVersions", () => {
     replaceWorkspaceVersions(testDir);
 
     const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-    expect(pkg.devDependencies["@kingstack/config"]).toBe("^0.2.0");
+    expect(pkg.devDependencies["@kingstack/config"]).toBe("^0.3.0");
+  });
+
+  it("pins the deployment package to an exact pre-1.0 version", () => {
+    const pkgPath = join(testDir, "package.json");
+    writeFileSync(
+      pkgPath,
+      JSON.stringify({
+        name: "test",
+        devDependencies: { "@kingstack/deploy": "workspace:*" },
+      }),
+    );
+
+    replaceWorkspaceVersions(testDir);
+
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+    expect(pkg.devDependencies["@kingstack/deploy"]).toBe("0.1.0");
   });
 
   it("should replace the AOS workspace version with its npm version", () => {
@@ -313,6 +329,7 @@ describe("prepareGeneratedProject", () => {
     mkdirSync(join(testDir, "packages", "create-kingstack"), {
       recursive: true,
     });
+    mkdirSync(join(testDir, "packages", "deploy"), { recursive: true });
     mkdirSync(join(testDir, "packages", "comment-tree"), {
       recursive: true,
     });
@@ -330,6 +347,7 @@ describe("prepareGeneratedProject", () => {
       join(testDir, "packages", "create-kingstack", "package.json"),
       "{}",
     );
+    writeFileSync(join(testDir, "packages", "deploy", "package.json"), "{}");
     writeFileSync(
       join(testDir, "packages", "comment-tree", "package.json"),
       "{}",
@@ -341,6 +359,7 @@ describe("prepareGeneratedProject", () => {
       join(testDir, "Dockerfile"),
       [
         "COPY packages/config/package.json packages/config/package.json",
+        "COPY packages/deploy/package.json packages/deploy/package.json",
         "COPY packages/advanced-optimistic-store/package.json packages/advanced-optimistic-store/package.json",
         "COPY packages/comment-tree/package.json packages/comment-tree/package.json",
         "COPY packages/dnd-tree/package.json packages/dnd-tree/package.json",
@@ -396,6 +415,11 @@ describe("prepareGeneratedProject", () => {
     );
   });
 
+  it("should remove packages/deploy", () => {
+    prepareGeneratedProject(testDir);
+    expect(existsSync(join(testDir, "packages", "deploy"))).toBe(false);
+  });
+
   it("should remove packages/advanced-optimistic-store", () => {
     prepareGeneratedProject(testDir);
     expect(
@@ -421,7 +445,7 @@ describe("prepareGeneratedProject", () => {
 
   it("should return count of removed packages", () => {
     const count = prepareGeneratedProject(testDir);
-    expect(count).toBe(6);
+    expect(count).toBe(7);
   });
 
   it("should remove maintainer-only scripts and dependencies", () => {
@@ -451,6 +475,7 @@ describe("prepareGeneratedProject", () => {
 
     const content = readFileSync(join(testDir, "Dockerfile"), "utf-8");
     expect(content).not.toContain("packages/config/package.json");
+    expect(content).not.toContain("packages/deploy/package.json");
     expect(content).not.toContain(
       "packages/advanced-optimistic-store/package.json",
     );

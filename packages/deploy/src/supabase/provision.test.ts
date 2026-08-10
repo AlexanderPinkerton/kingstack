@@ -1,4 +1,7 @@
 import { describe, expect, it } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   buildCreateArgs,
   computeDescription,
@@ -6,12 +9,33 @@ import {
   REGIONS,
 } from "./options.js";
 import {
+  defaultProjectName,
   formatCommandFailureDetails,
   formatProvisioningPlan,
+  isSupportedSupabaseCliVersion,
   parseOrganizations,
 } from "./provision.js";
 
 describe("Supabase project provisioning CLI", () => {
+  it("derives the default only from a validated project manifest", () => {
+    const root = mkdtempSync(join(tmpdir(), "kingstack-provision-test-"));
+    try {
+      expect(() => defaultProjectName(root)).toThrow("project root");
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({ name: "@fixture/demo-app" }),
+      );
+      expect(defaultProjectName(root)).toBe("demo-app");
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+  it("accepts only the declared Supabase CLI range", () => {
+    expect(isSupportedSupabaseCliVersion("2.113.0")).toBe(true);
+    expect(isSupportedSupabaseCliVersion("2.999.1")).toBe(true);
+    expect(isSupportedSupabaseCliVersion("2.112.9")).toBe(false);
+    expect(isSupportedSupabaseCliVersion("3.0.0")).toBe(false);
+  });
   it("parses interactive and repeatable provisioning options", () => {
     expect(parseCliArgs(["example-app", "--dry-run"])).toMatchObject({
       projectName: "example-app",

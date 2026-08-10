@@ -1,14 +1,13 @@
-#!/usr/bin/env bun
-
 import type { ReadStream } from "node:tty";
 import { emitKeypressEvents } from "node:readline";
 import { createInterface, type Interface } from "node:readline/promises";
-import { schema } from "../../../config/schema.js";
 import {
+  loadUserSchema,
   renderEnvironmentValues as renderConfigEnvironmentValues,
   updateEnvironmentValues as updateConfigEnvironmentValues,
   writeEnvironmentFile as writeConfigEnvironmentFile,
-} from "../environment-file.js";
+  type ConfigSchema,
+} from "@kingstack/config";
 import {
   formatGetSecretsHelp,
   normalizePoolerRegion,
@@ -16,6 +15,7 @@ import {
   type GetSecretsCliOptions,
 } from "./get-secrets-options.js";
 import { assertSupabaseCli, choose, promptText, runYarn } from "./provision.js";
+import type { KingStackProject } from "../project.js";
 
 export interface HostedProject {
   ref: string;
@@ -32,6 +32,15 @@ export type SupabaseConfigValues = {
   SUPABASE_SECRET_KEY: string;
   SUPABASE_DB_PASSWORD: string;
 };
+
+export interface SupabasePullResult {
+  projectRef: string;
+  projectName: string;
+  region: string;
+  poolerRegion: string;
+  environment?: string;
+  configChanged: boolean;
+}
 
 interface ApiKeyRecord {
   apiKey: string;
@@ -180,8 +189,12 @@ export function updateEnvironmentValues(
   return updateConfigEnvironmentValues(content, values);
 }
 
-async function getSecrets(options: GetSecretsCliOptions): Promise<void> {
-  assertSupabaseCli();
+export async function getSecrets(
+  options: GetSecretsCliOptions,
+  projectContext: KingStackProject,
+): Promise<SupabasePullResult> {
+  assertSupabaseCli(projectContext.root);
+  const schema = await loadUserSchema(projectContext.root);
   const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY);
   const interface_ = interactive
     ? createInterface({ input: process.stdin, output: process.stdout })
@@ -191,9 +204,9 @@ async function getSecrets(options: GetSecretsCliOptions): Promise<void> {
   let destination: Destination;
   let poolerRegion: string;
   try {
-    project = await resolveProject(options, interface_);
-    destination = await resolveDestination(options, interface_);
-    assertHostedEnvironment(destination);
+    project = await resolveProject(options, interface_, projectContext.root);
+    destination = await resolveDestination(options, interface_, schema);
+    assertHostedEnvironment(destination, schema);
     const defaultPoolerRegion = normalizePoolerRegion(
       `aws-0-${project.region}`,
     );
@@ -215,7 +228,11 @@ async function getSecrets(options: GetSecretsCliOptions): Promise<void> {
     interface_?.close();
   }
 
-  const apiKeys = getProjectApiKeys(project.ref, options.apiKeyName);
+  const apiKeys = getProjectApiKeys(
+    project.ref,
+    options.apiKeyName,
+    projectContext.root,
+  );
   const databasePassword = await resolveDatabasePassword(interactive);
   const values: SupabaseConfigValues = {
     SUPABASE_PROJECT_REF: project.ref,
@@ -232,12 +249,22 @@ async function getSecrets(options: GetSecretsCliOptions): Promise<void> {
     );
     console.log();
     console.log(renderEnvironmentValues(values));
-    return;
+    return {
+      projectRef: project.ref,
+      projectName: project.name,
+      region: project.region,
+      poolerRegion,
+      configChanged: false,
+    };
   }
 
   const environment = destination.environment;
   if (!environment) throw new Error("Config environment is missing.");
-  const relativePath = writeEnvironmentFile(environment, values);
+  const relativePath = writeEnvironmentFile(
+    environment,
+    values,
+    projectContext.root,
+  );
   console.log();
   console.log(`Wrote the Supabase values to ${relativePath}.`);
   console.log("The secret key and database password were not printed.");
@@ -256,13 +283,22 @@ async function getSecrets(options: GetSecretsCliOptions): Promise<void> {
   console.log(
     `5. After NEXT_HOST is configured, run: yarn supabase:auth:configure ${environment}`,
   );
+  return {
+    projectRef: project.ref,
+    projectName: project.name,
+    region: project.region,
+    poolerRegion,
+    environment,
+    configChanged: true,
+  };
 }
 
-function listProjects(): HostedProject[] {
+function listProjects(projectRoot: string): HostedProject[] {
   const output = runYarn(
     ["exec", "supabase", "projects", "list", "--output", "json"],
     {
       capture: true,
+      cwd: projectRoot,
       display: "yarn exec supabase projects list --output json",
     },
   );
@@ -272,8 +308,9 @@ function listProjects(): HostedProject[] {
 async function resolveProject(
   options: GetSecretsCliOptions,
   interface_: Interface | undefined,
+  projectRoot: string,
 ): Promise<HostedProject> {
-  const projects = listProjects();
+  const projects = listProjects(projectRoot);
   if (options.projectRef) {
     const project = projects.find(({ ref }) => ref === options.projectRef);
     if (!project) {
@@ -305,6 +342,7 @@ async function resolveProject(
 async function resolveDestination(
   options: GetSecretsCliOptions,
   interface_: Interface | undefined,
+  schema: ConfigSchema,
 ): Promise<Destination> {
   if (options.print) return { kind: "print" };
   if (options.environment) {
@@ -316,7 +354,7 @@ async function resolveDestination(
     );
   }
 
-  const hostedEnvironments = Object.entries(schema.environments)
+  const hostedEnvironments = Object.entries(schema.environments ?? {})
     .filter(([, definition]) => definition.mode === "hosted")
     .map(([environment]) => ({
       label: `Write config/${environment}.ts`,
@@ -336,10 +374,13 @@ async function resolveDestination(
   ]);
 }
 
-function assertHostedEnvironment(destination: Destination): void {
+function assertHostedEnvironment(
+  destination: Destination,
+  schema: ConfigSchema,
+): void {
   if (destination.kind !== "file" || !destination.environment) return;
   const environments: Readonly<Record<string, { mode: string }>> =
-    schema.environments;
+    schema.environments ?? {};
   const definition = environments[destination.environment];
   if (!definition) {
     throw new Error(
@@ -399,7 +440,8 @@ async function confirmImport(
 
 function getProjectApiKeys(
   projectRef: string,
-  apiKeyName?: string,
+  apiKeyName: string | undefined,
+  projectRoot: string,
 ): { publishableKey: string; secretKey: string } {
   const args = [
     "exec",
@@ -414,6 +456,7 @@ function getProjectApiKeys(
   ];
   const output = runYarn(args, {
     capture: true,
+    cwd: projectRoot,
     sensitive: true,
     display: `yarn exec supabase projects api-keys --project-ref ${projectRef} --reveal --output json`,
   });
@@ -497,11 +540,13 @@ export async function promptSecret(question: string): Promise<string> {
 function writeEnvironmentFile(
   environment: string,
   values: SupabaseConfigValues,
+  projectRoot: string,
 ): string {
   return writeConfigEnvironmentFile(
     environment,
     values,
     "Environment-specific values populated from a hosted Supabase project.",
+    { cwd: projectRoot },
   );
 }
 
@@ -523,20 +568,14 @@ function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value ? value : undefined;
 }
 
-async function main(): Promise<void> {
-  const options = parseGetSecretsCliArgs(process.argv.slice(2));
+export async function runSupabasePullCli(
+  args: string[],
+  project: KingStackProject,
+): Promise<void> {
+  const options = parseGetSecretsCliArgs(args);
   if (options.help) {
     console.log(formatGetSecretsHelp());
     return;
   }
-  await getSecrets(options);
-}
-
-if (import.meta.main) {
-  void main().catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error();
-    console.error(`Supabase credential import stopped: ${message}`);
-    process.exitCode = 1;
-  });
+  await getSecrets(options, project);
 }

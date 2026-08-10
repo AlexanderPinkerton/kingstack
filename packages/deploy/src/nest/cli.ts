@@ -1,7 +1,6 @@
-#!/usr/bin/env bun
-
-import { log } from "./nest-digitalocean/commands.js";
-import { deploy } from "./nest-digitalocean/deploy.js";
+import { log } from "./digitalocean/commands.js";
+import type { KingStackProject } from "../project.js";
+import { deploy } from "./digitalocean/deploy.js";
 import {
   formatHelp,
   getDefaultTag,
@@ -9,16 +8,19 @@ import {
   resolveDomain,
   sanitizeSlug,
   validateRequiredOptions,
-} from "./nest-digitalocean/options.js";
+} from "./digitalocean/options.js";
 import {
   loadProjectConfig,
   writeBackendHostConfig,
-} from "./nest-digitalocean/project-config.js";
-import { provision } from "./nest-digitalocean/provision.js";
-import { runNestWizard } from "./nest-digitalocean/wizard.js";
+} from "./digitalocean/project-config.js";
+import { provision } from "./digitalocean/provision.js";
+import { runNestWizard } from "./digitalocean/wizard.js";
 
-async function main(): Promise<void> {
-  let options = parseCliArgs(process.argv.slice(2));
+export async function runNestCli(
+  args: string[],
+  projectContext: KingStackProject,
+): Promise<void> {
+  let options = parseCliArgs(args);
   if (options.help) {
     log(formatHelp());
     return;
@@ -29,7 +31,7 @@ async function main(): Promise<void> {
     !options.environment ||
     (options.command === "provision" && !options.region);
   if (needsWizard && process.stdin.isTTY && process.stdout.isTTY) {
-    const result = await runNestWizard(options);
+    const result = await runNestWizard(options, projectContext);
     options = result.options;
     project = result.project;
   }
@@ -37,7 +39,7 @@ async function main(): Promise<void> {
   const environment = options.environment;
   if (!environment || !options.command) return;
 
-  project ||= await loadProjectConfig(environment);
+  project ||= await loadProjectConfig(environment, projectContext);
   const tag = sanitizeSlug(
     options.tag || getDefaultTag(project.appSlug, environment),
     63,
@@ -69,24 +71,30 @@ async function main(): Promise<void> {
         project,
         domain,
         tag,
+        projectContext,
       );
-      updateBackendConfig(options, result.backendHost);
+      updateBackendConfig(options, result.backendHost, projectContext);
     }
   } else {
-    const result = await deploy(options, project, domain, tag);
-    updateBackendConfig(options, result.backendHost);
+    const result = await deploy(options, project, domain, tag, projectContext);
+    updateBackendConfig(options, result.backendHost, projectContext);
   }
 }
 
 function updateBackendConfig(
   options: ReturnType<typeof parseCliArgs>,
   backendHost: string | undefined,
+  projectContext: KingStackProject,
 ): void {
   if (!options.updateConfig || options.dryRun || !backendHost) return;
   const environment = options.environment;
   if (!environment) return;
 
-  const relativePath = writeBackendHostConfig(environment, backendHost);
+  const relativePath = writeBackendHostConfig(
+    environment,
+    backendHost,
+    projectContext,
+  );
   log();
   log(`Updated ${relativePath}: NEST_HOST=${backendHost}`);
   log("Existing Supabase, Vercel, and application values were preserved.");
@@ -97,10 +105,3 @@ function updateBackendConfig(
   );
   log("2. Redeploy the frontend: yarn vercel:prod");
 }
-
-void main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error();
-  console.error(`Deployment stopped: ${message}`);
-  process.exitCode = 1;
-});

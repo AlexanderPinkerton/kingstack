@@ -1,8 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { updateEnvironmentValues } from "../environment-file.js";
+import { updateEnvironmentValues } from "@kingstack/config";
 import {
   parseProjectDomains,
   parseProjectLink,
+  isSupportedVercelCliVersion,
   productionDomains,
   selectRequestedDomain,
   type VercelConfigValues,
@@ -19,6 +20,12 @@ const importedValues: VercelConfigValues = {
 };
 
 describe("Vercel configuration import CLI", () => {
+  it("accepts only the declared Vercel CLI range", () => {
+    expect(isSupportedVercelCliVersion("Vercel CLI 58.1.0")).toBe(true);
+    expect(isSupportedVercelCliVersion("58.9.2")).toBe(true);
+    expect(isSupportedVercelCliVersion("58.0.9")).toBe(false);
+    expect(isSupportedVercelCliVersion("59.0.0")).toBe(false);
+  });
   it("parses file, host, and print destinations", () => {
     expect(
       parseGetVercelConfigCliArgs([

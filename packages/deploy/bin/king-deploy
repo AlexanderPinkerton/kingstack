@@ -1,0 +1,19 @@
+#!/usr/bin/env bun
+
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+if (typeof Bun === "undefined") {
+  const entrypoint = fileURLToPath(new URL("../dist/bin.js", import.meta.url));
+  const result = spawnSync("bun", [entrypoint, ...process.argv.slice(2)], {
+    stdio: "inherit",
+  });
+  if (result.error) {
+    console.error("KingStack deployment requires Bun 1.2.8 or newer on PATH.");
+    process.exitCode = 1;
+  } else {
+    process.exitCode = result.status ?? 1;
+  }
+} else {
+  await import("../dist/bin.js");
+}

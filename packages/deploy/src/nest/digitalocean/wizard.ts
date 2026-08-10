@@ -1,5 +1,6 @@
 import { createInterface, type Interface } from "node:readline/promises";
-import { schema } from "../../../config/schema.js";
+import { loadUserSchema, type ConfigSchema } from "@kingstack/config";
+import type { KingStackProject } from "../../project.js";
 import { assertTool, log } from "./commands.js";
 import {
   assertDigitalOceanAccess,
@@ -49,6 +50,7 @@ const COMMON_SIZE_SLUGS = [
 
 export async function runNestWizard(
   baseOptions: CliOptions,
+  projectContext: KingStackProject,
 ): Promise<NestWizardResult> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     throw new Error(
@@ -67,6 +69,7 @@ export async function runNestWizard(
     output: process.stdout,
   });
   try {
+    const schema = await loadUserSchema(projectContext.root);
     let options = cloneOptions(baseOptions);
     options.command =
       options.command ||
@@ -81,9 +84,12 @@ export async function runNestWizard(
         },
       ]));
     options.environment =
-      options.environment || (await chooseEnvironment(interface_));
+      options.environment || (await chooseEnvironment(interface_, schema));
 
-    const project = await loadProjectConfig(options.environment);
+    const project = await loadProjectConfig(
+      options.environment,
+      projectContext,
+    );
     const tag =
       options.tag || getDefaultTag(project.appSlug, options.environment);
 
@@ -209,8 +215,11 @@ function cloneOptions(options: CliOptions): CliOptions {
   };
 }
 
-async function chooseEnvironment(interface_: Interface): Promise<string> {
-  const environments = Object.entries(schema.environments)
+async function chooseEnvironment(
+  interface_: Interface,
+  schema: ConfigSchema,
+): Promise<string> {
+  const environments = Object.entries(schema.environments ?? {})
     .filter(([, definition]) => definition.mode === "hosted")
     .map(([name, definition]) => ({
       label: `${name}${definition.description ? ` — ${definition.description}` : ""}`,

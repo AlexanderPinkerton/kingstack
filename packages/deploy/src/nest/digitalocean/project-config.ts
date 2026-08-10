@@ -1,14 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import {
-  resolveConfig,
+  loadResolvedEnvironment,
   validateEnvFileKeys,
-  type ConfigSchema,
-  type ConfigValues,
+  writeEnvironmentFile,
 } from "@kingstack/config";
-import { writeEnvironmentFile } from "../environment-file.js";
 import { parsePort, sanitizeSlug, validateDomain } from "./options.js";
+import type { KingStackProject } from "../../project.js";
 
 interface EnvFileDefinition {
   keys: string[];
@@ -36,11 +34,13 @@ export function getBackendHostConfigValues(
 export function writeBackendHostConfig(
   environment: string,
   domain: string,
+  project: KingStackProject,
 ): string {
   return writeEnvironmentFile(
     environment,
     getBackendHostConfigValues(domain),
     BACKEND_VALUES_DESCRIPTION,
+    { cwd: project.root },
   );
 }
 
@@ -54,6 +54,7 @@ function readJsonFile<T>(path: string): T {
 
 export async function loadProjectConfig(
   environment: string,
+  project: KingStackProject,
 ): Promise<ProjectDeploymentConfig> {
   const requiredPaths = [
     "package.json",
@@ -62,44 +63,35 @@ export async function loadProjectConfig(
     `config/${environment}.ts`,
     "packages/prisma/package.json",
   ];
-  const missing = requiredPaths.filter((path) => !existsSync(resolve(path)));
+  const missing = requiredPaths.filter(
+    (path) => !existsSync(resolve(project.root, path)),
+  );
   if (missing.length > 0) {
     throw new Error(
       `Run from a KingStack project root. Missing: ${missing.join(", ")}`,
     );
   }
 
-  const rootPackage = readJsonFile<{ name?: string }>(resolve("package.json"));
+  const rootPackage = readJsonFile<{ name?: string }>(
+    resolve(project.root, "package.json"),
+  );
   const prismaPackage = readJsonFile<{ name?: string }>(
-    resolve("packages/prisma/package.json"),
+    resolve(project.root, "packages/prisma/package.json"),
   );
   if (!rootPackage.name) throw new Error("package.json is missing its name.");
   if (!prismaPackage.name) {
     throw new Error("packages/prisma/package.json is missing its name.");
   }
 
-  const schemaModule = (await import(
-    pathToFileURL(resolve("config/schema.ts")).href
-  )) as { schema?: ConfigSchema };
-  const valuesModule = (await import(
-    pathToFileURL(resolve(`config/${environment}.ts`)).href
-  )) as { values?: ConfigValues };
-  if (!schemaModule.schema)
-    throw new Error("config/schema.ts exports no schema.");
-  if (!valuesModule.values) {
-    throw new Error(`config/${environment}.ts exports no values.`);
-  }
-
-  const result = resolveConfig(schemaModule.schema, valuesModule.values, {
-    environment,
-  });
+  const result = await loadResolvedEnvironment(environment, project.root);
+  const { schema } = result;
   if (result.errors.length > 0) {
     throw new Error(
       `Configuration is invalid:\n${result.errors.map((error) => `- ${error.key}: ${error.message}`).join("\n")}`,
     );
   }
   const keyErrors = validateEnvFileKeys(
-    schemaModule.schema,
+    schema,
     new Set(Object.keys(result.config.all)),
   );
   if (keyErrors.length > 0) {
@@ -110,8 +102,8 @@ export async function loadProjectConfig(
 
   validateHostedNestConfig(result.config.all, environment);
 
-  const nestDefinition = schemaModule.schema.envfiles.nest;
-  const prismaDefinition = schemaModule.schema.envfiles.prisma;
+  const nestDefinition = schema.envfiles.nest;
+  const prismaDefinition = schema.envfiles.prisma;
   if (!nestDefinition || !prismaDefinition) {
     throw new Error(
       "The KingStack schema must define nest and prisma envfiles.",

@@ -1,19 +1,19 @@
-#!/usr/bin/env bun
-
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createInterface, type Interface } from "node:readline/promises";
-import { schema } from "../../../config/schema.js";
 import {
+  loadUserSchema,
   renderEnvironmentValues,
   writeEnvironmentFile,
-} from "../environment-file.js";
+  type ConfigSchema,
+} from "@kingstack/config";
 import {
   formatGetVercelConfigHelp,
   parseGetVercelConfigCliArgs,
   type GetVercelConfigCliOptions,
 } from "./get-config-options.js";
+import type { KingStackProject } from "../project.js";
 
 export interface VercelProjectLink {
   projectId: string;
@@ -34,6 +34,14 @@ export type VercelConfigValues = {
   VERCEL_ORG_ID: string;
   VERCEL_PROJECT_ID: string;
 };
+
+export interface VercelConfigResult {
+  projectId: string;
+  organizationId: string;
+  host: string;
+  environment?: string;
+  configChanged: boolean;
+}
 
 interface Destination {
   kind: "file" | "print";
@@ -118,10 +126,14 @@ export function selectRequestedDomain(
   return selected;
 }
 
-async function getConfig(options: GetVercelConfigCliOptions): Promise<void> {
-  assertVercelCli();
-  const project = readProjectLink();
-  const domains = listProjectDomains(project);
+export async function getConfig(
+  options: GetVercelConfigCliOptions,
+  projectContext: KingStackProject,
+): Promise<VercelConfigResult> {
+  assertVercelCli(projectContext.root);
+  const schema = await loadUserSchema(projectContext.root);
+  const project = readProjectLink(projectContext.root);
+  const domains = listProjectDomains(project, projectContext.root);
   const candidates = productionDomains(domains);
   if (candidates.length === 0) {
     throw new Error(
@@ -137,8 +149,8 @@ async function getConfig(options: GetVercelConfigCliOptions): Promise<void> {
   let destination: Destination;
   let domain: VercelProjectDomain;
   try {
-    destination = await resolveDestination(options, interface_);
-    assertHostedEnvironment(destination);
+    destination = await resolveDestination(options, interface_, schema);
+    assertHostedEnvironment(destination, schema);
     domain = await resolveDomain(options, candidates, interface_);
     printImportPlan(project, domain, destination);
     await confirmImport(interface_, options.yes, destination);
@@ -155,7 +167,12 @@ async function getConfig(options: GetVercelConfigCliOptions): Promise<void> {
   if (destination.kind === "print") {
     console.log();
     console.log(renderEnvironmentValues(values, VALUES_DESCRIPTION));
-    return;
+    return {
+      projectId: project.projectId,
+      organizationId: project.orgId,
+      host: domain.name,
+      configChanged: false,
+    };
   }
 
   const environment = destination.environment;
@@ -164,6 +181,7 @@ async function getConfig(options: GetVercelConfigCliOptions): Promise<void> {
     environment,
     values,
     VALUES_DESCRIPTION,
+    { cwd: projectContext.root },
   );
   console.log();
   console.log(`Wrote the Vercel project values to ${relativePath}.`);
@@ -181,27 +199,45 @@ async function getConfig(options: GetVercelConfigCliOptions): Promise<void> {
   console.log(
     `4. Configure hosted Auth redirects: yarn supabase:auth:configure ${environment}`,
   );
+  return {
+    projectId: project.projectId,
+    organizationId: project.orgId,
+    host: domain.name,
+    environment,
+    configChanged: true,
+  };
 }
 
-function assertVercelCli(): void {
+function assertVercelCli(projectRoot: string): void {
   let version: string;
   try {
-    version = runVercel(["--version"], { quiet: true });
+    version = runVercel(["--version"], {
+      cwd: projectRoot,
+      quiet: true,
+    });
   } catch {
     throw new Error(
       "Vercel CLI is unavailable. Run `yarn install` from the repository root.",
     );
   }
-  const major = Number(version.match(/\d+/)?.[0]);
-  if (!Number.isInteger(major) || major < 58) {
+  if (!isSupportedVercelCliVersion(version)) {
     throw new Error(
-      `Vercel CLI 58 or newer is required for the project API command; found ${version || "an unknown version"}. Run \`yarn install\` from the repository root.`,
+      `Vercel CLI >=58.1.0 <59 is required for the project API command; found ${version || "an unknown version"}. Run \`yarn install\` from the repository root.`,
     );
   }
 }
 
-function readProjectLink(): VercelProjectLink {
-  const path = resolve(process.cwd(), ".vercel/project.json");
+export function isSupportedVercelCliVersion(value: string): boolean {
+  const match = /(?:^|\s)(\d+)\.(\d+)\.(\d+)(?:\s|$)/.exec(value.trim());
+  if (!match) return false;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  const patch = Number(match[3]);
+  return major === 58 && (minor > 1 || (minor === 1 && patch >= 0));
+}
+
+function readProjectLink(projectRoot: string): VercelProjectLink {
+  const path = resolve(projectRoot, ".vercel/project.json");
   if (!existsSync(path)) {
     throw new Error(
       "No linked Vercel project was found at .vercel/project.json. Run `yarn vercel` or `yarn exec vercel link` first.",
@@ -210,11 +246,15 @@ function readProjectLink(): VercelProjectLink {
   return parseProjectLink(readFileSync(path, "utf8"));
 }
 
-function listProjectDomains(project: VercelProjectLink): VercelProjectDomain[] {
+function listProjectDomains(
+  project: VercelProjectLink,
+  projectRoot: string,
+): VercelProjectDomain[] {
   const endpoint = `/v9/projects/${encodeURIComponent(project.projectId)}/domains?teamId=${encodeURIComponent(project.orgId)}&limit=100`;
   let output: string;
   try {
     output = runVercel(["api", endpoint, "--raw", "--non-interactive"], {
+      cwd: projectRoot,
       display: "yarn exec vercel api <linked-project-domains> --raw",
     });
   } catch (error) {
@@ -230,6 +270,7 @@ function listProjectDomains(project: VercelProjectLink): VercelProjectDomain[] {
 async function resolveDestination(
   options: GetVercelConfigCliOptions,
   interface_: Interface | undefined,
+  schema: ConfigSchema,
 ): Promise<Destination> {
   if (options.print) return { kind: "print" };
   if (options.environment) {
@@ -241,7 +282,7 @@ async function resolveDestination(
     );
   }
 
-  const hostedEnvironments = Object.entries(schema.environments)
+  const hostedEnvironments = Object.entries(schema.environments ?? {})
     .filter(([, definition]) => definition.mode === "hosted")
     .map(([environment]) => ({
       label: `Write config/${environment}.ts`,
@@ -272,10 +313,13 @@ async function resolveDestination(
   );
 }
 
-function assertHostedEnvironment(destination: Destination): void {
+function assertHostedEnvironment(
+  destination: Destination,
+  schema: ConfigSchema,
+): void {
   if (destination.kind !== "file" || !destination.environment) return;
   const environments: Readonly<Record<string, { mode: string }>> =
-    schema.environments;
+    schema.environments ?? {};
   const definition = environments[destination.environment];
   if (!definition) {
     throw new Error(
@@ -385,13 +429,13 @@ function domainLabel(domain: VercelProjectDomain): string {
 
 function runVercel(
   args: string[],
-  options: { display?: string; quiet?: boolean } = {},
+  options: { cwd: string; display?: string; quiet?: boolean },
 ): string {
   if (!options.quiet) {
     console.log(`> ${options.display || `yarn exec vercel ${args.join(" ")}`}`);
   }
   const result = spawnSync("yarn", ["exec", "vercel", ...args], {
-    cwd: process.cwd(),
+    cwd: options.cwd,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     maxBuffer: 10 * 1024 * 1024,
@@ -431,20 +475,14 @@ function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value ? value : undefined;
 }
 
-async function main(): Promise<void> {
-  const options = parseGetVercelConfigCliArgs(process.argv.slice(2));
+export async function runVercelPullCli(
+  args: string[],
+  project: KingStackProject,
+): Promise<void> {
+  const options = parseGetVercelConfigCliArgs(args);
   if (options.help) {
     console.log(formatGetVercelConfigHelp());
     return;
   }
-  await getConfig(options);
-}
-
-if (import.meta.main) {
-  void main().catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error();
-    console.error(`Vercel configuration import stopped: ${message}`);
-    process.exitCode = 1;
-  });
+  await getConfig(options, project);
 }

@@ -1,6 +1,12 @@
 # KingStack Deployment Package Plan
 
-Status: approved for implementation
+Status: implemented in the repository; initial npm release pending
+
+The extraction, package-boundary tests, template projection, exact generated
+dependency, compatibility aliases, Changeset, and packed-package smoke test
+were completed on 2026-08-09. Publishing `@kingstack/deploy@0.1.0`, generating
+against that registry release, and any supervised live-provider smoke remain
+release operations rather than repository implementation steps.
 
 ## Decision summary
 
@@ -30,8 +36,8 @@ framework and not a provider plugin system.
 
 ## Why package the deployment logic
 
-Generated projects currently receive `scripts/deploy` as copied source. The
-copy includes approximately:
+Before this extraction, generated projects received `scripts/deploy` as copied
+source. That copy included approximately:
 
 | Area | Source lines | Test lines | Current responsibilities |
 | --- | ---: | ---: | --- |
@@ -95,9 +101,9 @@ the project's manifest and lockfile.
 - Implementing the unified full-stack orchestrator as part of the extraction.
 - Changing existing deployment semantics merely because code is moving.
 
-## Current deployment surface
+## Pre-extraction deployment surface
 
-### Hosted deployment commands to move
+### Hosted deployment commands migrated
 
 | Existing Yarn command | Current entrypoint | Package command |
 | --- | --- | --- |

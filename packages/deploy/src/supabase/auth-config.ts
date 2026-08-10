@@ -1,13 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { Entry } from "@napi-rs/keyring";
-import {
-  resolveConfig,
-  type ConfigSchema,
-  type ConfigValues,
-} from "@kingstack/config";
+import { loadResolvedEnvironment } from "@kingstack/config";
 import type { AuthConfigCliOptions } from "./auth-options.js";
 
 const MANAGEMENT_API_URL = "https://api.supabase.com/v1";
@@ -42,12 +36,21 @@ export type AuthConfigFetcher = (
 
 export async function resolveHostedAuthPlan(
   options: AuthConfigCliOptions,
+  projectRoot?: string,
 ): Promise<HostedAuthPlan> {
   let projectRef = options.projectRef;
   let siteUrl = options.siteUrl;
 
   if (options.environment) {
-    const resolved = await loadEnvironmentConfig(options.environment);
+    if (!projectRoot) {
+      throw new Error(
+        "A KingStack project root is required for an environment.",
+      );
+    }
+    const resolved = await loadEnvironmentConfig(
+      options.environment,
+      projectRoot,
+    );
     projectRef ||= stringValue(resolved.SUPABASE_PROJECT_REF);
     siteUrl ||= stringValue(resolved.NEXT_URL);
   }
@@ -119,20 +122,25 @@ export function authConfigMatches(
   );
 }
 
-export function resolveSupabaseAccessToken(): string {
+export async function resolveSupabaseAccessToken(): Promise<string> {
   const environmentToken = process.env.SUPABASE_ACCESS_TOKEN?.trim();
   if (environmentToken) return environmentToken;
 
-  for (const account of SUPABASE_CLI_KEYCHAIN_ACCOUNTS) {
-    try {
-      const keychainToken = new Entry(
-        SUPABASE_CLI_KEYCHAIN_SERVICE,
-        account,
-      ).getPassword();
-      if (keychainToken?.trim()) return keychainToken.trim();
-    } catch {
-      // The account may not exist, or the system may not provide a keyring.
+  try {
+    const { Entry } = await import("@napi-rs/keyring");
+    for (const account of SUPABASE_CLI_KEYCHAIN_ACCOUNTS) {
+      try {
+        const keychainToken = new Entry(
+          SUPABASE_CLI_KEYCHAIN_SERVICE,
+          account,
+        ).getPassword();
+        if (keychainToken?.trim()) return keychainToken.trim();
+      } catch {
+        // This account may not exist in the system keyring.
+      }
     }
+  } catch {
+    // This operating system may not provide a supported keyring.
   }
 
   const supabaseHome =
@@ -221,38 +229,26 @@ export function parseHostedAuthConfig(value: unknown): HostedAuthConfig {
 
 async function loadEnvironmentConfig(
   environment: string,
+  projectRoot: string,
 ): Promise<Record<string, string>> {
-  const schemaPath = resolve("config/schema.ts");
-  const valuesPath = resolve(`config/${environment}.ts`);
+  const schemaPath = resolve(projectRoot, "config/schema.ts");
+  const valuesPath = resolve(projectRoot, `config/${environment}.ts`);
   if (!existsSync(schemaPath) || !existsSync(valuesPath)) {
     throw new Error(
       `Run from a KingStack project root with config/schema.ts and config/${environment}.ts.`,
     );
   }
 
-  const schemaModule = (await import(pathToFileURL(schemaPath).href)) as {
-    schema?: ConfigSchema;
-  };
-  const valuesModule = (await import(pathToFileURL(valuesPath).href)) as {
-    values?: ConfigValues;
-  };
-  if (!schemaModule.schema) {
-    throw new Error("config/schema.ts exports no schema.");
-  }
-  if (!valuesModule.values) {
-    throw new Error(`config/${environment}.ts exports no values.`);
-  }
+  const result = await loadResolvedEnvironment(environment, projectRoot);
+  const { schema } = result;
 
-  const definition = schemaModule.schema.environments?.[environment];
+  const definition = schema.environments?.[environment];
   if (!definition || definition.mode !== "hosted") {
     throw new Error(
       `Environment "${environment}" must be declared as hosted in config/schema.ts.`,
     );
   }
 
-  const result = resolveConfig(schemaModule.schema, valuesModule.values, {
-    environment,
-  });
   if (result.errors.length > 0) {
     throw new Error(
       `Configuration is invalid:\n${result.errors.map((error) => `- ${error.key}: ${error.message}`).join("\n")}`,

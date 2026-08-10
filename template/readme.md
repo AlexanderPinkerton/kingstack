@@ -118,6 +118,7 @@ Some reusable functionality is installed from npm rather than copied into this
 repository:
 
 - `@kingstack/config`
+- `@kingstack/deploy`
 - `@kingstack/advanced-optimistic-store`
 - `@kingstack/comment-tree`
 - `@kingstack/dnd-tree`
@@ -128,6 +129,10 @@ their implementation source under this project's `packages/` directory.
 
 Their versions are declared in the consuming `package.json` files and can be
 updated through the normal Yarn dependency workflow.
+
+The deployment package remains pinned to an exact version while its command
+contract is pre-1.0. Review its changelog and run the project tests plus a Nest
+deployment `--dry-run` before adopting a newer version.
 
 ## Application architecture
 

@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import ts from "typescript";
+import { assertEnvironmentName } from "./cli/utils.js";
 
 export type EnvironmentValues = Readonly<Record<string, string>>;
 
@@ -74,15 +75,23 @@ export function writeEnvironmentFile(
   environment: string,
   values: EnvironmentValues,
   description: string,
+  options: { cwd?: string } = {},
 ): string {
   assertEnvironmentName(environment);
   const relativePath = `config/${environment}.ts`;
-  const path = resolve(process.cwd(), relativePath);
+  const cwd = resolve(options.cwd || process.cwd());
+  const path = resolve(cwd, relativePath);
   const ignored = spawnSync("git", ["check-ignore", "--quiet", relativePath], {
-    cwd: process.cwd(),
+    cwd,
     shell: false,
     stdio: "ignore",
   });
+  if (ignored.error) {
+    throw new Error(
+      `Git is required to verify that ${relativePath} will not expose deployment credentials.`,
+      { cause: ignored.error },
+    );
+  }
   if (ignored.status !== 0) {
     throw new Error(
       `${relativePath} may contain deployment credentials but is not ignored by Git. Add it to .gitignore immediately.`,
@@ -92,6 +101,7 @@ export function writeEnvironmentFile(
     ? updateEnvironmentValues(readFileSync(path, "utf8"), values)
     : renderEnvironmentValues(values, description);
   writeFileSync(path, content, { encoding: "utf8", mode: 0o600 });
+  chmodSync(path, 0o600);
   return relativePath;
 }
 
@@ -188,12 +198,4 @@ function propertyName(name: ts.PropertyName): string | undefined {
   return ts.isIdentifier(name) || ts.isStringLiteral(name)
     ? name.text
     : undefined;
-}
-
-function assertEnvironmentName(environment: string): void {
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(environment)) {
-    throw new Error(
-      `Invalid environment name "${environment}"; use letters, numbers, underscores, or hyphens.`,
-    );
-  }
 }

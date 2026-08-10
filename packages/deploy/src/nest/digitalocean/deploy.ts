@@ -3,6 +3,7 @@ import { isIP } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  assertExecutable,
   assertTool,
   confirmOrThrow,
   copyToTarget,
@@ -32,9 +33,13 @@ import {
   type ProjectDeploymentConfig,
 } from "./project-config.js";
 import { applyCaddy, rollbackTarget, verifyRemoteHost } from "./remote-host.js";
+import type { KingStackProject } from "../../project.js";
 
 export interface DeploymentResult {
   backendHost?: string;
+  targetIds: number[];
+  deployed: boolean;
+  hostReconfigured: boolean;
 }
 
 export async function deploy(
@@ -42,13 +47,15 @@ export async function deploy(
   project: ProjectDeploymentConfig,
   domain: string | undefined,
   tag: string,
+  projectContext: KingStackProject,
 ): Promise<DeploymentResult> {
-  assertTool("doctl", ["version"]);
-  assertTool("ssh", ["-V"]);
-  assertTool("which", ["scp"]);
+  assertTool("doctl", ["version"], projectContext.root);
+  assertTool("ssh", ["-V"], projectContext.root);
+  assertExecutable("scp", ["-V"], projectContext.root);
   if (!options.envOnly) {
-    assertTool("docker", ["info"]);
-    assertTool("gzip", ["--version"]);
+    assertTool("bash", ["--version"], projectContext.root);
+    assertTool("docker", ["info"], projectContext.root);
+    assertTool("gzip", ["--version"], projectContext.root);
   }
   assertDigitalOceanAccess();
 
@@ -101,7 +108,12 @@ export async function deploy(
     log(
       "Dry run complete; no Docker, database, cloud, or remote changes were made.",
     );
-    return { backendHost };
+    return {
+      backendHost,
+      targetIds: targets.map(({ id }) => id),
+      deployed: false,
+      hostReconfigured: false,
+    };
   }
 
   await confirmOrThrow(
@@ -132,7 +144,10 @@ export async function deploy(
   }
 
   let image = "";
-  const revision = createRevision(options.envOnly ? "env" : "image");
+  const revision = createRevision(
+    options.envOnly ? "env" : "image",
+    projectContext.root,
+  );
   if (!options.envOnly) {
     step(nextStep++, totalSteps, "Building the linux/amd64 Nest image...");
     image = `${project.appSlug}-nest:${revision}`;
@@ -152,13 +167,17 @@ export async function deploy(
         `com.kingstack.revision=${revision}`,
         ".",
       ],
-      { display: `docker build --platform linux/amd64 -t ${image} .` },
+      {
+        cwd: projectContext.root,
+        display: `docker build --platform linux/amd64 -t ${image} .`,
+      },
     );
 
     if (!migrationsSkipped) {
       step(nextStep++, totalSteps, "Applying Prisma production migrations...");
       runCommand("yarn", ["prisma:deploy"], {
         display: `yarn workspace ${project.prismaWorkspace} prisma migrate deploy`,
+        cwd: projectContext.root,
         env: { ...process.env, ...project.prismaEnv },
       });
     }
@@ -279,7 +298,12 @@ export async function deploy(
   log();
   log(`Deployment complete: ${targets.length} droplet(s) updated.`);
   log(`Logs: ssh root@<ip> 'docker logs ${project.appSlug}-nest --tail 100'`);
-  return { backendHost };
+  return {
+    backendHost,
+    targetIds: targets.map(({ id }) => id),
+    deployed: true,
+    hostReconfigured: options.reconfigureHost,
+  };
 }
 
 export function resolveDeploymentHost(
@@ -308,11 +332,12 @@ function describeDeploymentMode(options: CliOptions): string {
   return "image + migrations";
 }
 
-function createRevision(prefix: string): string {
+function createRevision(prefix: string, projectRoot: string): string {
   let commit = "nogit";
   try {
     commit = runCommand("git", ["rev-parse", "--short=12", "HEAD"], {
       capture: true,
+      cwd: projectRoot,
       quiet: true,
     }).toLowerCase();
   } catch {

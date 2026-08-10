@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createInterface, type Interface } from "node:readline/promises";
 import {
   buildCreateArgs,
@@ -10,6 +11,7 @@ import {
   type ProvisionPlan,
   REGIONS,
 } from "./options.js";
+import type { KingStackProject } from "../project.js";
 
 interface Organization {
   id: string;
@@ -27,17 +29,22 @@ const COMPUTE_DOCS =
   "https://supabase.com/docs/guides/platform/manage-your-usage/compute";
 const PRICING_PAGE = "https://supabase.com/pricing";
 
+export interface SupabaseProvisionResult extends ProvisionPlan {
+  created: boolean;
+}
+
 export function runYarn(
   args: string[],
   options: {
     capture?: boolean;
     display?: string;
+    cwd?: string;
     sensitive?: boolean;
   } = {},
 ): string {
   if (options.display) console.log(`> ${options.display}`);
   const result = spawnSync("yarn", args, {
-    cwd: process.cwd(),
+    cwd: options.cwd,
     encoding: "utf8",
     stdio: options.capture ? ["inherit", "pipe", "pipe"] : "inherit",
     maxBuffer: 10 * 1024 * 1024,
@@ -77,14 +84,32 @@ export function formatCommandFailureDetails(
     .trim();
 }
 
-export function assertSupabaseCli(): void {
+export function assertSupabaseCli(projectRoot: string): void {
+  let version: string;
   try {
-    runYarn(["exec", "supabase", "--version"], { capture: true });
+    version = runYarn(["exec", "supabase", "--version"], {
+      capture: true,
+      cwd: projectRoot,
+    });
   } catch {
     throw new Error(
       "Supabase CLI is unavailable. Run `yarn install` from the repository root.",
     );
   }
+  if (!isSupportedSupabaseCliVersion(version)) {
+    throw new Error(
+      `Supabase CLI >=2.113.0 <3 is required; found ${version || "an unknown version"}. Run \`yarn install\` from the repository root.`,
+    );
+  }
+}
+
+export function isSupportedSupabaseCliVersion(value: string): boolean {
+  const match = /(?:^|\s)(\d+)\.(\d+)\.(\d+)(?:\s|$)/.exec(value.trim());
+  if (!match) return false;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  const patch = Number(match[3]);
+  return major === 2 && (minor > 113 || (minor === 113 && patch >= 0));
 }
 
 export function parseOrganizations(value: string): Organization[] {
@@ -117,11 +142,12 @@ export function parseOrganizations(value: string): Organization[] {
   return organizations;
 }
 
-function listOrganizations(): Organization[] {
+function listOrganizations(projectRoot: string): Organization[] {
   let output: string;
   try {
     output = runYarn(["exec", "supabase", "orgs", "list", "--output", "json"], {
       capture: true,
+      cwd: projectRoot,
       display: "yarn exec supabase orgs list --output json",
     });
   } catch (error) {
@@ -134,18 +160,22 @@ function listOrganizations(): Organization[] {
   return parseOrganizations(output);
 }
 
-function defaultProjectName(): string {
+export function defaultProjectName(projectRoot: string): string {
+  let packageJson: { name?: unknown };
   try {
-    const packageJson = JSON.parse(
-      readFileSync(new URL("../../../package.json", import.meta.url), "utf8"),
+    packageJson = JSON.parse(
+      readFileSync(resolve(projectRoot, "package.json"), "utf8"),
     ) as { name?: unknown };
-    if (typeof packageJson.name === "string" && packageJson.name.trim()) {
-      return packageJson.name.replace(/^@[^/]+\//, "");
-    }
-  } catch {
-    // The user can provide a name when package.json is unavailable or malformed.
+  } catch (error) {
+    throw new Error(
+      `Run from a KingStack project root with a readable package.json: ${projectRoot}`,
+      { cause: error },
+    );
   }
-  return "kingstack-app";
+  if (typeof packageJson.name !== "string" || !packageJson.name.trim()) {
+    throw new Error("The KingStack project package.json must have a name.");
+  }
+  return packageJson.name.replace(/^@[^/]+\//, "");
 }
 
 export async function promptText(
@@ -184,6 +214,8 @@ export async function choose<T>(
 async function resolvePlan(
   options: CliOptions,
   interface_: Interface | undefined,
+  projectRoot: string,
+  defaultName: string,
 ): Promise<ProvisionPlan> {
   const requireInterface = (): Interface => {
     if (!interface_) {
@@ -196,15 +228,11 @@ async function resolvePlan(
 
   const projectName =
     options.projectName ||
-    (await promptText(
-      requireInterface(),
-      "Project name",
-      defaultProjectName(),
-    ));
+    (await promptText(requireInterface(), "Project name", defaultName));
 
   let orgId = options.orgId;
   if (!orgId) {
-    const organizations = listOrganizations();
+    const organizations = listOrganizations(projectRoot);
     orgId =
       organizations.length === 1
         ? organizations[0].id
@@ -292,7 +320,7 @@ async function confirm(interface_: Interface, yes: boolean): Promise<void> {
   if (!/^y(?:es)?$/i.test(answer)) throw new Error("Cancelled.");
 }
 
-function createProject(plan: ProvisionPlan): void {
+function createProject(plan: ProvisionPlan, projectRoot: string): void {
   const args = buildCreateArgs(plan);
   console.log();
   console.log(
@@ -302,7 +330,7 @@ function createProject(plan: ProvisionPlan): void {
   console.log(
     `> yarn ${args.join(" ")} (Supabase will securely prompt for the database password)`,
   );
-  runYarn(args);
+  runYarn(args, { cwd: projectRoot });
 }
 
 function printNextSteps(): void {
@@ -331,8 +359,12 @@ function printNextSteps(): void {
   );
 }
 
-export async function provisionSupabase(options: CliOptions): Promise<void> {
-  assertSupabaseCli();
+export async function provisionSupabase(
+  options: CliOptions,
+  project: KingStackProject,
+): Promise<SupabaseProvisionResult> {
+  const defaultName = defaultProjectName(project.root);
+  assertSupabaseCli(project.root);
   const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY);
   const interface_ = interactive
     ? createInterface({ input: process.stdin, output: process.stdout })
@@ -340,13 +372,13 @@ export async function provisionSupabase(options: CliOptions): Promise<void> {
 
   let plan: ProvisionPlan;
   try {
-    plan = await resolvePlan(options, interface_);
+    plan = await resolvePlan(options, interface_, project.root, defaultName);
     console.log(formatProvisioningPlan(plan));
 
     if (options.dryRun) {
       console.log();
       console.log("Dry run complete; no Supabase resources were changed.");
-      return;
+      return { ...plan, created: false };
     }
     if (!interface_) {
       throw new Error(
@@ -358,6 +390,7 @@ export async function provisionSupabase(options: CliOptions): Promise<void> {
     interface_?.close();
   }
 
-  createProject(plan);
+  createProject(plan, project.root);
   printNextSteps();
+  return { ...plan, created: true };
 }

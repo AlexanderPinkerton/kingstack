@@ -1,7 +1,5 @@
-#!/usr/bin/env bun
-
 import { createInterface, type Interface } from "node:readline/promises";
-import { schema } from "../../../config/schema.js";
+import { loadUserSchema, type ConfigSchema } from "@kingstack/config";
 import {
   authConfigMatches,
   desiredHostedAuthConfig,
@@ -18,9 +16,13 @@ import {
   type AuthConfigCliOptions,
 } from "./auth-options.js";
 import { choose } from "./provision.js";
+import type { KingStackProject } from "../project.js";
 
-async function main(): Promise<void> {
-  let options = parseAuthConfigCliArgs(process.argv.slice(2));
+export async function runSupabaseAuthCli(
+  args: string[],
+  project: KingStackProject,
+): Promise<void> {
+  let options = parseAuthConfigCliArgs(args);
   if (options.help) {
     console.log(formatAuthConfigHelp());
     return;
@@ -32,8 +34,9 @@ async function main(): Promise<void> {
     : undefined;
 
   try {
-    options = await resolveEnvironment(options, interface_);
-    const plan = await resolveHostedAuthPlan(options);
+    const schema = await loadUserSchema(project.root);
+    options = await resolveEnvironment(options, interface_, schema);
+    const plan = await resolveHostedAuthPlan(options, project.root);
     printPlan(plan);
 
     if (options.dryRun) {
@@ -42,7 +45,7 @@ async function main(): Promise<void> {
       return;
     }
 
-    const accessToken = resolveSupabaseAccessToken();
+    const accessToken = await resolveSupabaseAccessToken();
     const current = await getHostedAuthConfig(plan.projectRef, accessToken);
     printCurrent(current);
     const desired = desiredHostedAuthConfig(plan);
@@ -75,6 +78,7 @@ async function main(): Promise<void> {
 async function resolveEnvironment(
   options: AuthConfigCliOptions,
   interface_: Interface | undefined,
+  schema: ConfigSchema,
 ): Promise<AuthConfigCliOptions> {
   if (options.environment || (options.projectRef && options.siteUrl)) {
     return options;
@@ -85,7 +89,7 @@ async function resolveEnvironment(
     );
   }
 
-  const environments = Object.entries(schema.environments)
+  const environments = Object.entries(schema.environments ?? {})
     .filter(([, definition]) => definition.mode === "hosted")
     .map(([environment, definition]) => ({
       label: `${environment} — ${definition.description || "Hosted deployment"}`,
@@ -165,10 +169,3 @@ async function confirmUpdate(
   ).trim();
   if (!/^y(?:es)?$/i.test(answer)) throw new Error("Cancelled.");
 }
-
-void main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error();
-  console.error(`Supabase Auth configuration stopped: ${message}`);
-  process.exitCode = 1;
-});

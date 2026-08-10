@@ -4,6 +4,7 @@ import { shellQuote } from "./host-scripts.js";
 
 interface RunOptions {
   capture?: boolean;
+  cwd?: string;
   display?: string;
   env?: NodeJS.ProcessEnv;
   quiet?: boolean;
@@ -43,7 +44,7 @@ export function runCommand(
     log(`> ${options.display || [command, ...args].join(" ")}`);
   }
   const result = spawnSync(command, args, {
-    cwd: process.cwd(),
+    cwd: options.cwd,
     encoding: "utf8",
     env: options.env || process.env,
     stdio: options.capture ? ["ignore", "pipe", "pipe"] : "inherit",
@@ -75,11 +76,33 @@ export function parseJson<T>(value: string, description: string): T {
   }
 }
 
-export function assertTool(command: string, args: string[]): void {
+export function assertTool(
+  command: string,
+  args: string[],
+  cwd?: string,
+): void {
   try {
-    runCommand(command, args, { capture: true, quiet: true });
+    runCommand(command, args, { capture: true, cwd, quiet: true });
   } catch {
     throw new Error(`Required tool is unavailable: ${command}`);
+  }
+}
+
+export function assertExecutable(
+  command: string,
+  args: string[] = [],
+  cwd?: string,
+): void {
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: "utf8",
+    env: process.env,
+    stdio: "ignore",
+  });
+  if (result.error) {
+    throw new Error(`Required tool is unavailable: ${command}`, {
+      cause: result.error,
+    });
   }
 }
 

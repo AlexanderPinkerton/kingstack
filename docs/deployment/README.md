@@ -3,9 +3,15 @@
 KingStack deploys the Next.js application to Vercel and can deploy the NestJS
 application as a Docker container on one or more DigitalOcean Droplets.
 
+Hosted deployment commands come from the exact `@kingstack/deploy` version in
+the project manifest and lockfile. The familiar Yarn commands below are stable
+aliases for its compiled `king-deploy` CLI; installing or upgrading the package
+does not contact a provider or deploy anything. Bun 1.2.8 or newer is required.
+See the installed package README and changelog before changing its version.
+
 ## Supabase
 
-Provision a hosted Supabase project through the checked-in CLI with an explicit
+Provision a hosted Supabase project through the versioned CLI with an explicit
 cost review and confirmation:
 
 ```bash
