@@ -42,7 +42,7 @@
     "test:vercel": "bun test src/vercel/**/*.test.ts"
   },
   "dependencies": {
-    "@kingstack/config": "workspace:*",
+    "@kingstack/config": "0.3.0",
     "@napi-rs/keyring": "1.2.0"
   },
   "peerDependencies": {
