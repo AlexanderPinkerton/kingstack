@@ -1,5 +1,11 @@
 # @kingstack/deploy
 
+## 0.1.1
+
+### Patch Changes
+
+- 435dd0e: Declare the `@kingstack/config` runtime dependency with a registry-resolvable version instead of the monorepo-only `workspace:*` protocol.
+
 ## 0.1.0
 
 ### Minor Changes
