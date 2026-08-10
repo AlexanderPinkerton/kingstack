@@ -86,7 +86,7 @@ export const values = defineValues({
 `,
   );
 
-  run("yarn", ["install"], temporaryRoot);
+  run("yarn", ["install", "--no-immutable"], temporaryRoot);
 
   const version = run(
     "yarn",
