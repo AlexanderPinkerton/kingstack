@@ -358,6 +358,8 @@ export function prepareGeneratedProject(targetDir: string): number {
   for (const maintainerPath of [
     ".changeset",
     ".github/workflows/release-changeset.yml",
+    "scripts/bootstrap-public-package.test.ts",
+    "scripts/bootstrap-public-package.ts",
     "scripts/get-public-packages.ts",
     "scripts/test-create-kingstack.ts",
     "setup-guide.md",
@@ -374,9 +376,17 @@ export function prepareGeneratedProject(targetDir: string): number {
       const rootPackage = JSON.parse(readFileSync(rootPackagePath, "utf-8"));
       for (const script of [
         "build:release-packages",
+        "package:bootstrap",
         "test:create-kingstack",
+        "test:package-bootstrap",
       ]) {
         delete rootPackage.scripts?.[script];
+      }
+      if (rootPackage.scripts?.test) {
+        rootPackage.scripts.test = rootPackage.scripts.test.replace(
+          "yarn test:package-bootstrap && ",
+          "",
+        );
       }
       if (rootPackage.scripts?.["king-config"]) {
         rootPackage.scripts["king-config"] = "yarn exec king-config";

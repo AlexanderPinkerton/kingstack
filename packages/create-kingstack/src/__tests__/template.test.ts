@@ -374,6 +374,10 @@ describe("prepareGeneratedProject", () => {
       "contributor only",
     );
     writeFileSync(
+      join(testDir, "scripts", "bootstrap-public-package.ts"),
+      "maintainer only",
+    );
+    writeFileSync(
       join(testDir, "scripts", "enable-backend.ts"),
       "generated project command",
     );
@@ -381,10 +385,12 @@ describe("prepareGeneratedProject", () => {
       join(testDir, "package.json"),
       JSON.stringify({
         scripts: {
-          test: "vitest",
+          test: "yarn test:package-bootstrap && vitest",
           "king-config": "bun packages/config/src/cli/index.ts",
           "build:release-packages": "maintainer release command",
+          "package:bootstrap": "maintainer bootstrap command",
           "test:create-kingstack": "bun scripts/test-create-kingstack.ts",
+          "test:package-bootstrap": "maintainer bootstrap test",
           "backend:enable": "bun scripts/enable-backend.ts",
         },
         devDependencies: {
@@ -458,7 +464,9 @@ describe("prepareGeneratedProject", () => {
     );
     expect(pkg.scripts.test).toBe("vitest");
     expect(pkg.scripts["build:release-packages"]).toBeUndefined();
+    expect(pkg.scripts["package:bootstrap"]).toBeUndefined();
     expect(pkg.scripts["test:create-kingstack"]).toBeUndefined();
+    expect(pkg.scripts["test:package-bootstrap"]).toBeUndefined();
     expect(pkg.scripts["backend:enable"]).toBe("bun scripts/enable-backend.ts");
     expect(pkg.scripts["king-config"]).toBe("yarn exec king-config");
     expect(pkg.devDependencies["@changesets/cli"]).toBeUndefined();
