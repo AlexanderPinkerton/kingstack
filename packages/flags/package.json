@@ -1,6 +1,6 @@
 {
   "name": "@kingstack/flags",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Typed feature flags and identity-scoped snapshots for KingStack",
   "license": "MIT",
   "type": "module",
