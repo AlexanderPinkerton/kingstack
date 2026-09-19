@@ -84,6 +84,11 @@ the server evaluator. PostHog setup can be a documented recipe before adding
 another KingStack provider factory. Reuse OpenFeature's existing Nest integration
 where useful instead of duplicating it.
 
+Client ownership is explicit: disposing an evaluator must not shut down an
+injected, application-owned provider/client used by analytics. A client created
+by an integration needs a single shutdown/flush owner. Flag evaluation and
+analytics capture have independent enablement even when they share a client.
+
 Server-only dependencies must not enter browser imports. A Next-only consumer
 must install and run without Nest packages. Keep peer dependencies, package
 exports, and emitted declarations consistent with those boundaries, following
@@ -407,12 +412,37 @@ The application owns these small integration files; later library updates use
 normal dependency upgrades, with migration notes when the contract changes.
 An installation CLI can follow if repeated adoptions show that it saves work.
 
+### First adopter: CycleArena
+
+The first intended adopter is CycleArena. The
+[codebase integration review](./feature-flags-cyclearena-review.md) records the
+concrete files and proposed direct Nest control-plane snapshot path, based on
+commit `0ef1bd2d` reviewed on 2026-09-19.
+
+The initial contract must accommodate its existing runtime:
+
+- Injected client ownership and independent analytics/flag switches.
+- Explicit mapping between authenticated, anonymous, and experiment identities;
+  guest analytics currently take multiple identifier paths.
+- Inert store construction and browser activation without requiring the latest
+  KingStack `RootStore.mount()` API or Supabase readiness in fixture mode.
+- Snapshot routing to the control-plane API independently of game workers.
+- Compatibility with the adopter's actual Node, TypeScript, and PostHog versions;
+  its Nest Dockerfile currently targets Node 20, whereas KingStack targets Node 24.
+
+Use a presentation flag as the first adoption exercise. Gameplay rule changes
+need application-owned match scoping and stable decisions for a round; provider
+evaluation must stay outside simulation ticks. CycleArena's Nest adoption does
+not replace the library's separate Next-only acceptance test.
+
 ## Implementation sequence
 
 ### 1. Validate the foundation
 
 - Pin compatible OpenFeature and PostHog provider versions, including peer
   dependencies, and verify Node runtime compatibility.
+- Resolve CycleArena's runtime compatibility and client/identity ownership using
+  the first-adopter review before finalizing the public package contract.
 - Exercise boolean and variant evaluation through the same server API in Next
   and Nest using PostHog and an in-memory provider.
 - Measure snapshot request counts and latency; check timeout, initialization,
@@ -477,6 +507,8 @@ An installation CLI can follow if repeated adoptions show that it saves work.
 - [ ] Measured request counts justify the chosen snapshot evaluation strategy.
 - [ ] Generated-project setup and package installation boundaries are tested.
 - [ ] An existing application adopts the package incrementally without regeneration.
+- [ ] CycleArena's direct Nest delivery and older browser lifecycle work without a root-store rewrite.
+- [ ] Shared provider disposal and analytics/flags enablement are independent and tested.
 - [ ] If the experiment addition is included, a PostHog example validates real assignment, explicit exposure, and subsequent outcomes without exposing fallback values as assignments.
 
 Run focused package/integration tests and TypeScript checks through Yarn. A full
