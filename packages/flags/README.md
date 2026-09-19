@@ -4,11 +4,10 @@ Typed feature definitions, OpenFeature server evaluation, and identity-scoped
 browser snapshots. Applications own their provider, authentication, analytics,
 and transport. Nest is optional.
 
-**Development status:** initial implementation, not published. Version `0.0.0`
-is a workspace placeholder; the Changeset prepares `0.1.0`. Runtime recipes and
-mocked provider tests are available. Live PostHog verification, supported Node
-runtime checks, template wiring, and the first downstream adoption remain
-separate milestones. Do not add the placeholder version to generated projects.
+**Initial release:** runtime recipes and mocked provider tests are available.
+Live PostHog verification, template wiring, and the first downstream adoption
+remain separate milestones. Version `0.0.0` is reserved for package bootstrap;
+use `0.1.0` or later in applications.
 
 ## Package boundaries
 

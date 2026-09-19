@@ -95,6 +95,17 @@ describe("public package manifest validation", () => {
       ),
     ).toThrow("publishConfig.access");
   });
+
+  it("runs either packed-consumer check after building", () => {
+    for (const script of ["test:package", "test:pack"]) {
+      expect(
+        verificationScripts({
+          ...validManifest,
+          scripts: { ...validManifest.scripts, [script]: "node smoke.mjs" },
+        }),
+      ).toEqual(["lint", "typecheck", "test", "build", script]);
+    }
+  });
 });
 
 describe("new Changesets package contract", () => {

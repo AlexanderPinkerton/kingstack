@@ -209,9 +209,20 @@ export function hasExpectedTrust(configuration: TrustConfiguration): boolean {
 }
 
 export function verificationScripts(manifest: PackageManifest): string[] {
-  return ["lint", "typecheck", "test", "build", "test:package"].filter(
-    (script) => Boolean(manifest.scripts?.[script]),
-  );
+  const scripts: string[] = [];
+  for (const script of [
+    "lint",
+    "typecheck",
+    "test",
+    "build",
+    "test:package",
+    "test:pack",
+  ]) {
+    if (manifest.scripts?.[script]) {
+      scripts.push(script);
+    }
+  }
+  return scripts;
 }
 
 export function pendingChangesetRelease(
