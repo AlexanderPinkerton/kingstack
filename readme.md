@@ -34,6 +34,28 @@ The CLI uses an explicit template allowlist, so adding a new upstream package
 or maintainer file does not silently add it to future applications. Generated
 projects also receive their own application-focused README.
 
+## Bootstrap a published package
+
+New public workspaces start at version `0.0.0` with their initial Changeset.
+After merging the package to `main`, but before merging its Changesets version
+PR, validate the artifact and establish its one-time npm trust relationship:
+
+```bash
+yarn package:bootstrap @kingstack/new-package --dry-run
+yarn package:bootstrap @kingstack/new-package
+```
+
+The command runs the package's available checks, packs through Yarn, rejects
+local-only dependency protocols in the tarball, and publishes `0.0.0` under the
+non-default `bootstrap` tag. It then configures `release-changeset.yml` as the
+package's npm trusted publisher. Merge the Changesets version PR afterward so
+OIDC publishes the first real release as `latest`.
+
+The command requires a clean, up-to-date `main` checkout, an npm maintainer
+login, and account-level 2FA. If publication succeeds but trust configuration
+does not, rerun the same command; it will detect the existing package and skip
+publication.
+
 ## Create a project
 
 ### Requirements
@@ -424,6 +446,7 @@ Start with the [deployment guide](./docs/deployment/README.md) and
 - [Supabase management](./docs/supabase/README.md)
 - [Supabase security](./docs/supabase/security.md)
 - [Configuration](./config/readme.md)
+- [Feature flags plan](./docs/feature-flags-plan.md)
 - [Scripts and automation](./docs/scripts/README.md)
 - [Metadata and SEO](./docs/metadata/README.md)
 - [Deployment](./docs/deployment/README.md)

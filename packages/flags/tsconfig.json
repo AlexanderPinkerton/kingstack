@@ -1,0 +1,13 @@
+{
+  "extends": "@kingstack/ts-config/esm-library.json",
+  "compilerOptions": {
+    "outDir": "./dist/esm",
+    "rootDir": "./src",
+    "lib": ["ES2022", "DOM"],
+    "declaration": true,
+    "noEmit": false,
+    "composite": true,
+    "types": []
+  },
+  "include": ["src/**/*.ts"]
+}

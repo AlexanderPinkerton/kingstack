@@ -2764,6 +2764,37 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@kingstack/flags@workspace:packages/flags":
+  version: 0.0.0-use.local
+  resolution: "@kingstack/flags@workspace:packages/flags"
+  dependencies:
+    "@kingstack/eslint-config": "workspace:*"
+    "@kingstack/ts-config": "workspace:*"
+    "@openfeature/core": "npm:1.12.0"
+    "@openfeature/server-sdk": "npm:1.23.0"
+    "@posthog/openfeature-node-provider": "npm:0.1.1"
+    "@types/node": "npm:^24.10.1"
+    "@types/react": "npm:^19.0.0"
+    eslint: "npm:10.8.0"
+    mobx: "npm:^6.13.7"
+    posthog-node: "npm:5.52.4"
+    react: "npm:19.0.0"
+    typescript: "npm:5.9.3"
+    vitest: "npm:^3.1.4"
+  peerDependencies:
+    "@openfeature/server-sdk": ^1.23.0
+    mobx: ^6.13.7
+    react: ^18.0.0 || ^19.0.0
+  peerDependenciesMeta:
+    "@openfeature/server-sdk":
+      optional: true
+    mobx:
+      optional: true
+    react:
+      optional: true
+  languageName: unknown
+  linkType: soft
+
 "@kingstack/logger@workspace:*, @kingstack/logger@workspace:packages/logger":
   version: 0.0.0-use.local
   resolution: "@kingstack/logger@workspace:packages/logger"
@@ -3663,6 +3694,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@openfeature/core@npm:1.12.0":
+  version: 1.12.0
+  resolution: "@openfeature/core@npm:1.12.0"
+  checksum: 10c0/561aa31810b6bad7c787a61dfeef11615b3151773f751548b0d3bc894cf50d863ef45832f9b92f390bc7da7ba1c41be12ce6226a78c36a504dfd5e7fb97120bd
+  languageName: node
+  linkType: hard
+
+"@openfeature/server-sdk@npm:1.23.0":
+  version: 1.23.0
+  resolution: "@openfeature/server-sdk@npm:1.23.0"
+  peerDependencies:
+    "@openfeature/core": ^1.12.0
+  checksum: 10c0/2e9a5b57dece1d08a37a80f9a4118f1b22978693b865b4d8f9f89a97272aa9b125c5f94aa908670e3d83411252a43f2a9379c6b81d94f9361e8739740c1226e0
+  languageName: node
+  linkType: hard
+
 "@oxc-project/types@npm:=0.110.0":
   version: 0.110.0
   resolution: "@oxc-project/types@npm:0.110.0"
@@ -3854,6 +3901,33 @@ __metadata:
   version: 0.11.0
   resolution: "@pkgjs/parseargs@npm:0.11.0"
   checksum: 10c0/5bd7576bb1b38a47a7fc7b51ac9f38748e772beebc56200450c4a817d712232b8f1d3ef70532c80840243c657d491cf6a6be1e3a214cff907645819fdc34aadd
+  languageName: node
+  linkType: hard
+
+"@posthog/core@npm:^1.54.2":
+  version: 1.55.0
+  resolution: "@posthog/core@npm:1.55.0"
+  dependencies:
+    "@posthog/types": "npm:^1.412.2"
+  checksum: 10c0/50c62277da7c3d2da02499d7620c6bb691beed31246f7358836df513ef6b045edf0caca3720362997a1d2dbbc02e91113d0a2f3c8db834a482e5a698bc0f1aee
+  languageName: node
+  linkType: hard
+
+"@posthog/openfeature-node-provider@npm:0.1.1":
+  version: 0.1.1
+  resolution: "@posthog/openfeature-node-provider@npm:0.1.1"
+  peerDependencies:
+    "@openfeature/core": ^1.11.0
+    "@openfeature/server-sdk": ^1.17.0
+    posthog-node: ">=5.21.2"
+  checksum: 10c0/ccad442496bb837481f2dc68da23bee7e9a7f25af5af5e60d7000fe5b024ea631eb127459e6a5a198f3f78e95c5087d569a0e96d91f5fcec7248817ed2240c4b
+  languageName: node
+  linkType: hard
+
+"@posthog/types@npm:^1.412.2":
+  version: 1.412.2
+  resolution: "@posthog/types@npm:1.412.2"
+  checksum: 10c0/3db64739afc34a14bdea0c5858810a889a3db3c36d1a27e012406688c3a4313ee6d492fe4f88ff3803e3ee7cf7dc8a9b9cf0130e82b98504400892bd866ce3ee
   languageName: node
   linkType: hard
 
@@ -13507,6 +13581,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"posthog-node@npm:5.52.4":
+  version: 5.52.4
+  resolution: "posthog-node@npm:5.52.4"
+  dependencies:
+    "@posthog/core": "npm:^1.54.2"
+  peerDependencies:
+    rxjs: ^7.0.0
+  peerDependenciesMeta:
+    rxjs:
+      optional: true
+  checksum: 10c0/1dbb4c5c730aa9a0806a244759b7a2b1320dd4c08bda48fb1de8dcdab242e049587f0c26d257704e4501939af7e5cc2b48838eb9d9e5dfc3f947ff8f1f7c8be7
+  languageName: node
+  linkType: hard
+
 "prelude-ls@npm:^1.2.1":
   version: 1.2.1
   resolution: "prelude-ls@npm:1.2.1"
@@ -13827,6 +13915,13 @@ __metadata:
     react: ">=16.6.0"
     react-dom: ">=16.6.0"
   checksum: 10c0/2ba754ba748faefa15f87c96dfa700d5525054a0141de8c75763aae6734af0740e77e11261a1e8f4ffc08fd9ab78510122e05c21c2d79066c38bb6861a886c82
+  languageName: node
+  linkType: hard
+
+"react@npm:19.0.0":
+  version: 19.0.0
+  resolution: "react@npm:19.0.0"
+  checksum: 10c0/9cad8f103e8e3a16d15cb18a0d8115d8bd9f9e1ce3420310aea381eb42aa0a4f812cf047bb5441349257a05fba8a291515691e3cb51267279b2d2c3253f38471
   languageName: node
   linkType: hard
 

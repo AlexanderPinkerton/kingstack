@@ -28,6 +28,7 @@ COPY packages/comment-tree/package.json packages/comment-tree/package.json
 COPY packages/create-kingstack/package.json packages/create-kingstack/package.json
 COPY packages/dnd-tree/package.json packages/dnd-tree/package.json
 COPY packages/logger/package.json packages/logger/package.json
+COPY packages/flags/package.json packages/flags/package.json
 # └─ if you have more workspaces, repeat: COPY packages/foo/package.json packages/foo/package.json
 
 # 4) Install only Nest and its workspace dependencies with vendored Yarn.

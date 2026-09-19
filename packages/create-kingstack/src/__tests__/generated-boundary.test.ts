@@ -121,6 +121,8 @@ describe("generated project boundary", () => {
       ".changeset",
       ".github/workflows/release-changeset.yml",
       "docs/archive",
+      "scripts/bootstrap-public-package.test.ts",
+      "scripts/bootstrap-public-package.ts",
       "scripts/get-public-packages.ts",
       "scripts/test-create-kingstack.ts",
       "setup-guide.md",
@@ -136,7 +138,10 @@ describe("generated project boundary", () => {
       readFileSync(join(generatedRoot, "package.json"), "utf8"),
     );
     expect(rootPackage.scripts["build:release-packages"]).toBeUndefined();
+    expect(rootPackage.scripts["package:bootstrap"]).toBeUndefined();
     expect(rootPackage.scripts["test:create-kingstack"]).toBeUndefined();
+    expect(rootPackage.scripts["test:package-bootstrap"]).toBeUndefined();
+    expect(rootPackage.scripts.test).not.toContain("test:package-bootstrap");
     expect(rootPackage.scripts["king-config"]).toBe("yarn exec king-config");
     expect(rootPackage.devDependencies["@changesets/cli"]).toBeUndefined();
   });
