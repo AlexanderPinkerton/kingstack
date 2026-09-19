@@ -57,6 +57,9 @@ jobs:
       - name: Smoke Test Packed Deployment Package
         run: yarn workspace @kingstack/deploy test:package
 
+      - name: Smoke Test Packed Flags Package
+        run: yarn workspace @kingstack/flags test:pack
+
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1

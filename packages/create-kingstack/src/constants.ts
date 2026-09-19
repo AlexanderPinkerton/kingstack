@@ -82,6 +82,7 @@ export const PACKAGES_TO_REMOVE = [
   "packages/comment-tree", // Published to npm
   "packages/dnd-tree", // Published to npm
   "packages/logger", // Published to npm
+  "packages/flags", // Maintainer library; template wiring follows its first release
   "packages/create-kingstack", // This CLI itself
 ];
 

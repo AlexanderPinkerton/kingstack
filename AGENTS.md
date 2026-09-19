@@ -22,16 +22,16 @@ CONTRIBUTION RULES:
 UI DESIGN:
 - Always refer to the brandkit and design system to ensure consistency.
 
+SYNTAX:
+- Use as few ternary statements as possible
+- Use as few magic strings as possible
+- Prefer imperitive code over functional code unless performance is a consideration
+
 CONTRIBUTION GUIDELINES:
 - Detailed standards live in `contribution-standards/`.
 - Start with `contribution-standards/readme.md`.
 - Do not load every guideline by default. Read the README, then open only the files relevant to the task.
 - When a task touches state management, React hooks, MobX reactivity, HUD/controller structure, or store boundaries, check for a matching guideline before editing.
-
-SPECIFIC SITUATIONS:
-- If the task involves MobX + React interactions, read `contribution-standards/MobX Reactivity.md`.
-- If the task involves store splits, controller hooks, view models, or state ownership, read `contribution-standards/Domain Stores, Not God Objects.md`.
-- If the task involves custom hooks or effect wiring, read `contribution-standards/Hooks Are Thin Bridges.md`.
 
 OTHER NOTES:
 - THANK YOU!!!! I really appreciate the hard work you put into our projects. You are a champion!

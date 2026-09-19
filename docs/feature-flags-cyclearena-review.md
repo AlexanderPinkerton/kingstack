@@ -172,13 +172,53 @@ Smoke-test the packed package with CycleArena's Nest module output, TypeScript,
 and Docker production dependency layout. The currently declared PostHog versions
 also need compatibility checks before introducing the OpenFeature provider.
 
-## First integration exercise
+## Agreed delivery order
 
-1. Install a packed/prerelease library in the consuming workspaces and add a
+Build and validate `@kingstack/flags` in KingStack first, release it to npm once
+the release checks pass, then prepare CycleArena and integrate the released
+package. CycleArena remains unchanged during library development. Compatibility
+fixtures and packed-package checks cover its constraints before adoption; they
+do not replace verification in the actual application afterward.
+
+### Targeted CycleArena preparation, after the library release
+
+1. **Make browser store ownership explicit.** Move the module-level RootStore
+   into `AppProviders`, following KingStack's per-provider construction and
+   mount/release lifecycle. Preserve existing domain stores and behavior. Cover
+   lifecycle replay, cleanup, playground initialization, and account changes.
+   Personalized SSR state must never live in a process-wide singleton.
+2. **Define analytics identity transitions.** Document visitor, Supabase guest,
+   and registered-user assignment/exposure/outcome IDs. Coordinate analytics
+   readiness with session changes in TypeScript, and test guest creation,
+   account upgrade, sign-out, and another account signing in. Start experiments
+   with registered users until guest continuity is verified in PostHog.
+3. **Separate client ownership from analytics enablement.** Give the server
+   PostHog client one owner and shutdown hook. Analytics and flags can each use
+   that client independently. Test all four enablement combinations, and verify
+   browser analytics does not introduce competing flag requests.
+4. **Decide the runtime upgrade separately.** Validate the actual Node patch
+   version against the released flags/OpenFeature/PostHog requirements. If
+   moving CycleArena to KingStack's Node baseline, validate its native
+   `node-datachannel` dependency and Docker deployment in a separate change.
+   A broad dependency or template migration is not a flags prerequisite.
+
+Keep these preparation changes separate from flag behavior so regressions have
+a clear owner. Existing session, analytics, gameplay, and playground tests must
+pass before enabling the first flag.
+
+- Pros: adopts the current lifecycle pattern where it matters, preserves
+  application behavior, and separates library, modernization, and integration
+  failures into independently reviewable changes.
+- Cons: compatibility fixtures cannot expose every deployment issue, and the
+  first actual adopter may still reveal changes that need a follow-up release.
+
+### Integration of the released package
+
+1. Install the released npm library in the consuming workspaces and add a
    project-owned catalog in `packages/shared/feature-flags`.
 2. Add flags configuration, independent PostHog client ownership, and a snapshot
    endpoint to the Nest control-plane role.
-3. Add the MobX store and direct Nest loader to the existing browser runtime.
+3. Add the MobX store and direct Nest loader to the prepared browser runtime.
 4. Exercise one presentation flag for registered users, preserving current
    behavior as its default. Confirm provider substitution with fixtures.
 5. If the proposed v1 experiment scope is included, test a presentation variant

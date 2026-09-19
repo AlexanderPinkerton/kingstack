@@ -1,8 +1,32 @@
 # KingStack Feature Flags Plan
 
-Status: proposed; implementation has not started.
+Status: implementation in progress; npm publication and application adoption are
+separate later steps.
 
 Date: 2026-09-19.
+
+## Initial implementation checkpoint
+
+The first package implementation is in
+[`packages/flags`](../packages/flags/README.md). It includes typed catalogs,
+OpenFeature evaluation, bounded snapshots, a MobX store, thin React bridges,
+HTTP transport, fixtures, and Next/direct-Nest composition recipes. Package
+checks cover runtime behavior, inferred types, optional dependency boundaries,
+and packed ESM/CommonJS consumers. Nothing has been published or integrated
+into CycleArena.
+
+The PostHog contract test uses real SDKs with mocked HTTP. Two visible flags
+produce two remote requests; automatic exposure is disabled. Initial defaults
+are therefore no interval polling, a 16-flag snapshot limit, concurrency four,
+a 1,500 ms server snapshot deadline, and a 5,000 ms browser load timeout. These
+are bounded starting policies, not conclusions from live latency measurements.
+See the [tested versions and provider notes](../packages/flags/docs/posthog.md).
+
+Before release, finish supported-runtime checks, live provider validation, and
+the experiment scope decision. Template config/catalog wiring must reference an
+available package version. After release, prepare CycleArena and integrate the
+published library. The initial implementation supports variant selection;
+explicit exposure recording and live experiment verification remain unfinished.
 
 ## Goal and decisions
 
@@ -67,17 +91,22 @@ Project definitions stay in `packages/shared/feature-flags`. The published
 library contains reusable behavior, with no application-specific flags or
 environment reads at import time.
 
-Proposed entry points, to finalize during the initial implementation spike:
+Initial implementation entry points:
 
 | Entry point | Responsibility |
 | --- | --- |
 | `@kingstack/flags` | Definitions, inferred types, validation, context and snapshot contracts |
-| `@kingstack/flags/server` | OpenFeature-backed evaluation, snapshot creation, fallback diagnostics |
+| `@kingstack/flags/server` | OpenFeature evaluation, snapshots, diagnostics, standard Request/Response handler |
 | `@kingstack/flags/mobx` | Observable snapshot store, refresh and identity lifecycle |
 | `@kingstack/flags/react` | Optional context and thin lifecycle/access hooks |
-| `@kingstack/flags/next` | Next route and server-rendering integration helpers |
-| `@kingstack/flags/nest` | Nest dependency injection and lifecycle integration |
+| `@kingstack/flags/http` | Browser snapshot loader with application-owned authenticated fetch |
 | `@kingstack/flags/testing` | Deterministic fixtures and snapshot loaders |
+
+Next uses the standard handler from `/server`; Nest injects the evaluator through
+its normal provider mechanism. Dedicated `/next` and `/nest` wrappers are not
+needed by the current implementation. Pros: fewer dependencies and one evaluator
+contract. Cons: hosts still supply their authentication and lifecycle wiring;
+the [composition guide](../packages/flags/docs/composition.md) makes that explicit.
 
 The application constructs its OpenFeature provider and injects its client into
 the server evaluator. PostHog setup can be a documented recipe before adding
@@ -96,7 +125,7 @@ the runtime separation already used by `@kingstack/logger`.
 
 ## Application API
 
-The following is a proposed API, not currently available code:
+The following API is implemented in the workspace package:
 
 ```ts
 // Project-owned shared catalog
@@ -483,28 +512,31 @@ not replace the library's separate Next-only acceptance test.
 - Add config mappings, generated-project examples, package boundaries, and docs.
 - Exercise the packed package in a minimal Next-only consumer and a Nest consumer.
 - Verify generated projects can start from defaults and later enable PostHog.
-- Include the existing-application migration guide and validate it during the
-  downstream adoption. Document direct Nest snapshot delivery as well as Next.
-- Adopt in one downstream project and address integration friction before release.
+- Include the existing-application migration guide and compatibility fixtures.
+  Document direct Nest snapshot delivery as well as Next.
+- Release after package checks and provider verification. Then make the targeted
+  CycleArena preparation changes and adopt the released package, following the
+  [agreed delivery order](./feature-flags-cyclearena-review.md#agreed-delivery-order).
+  Downstream adoption is a separate acceptance milestone after publication.
 - Complete focused tests, typechecks, formatting, and release metadata.
 
 ## Acceptance criteria
 
 - [ ] Next-only projects evaluate and display flags without installing or running Nest.
-- [ ] Core and browser imports do not pull in framework/server-only dependencies.
+- [x] Core and browser imports do not pull in framework/server-only dependencies.
 - [ ] Next and Nest use the same catalog and evaluator API.
 - [ ] Replacing the provider changes setup/configuration, not feature checks or UI.
-- [ ] In-memory/default mode works without network access or Supabase.
+- [x] In-memory/default mode works without network access or Supabase.
 - [ ] Selecting `none` prevents flags-related requests and exposure events while preserving declared defaults and independent analytics.
-- [ ] Catalog types and runtime validation reject invalid defaults and variants.
-- [ ] Concurrent users cannot share request context or cached personalized values.
-- [ ] Account switching, sign-out, and late responses cannot restore previous-user flags.
+- [x] Catalog types and runtime validation reject invalid defaults and variants.
+- [x] Concurrent users cannot share request context or cached personalized values in the package evaluator.
+- [x] Account switching, sign-out, and late responses cannot restore previous-user flags.
 - [ ] Snapshot responses contain only the allowed flags and use private, no-store caching.
-- [ ] Provider errors, missing flags, and timeouts resolve predictably with diagnostics.
-- [ ] Matching SSR bootstrap and initial client values agree; mismatched scopes are rejected.
-- [ ] Browser reads trigger neither network requests nor exposure events.
-- [ ] Active refresh, deactivation, disposal, and React lifecycle replay do not leak work.
-- [ ] Measured request counts justify the chosen snapshot evaluation strategy.
+- [x] Provider errors, missing flags, and timeouts resolve predictably with diagnostics in package tests.
+- [x] Matching SSR bootstrap and initial client values agree; mismatched scopes are rejected at the store boundary.
+- [x] Browser reads trigger neither network requests nor exposure events.
+- [x] Store acquisition/release tests cover active refresh, deactivation, disposal, and lifecycle replay.
+- [x] Mocked-HTTP request counts establish a bounded initial strategy; live latency/cost validation remains required.
 - [ ] Generated-project setup and package installation boundaries are tested.
 - [ ] An existing application adopts the package incrementally without regeneration.
 - [ ] CycleArena's direct Nest delivery and older browser lifecycle work without a root-store rewrite.

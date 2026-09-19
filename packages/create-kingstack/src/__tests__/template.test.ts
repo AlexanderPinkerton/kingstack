@@ -337,6 +337,7 @@ describe("prepareGeneratedProject", () => {
       recursive: true,
     });
     mkdirSync(join(testDir, "packages", "logger"), { recursive: true });
+    mkdirSync(join(testDir, "packages", "flags"), { recursive: true });
     mkdirSync(join(testDir, "packages", "shared"), { recursive: true });
     writeFileSync(join(testDir, "packages", "config", "package.json"), "{}");
     writeFileSync(
@@ -354,6 +355,7 @@ describe("prepareGeneratedProject", () => {
     );
     writeFileSync(join(testDir, "packages", "dnd-tree", "package.json"), "{}");
     writeFileSync(join(testDir, "packages", "logger", "package.json"), "{}");
+    writeFileSync(join(testDir, "packages", "flags", "package.json"), "{}");
     writeFileSync(join(testDir, "packages", "shared", "package.json"), "{}");
     writeFileSync(
       join(testDir, "Dockerfile"),
@@ -364,6 +366,7 @@ describe("prepareGeneratedProject", () => {
         "COPY packages/comment-tree/package.json packages/comment-tree/package.json",
         "COPY packages/dnd-tree/package.json packages/dnd-tree/package.json",
         "COPY packages/logger/package.json packages/logger/package.json",
+        "COPY packages/flags/package.json packages/flags/package.json",
         "RUN yarn workspace @kingstack/logger build",
         "COPY packages/shared/package.json packages/shared/package.json",
       ].join("\n"),
@@ -444,6 +447,11 @@ describe("prepareGeneratedProject", () => {
     expect(existsSync(join(testDir, "packages", "logger"))).toBe(false);
   });
 
+  it("should keep the unpublished flags library out of generated projects", () => {
+    prepareGeneratedProject(testDir);
+    expect(existsSync(join(testDir, "packages", "flags"))).toBe(false);
+  });
+
   it("should NOT remove packages/shared", () => {
     prepareGeneratedProject(testDir);
     expect(existsSync(join(testDir, "packages", "shared"))).toBe(true);
@@ -451,7 +459,7 @@ describe("prepareGeneratedProject", () => {
 
   it("should return count of removed packages", () => {
     const count = prepareGeneratedProject(testDir);
-    expect(count).toBe(7);
+    expect(count).toBe(8);
   });
 
   it("should remove maintainer-only scripts and dependencies", () => {
@@ -490,6 +498,7 @@ describe("prepareGeneratedProject", () => {
     expect(content).not.toContain("packages/comment-tree/package.json");
     expect(content).not.toContain("packages/dnd-tree/package.json");
     expect(content).not.toContain("packages/logger/package.json");
+    expect(content).not.toContain("packages/flags/package.json");
     expect(content).not.toContain("workspace @kingstack/logger build");
     expect(content).toContain("packages/shared/package.json");
   });
