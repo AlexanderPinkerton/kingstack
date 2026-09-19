@@ -1,5 +1,11 @@
 # @kingstack/create-kingstack
 
+## 0.6.1
+
+### Patch Changes
+
+- 9c041ed: Keep the upstream public-package bootstrap command and its tests out of generated KingStack projects.
+
 ## 0.6.0
 
 ### Minor Changes
