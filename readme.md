@@ -446,6 +446,7 @@ Start with the [deployment guide](./docs/deployment/README.md) and
 - [Supabase management](./docs/supabase/README.md)
 - [Supabase security](./docs/supabase/security.md)
 - [Configuration](./config/readme.md)
+- [Feature flags plan](./docs/feature-flags-plan.md)
 - [Scripts and automation](./docs/scripts/README.md)
 - [Metadata and SEO](./docs/metadata/README.md)
 - [Deployment](./docs/deployment/README.md)
