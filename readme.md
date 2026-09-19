@@ -56,6 +56,10 @@ login, and account-level 2FA. If publication succeeds but trust configuration
 does not, rerun the same command; it will detect the existing package and skip
 publication.
 
+npm may request browser verification separately for publication and trust
+access. Complete each authentication link printed by the command; it resumes
+automatically after approval.
+
 ## Create a project
 
 ### Requirements
