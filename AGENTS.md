@@ -22,6 +22,15 @@ CONTRIBUTION RULES:
 UI DESIGN:
 - Always refer to the brandkit and design system to ensure consistency.
 
+<<<<<<< Updated upstream
+=======
+SYNTAX:
+- Use as few ternary statements as possible
+- Use as few magic strings as possible
+- Prefer imperitive code over functional code unless performance is a consideration
+- Prioritize readability, clear organization, and explicit syntax over brevity
+
+>>>>>>> Stashed changes
 CONTRIBUTION GUIDELINES:
 - Detailed standards live in `contribution-standards/`.
 - Start with `contribution-standards/readme.md`.
