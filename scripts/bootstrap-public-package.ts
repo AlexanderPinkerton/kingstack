@@ -1,10 +1,11 @@
 #!/usr/bin/env bun
 
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
+import { setTimeout as delay } from "node:timers/promises";
 
 const BOOTSTRAP_VERSION = "0.0.0";
 const BOOTSTRAP_TAG = "bootstrap";
@@ -13,6 +14,13 @@ const NPM_REGISTRY = "https://registry.npmjs.org";
 const TRUST_REPOSITORY = "AlexanderPinkerton/kingstack";
 const TRUST_WORKFLOW = "release-changeset.yml";
 const TRUST_PUBLISH_PERMISSION = "createPackage";
+const NPM_AUTH_TIMEOUT_MS = 5 * 60 * 1000;
+const NPM_AUTH_POLL_MS = 1000;
+
+interface NpmWebAuthChallenge {
+  authUrl: string;
+  doneUrl: string;
+}
 
 const DEPENDENCY_FIELDS = [
   "dependencies",
@@ -208,6 +216,72 @@ export function hasExpectedTrust(configuration: TrustConfiguration): boolean {
   );
 }
 
+export function parseNpmWebAuthChallenge(
+  output: string,
+): NpmWebAuthChallenge | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(output);
+  } catch {
+    return undefined;
+  }
+  if (!isObject(parsed) || !isObject(parsed.error)) return undefined;
+  const error = parsed.error;
+  if (error.code !== "EOTP") return undefined;
+  if (typeof error.authUrl !== "string" || typeof error.doneUrl !== "string") {
+    return undefined;
+  }
+
+  const authUrl = new URL(error.authUrl);
+  const doneUrl = new URL(error.doneUrl);
+  if (
+    authUrl.origin !== "https://www.npmjs.com" ||
+    !authUrl.pathname.startsWith("/auth/cli/") ||
+    doneUrl.origin !== NPM_REGISTRY ||
+    doneUrl.pathname !== "/-/v1/done" ||
+    authUrl.username ||
+    authUrl.password ||
+    doneUrl.username ||
+    doneUrl.password
+  ) {
+    throw new Error("npm returned an unexpected browser authentication URL.");
+  }
+  return { authUrl: authUrl.href, doneUrl: doneUrl.href };
+}
+
+export async function waitForNpmWebAuth(
+  challenge: NpmWebAuthChallenge,
+  request: (url: string, init: RequestInit) => Promise<Response> = fetch,
+  signal = AbortSignal.timeout(NPM_AUTH_TIMEOUT_MS),
+): Promise<string> {
+  // npm-profile uses the same 202/retry-after protocol. This token is an OTP,
+  // not a persistent login credential; never print it or save it to npm config.
+  while (true) {
+    signal.throwIfAborted();
+    const response = await request(challenge.doneUrl, {
+      signal,
+      redirect: "error",
+      headers: { "cache-control": "no-store" },
+    });
+    if (response.status === 200) {
+      const body: unknown = await response.json();
+      if (isObject(body) && typeof body.token === "string" && body.token) {
+        return body.token;
+      }
+      throw new Error("npm authentication returned no one-time password.");
+    }
+    if (response.status !== 202) {
+      throw new Error(
+        `npm authentication failed (HTTP ${response.status}); rerun bootstrap for a fresh link.`,
+      );
+    }
+    await response.body?.cancel();
+    let pollMs = Number(response.headers.get("retry-after")) * 1000;
+    if (!Number.isFinite(pollMs) || pollMs <= 0) pollMs = NPM_AUTH_POLL_MS;
+    await delay(pollMs, undefined, { signal });
+  }
+}
+
 export function verificationScripts(manifest: PackageManifest): string[] {
   const scripts: string[] = [];
   for (const script of [
@@ -334,9 +408,15 @@ function findWorkspace(
   );
 }
 
-function inspect(command: string, args: string[], cwd: string): CommandResult {
+function inspect(
+  command: string,
+  args: string[],
+  cwd: string,
+  env = process.env,
+): CommandResult {
   const result = spawnSync(command, args, {
     cwd,
+    env,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -352,42 +432,6 @@ function inspect(command: string, args: string[], cwd: string): CommandResult {
     stdout: result.stdout || "",
     status: result.status ?? 1,
   };
-}
-
-function inspectStreaming(
-  command: string,
-  args: string[],
-  cwd: string,
-): Promise<CommandResult> {
-  return new Promise((resolveCommand, rejectCommand) => {
-    const child = spawn(command, args, {
-      cwd,
-      stdio: ["inherit", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (chunk: string) => {
-      stdout += chunk;
-      process.stdout.write(chunk);
-    });
-    child.stderr.setEncoding("utf8");
-    child.stderr.on("data", (chunk: string) => {
-      stderr += chunk;
-      process.stderr.write(chunk);
-    });
-    child.once("error", (error) => {
-      rejectCommand(
-        new Error(`Could not run ${command}: ${error.message}`, {
-          cause: error,
-        }),
-      );
-    });
-    child.once("close", (status) => {
-      resolveCommand({ stderr, stdout, status: status ?? 1 });
-    });
-  });
 }
 
 function run(command: string, args: string[], cwd: string): void {
@@ -503,18 +547,26 @@ async function readTrustConfiguration(
   packageName: string,
   repoRoot: string,
 ): Promise<TrustConfiguration | undefined> {
-  const result = await inspectStreaming(
-    "yarn",
-    npmCliArgs([
-      "trust",
-      "list",
-      packageName,
-      "--json",
-      "--registry",
-      NPM_REGISTRY,
-    ]),
-    repoRoot,
-  );
+  const args = npmCliArgs([
+    "trust",
+    "list",
+    packageName,
+    "--json",
+    "--registry",
+    NPM_REGISTRY,
+  ]);
+  let result = inspect("yarn", args, repoRoot);
+  if (result.status !== 0) {
+    const challenge = parseNpmWebAuthChallenge(result.stdout);
+    if (challenge) {
+      console.log(`\nAuthenticate npm trust access at:\n${challenge.authUrl}`);
+      const otp = await waitForNpmWebAuth(challenge);
+      result = inspect("yarn", args, repoRoot, {
+        ...process.env,
+        npm_config_otp: otp,
+      });
+    }
+  }
   if (result.status !== 0) {
     throw new Error(
       result.stderr.trim() ||

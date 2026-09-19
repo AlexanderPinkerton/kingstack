@@ -1,14 +1,17 @@
 import { describe, expect, it } from "bun:test";
+import { rejects } from "node:assert/strict";
 import {
   assertNewPackageContract,
   hasExpectedTrust,
   parseBootstrapArgs,
+  parseNpmWebAuthChallenge,
   parseTrustConfiguration,
   pendingChangesetRelease,
   repositorySlug,
   validatePackedManifest,
   validateWorkspaceManifest,
   verificationScripts,
+  waitForNpmWebAuth,
   type PackageManifest,
 } from "./bootstrap-public-package.js";
 
@@ -188,5 +191,105 @@ describe("npm trusted-publisher validation", () => {
         permissions: ["createPackage"],
       }),
     ).toBe(false);
+  });
+});
+
+describe("npm browser authentication for captured trust commands", () => {
+  const challenge = {
+    authUrl: "https://www.npmjs.com/auth/cli/test-challenge",
+    doneUrl: "https://registry.npmjs.org/-/v1/done?authId=test-challenge",
+  };
+
+  it("recognizes npm's structured browser challenge without swallowing other failures", () => {
+    expect(
+      parseNpmWebAuthChallenge(
+        JSON.stringify({
+          error: { code: "EOTP", ...challenge },
+        }),
+      ),
+    ).toEqual(challenge);
+    expect(parseNpmWebAuthChallenge("not JSON")).toBeUndefined();
+    expect(
+      parseNpmWebAuthChallenge(
+        JSON.stringify({
+          error: { code: "E403", ...challenge },
+        }),
+      ),
+    ).toBeUndefined();
+    expect(
+      parseNpmWebAuthChallenge(
+        JSON.stringify({
+          error: { code: "EOTP" },
+        }),
+      ),
+    ).toBeUndefined();
+  });
+
+  it("rejects authentication URLs outside npm", () => {
+    for (const field of ["authUrl", "doneUrl"]) {
+      expect(() =>
+        parseNpmWebAuthChallenge(
+          JSON.stringify({
+            error: {
+              code: "EOTP",
+              ...challenge,
+              [field]: "https://example.com/auth",
+            },
+          }),
+        ),
+      ).toThrow("unexpected browser authentication URL");
+    }
+  });
+
+  it("waits for browser approval and returns the OTP without following redirects", async () => {
+    let calls = 0;
+    const otp = await waitForNpmWebAuth(challenge, (url, init) => {
+      expect(url).toBe(challenge.doneUrl);
+      expect(init.redirect).toBe("error");
+      expect(init.headers).toEqual({ "cache-control": "no-store" });
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+      calls++;
+      if (calls === 1) {
+        return Promise.resolve(
+          new Response(null, {
+            status: 202,
+            headers: { "retry-after": "0.001" },
+          }),
+        );
+      }
+      return Promise.resolve(Response.json({ token: "test-only-otp" }));
+    });
+    expect(calls).toBe(2);
+    expect(otp).toBe("test-only-otp");
+  });
+
+  it("stops when the auth link expires or npm returns an invalid response", async () => {
+    await rejects(
+      waitForNpmWebAuth(challenge, () =>
+        Promise.resolve(new Response(null, { status: 404 })),
+      ),
+      /fresh link/,
+    );
+    await rejects(
+      waitForNpmWebAuth(challenge, () => Promise.resolve(Response.json({}))),
+      /no one-time password/,
+    );
+  });
+
+  it("stops polling when authentication is cancelled", async () => {
+    const controller = new AbortController();
+    let calls = 0;
+    await rejects(
+      waitForNpmWebAuth(
+        challenge,
+        () => {
+          calls++;
+          controller.abort(new Error("authentication cancelled"));
+          return Promise.resolve(new Response(null, { status: 202 }));
+        },
+        controller.signal,
+      ),
+    );
+    expect(calls).toBe(1);
   });
 });
