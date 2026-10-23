@@ -115,7 +115,7 @@ restart running services so they load reassigned ports.
 
 ## Requirements
 
-- **Node.js `>=24.18.0 <25`**
+- **Node.js `>=24.22.1 <25`**
 - **Yarn** (installed automatically via corepack)
 - **Bun** (for running scripts)
 - **Docker** (full-stack setup only)

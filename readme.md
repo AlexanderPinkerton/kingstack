@@ -64,7 +64,7 @@ automatically after approval.
 
 ### Requirements
 
-- Node.js `>=24.18.0 <25`
+- Node.js `>=24.22.1 <25`
 - Git
 - Yarn
 - Bun

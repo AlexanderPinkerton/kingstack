@@ -23,7 +23,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 24.18.0
+          node-version: 24.22.1
           registry-url: "https://registry.npmjs.org"
 
       # Changesets 2.x expects `npm info --json` to return an object. npm 12

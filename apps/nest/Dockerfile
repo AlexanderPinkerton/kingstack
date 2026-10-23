@@ -1,7 +1,7 @@
 # apps/nest/Dockerfile
 
 # Stage 1: Build
-FROM node:24.18.0-bookworm AS build
+FROM node:24.22.1-bookworm AS build
 WORKDIR /app
 
 # 1) Copy root-level manifests + Yarn config
@@ -51,7 +51,7 @@ RUN YARN_ENABLE_IMMUTABLE_INSTALLS=true \
     node .yarn/releases/yarn-4.10.2.cjs workspaces focus @kingstack/nest --production
 
 # Stage 2: Runtime
-FROM node:24.18.0-bookworm-slim
+FROM node:24.22.1-bookworm-slim
 
 # 👇 Install OpenSSL (required by Prisma Client)
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*

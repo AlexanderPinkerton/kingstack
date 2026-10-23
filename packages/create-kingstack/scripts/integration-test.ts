@@ -65,7 +65,7 @@ async function runTest(test: TestCase): Promise<boolean> {
 
   try {
     const result =
-      await $`docker run --rm -v ${REPO_ROOT}:/app -w /app node:24.18-alpine sh -c ${dockerCommand}`.quiet();
+      await $`docker run --rm -v ${REPO_ROOT}:/app -w /app node:24.22.1-alpine sh -c ${dockerCommand}`.quiet();
 
     console.log(result.stdout.toString());
 
