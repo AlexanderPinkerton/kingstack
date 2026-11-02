@@ -158,7 +158,7 @@ export async function deploy(
         "--platform",
         "linux/amd64",
         "-f",
-        "apps/nest/Dockerfile",
+        project.dockerfile,
         "-t",
         image,
         "--label",
@@ -169,7 +169,7 @@ export async function deploy(
       ],
       {
         cwd: projectContext.root,
-        display: `docker build --platform linux/amd64 -t ${image} .`,
+        display: `docker build --platform linux/amd64 -f ${project.dockerfile} -t ${image} .`,
       },
     );
 
@@ -236,6 +236,7 @@ export async function deploy(
             imageReference: targetImage,
             revision,
             port: project.port,
+            healthcheckPath: project.healthcheckPath,
             domain: backendHost,
             preservePortBinding: !options.reconfigureHost,
           }),

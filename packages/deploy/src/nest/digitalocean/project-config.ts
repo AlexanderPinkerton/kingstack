@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import {
   loadResolvedEnvironment,
   validateEnvFileKeys,
@@ -19,6 +19,8 @@ const BACKEND_VALUES_DESCRIPTION =
 export interface ProjectDeploymentConfig {
   appSlug: string;
   prismaWorkspace: string;
+  dockerfile: string;
+  healthcheckPath: string;
   nestEnv: string;
   prismaEnv: NodeJS.ProcessEnv;
   port: number;
@@ -58,7 +60,6 @@ export async function loadProjectConfig(
 ): Promise<ProjectDeploymentConfig> {
   const requiredPaths = [
     "package.json",
-    "apps/nest/Dockerfile",
     "config/schema.ts",
     `config/${environment}.ts`,
     "packages/prisma/package.json",
@@ -110,6 +111,24 @@ export async function loadProjectConfig(
     );
   }
 
+  // The schema already owns the application layout. Keep deployment aligned
+  // with it instead of requiring generated projects to retain apps/nest.
+  const dockerfile = relative(
+    project.root,
+    resolve(project.root, dirname(nestDefinition.path), "Dockerfile"),
+  );
+  if (dockerfile.startsWith("..") || isAbsolute(dockerfile)) {
+    throw new Error("The Nest Dockerfile must be inside the project root.");
+  }
+  if (!existsSync(resolve(project.root, dockerfile))) {
+    throw new Error(`Missing Nest Dockerfile: ${dockerfile}`);
+  }
+
+  const healthcheckPath = result.config.all.NEST_HEALTHCHECK_PATH || "/";
+  if (!/^\/[^\s?#]*$/.test(healthcheckPath)) {
+    throw new Error("NEST_HEALTHCHECK_PATH must be an absolute HTTP path.");
+  }
+
   const prismaEnv: NodeJS.ProcessEnv = {};
   for (const key of prismaDefinition.keys) {
     const value = result.config.all[key];
@@ -119,6 +138,8 @@ export async function loadProjectConfig(
   return {
     appSlug: sanitizeSlug(rootPackage.name),
     prismaWorkspace: prismaPackage.name,
+    dockerfile,
+    healthcheckPath,
     nestEnv: renderEnvFile(result.config.all, nestDefinition),
     prismaEnv,
     port: parsePort(result.config.all.NEST_PORT),

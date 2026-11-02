@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { runInNewContext } from "node:vm";
 import { resolveDeploymentHost } from "./deploy.js";
 import {
   buildFirewallRules,
@@ -16,6 +17,7 @@ import {
   renderCloudInit,
   renderExistingDeploymentProbe,
   renderRemoteDeployScript,
+  renderReadinessProbe,
   renderTrustedHttpsProbe,
 } from "./host-scripts.js";
 import {
@@ -42,6 +44,33 @@ import {
 } from "./wizard.js";
 
 describe("DigitalOcean Nest deployment CLI", () => {
+  it("requires a successful response from the configured readiness endpoint", () => {
+    for (const statusCode of [200, 204, 301, 401, 404, 500, 503]) {
+      let exitCode: number | undefined;
+      let requestedPath: string | undefined;
+      runInNewContext(renderReadinessProbe(3000, "/health"), {
+        require: () => ({
+          get: (
+            options: { path: string },
+            callback: (response: unknown) => void,
+          ) => {
+            requestedPath = options.path;
+            callback({ statusCode, resume() {} });
+            return { setTimeout() {}, on() {} };
+          },
+        }),
+        process: {
+          env: {},
+          exit: (code: number) => {
+            exitCode = code;
+          },
+        },
+      });
+      expect(requestedPath).toBe("/health");
+      expect(exitCode).toBe(statusCode < 300 ? 0 : 1);
+    }
+  });
+
   it("parses provision and deploy options", () => {
     expect(
       parseCliArgs([
@@ -430,6 +459,9 @@ describe("DigitalOcean Nest deployment CLI", () => {
       domain: "api.example.com",
     });
     expect(script).toContain("my-app-nest-candidate");
+    expect(
+      script.match(/--env KINGSTACK_DEPLOYMENT_CANDIDATE=true/g),
+    ).toHaveLength(1);
     expect(script).toContain("wait_ready");
     expect(script).toContain("restore_previous");
     expect(script).toContain("127.0.0.1:3099:3099");

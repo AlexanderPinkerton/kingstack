@@ -6,6 +6,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
+import { rejects } from "node:assert/strict";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import { runDeployCli } from "./cli.js";
@@ -56,6 +57,32 @@ describe("KingStack project boundary", () => {
     expect(project.port).toBe(3420);
     expect(project.backendUrl).toBe("https://api.example.com");
     expect(project.nestEnv).toContain("LOG_FORMAT=json");
+    expect(project.dockerfile).toBe("apps/nest/Dockerfile");
+    expect(project.healthcheckPath).toBe("/");
+  });
+
+  it("uses a renamed backend workspace and its configured readiness endpoint", async () => {
+    const root = createProjectFixture("apps/backend", "/health");
+    const project = await loadProjectConfig("production", { root });
+    expect(project.dockerfile).toBe("apps/backend/Dockerfile");
+    expect(project.healthcheckPath).toBe("/health");
+  });
+
+  it("rejects a missing backend Dockerfile before provider access", async () => {
+    const root = createProjectFixture("apps/backend");
+    rmSync(join(root, "apps/backend/Dockerfile"));
+    await rejects(
+      loadProjectConfig("production", { root }),
+      /Missing Nest Dockerfile: apps\/backend\/Dockerfile/,
+    );
+  });
+
+  it("rejects invalid readiness paths", async () => {
+    const root = createProjectFixture("apps/backend", "https://example.com");
+    await rejects(
+      loadProjectConfig("production", { root }),
+      /NEST_HEALTHCHECK_PATH must be an absolute HTTP path/,
+    );
   });
 
   it("reports every missing required project artifact before mutation", async () => {
@@ -69,15 +96,18 @@ describe("KingStack project boundary", () => {
       message = error instanceof Error ? error.message : String(error);
     }
     expect(message).toContain(
-      "Missing: package.json, apps/nest/Dockerfile, config/schema.ts, config/production.ts, packages/prisma/package.json",
+      "Missing: package.json, config/schema.ts, config/production.ts, packages/prisma/package.json",
     );
   });
 });
 
-function createProjectFixture(): string {
+function createProjectFixture(
+  backendPath = "apps/nest",
+  healthcheckPath = "/",
+): string {
   const root = mkdtempSync(join(tmpdir(), "kingstack-deploy-project-"));
   temporaryDirectories.push(root);
-  mkdirSync(join(root, "apps/nest"), { recursive: true });
+  mkdirSync(join(root, backendPath), { recursive: true });
   mkdirSync(join(root, "config"), { recursive: true });
   mkdirSync(join(root, "packages/prisma"), { recursive: true });
   symlinkSync(
@@ -90,7 +120,7 @@ function createProjectFixture(): string {
     join(root, "package.json"),
     JSON.stringify({ name: "@fixture/fixture-app" }),
   );
-  writeFileSync(join(root, "apps/nest/Dockerfile"), "FROM scratch\n");
+  writeFileSync(join(root, backendPath, "Dockerfile"), "FROM scratch\n");
   writeFileSync(
     join(root, "packages/prisma/package.json"),
     JSON.stringify({ name: "@fixture/prisma" }),
@@ -105,6 +135,7 @@ export const schema = defineSchema({
   },
   core: {
     NEST_PORT: { default: "3420" },
+    NEST_HEALTHCHECK_PATH: { default: ${JSON.stringify(healthcheckPath)} },
     LOG_FORMAT: { default: "json" },
     DATABASE_URL: { default: "postgresql://fixture" },
   },
@@ -112,7 +143,7 @@ export const schema = defineSchema({
     NEXT_PUBLIC_NEST_BACKEND_URL: "https://api.example.com",
   }),
   envfiles: {
-    nest: { path: "apps/nest/.env", keys: ["NEST_PORT", "LOG_FORMAT"] },
+    nest: { path: ${JSON.stringify(`${backendPath}/.env`)}, keys: ["NEST_PORT", "LOG_FORMAT"] },
     prisma: { path: "packages/prisma/.env", keys: ["DATABASE_URL"] },
   },
 });

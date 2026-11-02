@@ -17,6 +17,15 @@ yarn add --dev --exact @kingstack/deploy@0.1.0
 The package never updates itself and installing it does not contact a provider
 or perform a deployment. The CLI requires Bun 1.2.8 or newer.
 
+Nest deployment finds the Dockerfile next to `schema.envfiles.nest.path`, so
+`apps/backend/.env` uses `apps/backend/Dockerfile`. Define
+`NEST_HEALTHCHECK_PATH` in the configuration schema to probe a readiness endpoint
+such as `/health`; the default is `/`. Readiness requires an HTTP 2xx response.
+Validation containers receive `KINGSTACK_DEPLOYMENT_CANDIDATE=true`. Applications
+with scheduled jobs should disable their scheduler when this flag is set; the
+active container starts with the normal configured environment. A successful
+candidate check does not make single-host releases zero-downtime.
+
 ## Commands
 
 ```bash
