@@ -165,6 +165,14 @@ When `--env` is omitted, synchronization uses environments marked `sync: true`. 
 
 An actual sync requires authenticated `gh` and/or `vercel` CLIs on `PATH`.
 
+With Vercel CLI 65.10.x, valid Stripe publishable keys (`pk_test_...` or
+`pk_live_...`) mapped to `NEXT_PUBLIC_` variables are explicitly synced with
+`--type config`. This authorizes their intended browser exposure. Private keys,
+malformed publishable keys, and unrelated values retain Vercel's default
+credential checks; the sync command never opts all public-prefixed values into
+public config. Each KingStack environment still targets its configured Vercel
+project's `production` environment through `--environment production`.
+
 ## Adding or removing a key
 
 1. Add or remove the input in `schema.core`, or update `schema.computed` for a derived value.
