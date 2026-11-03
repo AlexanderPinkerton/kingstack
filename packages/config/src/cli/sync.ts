@@ -174,17 +174,30 @@ function syncToVercel(
   const vercelEnvironment = "production";
   let succeeded = true;
   for (const { key, value } of secrets) {
-    const result = spawnSync(
-      "vercel",
-      ["env", "add", key, vercelEnvironment, "--force"],
-      {
-        cwd,
-        encoding: "utf8",
-        input: value,
-        shell: false,
-        stdio: ["pipe", "pipe", "pipe"],
-      },
-    );
+    const args = [
+      "env",
+      "add",
+      key,
+      "--environment",
+      vercelEnvironment,
+      "--force",
+    ];
+    // Vercel CLI 65 requires explicit consent for credential-shaped public
+    // values. Stripe publishable keys are public by design; private keys and
+    // unrelated values must retain Vercel's normal credential checks.
+    if (
+      key.startsWith("NEXT_PUBLIC_") &&
+      /^pk_(test|live)_[A-Za-z0-9]+$/.test(value)
+    ) {
+      args.push("--type", "config");
+    }
+    const result = spawnSync("vercel", args, {
+      cwd,
+      encoding: "utf8",
+      input: value,
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     if (result.status === 0) {
       console.log(`   ✅ ${key}`);
     } else {
