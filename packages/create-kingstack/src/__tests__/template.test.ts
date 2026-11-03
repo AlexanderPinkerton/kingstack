@@ -211,7 +211,7 @@ describe("replaceWorkspaceVersions", () => {
     replaceWorkspaceVersions(testDir);
 
     const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-    expect(pkg.devDependencies["@kingstack/config"]).toBe("^0.3.0");
+    expect(pkg.devDependencies["@kingstack/config"]).toBe("^0.3.1");
   });
 
   it("pins the deployment package to an exact pre-1.0 version", () => {
@@ -227,7 +227,7 @@ describe("replaceWorkspaceVersions", () => {
     replaceWorkspaceVersions(testDir);
 
     const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-    expect(pkg.devDependencies["@kingstack/deploy"]).toBe("0.1.0");
+    expect(pkg.devDependencies["@kingstack/deploy"]).toBe("0.2.0");
   });
 
   it("should replace the AOS workspace version with its npm version", () => {
