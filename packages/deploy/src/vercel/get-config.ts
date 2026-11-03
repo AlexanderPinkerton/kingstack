@@ -123,6 +123,11 @@ export function selectRequestedDomain(
       `Hostname "${requestedHost}" is not a verified production domain for the linked Vercel project. Available domains: ${domains.map(({ name }) => name).join(", ") || "none"}.`,
     );
   }
+  if (selected.redirect) {
+    throw new Error(
+      `Hostname "${selected.name}" redirects to "${selected.redirect}". Use the destination hostname for NEXT_HOST so metadata, CORS, and Auth URLs share the final origin.`,
+    );
+  }
   return selected;
 }
 
@@ -339,11 +344,17 @@ async function resolveDomain(
   interface_: Interface | undefined,
 ): Promise<VercelProjectDomain> {
   if (options.host) return selectRequestedDomain(domains, options.host);
-  if (!interface_ || domains.length === 1) return domains[0];
+  const canonicalDomains = domains.filter(({ redirect }) => !redirect);
+  if (canonicalDomains.length === 0) {
+    throw new Error(
+      "The linked Vercel project has no verified production domain without a redirect. Configure a destination domain before importing NEXT_HOST.",
+    );
+  }
+  if (!interface_ || canonicalDomains.length === 1) return canonicalDomains[0];
   return choose(
     interface_,
     "Choose the production hostname for NEXT_HOST:",
-    domains.map((domain) => ({
+    canonicalDomains.map((domain) => ({
       label: domainLabel(domain),
       value: domain,
     })),

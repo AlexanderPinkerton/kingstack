@@ -118,8 +118,7 @@ export class CurrentUserStore {
   // API Implementations
   private apiQueryFn = async (): Promise<CurrentUserApiData[]> => {
     const token = this.session?.access_token || "";
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3069";
-    const response = await fetchWithAuth(token, `${baseUrl}/api/user`);
+    const response = await fetchWithAuth(token, "/api/user");
     const currentUser = await readJsonResponse<CurrentUserApiData>(response);
     // Wrap single user object in array since optimistic store expects array of entities
     return [currentUser];

@@ -23,6 +23,7 @@ export interface ProjectDeploymentConfig {
   prismaEnv: NodeJS.ProcessEnv;
   port: number;
   backendUrl?: string;
+  frontendUrl?: string;
 }
 
 export function getBackendHostConfigValues(
@@ -122,6 +123,7 @@ export async function loadProjectConfig(
     nestEnv: renderEnvFile(result.config.all, nestDefinition),
     prismaEnv,
     port: parsePort(result.config.all.NEST_PORT),
+    frontendUrl: result.config.all.NEXT_URL,
     backendUrl:
       typeof result.config.all.NEXT_PUBLIC_NEST_BACKEND_URL === "string"
         ? result.config.all.NEXT_PUBLIC_NEST_BACKEND_URL

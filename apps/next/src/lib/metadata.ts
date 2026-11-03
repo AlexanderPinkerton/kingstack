@@ -1,12 +1,38 @@
 import type { Metadata, MetadataRoute, Viewport } from "next";
 
+// Generated from NEXT_HOST by KingStack. Never fall back to another site's URL.
+const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+if (!configuredSiteUrl) {
+  throw new Error(
+    "NEXT_PUBLIC_SITE_URL is missing. Generate the environment or sync Vercel configuration before building.",
+  );
+}
+const configuredOrigin = new URL(configuredSiteUrl);
+if (
+  !["http:", "https:"].includes(configuredOrigin.protocol) ||
+  configuredOrigin.origin !== configuredSiteUrl.replace(/\/$/, "")
+) {
+  throw new Error(
+    "NEXT_PUBLIC_SITE_URL must be an HTTP(S) origin without a path, query, or credentials.",
+  );
+}
+
+// Vercel previews have their own deployment URL; never make them indexable.
+let siteUrl = configuredOrigin.origin;
+if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL) {
+  siteUrl = new URL(`https://${process.env.VERCEL_URL}`).origin;
+}
+const allowIndexing =
+  process.env.KINGSTACK_ENVIRONMENT === "production" &&
+  (!process.env.VERCEL_ENV || process.env.VERCEL_ENV === "production");
+
 // Site-wide configuration
 export const siteConfig = {
   name: "KingStack",
   shortName: "KingStack",
   description:
     "A modern full-stack TypeScript monorepo with Next.js, NestJS, Supabase, and powerful state management.",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://kingstack.dev",
+  url: siteUrl,
   ogImage: "/og-image.jpg", // You'll need to add this image
   creator: "KingStack Team",
   email: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contact@kingstack.dev",
@@ -93,11 +119,11 @@ export const defaultMetadata: Metadata = {
     creator: siteConfig.twitterHandle,
   },
   robots: {
-    index: true,
-    follow: true,
+    index: allowIndexing,
+    follow: allowIndexing,
     googleBot: {
-      index: true,
-      follow: true,
+      index: allowIndexing,
+      follow: allowIndexing,
       "max-video-preview": -1,
       "max-image-preview": "large",
       "max-snippet": -1,
@@ -164,6 +190,19 @@ export function createMetadata(overrides: {
     canonical,
   } = overrides;
 
+  // Page metadata supplies paths; the environment owns the origin.
+  if (
+    canonical &&
+    (!canonical.startsWith("/") ||
+      canonical.startsWith("//") ||
+      canonical.includes("\\") ||
+      new URL(canonical, siteConfig.url).origin !== siteConfig.url)
+  ) {
+    throw new Error(
+      "Page canonical must be a root-relative path, such as /store.",
+    );
+  }
+
   return {
     title: title || undefined,
     description: description || siteConfig.description,
@@ -196,6 +235,7 @@ export function createMetadata(overrides: {
       ? {
           index: false,
           follow: false,
+          googleBot: { index: false, follow: false },
         }
       : defaultMetadata.robots,
     alternates: canonical

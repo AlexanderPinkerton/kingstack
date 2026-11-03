@@ -47,7 +47,25 @@ export const schema = defineSchema({
     // Application URLs
     NEXT_HOST: {
       default: "localhost",
-      description: "Next.js frontend hostname",
+      description: "Canonical frontend hostname (no protocol, port, or path)",
+      validate: (value, context) => {
+        try {
+          const url = new URL(`https://${value}`);
+          if (url.hostname !== value.toLowerCase()) {
+            return "Use only a hostname, without a protocol, port, path, or credentials";
+          }
+          if (
+            context.mode === EnvironmentMode.Hosted &&
+            /^(localhost|.*\.localhost|127\..*|0\.0\.0\.0|\[::1\]|\[::\])$/i.test(
+              value,
+            )
+          ) {
+            return "Hosted environments require the deployed frontend hostname";
+          }
+        } catch {
+          return "Expected a valid frontend hostname";
+        }
+      },
     },
     NEST_HOST: {
       default: "localhost",
@@ -219,8 +237,8 @@ export const schema = defineSchema({
       : `https://${core.NEST_HOST}`;
 
     const nextUrl = isLocal
-      ? `http://${core.NEXT_HOST}:${core.NEXT_PORT}`
-      : `https://${core.NEXT_HOST}`;
+      ? `http://${core.NEXT_HOST.toLowerCase()}:${core.NEXT_PORT}`
+      : `https://${core.NEXT_HOST.toLowerCase()}`;
 
     return {
       // Supabase API URL (for auth, storage, etc.)
@@ -248,6 +266,7 @@ export const schema = defineSchema({
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: core.SUPABASE_PUBLISHABLE_KEY,
       NEXT_PUBLIC_NEST_BACKEND_URL: nestUrl,
       NEXT_PUBLIC_API_URL: nextUrl,
+      NEXT_PUBLIC_SITE_URL: nextUrl,
 
       // NestJS config
       NEXT_URL: nextUrl,
@@ -271,6 +290,7 @@ export const schema = defineSchema({
         "NEXT_PUBLIC_SUPABASE_URL",
         "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
         "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_SITE_URL",
 
         // Server-side database config
         "SUPABASE_DB_POOL_URL",
@@ -372,6 +392,7 @@ export const schema = defineSchema({
         "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
         "NEXT_PUBLIC_NEST_BACKEND_URL",
         "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_SITE_URL",
         "SUPABASE_DB_POOL_URL",
         "SUPABASE_DB_DIRECT_URL",
         "LOG_LEVEL",

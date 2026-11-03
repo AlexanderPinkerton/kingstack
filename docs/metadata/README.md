@@ -6,7 +6,7 @@ This guide explains how to manage metadata, SEO, and PWA configuration for KingS
 
 ## 📁 File Structure
 
-All metadata configuration is centralized in a single file:
+Branding and page metadata live in `metadata.ts`; the site origin comes from KingStack configuration:
 
 ```
 apps/next/src/
@@ -41,7 +41,7 @@ export const siteConfig = {
   name: "KingStack",           // Full site name
   shortName: "KingStack",       // Short name for PWA
   description: "Your site description...",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://kingstack.dev",
+  url: siteUrl, // Derived from KingStack; do not hard-code a domain here
   ogImage: "/og-image.jpg",     // Open Graph image
   creator: "KingStack Team",
   email: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contact@kingstack.dev",
@@ -65,6 +65,48 @@ export const siteConfig = {
   },
 }
 ```
+
+---
+
+## Site origin and indexing
+
+Set `NEXT_HOST` once in each `config/<environment>.ts` file, using the final
+hostname after redirects (for example, `www.example.com`, without a protocol,
+port, or path). The schema derives all of these from that same input:
+
+- `NEXT_URL`: backend CORS, email/checkout links, and the Supabase Auth site URL.
+- `NEXT_PUBLIC_API_URL`: the frontend origin for existing consumers. Browser calls
+  to the current site's API should use relative paths such as `/api/user`.
+- `NEXT_PUBLIC_SITE_URL`: the metadata base for canonicals and social cards.
+
+Local origins use HTTP and `NEXT_PORT`; hosted origins use HTTPS. Each
+KingStack environment has its own hostname. Do not separately set
+`NEXT_PUBLIC_SITE_URL` in source code or maintain a second domain in Vercel.
+Run `yarn env:local` after adopting this schema locally. For a hosted environment,
+sync its Vercel values and rebuild the frontend. A missing site URL fails the
+build with a configuration error instead of publishing a fallback domain.
+
+Pages pass root-relative canonical paths, such as `canonical: "/store"`.
+Absolute or protocol-relative canonical URLs are rejected so individual pages
+cannot silently reintroduce another origin.
+
+Only `KINGSTACK_ENVIRONMENT=production` is indexable by default. Development and
+local sites stay `noindex` even when `NODE_ENV=production` or deployed to a
+Vercel project's production target. Vercel previews also stay `noindex` and use
+`VERCEL_URL` for their metadata origin when available. Keep Vercel's system
+environment variables enabled for this preview detection. `noIndex: true`
+continues to protect individual private pages in production; `noIndex: false`
+does not override the environment's indexing restriction.
+
+Provider settings still need to agree with the config. A hostname change requires
+updating Vercel routing, refreshing the backend environment, syncing/rebuilding
+the frontend, and applying the Auth site/redirect settings. Generating
+`supabase/config.toml` updates local Auth configuration; it does not change a
+hosted Supabase project's settings. Keep preview/auth callback allowlists
+explicit rather than accepting arbitrary origins.
+
+References: [Next.js metadataBase](https://nextjs.org/docs/15/app/api-reference/functions/generate-metadata#metadatabase)
+and [Vercel system environment variables](https://vercel.com/docs/environment-variables/system-environment-variables).
 
 ---
 
@@ -367,5 +409,5 @@ export async function generateMetadata({
 
 ---
 
-🌟 **All metadata configuration is managed in one place: `apps/next/src/lib/metadata.ts`**
+Branding and page metadata: `apps/next/src/lib/metadata.ts`. Site origin: `NEXT_HOST` in KingStack configuration.
 
