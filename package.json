@@ -95,6 +95,6 @@
     "supabase": "2.113.0",
     "turbo": "2.10.7",
     "typescript": "5.9.3",
-    "vercel": "58.1.0"
+    "vercel": "65.10.0"
   }
 }

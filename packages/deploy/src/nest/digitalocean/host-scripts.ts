@@ -113,11 +113,16 @@ systemctl enable --now caddy
 `;
 }
 
+export function renderReadinessProbe(port: number, path = "/"): string {
+  return `const http=require("node:http");const port=Number(process.env.PORT||${parsePort(port)});const request=http.get({host:"127.0.0.1",port,path:${JSON.stringify(path)}},response=>{response.resume();process.exit(response.statusCode>=200&&response.statusCode<300?0:1)});request.setTimeout(1000,()=>{request.destroy();process.exit(1)});request.on("error",()=>process.exit(1));`;
+}
+
 export function renderRemoteDeployScript(options: {
   appSlug: string;
   imageReference: string;
   revision: string;
   port: number;
+  healthcheckPath?: string;
   domain?: string;
   preservePortBinding?: boolean;
 }): string {
@@ -134,9 +139,7 @@ export function renderRemoteDeployScript(options: {
     ? `${renderExistingDeploymentProbe(appSlug, port)}
 publish="$publish:${port}"`
     : `publish=${shellQuote(configuredPublish)}`;
-  const probe = shellQuote(
-    `const http=require("node:http");const port=Number(process.env.PORT||${port});const request=http.get({host:"127.0.0.1",port,path:"/"},response=>{response.resume();process.exit(0)});request.setTimeout(1000,()=>{request.destroy();process.exit(1)});request.on("error",()=>process.exit(1));`,
-  );
+  const probe = shellQuote(renderReadinessProbe(port, options.healthcheckPath));
 
   return `#!/usr/bin/env bash
 set -euo pipefail
@@ -183,6 +186,7 @@ docker rm -f "$candidate" >/dev/null 2>&1 || true
 docker run -d --restart=no \
   --name "$candidate" \
   --env-file "$active_env" \
+  --env KINGSTACK_DEPLOYMENT_CANDIDATE=true \
   --label com.kingstack.app=${shellQuote(appSlug)} \
   --label com.kingstack.revision="$revision" \
   "$image" >/dev/null

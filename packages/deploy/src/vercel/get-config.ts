@@ -222,7 +222,7 @@ function assertVercelCli(projectRoot: string): void {
   }
   if (!isSupportedVercelCliVersion(version)) {
     throw new Error(
-      `Vercel CLI >=58.1.0 <59 is required for the project API command; found ${version || "an unknown version"}. Run \`yarn install\` from the repository root.`,
+      `Vercel CLI >=65.10.0 <66 is required for the project API command; found ${version || "an unknown version"}. Run \`yarn install\` from the repository root.`,
     );
   }
 }
@@ -233,7 +233,7 @@ export function isSupportedVercelCliVersion(value: string): boolean {
   const major = Number(match[1]);
   const minor = Number(match[2]);
   const patch = Number(match[3]);
-  return major === 58 && (minor > 1 || (minor === 1 && patch >= 0));
+  return major === 65 && (minor > 10 || (minor === 10 && patch >= 0));
 }
 
 function readProjectLink(projectRoot: string): VercelProjectLink {
