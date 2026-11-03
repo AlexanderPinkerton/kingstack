@@ -237,7 +237,7 @@ describe("generated project boundary", () => {
     expect(rootPackage.scripts["docker:trim-build-cache"]).toBe(
       "docker buildx prune --force --max-used-space 5GB",
     );
-    expect(rootPackage.devDependencies.vercel).toBe("58.1.0");
+    expect(rootPackage.devDependencies.vercel).toBe("65.10.0");
     expect(rootPackage.scripts["prisma:deploy"]).toBe(
       "yarn workspace @boundary-check/prisma prisma migrate deploy",
     );
