@@ -47,7 +47,7 @@
   },
   "peerDependencies": {
     "supabase": ">=2.113.0 <3",
-    "vercel": ">=58.1.0 <59"
+    "vercel": ">=65.10.0 <66"
   },
   "peerDependenciesMeta": {
     "supabase": {

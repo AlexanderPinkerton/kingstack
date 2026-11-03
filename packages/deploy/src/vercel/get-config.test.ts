@@ -21,10 +21,12 @@ const importedValues: VercelConfigValues = {
 
 describe("Vercel configuration import CLI", () => {
   it("accepts only the declared Vercel CLI range", () => {
-    expect(isSupportedVercelCliVersion("Vercel CLI 58.1.0")).toBe(true);
-    expect(isSupportedVercelCliVersion("58.9.2")).toBe(true);
-    expect(isSupportedVercelCliVersion("58.0.9")).toBe(false);
-    expect(isSupportedVercelCliVersion("59.0.0")).toBe(false);
+    expect(isSupportedVercelCliVersion("Vercel CLI 65.10.0")).toBe(true);
+    expect(isSupportedVercelCliVersion("65.11.2")).toBe(true);
+    expect(isSupportedVercelCliVersion("65.9.9")).toBe(false);
+    expect(isSupportedVercelCliVersion("66.0.0")).toBe(false);
+    expect(isSupportedVercelCliVersion("58.1.0")).toBe(false);
+    expect(isSupportedVercelCliVersion("65.10.0-canary.1")).toBe(false);
   });
   it("parses file, host, and print destinations", () => {
     expect(

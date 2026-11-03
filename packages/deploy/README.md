@@ -52,7 +52,7 @@ Generated projects retain their familiar Yarn aliases, including
 
 Provider tools remain project or system prerequisites:
 
-- Supabase CLI `>=2.113.0 <3` and Vercel CLI `>=58.1.0 <59` are optional peers
+- Supabase CLI `>=2.113.0 <3` and Vercel CLI `>=65.10.0 <66` are optional peers
   used only by their provider commands.
 - Nest deployment requires `doctl`, Docker, SSH, SCP, gzip, Git, and Bash for
   the selected operation.
