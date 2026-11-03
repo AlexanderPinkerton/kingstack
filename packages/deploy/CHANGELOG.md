@@ -1,5 +1,26 @@
 # @kingstack/deploy
 
+## 0.2.0
+
+### Minor Changes
+
+- a63304b: Resolve the Nest Dockerfile beside the schema's Nest envfile so projects with
+  renamed backend workspaces can deploy. Support NEST_HEALTHCHECK_PATH (default /)
+  and require a 2xx readiness response. Mark validation containers with
+  KINGSTACK_DEPLOYMENT_CANDIDATE=true so applications can disable scheduled jobs
+  until the active container starts.
+
+  Update the supported Vercel CLI range to >=65.10.0 <66 and the template tooling pin to 65.10.0.
+
+### Patch Changes
+
+- 16306a1: Reject redirect aliases when importing NEXT_HOST from Vercel, and offer only destination domains for automatic or interactive selection. This keeps frontend metadata, backend CORS, and Auth redirects on the same canonical origin.
+
+  Nest deployment also checks the configured frontend with a read-only, bounded HTTP request and warns when it redirects to another origin. Unavailable frontends remain advisory so first deployments can proceed.
+
+- Updated dependencies [67cf297]
+  - @kingstack/config@0.3.1
+
 ## 0.1.1
 
 ### Patch Changes

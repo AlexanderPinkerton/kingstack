@@ -1,6 +1,6 @@
 {
   "name": "@kingstack/deploy",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "author": "Alexander Pinkerton <alexanderpinkerton.business@gmail.com>",
   "license": "MIT",
   "description": "Versioned hosted deployment tooling for KingStack projects",
@@ -42,7 +42,7 @@
     "test:vercel": "bun test src/vercel/**/*.test.ts"
   },
   "dependencies": {
-    "@kingstack/config": "0.3.0",
+    "@kingstack/config": "0.3.1",
     "@napi-rs/keyring": "1.2.0"
   },
   "peerDependencies": {
