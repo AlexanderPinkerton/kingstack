@@ -34,6 +34,7 @@ import {
 } from "./project-config.js";
 import { applyCaddy, rollbackTarget, verifyRemoteHost } from "./remote-host.js";
 import type { KingStackProject } from "../../project.js";
+import { checkFrontendOrigin } from "../../frontend-origin.js";
 
 export interface DeploymentResult {
   backendHost?: string;
@@ -49,6 +50,10 @@ export async function deploy(
   tag: string,
   projectContext: KingStackProject,
 ): Promise<DeploymentResult> {
+  if (project.frontendUrl) {
+    const warning = await checkFrontendOrigin(project.frontendUrl);
+    if (warning) console.warn(`Warning: ${warning}`);
+  }
   assertTool("doctl", ["version"], projectContext.root);
   assertTool("ssh", ["-V"], projectContext.root);
   assertExecutable("scp", ["-V"], projectContext.root);

@@ -58,6 +58,22 @@ Provider tools remain project or system prerequisites:
   the selected operation.
 - Provider authentication is never performed during package installation.
 
+## Canonical frontend origin
+
+Set `NEXT_HOST` to the final frontend hostname after redirects. The project
+schema derives `NEXT_URL`, `NEXT_PUBLIC_API_URL`, and `NEXT_PUBLIC_SITE_URL`
+from it so backend CORS, Auth links, and page metadata agree.
+
+`king-deploy vercel pull` offers only verified destination domains and rejects
+an explicitly requested redirect alias with its destination in the error.
+Nest deployment checks `NEXT_URL` with read-only HTTP HEAD requests and warns
+about redirects to another origin. The check makes at most five requests
+within five seconds; it remains advisory when the frontend is unavailable so
+first deployments can proceed. It does not change DNS, CORS, or Auth settings.
+
+Schema and metadata template changes must also be adopted by existing projects;
+upgrading this package does not rewrite their application code.
+
 ## Upgrade safety
 
 Review the dependency and changelog before upgrading. Then inspect the intended

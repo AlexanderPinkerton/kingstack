@@ -7,6 +7,12 @@
     },
     "build": {
       "dependsOn": ["^build", "@kingstack/prisma#generate"],
+      "env": [
+        "NEXT_PUBLIC_SITE_URL",
+        "KINGSTACK_ENVIRONMENT",
+        "VERCEL_ENV",
+        "VERCEL_URL",
+      ],
       "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**"],
     },
     "test": {

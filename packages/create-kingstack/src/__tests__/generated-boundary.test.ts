@@ -78,8 +78,8 @@ describe("generated project boundary", () => {
       readFileSync(join(generatedRoot, "apps", "nest", "package.json"), "utf8"),
     );
     expect(nestPackage.dependencies["@kingstack/logger"]).toBe("^0.1.0");
-    expect(rootPackage.devDependencies["@kingstack/config"]).toBe("^0.3.0");
-    expect(rootPackage.devDependencies["@kingstack/deploy"]).toBe("0.1.0");
+    expect(rootPackage.devDependencies["@kingstack/config"]).toBe("^0.3.1");
+    expect(rootPackage.devDependencies["@kingstack/deploy"]).toBe("0.2.0");
 
     const nestDockerfile = readFileSync(
       join(generatedRoot, "apps", "nest", "Dockerfile"),

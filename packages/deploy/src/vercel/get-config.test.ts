@@ -140,6 +140,9 @@ describe("Vercel configuration import CLI", () => {
     expect(() => selectRequestedDomain(domains, "preview.example.com")).toThrow(
       "not a verified production domain",
     );
+    expect(() => selectRequestedDomain(domains, "example.com")).toThrow(
+      'redirects to "www.example.com"',
+    );
   });
 
   it("updates only Vercel-owned values and preserves Supabase credentials", () => {
