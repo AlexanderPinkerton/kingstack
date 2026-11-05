@@ -1,7 +1,18 @@
 import { describe, expect, it } from "bun:test";
 import { rejects } from "node:assert/strict";
 import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+import {
   assertNewPackageContract,
+  createRecoveryArchive,
   hasExpectedTrust,
   parseBootstrapArgs,
   parseNpmWebAuthChallenge,
@@ -40,8 +51,16 @@ describe("public package bootstrap arguments", () => {
       dryRun: true,
       help: false,
       packageName: "@kingstack/example",
+      recover: false,
       yes: true,
     });
+  });
+
+  it("requires an explicit recovery flag", () => {
+    expect(
+      parseBootstrapArgs(["@kingstack/example", "--recover", "--dry-run"])
+        .recover,
+    ).toBe(true);
   });
 
   it("rejects unknown options and extra package names", () => {
@@ -100,7 +119,7 @@ describe("public package manifest validation", () => {
   });
 
   it("runs either packed-consumer check after building", () => {
-    for (const script of ["test:package", "test:pack"]) {
+    for (const script of ["test:package", "test:pack", "test:config"]) {
       expect(
         verificationScripts({
           ...validManifest,
@@ -112,6 +131,27 @@ describe("public package manifest validation", () => {
 });
 
 describe("new Changesets package contract", () => {
+  it("recovers a completed stable version without weakening normal bootstrap checks", () => {
+    expect(() =>
+      assertNewPackageContract("@kingstack/example", "0.1.0", undefined, true),
+    ).not.toThrow();
+    expect(() =>
+      assertNewPackageContract("@kingstack/example", "0.1.0", undefined),
+    ).toThrow("--recover");
+    expect(() =>
+      assertNewPackageContract("@kingstack/example", "0.1.0", "minor", true),
+    ).toThrow("no pending Changeset");
+    for (const version of ["0.0.0", "0.1.0-beta.1", "invalid"]) {
+      expect(() =>
+        assertNewPackageContract(
+          "@kingstack/example",
+          version,
+          undefined,
+          true,
+        ),
+      ).toThrow("already-versioned stable release");
+    }
+  });
   it("requires a 0.0.0 package with an initial minor Changeset", () => {
     const release = pendingChangesetRelease(
       [
@@ -137,6 +177,52 @@ describe("new Changesets package contract", () => {
 });
 
 describe("packed package validation", () => {
+  it("recovers a real Yarn archive without changing release bytes or source version", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "king-bootstrap-recovery-test-"));
+    try {
+      const source = join(cwd, "source");
+      mkdirSync(join(source, "dist"), { recursive: true });
+      const manifest = {
+        ...validManifest,
+        version: "0.1.0",
+        files: ["dist"],
+        main: "dist/index.js",
+        dependencies: { "@kingstack/config": "0.4.0" },
+      };
+      writeFileSync(join(source, "package.json"), JSON.stringify(manifest));
+      writeFileSync(join(source, "yarn.lock"), "");
+      writeFileSync(
+        join(source, "dist/index.js"),
+        "module.exports = 'unchanged';\n",
+      );
+      const archive = join(cwd, "release.tgz");
+      execFileSync("yarn", ["pack", "--out", archive], { cwd: source });
+      const originalArchive = readFileSync(archive);
+      const bootstrap = createRecoveryArchive(
+        archive,
+        manifest.name!,
+        "0.1.0",
+        cwd,
+      );
+      const readPacked = (file: string) =>
+        execFileSync("tar", ["-xOf", bootstrap, `package/${file}`], {
+          encoding: "utf8",
+        });
+      expect(JSON.parse(readPacked("package.json"))).toEqual({
+        ...manifest,
+        version: "0.0.0",
+      });
+      expect(readPacked("dist/index.js")).toBe(
+        "module.exports = 'unchanged';\n",
+      );
+      expect(readFileSync(archive)).toEqual(originalArchive);
+      expect(
+        JSON.parse(readFileSync(join(source, "package.json"), "utf8")).version,
+      ).toBe("0.1.0");
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
   it("accepts registry dependency ranges", () => {
     expect(() =>
       validatePackedManifest(
