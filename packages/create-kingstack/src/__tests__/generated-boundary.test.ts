@@ -87,6 +87,7 @@ describe("generated project boundary", () => {
     );
     expect(nestDockerfile).not.toContain("packages/logger");
     expect(nestDockerfile).not.toContain("packages/deploy");
+    expect(nestDockerfile).not.toContain("packages/email");
     expect(nestDockerfile).not.toContain("workspace @kingstack/logger build");
     expect(nestDockerfile).toContain("workspace @boundary-check/shared build");
     expect(nestDockerfile).toContain(

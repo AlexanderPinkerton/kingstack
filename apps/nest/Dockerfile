@@ -23,6 +23,7 @@ COPY packages/ts-config/package.json packages/ts-config/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/config/package.json packages/config/package.json
 COPY packages/deploy/package.json packages/deploy/package.json
+COPY packages/email/package.json packages/email/package.json
 COPY packages/advanced-optimistic-store/package.json packages/advanced-optimistic-store/package.json
 COPY packages/comment-tree/package.json packages/comment-tree/package.json
 COPY packages/create-kingstack/package.json packages/create-kingstack/package.json

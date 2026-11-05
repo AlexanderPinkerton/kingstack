@@ -60,6 +60,12 @@ jobs:
       - name: Smoke Test Packed Flags Package
         run: yarn workspace @kingstack/flags test:pack
 
+      - name: Smoke Test Packed Email Package
+        run: yarn workspace @kingstack/email test:pack
+
+      - name: Smoke Test Email Config Compatibility
+        run: yarn workspace @kingstack/email test:config
+
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1
