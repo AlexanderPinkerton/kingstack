@@ -78,6 +78,7 @@ export const PUBLISHED_PACKAGES: Record<string, string> = {
 export const PACKAGES_TO_REMOVE = [
   "packages/config", // Published to npm
   "packages/deploy", // Published to npm
+  "packages/email", // Optional published library
   "packages/advanced-optimistic-store", // Published to npm
   "packages/comment-tree", // Published to npm
   "packages/dnd-tree", // Published to npm

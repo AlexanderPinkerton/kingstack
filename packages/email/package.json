@@ -1,0 +1,107 @@
+{
+  "name": "@kingstack/email",
+  "version": "0.0.0",
+  "description": "React Email templates, Resend delivery, and Supabase Auth email tooling for KingStack",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlexanderPinkerton/kingstack.git",
+    "directory": "packages/email"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "default": "./dist/react.js"
+    },
+    "./auth": {
+      "types": "./dist/auth.d.ts",
+      "default": "./dist/auth.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./supabase": {
+      "types": "./dist/supabase.d.ts",
+      "default": "./dist/supabase.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "react": [
+        "dist/react.d.ts"
+      ],
+      "auth": [
+        "dist/auth.d.ts"
+      ],
+      "server": [
+        "dist/server.d.ts"
+      ],
+      "supabase": [
+        "dist/supabase.d.ts"
+      ]
+    }
+  },
+  "bin": {
+    "king-email": "bin/king-email.cjs"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src scripts",
+    "lint:fix": "eslint src scripts --fix",
+    "test": "vitest run",
+    "test:pack": "yarn build && node scripts/pack-smoke.cjs",
+    "test:config": "yarn workspace @kingstack/config build && yarn build && bun scripts/config-smoke.ts"
+  },
+  "dependencies": {
+    "@iarna/toml": "^2.2.5",
+    "@react-email/components": "0.0.25",
+    "@react-email/render": "1.0.1",
+    "resend": "6.5.2"
+  },
+  "peerDependencies": {
+    "@kingstack/config": ">=0.3.1 <0.5",
+    "react": "^18.3.1 || ^19.0.0",
+    "react-dom": "^18.3.1 || ^19.0.0",
+    "react-email": ">=6.11.3 <7"
+  },
+  "peerDependenciesMeta": {
+    "@kingstack/config": {
+      "optional": true
+    },
+    "react-email": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@kingstack/config": "workspace:*",
+    "@kingstack/eslint-config": "workspace:*",
+    "@types/node": "^24.10.1",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "eslint": "10.8.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "5.9.3",
+    "vitest": "^3.1.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
