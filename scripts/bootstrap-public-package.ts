@@ -1,7 +1,14 @@
 #!/usr/bin/env bun
 
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -34,6 +41,7 @@ export interface BootstrapCliOptions {
   dryRun: boolean;
   help: boolean;
   packageName?: string;
+  recover: boolean;
   yes: boolean;
 }
 
@@ -74,12 +82,15 @@ export function parseBootstrapArgs(args: string[]): BootstrapCliOptions {
   const options: BootstrapCliOptions = {
     dryRun: false,
     help: false,
+    recover: false,
     yes: false,
   };
 
   for (const argument of args) {
     if (argument === "--dry-run") {
       options.dryRun = true;
+    } else if (argument === "--recover") {
+      options.recover = true;
     } else if (argument === "--yes") {
       options.yes = true;
     } else if (argument === "--help" || argument === "-h") {
@@ -291,6 +302,7 @@ export function verificationScripts(manifest: PackageManifest): string[] {
     "build",
     "test:package",
     "test:pack",
+    "test:config",
   ]) {
     if (manifest.scripts?.[script]) {
       scripts.push(script);
@@ -330,10 +342,24 @@ export function assertNewPackageContract(
   packageName: string,
   version: string,
   release: ChangesetReleaseType | undefined,
+  recover = false,
 ): void {
+  if (recover) {
+    if (version === BOOTSTRAP_VERSION || !/^\d+\.\d+\.\d+$/.test(version)) {
+      throw new Error(
+        "--recover requires an already-versioned stable release.",
+      );
+    }
+    if (release !== undefined) {
+      throw new Error(
+        "--recover requires the package's Changesets version step to be complete, with no pending Changeset.",
+      );
+    }
+    return;
+  }
   if (version !== BOOTSTRAP_VERSION) {
     throw new Error(
-      `New Changesets packages must start at ${BOOTSTRAP_VERSION}; ${packageName} is ${version}.`,
+      `New Changesets packages must start at ${BOOTSTRAP_VERSION}; ${packageName} is ${version}. If its version PR was already merged before bootstrap, use --recover.`,
     );
   }
   if (release !== "minor") {
@@ -361,15 +387,19 @@ Bootstrap a new public KingStack package and its npm trusted publisher.
 Usage:
   yarn package:bootstrap @kingstack/<package>
   yarn package:bootstrap @kingstack/<package> --dry-run
+  yarn package:bootstrap @kingstack/<package> --recover [--dry-run]
 
 Options:
   --dry-run  Validate and pack without publishing or changing npm trust.
+  --recover  Recover a missed bootstrap after the Changesets version PR merged.
   --yes      Skip the typed local confirmation. npm may still require 2FA.
   -h, --help Show this help.
 
 New packages must start at 0.0.0. The command publishes that version under the
 non-default "bootstrap" tag, configures release-changeset.yml as the trusted
 publisher, and leaves the first real release to Changesets.
+Recovery repacks the validated release artifact as 0.0.0 in a temporary directory.
+It preserves the checkout's version and leaves that release for an Actions retry.
 `);
 }
 
@@ -648,6 +678,40 @@ function createPackageArchive(
   return archive;
 }
 
+/** Repack only the bootstrap version; the checkout and release artifact stay intact. */
+export function createRecoveryArchive(
+  archive: string,
+  packageName: string,
+  releaseVersion: string,
+  temporaryRoot: string,
+): string {
+  const staging = join(temporaryRoot, "recovery");
+  mkdirSync(staging);
+  run("tar", ["-xf", archive, "-C", staging], temporaryRoot);
+  const packageRoot = join(staging, "package");
+  const manifestPath = join(packageRoot, "package.json");
+  const manifest = JSON.parse(
+    readFileSync(manifestPath, "utf8"),
+  ) as PackageManifest;
+  validatePackedManifest(manifest, packageName, releaseVersion);
+  manifest.version = BOOTSTRAP_VERSION;
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  // Treat this extracted package as a standalone Yarn project. Workspace ranges
+  // have already been converted to registry versions by the original Yarn pack.
+  writeFileSync(join(packageRoot, "yarn.lock"), "");
+  const bootstrapArchive = join(temporaryRoot, "bootstrap.tgz");
+  run("yarn", ["pack", "--out", bootstrapArchive], packageRoot);
+  const packed = JSON.parse(
+    requireOutput(
+      "tar",
+      ["-xOf", bootstrapArchive, "package/package.json"],
+      temporaryRoot,
+    ),
+  ) as PackageManifest;
+  validatePackedManifest(packed, packageName, BOOTSTRAP_VERSION);
+  return bootstrapArchive;
+}
+
 function publishBootstrapArchive(archive: string, repoRoot: string): void {
   run(
     "yarn",
@@ -680,7 +744,10 @@ function assertTrustCanBeCreated(
   );
 }
 
-export async function main(args: string[]): Promise<void> {
+export async function main(
+  args: string[],
+  repoRoot = resolve(import.meta.dir, ".."),
+): Promise<void> {
   const options = parseBootstrapArgs(args);
   if (options.help) {
     printHelp();
@@ -691,7 +758,6 @@ export async function main(args: string[]): Promise<void> {
     throw new Error("A package name is required.");
   }
 
-  const repoRoot = resolve(import.meta.dir, "..");
   const workspace = findWorkspace(repoRoot, options.packageName);
   const packageName = workspace.manifest.name;
   const version = workspace.manifest.version;
@@ -712,6 +778,7 @@ export async function main(args: string[]): Promise<void> {
       packageName,
       version,
       readPendingChangesetRelease(packageName, repoRoot),
+      options.recover,
     );
   }
 
@@ -725,6 +792,17 @@ export async function main(args: string[]): Promise<void> {
         join(tmpdir(), "kingstack-package-bootstrap-"),
       );
       archive = createPackageArchive(workspace, repoRoot, temporaryRoot);
+      if (options.recover) {
+        archive = createRecoveryArchive(
+          archive,
+          packageName,
+          version,
+          temporaryRoot,
+        );
+        console.log(
+          `Recovery artifact: ${packageName}@${BOOTSTRAP_VERSION}; checkout remains at ${version}.`,
+        );
+      }
       console.log("Packed manifest passed registry-safety validation.");
     }
 
@@ -747,12 +825,16 @@ export async function main(args: string[]): Promise<void> {
     }
 
     if (!options.yes) {
-      await confirm(`${packageName}@${version}`);
+      await confirm(
+        `${packageName}@${packageExists ? version : BOOTSTRAP_VERSION}`,
+      );
     }
 
     if (!packageExists) {
       if (!archive) throw new Error("Package archive was not created.");
-      console.log(`\nPublishing ${packageName}@${version}...`);
+      console.log(
+        `\nPublishing ${packageName}@${BOOTSTRAP_VERSION} with tag ${BOOTSTRAP_TAG}...`,
+      );
       publishBootstrapArchive(archive, repoRoot);
     }
 
@@ -774,7 +856,11 @@ export async function main(args: string[]): Promise<void> {
     }
 
     console.log(`\n${packageName} bootstrap complete.`);
-    if (!packageExists) {
+    if (options.recover) {
+      console.log(
+        `Retry the failed Release Packages workflow to publish ${version} through OIDC.`,
+      );
+    } else if (!packageExists) {
       console.log(
         "Merge the Changesets version PR to publish the first real release through OIDC.",
       );

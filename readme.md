@@ -60,6 +60,22 @@ npm may request browser verification separately for publication and trust
 access. Complete each authentication link printed by the command; it resumes
 automatically after approval.
 
+If the version PR was merged before the first bootstrap, the package is still
+missing from npm but its workspace is already at a release version. Recover from
+a clean, up-to-date `main` checkout with:
+
+```bash
+yarn package:bootstrap @kingstack/new-package --recover --dry-run
+yarn package:bootstrap @kingstack/new-package --recover
+```
+
+Recovery validates the current release, then uses Yarn to repack it as `0.0.0`
+in a temporary directory. It publishes only that artifact under `bootstrap`,
+configures the trusted publisher, and leaves the checkout's release version
+unchanged. Then rerun the failed **Release Packages** workflow so OIDC publishes
+the intended version as `latest`. Do not add another Changeset for the retry.
+If the registry package already exists, recovery only verifies/configures trust.
+
 ## Create a project
 
 ### Requirements
