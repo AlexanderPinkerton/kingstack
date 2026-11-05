@@ -6,6 +6,80 @@ export interface EnvEntry {
   value: string;
 }
 
+export function configOutputApplies(
+  definition: ConfigFileMapping,
+  environment: string,
+): boolean {
+  return (
+    !definition.environments || definition.environments.includes(environment)
+  );
+}
+
+export function parseJsonObject(
+  content: string,
+  path: string,
+): Record<string, unknown> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    // JSON parser messages can include credential values from the source.
+    throw new Error(`Invalid JSON in ${path}`);
+  }
+  if (!isJsonObject(parsed))
+    throw new Error(`Expected a JSON object in ${path}`);
+  return parsed;
+}
+
+export function renderJsonFile(
+  currentContent: string,
+  config: Record<string, string>,
+  definition: ConfigFileMapping,
+): string {
+  const parsed = parseJsonObject(currentContent, definition.path);
+  for (const [destination, sourceKey] of Object.entries(definition.mappings)) {
+    const value = config[sourceKey];
+    if (value === undefined)
+      throw new Error(
+        `Missing source key "${sourceKey}" for ${definition.path}`,
+      );
+    const keys = destination.split(".");
+    if (
+      keys.some(
+        (key) =>
+          !/^[A-Za-z0-9_-]+$/.test(key) ||
+          ["__proto__", "constructor", "prototype"].includes(key),
+      )
+    ) {
+      throw new Error(
+        `Invalid JSON mapping path "${destination}" in ${definition.path}`,
+      );
+    }
+    let parent = parsed;
+    for (const key of keys.slice(0, -1)) {
+      if (!Object.hasOwn(parent, key)) parent[key] = {};
+      const child = parent[key];
+      if (!isJsonObject(child))
+        throw new Error(
+          `JSON mapping "${destination}" crosses a non-object in ${definition.path}`,
+        );
+      parent = child;
+    }
+    const leaf = keys.at(-1)!;
+    if (Object.hasOwn(parent, leaf) && typeof parent[leaf] !== "string") {
+      throw new Error(
+        `JSON mapping "${destination}" must target a string in ${definition.path}`,
+      );
+    }
+    parent[leaf] = value;
+  }
+  return `${JSON.stringify(parsed, null, 2)}\n`;
+}
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export function getEnvEntries(
   config: Record<string, string>,
   definition: EnvFileConfig,
@@ -198,6 +272,9 @@ function replaceTomlAssignment(
     );
   }
 
+  const lastKey = keys.at(-1);
+  const arrayIndex =
+    lastKey && /^\d+$/.test(lastKey) ? Number(keys.pop()) : undefined;
   const targetKey = keys.at(-1);
   if (!targetKey) throw new Error("TOML mapping path cannot be empty");
   const targetTable = keys.slice(0, -1).join(".");
@@ -242,6 +319,18 @@ function replaceTomlAssignment(
       continue;
     }
 
+    if (arrayIndex !== undefined) {
+      const element = findTomlArrayElement(
+        content,
+        offset + assignment[0].length,
+        arrayIndex,
+        path,
+      );
+      matches.push({ ...element, lineEnding });
+      offset += line.length;
+      continue;
+    }
+
     const remainder = body.slice(assignment[0].length);
     const commentStart = findTomlCommentStart(remainder);
     const rawValue = (
@@ -274,6 +363,63 @@ function replaceTomlAssignment(
     match.lineEnding || (content.includes("\r\n") ? "\r\n" : "\n");
   const serialized = serializeTomlScalar(value, lineEnding);
   return content.slice(0, match.start) + serialized + content.slice(match.end);
+}
+
+/** Locate a flat scalar-array element without rewriting comments or whitespace. */
+function findTomlArrayElement(
+  content: string,
+  start: number,
+  index: number,
+  path: string,
+): { start: number; end: number } {
+  let cursor = start;
+  const skipTrivia = () => {
+    while (cursor < content.length) {
+      if (/\s/.test(content[cursor])) cursor++;
+      else if (content[cursor] === "#") {
+        while (cursor < content.length && content[cursor] !== "\n") cursor++;
+      } else break;
+    }
+  };
+  skipTrivia();
+  if (content[cursor++] !== "[")
+    throw new Error(`TOML mapping "${path}" must target an array element`);
+  for (let element = 0; cursor < content.length; element++) {
+    skipTrivia();
+    const tokenStart = cursor;
+    const quote = content[cursor];
+    if (quote === '"' || quote === "'") {
+      if (content.slice(cursor, cursor + 3) === quote.repeat(3))
+        throw new Error(
+          `TOML mapping "${path}" requires single-line array elements`,
+        );
+      cursor++;
+      while (cursor < content.length) {
+        const char = content[cursor++];
+        if (char === "\\" && quote === '"') cursor++;
+        else if (char === quote) break;
+        else if (char === "\n" || char === "\r")
+          throw new Error(`Invalid scalar array mapping "${path}"`);
+      }
+    } else {
+      while (cursor < content.length && !/[\s,\]#]/.test(content[cursor]))
+        cursor++;
+    }
+    const tokenEnd = cursor;
+    if (tokenEnd === tokenStart) break;
+    // The whole document was parsed first; reject compound elements explicitly.
+    const token = TOML.parse(
+      `value = ${content.slice(tokenStart, tokenEnd)}`,
+    ).value;
+    if (typeof token !== "string" && typeof token !== "number")
+      throw new Error(
+        `TOML mapping "${path}" requires string or number array elements`,
+      );
+    if (element === index) return { start: tokenStart, end: tokenEnd };
+    skipTrivia();
+    if (content[cursor++] !== ",") break;
+  }
+  throw new Error(`Cannot locate TOML array mapping "${path}"`);
 }
 
 function serializeTomlScalar(

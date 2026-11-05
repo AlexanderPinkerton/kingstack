@@ -68,6 +68,71 @@ describe("configuration CLI commands", () => {
     expect(existsSync(join(cwd, ".vercel"))).toBe(false);
   });
 
+  it("generates hosted project links, preserves metadata, and detects drift without touching local links", async () => {
+    const cwd = createFixture({ PORT: "3000" });
+    appendFileSync(
+      join(cwd, "config/schema.ts"),
+      `
+schema.environments.production = { mode: "hosted", sync: true };
+schema.configs = { vercel: {
+  path: ".vercel/project.json", format: "json", createIfMissing: true,
+  environments: ["staging", "production"],
+  mappings: { projectId: "VERCEL_PROJECT_ID", orgId: "VERCEL_ORG_ID" },
+} };`,
+    );
+    for (const env of ["staging", "production"])
+      writeFileSync(
+        join(cwd, `config/${env}.ts`),
+        `export const values = { PORT: "3000", VERCEL_PROJECT_ID: "project_${env}" };`,
+      );
+    expect(await generateCommand("local", { cwd })).toBe(true);
+    expect(existsSync(join(cwd, ".vercel"))).toBe(false);
+    expect(await generateCommand("staging", { cwd })).toBe(true);
+    const path = join(cwd, ".vercel/project.json");
+    expect(JSON.parse(readFileSync(path, "utf8")).projectId).toBe(
+      "project_staging",
+    );
+    writeFileSync(
+      path,
+      JSON.stringify({
+        projectId: "project_staging",
+        orgId: "org",
+        metadata: { keep: true },
+      }),
+    );
+    expect(await generateCommand("production", { cwd })).toBe(true);
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({
+      projectId: "project_production",
+      orgId: "org",
+      metadata: { keep: true },
+    });
+    expect(await diffCommand("production", { cwd })).toBe(true);
+    expect(await diffCommand("staging", { cwd })).toBe(false);
+    const linked = readFileSync(path, "utf8");
+    expect(await generateCommand("local", { cwd })).toBe(true);
+    expect(readFileSync(path, "utf8")).toBe(linked);
+    expect(await diffCommand("local", { cwd })).toBe(true);
+  });
+
+  it("does not replace any outputs or backups when JSON cannot be rendered", async () => {
+    const cwd = createFixture({ PORT: "3000" });
+    appendFileSync(
+      join(cwd, "config/schema.ts"),
+      `\nschema.configs = { json: { path: "broken.json", format: "json", mappings: { port: "PORT" } } };`,
+    );
+    mkdirSync(join(cwd, "app"));
+    writeFileSync(join(cwd, "app/.env"), "ORIGINAL=keep\n");
+    writeFileSync(join(cwd, "broken.json"), '{"secret":"private');
+    await expect(generateCommand("local", { cwd })).rejects.toThrow(
+      "Invalid JSON",
+    );
+    expect(readFileSync(join(cwd, "app/.env"), "utf8")).toBe("ORIGINAL=keep\n");
+    expect(existsSync(join(cwd, "app/.env.previous"))).toBe(false);
+    expect(readFileSync(join(cwd, "broken.json"), "utf8")).toBe(
+      '{"secret":"private',
+    );
+  });
+
   it("validates provider values only when synchronizing that provider", async () => {
     const cwd = createFixture({ PORT: "3000" });
 

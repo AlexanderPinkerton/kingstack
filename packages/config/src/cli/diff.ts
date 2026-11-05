@@ -4,9 +4,11 @@ import * as TOML from "@iarna/toml";
 import type { ConfigSchema } from "../core";
 import {
   coerceTomlValue,
+  configOutputApplies,
   getEnvEntries,
   getNestedValue,
   parseEnvFile,
+  parseJsonObject,
 } from "../render";
 import { inspectEnvironment } from "./check";
 import { loadUserSchema } from "./utils";
@@ -34,7 +36,7 @@ export async function diffCommand(
 
   const differences = [
     ...diffEnvFiles(schema, inspection.config.all, cwd),
-    ...diffConfigFiles(schema, inspection.config.all, cwd),
+    ...diffConfigFiles(schema, inspection.config.all, cwd, environment),
   ];
 
   if (differences.length === 0) {
@@ -112,10 +114,12 @@ function diffConfigFiles(
   schema: ConfigSchema,
   config: Record<string, string>,
   cwd: string,
+  environment: string,
 ): Difference[] {
   const differences: Difference[] = [];
 
   for (const [name, definition] of Object.entries(schema.configs ?? {})) {
+    if (!configOutputApplies(definition, environment)) continue;
     const path = resolveInsideProject(cwd, definition.path);
     if (!existsSync(path)) {
       differences.push({ key: `configs.${name}`, status: "missing" });
@@ -124,10 +128,14 @@ function diffConfigFiles(
 
     let parsed: Record<string, unknown>;
     try {
-      parsed = TOML.parse(readFileSync(path, "utf8"));
-    } catch (error: unknown) {
+      const content = readFileSync(path, "utf8");
+      parsed =
+        definition.format === "json"
+          ? parseJsonObject(content, definition.path)
+          : TOML.parse(content);
+    } catch {
       differences.push({
-        key: `configs.${name}: ${error instanceof Error ? error.message : String(error)}`,
+        key: `configs.${name}: invalid ${definition.format}`,
         status: "invalid",
       });
       continue;
@@ -138,7 +146,10 @@ function diffConfigFiles(
     )) {
       const sourceValue = config[sourceKey];
       if (sourceValue === undefined) continue;
-      const expected = coerceTomlValue(destination, sourceValue);
+      const expected =
+        definition.format === "json"
+          ? sourceValue
+          : coerceTomlValue(destination, sourceValue);
       const actual = getNestedValue(parsed, destination);
       if (actual !== expected) {
         differences.push({

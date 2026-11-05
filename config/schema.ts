@@ -351,6 +351,16 @@ export const schema = defineSchema({
   // Config File Mappings (Which Values Update Which Config Files)
   // ============================================================================
   configs: {
+    vercel: {
+      path: ".vercel/project.json",
+      format: "json",
+      createIfMissing: true,
+      environments: ["development", "production"],
+      mappings: {
+        projectId: "VERCEL_PROJECT_ID",
+        orgId: "VERCEL_ORG_ID",
+      },
+    },
     supabase: {
       path: "supabase/config.toml",
       format: "toml",

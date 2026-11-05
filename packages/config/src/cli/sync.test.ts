@@ -1,4 +1,5 @@
 import {
+  appendFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -126,6 +127,65 @@ describe("Vercel environment sync", () => {
     ).resolves.toBe(true);
     expect(run).not.toHaveBeenCalled();
     expect(existsSync(join(cwd, ".vercel"))).toBe(false);
+    mkdirSync(join(cwd, ".vercel"));
+    const original =
+      '{ "projectId": "keep", "orgId": "keep-org", "metadata": true }\n';
+    writeFileSync(join(cwd, ".vercel/project.json"), original);
+    expect(
+      await syncCommand({
+        cwd,
+        env: "production",
+        target: "vercel",
+        dryRun: true,
+      }),
+    ).toBe(true);
+    expect(readFileSync(join(cwd, ".vercel/project.json"), "utf8")).toBe(
+      original,
+    );
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("supports the positional environment argument on Vercel CLI 49", async () => {
+    const cwd = fixture("production", "pk_live_PublicFixture123");
+    run.mockImplementation((_command, args) =>
+      args[0] === "--version"
+        ? { status: 0, stderr: "Vercel CLI 49.2.0" }
+        : { status: 0 },
+    );
+    expect(
+      await syncCommand({ cwd, env: "production", target: "vercel" }),
+    ).toBe(true);
+    for (const [, args] of run.mock.calls.filter(
+      ([, args]) => args[0] === "env",
+    )) {
+      expect(args.slice(3)).toEqual(["production", "--force"]);
+    }
+  });
+
+  it("preserves project-link metadata and skips only explicitly optional empty values", async () => {
+    const cwd = fixture("production", "pk_live_PublicFixture123");
+    appendFileSync(
+      join(cwd, "config/schema.ts"),
+      `\nschema.core.OPTIONAL = { default: "" }; schema.core.EXTRA = { default: "value" }; schema.services.vercel.optionalKeys = ["OPTIONAL", "EXTRA"];`,
+    );
+    mkdirSync(join(cwd, ".vercel"));
+    writeFileSync(
+      join(cwd, ".vercel/project.json"),
+      '{"projectId":"old","orgId":"old","metadata":{"keep":true}}',
+    );
+    expect(
+      await syncCommand({ cwd, env: "production", target: "vercel" }),
+    ).toBe(true);
+    const calls = run.mock.calls.filter(([, args]) => args[0] === "env");
+    expect(calls.some(([, args]) => args[2] === "OPTIONAL")).toBe(false);
+    expect(calls.some(([, args]) => args[2] === "EXTRA")).toBe(true);
+    expect(
+      JSON.parse(readFileSync(join(cwd, ".vercel/project.json"), "utf8")),
+    ).toEqual({
+      projectId: "project_production",
+      orgId: "org_fixture",
+      metadata: { keep: true },
+    });
   });
 
   function fixture(environment: string, publicValue: string): string {
