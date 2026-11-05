@@ -49,8 +49,12 @@ export interface EnvFileConfig {
 export interface ConfigFileMapping {
   /** Path to the config file, relative to the project root. */
   path: string;
-  /** TOML is the only currently supported structured config format. */
-  format: "toml";
+  /** Structured output format. JSON mappings emit string values. */
+  format: "toml" | "json";
+  /** Limit this output to named environments; omitted means every environment. */
+  environments?: string[];
+  /** Create a missing JSON object file. Existing files are merged. */
+  createIfMissing?: boolean;
   /** Destination path to source configuration key. */
   mappings: Record<string, string>;
 }
@@ -58,6 +62,8 @@ export interface ConfigFileMapping {
 export interface ServiceConfig {
   description: string;
   keys: string[];
+  /** Sync these keys when populated; leave existing remote values alone when empty. */
+  optionalKeys?: string[];
 }
 
 export interface ConfigSchema {
@@ -358,6 +364,31 @@ export function validateSchemaMappings(
   }
 
   for (const [configName, config] of Object.entries(schema.configs ?? {})) {
+    if (!["toml", "json"].includes(config.format)) {
+      errors.push({
+        key: `configs.${configName}.format`,
+        message: "Supported config formats are toml and json",
+      });
+    }
+    if (config.createIfMissing && config.format !== "json") {
+      errors.push({
+        key: `configs.${configName}.createIfMissing`,
+        message:
+          "Only JSON outputs can be created without an existing template",
+      });
+    }
+    for (const environment of config.environments ?? []) {
+      if (
+        !/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(environment) ||
+        (schema.environments &&
+          !Object.hasOwn(schema.environments, environment))
+      ) {
+        errors.push({
+          key: `configs.${configName}.environments`,
+          message: `Unknown or invalid output environment "${environment}"`,
+        });
+      }
+    }
     registerOutputPath(
       outputPaths,
       config.path,
@@ -377,7 +408,7 @@ export function validateSchemaMappings(
 
   for (const [serviceName, service] of Object.entries(schema.services ?? {})) {
     const seen = new Set<string>();
-    for (const key of service.keys) {
+    for (const key of [...service.keys, ...(service.optionalKeys ?? [])]) {
       validateReferencedKey(
         knownKeys,
         key,

@@ -1,6 +1,6 @@
 # @kingstack/config
 
-TypeScript configuration management for projects that need validated per-environment values, computed values, generated `.env`/TOML files, and remote secret synchronization.
+TypeScript configuration management for projects that need validated per-environment values, computed values, generated `.env`/TOML/JSON files, and remote secret synchronization.
 
 ## Mental model
 
@@ -13,6 +13,43 @@ There are three kinds of files:
 TOML generation validates the existing document and patches only mapped scalar
 assignments. It preserves comments, ordering, spacing, and unrelated values,
 and refuses to synthesize missing assignments.
+
+JSON outputs merge mapped string fields into an existing object while preserving
+unmapped metadata. Use `createIfMissing: true` to create a new file and its parent
+directory. Invalid JSON, non-object roots, unsafe paths, and mappings that would
+replace a non-string value fail before any outputs are written. Formatting is
+normalized to two spaces. Optional `environments` limits generation and drift
+checking to those environment names; omission applies to every environment.
+
+```typescript
+configs: {
+  vercel: {
+    path: ".vercel/project.json",
+    format: "json",
+    createIfMissing: true,
+    environments: ["development", "production"],
+    mappings: {
+      projectId: "VERCEL_PROJECT_ID",
+      orgId: "VERCEL_ORG_ID",
+    },
+  },
+}
+```
+
+Keep deployment IDs required for hosted environments. Local generation leaves
+the last hosted Vercel link unchanged; it does not select a deployment target.
+Secret-sync dry runs never modify this link or invoke provider commands. Actual
+sync uses the selected environment's IDs and preserves other link metadata.
+Actual Vercel sync detects the installed CLI version: CLI 49 uses positional
+environment arguments, while CLI 65 uses named environment and public-key flags.
+
+Service `keys` must all be populated before sync. Use `optionalKeys` for optional
+integrations: populated values are sent, while empty/missing values are skipped
+without deleting existing remote settings. Both lists receive the same key and
+duplicate validation. Keep essential credentials in `keys`.
+
+TOML mappings can address existing scalar array elements, such as
+`auth.additional_redirect_urls.0`; comments and unmapped elements stay intact.
 
 When adding or removing a configuration key, update the schema first and then run `king-config check --all`. The checker identifies every environment value file that is missing the key or still contains an obsolete key.
 

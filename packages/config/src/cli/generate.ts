@@ -8,7 +8,12 @@ import {
 } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { resolveConfig, validateSchemaMappings } from "../core";
-import { renderEnvFile, renderTomlFile } from "../render";
+import {
+  configOutputApplies,
+  renderEnvFile,
+  renderJsonFile,
+  renderTomlFile,
+} from "../render";
 import { loadUserSchema, loadUserValues } from "./utils";
 
 interface OutputPlan {
@@ -57,17 +62,21 @@ export async function generateCommand(
   }
 
   for (const definition of Object.values(schema.configs ?? {})) {
+    if (!configOutputApplies(definition, environment)) continue;
     const destination = resolveOutputPath(cwd, definition.path);
-    if (!existsSync(destination)) {
+    const exists = existsSync(destination);
+    if (!exists && !definition.createIfMissing) {
       console.log(`⚠️  Skipping ${definition.path} (file does not exist)`);
       continue;
     }
-    const currentContent = readFileSync(destination, "utf8");
+    const currentContent = exists ? readFileSync(destination, "utf8") : "{}";
     plans.push(
       createPlan(
         cwd,
         definition.path,
-        renderTomlFile(currentContent, config.all, definition),
+        definition.format === "json"
+          ? renderJsonFile(currentContent, config.all, definition)
+          : renderTomlFile(currentContent, config.all, definition),
       ),
     );
   }

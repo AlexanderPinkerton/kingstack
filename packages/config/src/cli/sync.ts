@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { EnvironmentDefinition } from "../core";
 import { inspectEnvironment } from "./check";
 import { loadUserSchema } from "./utils";
+import { renderJsonFile } from "../render";
 
 type SyncTarget = "github" | "vercel";
 
@@ -44,10 +45,16 @@ export async function syncCommand(options: {
     return false;
   }
 
+  let vercelMajor = 65;
   if (!isDryRun) {
     if (targets.includes("github")) checkCommandAvailable("gh", ["--version"]);
-    if (targets.includes("vercel"))
-      checkCommandAvailable("vercel", ["--version"]);
+    if (targets.includes("vercel")) {
+      const version = checkCommandAvailable("vercel", ["--version"]);
+      const match = /Vercel CLI (\d+)\./i.exec(version);
+      if (!match)
+        throw new Error("Could not identify the installed Vercel CLI version");
+      vercelMajor = Number(match[1]);
+    }
   }
 
   let failed = false;
@@ -71,6 +78,7 @@ export async function syncCommand(options: {
               keys,
               isDryRun,
               cwd,
+              schema.services?.[syncTarget]?.optionalKeys,
             )
           : syncToVercel(
               environment,
@@ -78,6 +86,8 @@ export async function syncCommand(options: {
               keys,
               isDryRun,
               cwd,
+              schema.services?.[syncTarget]?.optionalKeys,
+              vercelMajor,
             );
       if (!succeeded) failed = true;
     }
@@ -99,10 +109,16 @@ function syncToGitHub(
   keys: string[],
   isDryRun: boolean,
   cwd: string,
+  optionalKeys: string[] = [],
 ): boolean {
   console.log(`\n🐙 GitHub environment: ${environment}`);
 
-  const secrets = collectRequiredValues(config, keys, "GitHub secret sync");
+  const secrets = collectRequiredValues(
+    config,
+    keys,
+    "GitHub secret sync",
+    optionalKeys,
+  );
   if (!secrets) return false;
 
   if (isDryRun) {
@@ -139,6 +155,8 @@ function syncToVercel(
   keys: string[],
   isDryRun: boolean,
   cwd: string,
+  optionalKeys: string[] = [],
+  vercelMajor = 65,
 ): boolean {
   const projectId = config.VERCEL_PROJECT_ID;
   const orgId = config.VERCEL_ORG_ID;
@@ -152,6 +170,7 @@ function syncToVercel(
     config,
     keys,
     "Vercel environment sync",
+    optionalKeys,
   );
   if (!secrets) return false;
   if (isDryRun) {
@@ -162,30 +181,35 @@ function syncToVercel(
   }
 
   const vercelDirectory = resolve(cwd, ".vercel");
+  const projectPath = join(vercelDirectory, "project.json");
+  const projectContent = renderJsonFile(
+    existsSync(projectPath) ? readFileSync(projectPath, "utf8") : "{}",
+    config,
+    {
+      path: ".vercel/project.json",
+      format: "json",
+      mappings: { projectId: "VERCEL_PROJECT_ID", orgId: "VERCEL_ORG_ID" },
+    },
+  );
   if (!existsSync(vercelDirectory))
     mkdirSync(vercelDirectory, { recursive: true });
-  writeFileSync(
-    join(vercelDirectory, "project.json"),
-    `${JSON.stringify({ projectId, orgId }, null, 2)}\n`,
-  );
+  writeFileSync(projectPath, projectContent);
 
   // Each configured KingStack environment maps to a separate Vercel project's
   // production environment.
   const vercelEnvironment = "production";
   let succeeded = true;
   for (const { key, value } of secrets) {
-    const args = [
-      "env",
-      "add",
-      key,
-      "--environment",
-      vercelEnvironment,
-      "--force",
-    ];
+    const environmentArgs =
+      vercelMajor >= 65
+        ? ["--environment", vercelEnvironment]
+        : [vercelEnvironment];
+    const args = ["env", "add", key, ...environmentArgs, "--force"];
     // Vercel CLI 65 requires explicit consent for credential-shaped public
     // values. Stripe publishable keys are public by design; private keys and
     // unrelated values must retain Vercel's normal credential checks.
     if (
+      vercelMajor >= 65 &&
       key.startsWith("NEXT_PUBLIC_") &&
       /^pk_(test|live)_[A-Za-z0-9]+$/.test(value)
     ) {
@@ -212,13 +236,16 @@ function collectRequiredValues(
   config: Record<string, string>,
   keys: string[],
   operation: string,
+  optionalKeys: string[] = [],
 ): Array<{ key: string; value: string }> | undefined {
   const missing = keys.filter((key) => !config[key]);
   if (missing.length > 0) {
     console.error(`   ❌ ${operation} requires: ${missing.join(", ")}`);
     return undefined;
   }
-  return keys.map((key) => ({ key, value: config[key] }));
+  return [...keys, ...optionalKeys.filter((key) => !!config[key])].map(
+    (key) => ({ key, value: config[key] }),
+  );
 }
 
 function getDefaultSyncEnvironments(
@@ -236,13 +263,14 @@ function parseTarget(target: string | undefined): SyncTarget | undefined {
   throw new Error(`Unknown sync target "${target}"; expected github or vercel`);
 }
 
-function checkCommandAvailable(command: string, args: string[]): void {
+function checkCommandAvailable(command: string, args: string[]): string {
   const result = spawnSync(command, args, {
     encoding: "utf8",
     shell: false,
     stdio: "pipe",
   });
   if (result.status !== 0) throw new Error(`${command} CLI is not available`);
+  return `${result.stdout || ""}\n${result.stderr || ""}`;
 }
 
 function commandError(result: ReturnType<typeof spawnSync>): string {
