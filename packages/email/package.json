@@ -1,6 +1,6 @@
 {
   "name": "@kingstack/email",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "React Email templates, Resend delivery, and Supabase Auth email tooling for KingStack",
   "license": "MIT",
   "repository": {

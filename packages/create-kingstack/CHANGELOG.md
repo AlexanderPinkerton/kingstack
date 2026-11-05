@@ -1,5 +1,15 @@
 # @kingstack/create-kingstack
 
+## 0.6.4
+
+### Patch Changes
+
+- ea0ab83: Add reusable React Email layouts and six configurable Supabase auth templates,
+  Resend application delivery with explicit local capture, and project-aware
+  template export/preview and hosted SMTP setup. Authentication policy changes
+  are separate, explicit operations. Include secret-redacted dry runs, private
+  rollback snapshots, and packed-consumer tests for React 18/19 and CommonJS/ESM.
+
 ## 0.6.3
 
 ### Patch Changes
