@@ -1,6 +1,10 @@
 /**
  * Pure schema resolution and validation for the configuration system.
  */
+import {
+  supabaseAuthSettingTypes,
+  type SupabaseAuthServiceConfig,
+} from "./supabase-auth";
 
 export enum EnvironmentMode {
   Local = "local",
@@ -60,6 +64,7 @@ export interface ConfigFileMapping {
 }
 
 export interface ServiceConfig {
+  provider?: never;
   description: string;
   keys: string[];
   /** Sync these keys when populated; leave existing remote values alone when empty. */
@@ -78,7 +83,7 @@ export interface ConfigSchema {
   ) => Record<string, string>;
   envfiles: Record<string, EnvFileConfig>;
   configs?: Record<string, ConfigFileMapping>;
-  services?: Record<string, ServiceConfig>;
+  services?: Record<string, ServiceConfig | SupabaseAuthServiceConfig>;
 }
 
 export type ConfigValues = Record<string, string>;
@@ -407,6 +412,36 @@ export function validateSchemaMappings(
   }
 
   for (const [serviceName, service] of Object.entries(schema.services ?? {})) {
+    if (service.provider === "supabase-auth") {
+      validateReferencedKey(
+        knownKeys,
+        service.projectRef,
+        `services.${serviceName}.projectRef`,
+        `Service "${serviceName}"`,
+        errors,
+      );
+      if (Object.keys(service.mappings).length === 0)
+        errors.push({
+          key: `services.${serviceName}.mappings`,
+          message: "Supabase Auth sync requires at least one mapping",
+        });
+      for (const [field, key] of Object.entries(service.mappings)) {
+        if (!Object.hasOwn(supabaseAuthSettingTypes, field))
+          errors.push({
+            key: `services.${serviceName}.${field}`,
+            message:
+              "Unsupported Supabase Auth setting; publish email templates separately",
+          });
+        validateReferencedKey(
+          knownKeys,
+          key,
+          `services.${serviceName}.${field}`,
+          `Service "${serviceName}"`,
+          errors,
+        );
+      }
+      continue;
+    }
     const seen = new Set<string>();
     for (const key of [...service.keys, ...(service.optionalKeys ?? [])]) {
       validateReferencedKey(

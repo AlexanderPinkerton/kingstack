@@ -133,11 +133,13 @@ credentials and delivers through Resend SMTP. It does not call your mailer.
 
 1. Verify a sending domain in Resend, keeping existing inbound mailbox DNS.
    Disable click tracking for auth links and create a sending-only API key.
-2. Configure `SUPABASE_PROJECT_REF`, `NEXT_URL` (canonical HTTPS origin), and
-   `RESEND_API_KEY` through `@kingstack/config` for each hosted environment.
-   Keep secrets out of `email.config.ts` and browser variables.
+2. Configure SMTP, sender, canonical Auth URLs, limits, and verification policy
+   through your normal configuration system. `@kingstack/config` 0.5+ provides a
+   `supabase-auth` service for the existing `king-config sync` workflow. Keep
+   secrets out of `email.config.ts` and browser variables. Template publishing
+   itself only needs `SUPABASE_PROJECT_REF` and a Management API login.
 3. Run `supabase init` if the project has no local Supabase configuration.
-   Set `[auth.email] enable_confirmations = true` explicitly if desired.
+   Generate `[auth.email]` policy settings from your configuration values.
    Export templates, preview them, and restart local Supabase to reload them.
 4. Authenticate with `supabase login` or supply a Management API
    `SUPABASE_ACCESS_TOKEN`. The CLI supports macOS CLI Keychain credentials and
@@ -148,25 +150,29 @@ credentials and delivers through Resend SMTP. It does not call your mailer.
 king-email preview
 king-email auth export
 king-email auth export --check
-king-email auth sync --env production
-king-email auth sync --env production --apply
-
-# Separate policy choice, also read-only until --apply:
-king-email auth policy --env production --require-verification
-king-email auth policy --env production --require-verification --apply
+king-email auth templates --env production
+king-email auth templates --env production --apply
 ```
 
-Sync installs SMTP, sender, templates, site URL, callback allowlist additions,
-and an hourly auth email limit of at least 30 (preserving higher values). It
-preserves confirmation policy and unrelated settings. An enabled Send Email
-hook blocks SMTP sync for review. Policy only enables required confirmation;
-it cannot retroactively verify existing automatically confirmed accounts.
+`auth templates` publishes only the six subjects and six HTML bodies. It does
+not change SMTP, sender, URLs, limits, or verification policy. Configure those
+through your ordinary configuration sync, separately from publishing content.
+Before enabling verification for the first time, configure delivery and deploy
+compatible callbacks, publish the templates, and test a real recovery email.
+Then enable verification in your configuration and sync. Changing policy cannot
+retroactively verify existing automatically confirmed accounts.
+
+For compatibility, `auth sync` still performs the previous combined
+SMTP/template setup, and `auth policy --require-verification` still enables
+verification. Both commands print deprecation guidance. Existing programmatic
+`syncAuthEmails` and `setAuthVerificationPolicy` remain available; new consumers
+should use `syncAuthTemplates` and their configuration system.
 
 Apply writes affected prior settings to `.local/auth-email-backups/` with mode
 0600 before the update and reads back nonsecret fields afterward. Backups can
-contain SMTP passwords; never commit them. If the provider masks a password,
-restoring the old provider requires the original secret as well as the backup.
-Plan output redacts SMTP secrets and hashes HTML instead of printing it.
+contain SMTP passwords from legacy sync runs; never commit them. Template-only
+backups include only subjects and HTML. Plan output hashes HTML instead of
+printing it.
 
 Local Supabase sends auth email to its captured inbox (Mailpit); the application's
 capture adapter writes files. Neither should send local fixture addresses to a
@@ -196,15 +202,15 @@ Local export updates only a marked template block and refuses unmanaged
 template definitions. It leaves all other TOML settings/comments intact.
 
 If your project uses different environment keys or a different config system,
-provide `tooling.resolveEnvironment(environment, cwd)` returning
-`{ projectRef, siteUrl, resendApiKey }`. That removes the need for the optional
+provide `tooling.resolveEnvironment(environment, cwd)` returning `{ projectRef }`.
+Only legacy `auth sync` also requires `siteUrl` and `resendApiKey`.
+That removes the need for the optional
 `@kingstack/config` peer. Programmatic `/supabase` exports provide rendering,
 export, redacted plans, synchronization, and explicit policy changes.
 
-## First release and validation
+## Development and validation
 
-This new package starts at version `0.0.0`; its changeset prepares `0.1.0`.
-Before a registry release, build and distribute a portable tarball:
+Before a registry release, validate a portable tarball in an isolated consumer:
 
 ```sh
 yarn workspace @kingstack/config build
@@ -212,18 +218,18 @@ yarn workspace @kingstack/email build
 yarn workspace @kingstack/email test
 yarn workspace @kingstack/email test:pack
 yarn workspace @kingstack/email pack --out /tmp/kingstack-email.tgz
-# In a consuming workspace, store the archive in the repo and install its path:
-yarn add @kingstack/email@file:./vendor/kingstack-email.tgz
+# In an isolated consuming checkout:
+yarn add @kingstack/email@file:/tmp/kingstack-email.tgz
 ```
 
 `test:pack` installs the actual archive in isolated React 18 and React 19
 consumers, checks CommonJS/ESM imports, legacy/NodeNext TypeScript resolution,
 and runs local export/preview without optional peers or real email delivery.
-Register the new package's trusted publisher using the repository's
-`yarn package:bootstrap @kingstack/email` workflow before its first Changesets
-release. Once published, replace archive dependencies with the registry version.
+Normal releases use Changesets and the configured trusted publisher. Use the
+published registry version for application commits; temporary archive paths are
+only for release-candidate validation.
 
-Config integration supports @kingstack/config 0.3.1 and 0.4.x. Run
+Config integration supports @kingstack/config 0.3.1, 0.4.x, and 0.5.x. Run
 `yarn test:config` from this package to check the packed workspace config. Set
 `KINGSTACK_CONFIG_ARCHIVE` to an absolute archive path to check a release candidate;
 Auth network calls are mocked and no emails or hosted writes occur.

@@ -68,6 +68,12 @@ export default defineEmailConfig({brand:{name:'Packed app'},from:{email:'support
     'project_id = "package-smoke"\n[auth.email]\nenable_confirmations = true\n',
   );
   writeFileSync(
+    join(cwd, "project-only.config.ts"),
+    `import config from './email.config';
+export default { ...config, tooling: { resolveEnvironment: async () => ({ projectRef: 'abcdefghijklmnopqrst' }) } };
+`,
+  );
+  writeFileSync(
     join(cwd, "config/schema.ts"),
     `import { defineSchema, EnvironmentMode } from '@kingstack/config';
 export const schema = defineSchema({
@@ -112,10 +118,11 @@ console.log = (line) => output.push(String(line));
 try {
   await runCli(['auth', 'sync', '--env', 'production']);
   await runCli(['auth', 'policy', '--env', 'production', '--require-verification']);
+  await runCli(['auth', 'templates', '--env', 'production', '--config', 'project-only.config.ts']);
 } finally {
   console.log = log;
 }
-assert.equal(requests, 2);
+assert.equal(requests, 3);
 const plans = output.map(line => JSON.parse(line));
 assert.equal(plans[0].project, 'abcdefghijklmnopqrst');
 assert.equal(plans[0].apply, false);
@@ -123,8 +130,10 @@ assert.equal(plans[0].settings.site_url, 'https://example.com');
 assert.equal(plans[0].settings.smtp_host, 'smtp.resend.com');
 assert.equal(plans[0].settings.mailer_autoconfirm, undefined);
 assert.equal(plans[1].settings.mailer_autoconfirm, false);
+assert.equal(Object.keys(plans[2].settings).length, 12);
+assert.ok(Object.keys(plans[2].settings).every(key => key.startsWith('mailer_subjects_') || key.startsWith('mailer_templates_')));
 assert.ok(!output.join('').includes('re_fixture-secret'));
-console.log('Packed config ' + configVersion + ': email environment resolution, SMTP/template plan, and verification policy passed with mocked network access.');
+console.log('Packed config ' + configVersion + ': template-only publishing and legacy command compatibility passed with mocked network access.');
 `,
   );
   console.log(run("bun", ["check.ts"], cwd));

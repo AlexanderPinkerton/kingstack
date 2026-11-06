@@ -183,20 +183,20 @@ export function renderTomlFile(
   const parsed = TOML.parse(currentContent) as Record<string, unknown>;
   const replacements: Array<{
     destination: string;
-    value: string | number;
+    value: string | number | boolean;
   }> = [];
 
   for (const [destination, sourceKey] of Object.entries(definition.mappings)) {
     const value = config[sourceKey];
     if (value === undefined) continue;
 
-    const coerced = coerceTomlValue(destination, value);
+    const current = getNestedValue(parsed, destination);
+    const coerced = coerceTomlValue(destination, value, current);
     if (typeof coerced === "string" && /[\r\n]/.test(coerced)) {
       throw new Error(
         `TOML mapping "${destination}" in ${definition.path} must be a single-line string`,
       );
     }
-    const current = getNestedValue(parsed, destination);
     if (current === undefined) {
       throw new Error(
         `Cannot update missing TOML mapping "${destination}" in ${definition.path}`,
@@ -248,13 +248,20 @@ export function getNestedValue(
   return current;
 }
 
-export function coerceTomlValue(path: string, value: string): string | number {
-  if (!/(^|[._])port$/i.test(path)) return value;
+export function coerceTomlValue(
+  path: string,
+  value: string,
+  current?: unknown,
+): string | number | boolean {
+  if (typeof current === "boolean") {
+    if (value !== "true" && value !== "false")
+      throw new Error(`TOML mapping "${path}" expected true or false`);
+    return value === "true";
+  }
+  if (typeof current !== "number" && !/(^|[._])port$/i.test(path)) return value;
   const number = Number(value);
-  if (!Number.isFinite(number)) {
-    throw new Error(
-      `TOML mapping "${path}" expected a number, received "${value}"`,
-    );
+  if (value.trim() === "" || !Number.isFinite(number)) {
+    throw new Error(`TOML mapping "${path}" expected a number`);
   }
   return number;
 }
@@ -262,7 +269,7 @@ export function coerceTomlValue(path: string, value: string): string | number {
 function replaceTomlAssignment(
   content: string,
   path: string,
-  value: string | number,
+  value: string | number | boolean,
   filePath: string,
 ): string {
   const keys = path.split(".");
@@ -423,10 +430,11 @@ function findTomlArrayElement(
 }
 
 function serializeTomlScalar(
-  value: string | number,
+  value: string | number | boolean,
   lineEnding: string,
 ): string {
-  if (typeof value === "number") return String(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
 
   const prefix = "value = ";
   const serialized = TOML.stringify({ value });

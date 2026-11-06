@@ -5,18 +5,26 @@ import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { defineEmailConfig } from "./index";
 import { exportAuthEmails, projectPath } from "./files";
-import { setAuthVerificationPolicy, syncAuthEmails } from "./supabase";
-import type { EmailConfig, HostedEmailEnvironment } from "./types";
+import {
+  setAuthVerificationPolicy,
+  syncAuthEmails,
+  syncAuthTemplates,
+} from "./supabase";
+import type { EmailConfig, HostedAuthEnvironment } from "./types";
 
 const help = `KingStack email
 
   king-email preview [--interactive]
   king-email auth export [--check]
-  king-email auth sync --env <hosted-environment> [--apply]
+  king-email auth templates --env <hosted-environment> [--apply]
+
+Legacy commands (deprecated; retained for existing consumers):
+  king-email auth sync --env <hosted-environment> [--apply]  (SMTP + templates)
   king-email auth policy --env <hosted-environment> --require-verification [--apply]
 
 Options: --cwd <project>, --config <email.config.ts>, --help, --version
-Sync and policy are read-only unless --apply is supplied. Policy changes are separate from SMTP/templates.
+Hosted commands are read-only unless --apply is supplied. Templates only publishes subjects/HTML.
+Manage SMTP, sender, URLs, limits, and verification policies with your normal configuration sync.
 Preview writes safe HTML examples; --interactive uses the project's optional React Email CLI.
 `;
 
@@ -24,7 +32,7 @@ async function hostedEnvironment(
   config: EmailConfig,
   environment: string,
   cwd: string,
-): Promise<HostedEmailEnvironment> {
+): Promise<HostedAuthEnvironment> {
   if (
     !/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(environment) ||
     ["local", "test"].includes(environment)
@@ -93,10 +101,21 @@ export async function runCli(
     return;
   }
   const action = positionals.join(" ");
-  if (!["preview", "auth export", "auth sync", "auth policy"].includes(action))
+  if (
+    ![
+      "preview",
+      "auth export",
+      "auth templates",
+      "auth sync",
+      "auth policy",
+    ].includes(action)
+  )
     throw new Error(`Unknown command.\n${help}`);
-  if (values.apply && !["auth sync", "auth policy"].includes(action))
-    throw new Error("--apply is only valid for sync or policy.");
+  if (
+    values.apply &&
+    !["auth templates", "auth sync", "auth policy"].includes(action)
+  )
+    throw new Error("--apply is only valid for templates, sync or policy.");
   if (values.check && action !== "auth export")
     throw new Error("--check is only valid for auth export.");
   if (values.interactive && action !== "preview")
@@ -105,7 +124,10 @@ export async function runCli(
     throw new Error("Verification policy must be changed using auth policy.");
   if (action === "auth policy" && !values["require-verification"])
     throw new Error("Provide --require-verification explicitly.");
-  if (["auth sync", "auth policy"].includes(action) && !values.env)
+  if (
+    ["auth templates", "auth sync", "auth policy"].includes(action) &&
+    !values.env
+  )
     throw new Error("Provide the hosted --env explicitly.");
   const cwd = resolve(values.cwd || process.cwd());
   const configFile = projectPath(cwd, values.config || "email.config.ts");
@@ -171,10 +193,32 @@ export async function runCli(
     apply: values.apply,
   };
   if (action === "auth policy") {
+    console.warn(
+      "Deprecated: manage Auth policies through your configuration sync.",
+    );
     await setAuthVerificationPolicy({ ...common, requireVerification: true });
   } else {
     await exportAuthEmails(config, { cwd, check: true });
-    await syncAuthEmails({ ...common, hosted, config });
+    if (action === "auth templates") {
+      await syncAuthTemplates({ ...common, config });
+    } else {
+      console.warn(
+        "Deprecated: auth sync also configures SMTP. Use auth templates for content and your configuration sync for settings.",
+      );
+      if (!hosted.siteUrl || !hosted.resendApiKey)
+        throw new Error(
+          "Legacy auth sync requires siteUrl and resendApiKey. Use auth templates to publish content only.",
+        );
+      await syncAuthEmails({
+        ...common,
+        hosted: {
+          projectRef: hosted.projectRef,
+          siteUrl: hosted.siteUrl,
+          resendApiKey: hosted.resendApiKey,
+        },
+        config,
+      });
+    }
   }
 }
 if (require.main === module) {

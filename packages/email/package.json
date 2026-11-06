@@ -76,7 +76,7 @@
     "resend": "6.5.2"
   },
   "peerDependencies": {
-    "@kingstack/config": ">=0.3.1 <0.5",
+    "@kingstack/config": ">=0.3.1 <0.6",
     "react": "^18.3.1 || ^19.0.0",
     "react-dom": "^18.3.1 || ^19.0.0",
     "react-email": ">=6.11.3 <7"

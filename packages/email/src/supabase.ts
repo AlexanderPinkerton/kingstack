@@ -6,6 +6,7 @@ import {
   authEmailSettings,
   authEmailPlan,
   authVerificationPolicy,
+  authTemplateSettings,
   type AuthPatch,
   type AuthSettings,
 } from "./settings";
@@ -16,6 +17,7 @@ export {
   authEmailSettings,
   authEmailPlan,
   authVerificationPolicy,
+  authTemplateSettings,
 } from "./settings";
 export type { AuthSettings, AuthPatch } from "./settings";
 export { exportAuthEmails } from "./files";
@@ -101,6 +103,15 @@ async function syncSettings(
   return { plan, backup };
 }
 
+/** Publish subjects and HTML without modifying delivery configuration or Auth policy. */
+export async function syncAuthTemplates(
+  options: SyncOptions & { config: EmailConfig },
+) {
+  const templates = await renderAuthEmails(options.config);
+  return syncSettings(options, () => authTemplateSettings(templates));
+}
+
+/** @deprecated Use syncAuthTemplates and the configuration system for SMTP settings. */
 export async function syncAuthEmails(
   options: SyncOptions & {
     config: EmailConfig;
@@ -114,6 +125,7 @@ export async function syncAuthEmails(
     authEmailSettings(current, options.config, options.hosted, templates),
   );
 }
+/** @deprecated Manage verification policy through the configuration system. */
 export async function setAuthVerificationPolicy(
   options: SyncOptions & { requireVerification: true },
 ) {

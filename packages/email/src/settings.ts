@@ -68,6 +68,12 @@ export function authEmailSettings(
     smtp_sender_name: config.from.name || config.brand.name,
     rate_limit_email_sent: hourlyRate,
   };
+  return { ...patch, ...authTemplateSettings(templates) };
+}
+
+/** Only email content; SMTP, URLs, limits, and account policy belong to config sync. */
+export function authTemplateSettings(templates: RenderedAuthEmails): AuthPatch {
+  const patch: AuthPatch = {};
   for (const kind of authEmailKinds) {
     patch[`mailer_subjects_${kind}`] = templates[kind].subject;
     patch[`mailer_templates_${kind}_content`] = templates[kind].html;

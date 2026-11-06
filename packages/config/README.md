@@ -1,6 +1,6 @@
 # @kingstack/config
 
-TypeScript configuration management for projects that need validated per-environment values, computed values, generated `.env`/TOML/JSON files, and remote secret synchronization.
+TypeScript configuration management for projects that need validated per-environment values, computed values, generated `.env`/TOML/JSON files, and remote configuration/secret synchronization.
 
 ## Mental model
 
@@ -198,9 +198,83 @@ bun king-config sync --env development --dry-run
 bun king-config sync --env development
 ```
 
-When `--env` is omitted, synchronization uses environments marked `sync: true`. Dry runs perform no writes and do not require provider CLIs. GitHub and Vercel values are passed through stdin instead of interpolated into shell commands.
+When `--env` is omitted, synchronization uses environments marked `sync: true`.
+All services declared in `schema.services` are included by default; `--target`
+selects one declared service. Dry runs perform no writes, credential lookups, or
+network requests and do not require provider CLIs. GitHub and Vercel values are
+passed through stdin instead of interpolated into shell commands.
 
 An actual sync requires authenticated `gh` and/or `vercel` CLIs on `PATH`.
+
+### Supabase Auth configuration
+
+Declare a service with `provider: "supabase-auth"` to include Auth settings in
+the same sync command. It uses the Supabase Management API because Auth settings
+are stored in Supabase, not in the application's environment variables.
+Authenticate with `yarn supabase login` (macOS CLI Keychain or legacy token file)
+or supply `SUPABASE_ACCESS_TOKEN`. The application anon/service-role keys cannot
+authorize project configuration changes.
+
+```typescript
+services: {
+  // Keep existing github/vercel services here.
+  supabase: {
+    provider: "supabase-auth",
+    description: "Hosted Auth configuration",
+    projectRef: "SUPABASE_PROJECT_REF",
+    mappings: {
+      site_url: "SUPABASE_AUTH_SITE_URL",
+      smtp_host: "SMTP_HOST",
+      smtp_port: "SMTP_PORT",
+      smtp_user: "SMTP_USER",
+      smtp_pass: "RESEND_API_KEY",
+      smtp_admin_email: "EMAIL_FROM_ADDRESS",
+      smtp_sender_name: "EMAIL_FROM_NAME",
+      rate_limit_email_sent: "AUTH_EMAIL_HOURLY_LIMIT",
+      mailer_autoconfirm: "AUTH_AUTOCONFIRM",
+      mailer_allow_unverified_email_sign_ins: "ALLOW_UNVERIFIED_SIGN_INS",
+      mailer_secure_email_change_enabled: "CONFIRM_OLD_EMAIL",
+    },
+  },
+}
+```
+
+Mapping values reference declared core/computed keys. Boolean inputs must be
+`"true"` or `"false"`; limits use integer strings. Exported
+`SupabaseAuthSetting` lists the supported settings. Unknown fields, including
+template content, fail validation before any provider is contacted. Only mapped
+fields are updated. Local environments cannot target hosted Auth.
+
+Use the same source keys in `configs` mappings for local Supabase settings.
+TOML generation preserves existing boolean/numeric/string types and comments.
+For example, derive `AUTH_AUTOCONFIRM` from `REQUIRE_VERIFICATION` and map the
+latter to `auth.email.enable_confirmations`. Keep custom SMTP disabled locally
+to use Mailpit. A TOML SMTP password can use `env(RESEND_API_KEY)`; supply its
+value through an ignored `.env` output rather than writing the secret into a
+committed TOML file.
+
+```sh
+bun king-config sync --env production --dry-run
+bun king-config sync --env production
+# Optional: only the declared Supabase service
+bun king-config sync --env production --target supabase
+```
+
+An apply reads current Auth settings, saves affected prior values with mode
+0600 under `.local/config-backups/`, patches the configured fields, and verifies
+nonsecret values afterward. **Ignore `.local/` in Git**: backups can contain SMTP
+credentials. A masked old password requires the original credential to restore.
+The backup directory also gets a Git ignore rule. Dry runs show policy and
+limit values while keeping credentials and string settings redacted.
+The desired SMTP password is reapplied because the API can conceal its value.
+An enabled Send Email hook blocks SMTP changes. Authentication, API, and
+verification failures produce a failed command, not a successful partial result;
+other providers may already have applied their independent changes.
+
+Email HTML and subjects are outside this provider. Render/check them with
+`king-email auth export` and publish them with `king-email auth templates`.
+For an initial rollout, configure delivery with verification disabled, publish
+and test the templates, then enable verification in config and sync again.
 
 With Vercel CLI 65.10.x, valid Stripe publishable keys (`pk_test_...` or
 `pk_live_...`) mapped to `NEXT_PUBLIC_` variables are explicitly synced with

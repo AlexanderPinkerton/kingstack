@@ -1,12 +1,16 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import type { EnvironmentDefinition } from "../core";
+import {
+  EnvironmentMode,
+  getResolveContext,
+  type EnvironmentDefinition,
+} from "../core";
 import { inspectEnvironment } from "./check";
 import { loadUserSchema } from "./utils";
 import { renderJsonFile } from "../render";
-
-type SyncTarget = "github" | "vercel";
+import { resolveSupabaseAuthSettings } from "../supabase-auth";
+import { syncToSupabaseAuth } from "./supabase-sync";
 
 export async function syncCommand(options: {
   cwd?: string;
@@ -16,8 +20,23 @@ export async function syncCommand(options: {
 }): Promise<boolean> {
   const cwd = options.cwd ? resolve(options.cwd) : process.cwd();
   const schema = await loadUserSchema(cwd);
-  const target = parseTarget(options.target);
-  const targets: SyncTarget[] = target ? [target] : ["github", "vercel"];
+  const targets = options.target
+    ? [options.target]
+    : Object.keys(schema.services ?? {});
+  if (targets.length === 0)
+    throw new Error("No sync services are declared in the schema");
+  for (const target of targets) {
+    const service = schema.services?.[target];
+    if (!service) throw new Error(`No services.${target} mapping is defined`);
+    if (
+      service.provider !== "supabase-auth" &&
+      target !== "github" &&
+      target !== "vercel"
+    )
+      throw new Error(
+        `Unknown sync target "${target}"; expected github, vercel, or a service with provider: supabase-auth`,
+      );
+  }
   const environments = options.env
     ? [options.env]
     : getDefaultSyncEnvironments(schema.environments);
@@ -28,12 +47,51 @@ export async function syncCommand(options: {
     return false;
   }
 
-  console.log(`🔐 Deployment Secret Sync${isDryRun ? " (dry run)" : ""}\n`);
+  console.log(
+    `🔐 Deployment Configuration Sync${isDryRun ? " (dry run)" : ""}\n`,
+  );
   const inspections = await Promise.all(
     environments.map((environment) =>
       inspectEnvironment(schema, environment, cwd),
     ),
   );
+  const supabasePlans = new Map<
+    string,
+    ReturnType<typeof resolveSupabaseAuthSettings>
+  >();
+  for (const inspection of inspections) {
+    const { context } = getResolveContext(schema, inspection.environment);
+    if (inspection.errors.length) continue;
+    for (const target of targets) {
+      const service = schema.services![target];
+      if (service.provider !== "supabase-auth") continue;
+      if (
+        context.mode === EnvironmentMode.Local ||
+        context.definition?.sync === false
+      ) {
+        inspection.errors.push({
+          key: `environments.${inspection.environment}`,
+          message:
+            "This environment is not eligible for hosted Supabase configuration sync",
+        });
+        continue;
+      }
+      try {
+        supabasePlans.set(
+          `${inspection.environment}:${target}`,
+          resolveSupabaseAuthSettings(service, inspection.config.all),
+        );
+      } catch (error) {
+        inspection.errors.push({
+          key: `services.${target}`,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Invalid Supabase Auth configuration",
+        });
+      }
+    }
+  }
   const invalidInspections = inspections.filter(
     (inspection) => inspection.errors.length > 0,
   );
@@ -63,7 +121,21 @@ export async function syncCommand(options: {
     console.log(`\n📦 Environment: ${environment}`);
 
     for (const syncTarget of targets) {
-      const keys = schema.services?.[syncTarget]?.keys;
+      const service = schema.services![syncTarget];
+      if (service.provider === "supabase-auth") {
+        const plan = supabasePlans.get(`${environment}:${syncTarget}`)!;
+        if (
+          !(await syncToSupabaseAuth({
+            ...plan,
+            environment,
+            cwd,
+            dryRun: isDryRun,
+          }))
+        )
+          failed = true;
+        continue;
+      }
+      const keys = service.keys;
       if (!keys) {
         console.error(`❌ No services.${syncTarget} mapping is defined`);
         failed = true;
@@ -78,7 +150,7 @@ export async function syncCommand(options: {
               keys,
               isDryRun,
               cwd,
-              schema.services?.[syncTarget]?.optionalKeys,
+              service.optionalKeys,
             )
           : syncToVercel(
               environment,
@@ -86,7 +158,7 @@ export async function syncCommand(options: {
               keys,
               isDryRun,
               cwd,
-              schema.services?.[syncTarget]?.optionalKeys,
+              service.optionalKeys,
               vercelMajor,
             );
       if (!succeeded) failed = true;
@@ -94,11 +166,13 @@ export async function syncCommand(options: {
   }
 
   if (failed) {
-    console.error("\n❌ Secret synchronization completed with errors");
+    console.error(
+      "\n❌ Configuration synchronization completed with errors; review the failed services above",
+    );
     return false;
   }
   console.log(
-    `\n✅ ${isDryRun ? "Secret synchronization plan is valid" : "Secret synchronization completed"}`,
+    `\n✅ ${isDryRun ? "Configuration synchronization plan is valid" : "Configuration synchronization completed"}`,
   );
   return true;
 }
@@ -255,12 +329,6 @@ function getDefaultSyncEnvironments(
   return Object.entries(environments)
     .filter(([, definition]) => definition.sync === true)
     .map(([name]) => name);
-}
-
-function parseTarget(target: string | undefined): SyncTarget | undefined {
-  if (target === undefined) return undefined;
-  if (target === "github" || target === "vercel") return target;
-  throw new Error(`Unknown sync target "${target}"; expected github or vercel`);
 }
 
 function checkCommandAvailable(command: string, args: string[]): string {

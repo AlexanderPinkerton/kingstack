@@ -211,7 +211,7 @@ describe("replaceWorkspaceVersions", () => {
     replaceWorkspaceVersions(testDir);
 
     const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-    expect(pkg.devDependencies["@kingstack/config"]).toBe("^0.4.0");
+    expect(pkg.devDependencies["@kingstack/config"]).toBe("^0.5.0");
   });
 
   it("pins the deployment package to an exact pre-1.0 version", () => {

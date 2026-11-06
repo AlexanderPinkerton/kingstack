@@ -23,6 +23,7 @@ import {
   authVerificationPolicy,
   authEmailPlan,
   syncAuthEmails,
+  syncAuthTemplates,
   setAuthVerificationPolicy,
   type AuthPatch,
   type AuthRequest,
@@ -417,6 +418,44 @@ describe("local export", () => {
 });
 
 describe("hosted settings", () => {
+  it("publishes only the twelve template fields without SMTP credentials or policy changes", async () => {
+    const cwd = temporary();
+    const original = {
+      smtp_host: "keep-host",
+      smtp_pass: "keep-secret",
+      site_url: "https://keep.example",
+      mailer_autoconfirm: true,
+      rate_limit_email_sent: 120,
+    };
+    let state: Record<string, unknown> = { ...original };
+    const request = vi
+      .fn<AuthRequest>()
+      .mockImplementation((_project, _token, patch) => {
+        if (patch) state = { ...state, ...patch };
+        return Promise.resolve({ ...state });
+      });
+    const result = await syncAuthTemplates({
+      cwd,
+      config,
+      environment: "production",
+      projectRef: hosted.projectRef,
+      token: "test-token",
+      request,
+      output: vi.fn(),
+      apply: true,
+    });
+    const patch = request.mock.calls[1][2]!;
+    expect(Object.keys(patch)).toHaveLength(12);
+    expect(
+      Object.keys(patch).every(
+        (key) =>
+          key.startsWith("mailer_subjects_") ||
+          key.startsWith("mailer_templates_"),
+      ),
+    ).toBe(true);
+    expect(state).toMatchObject(original);
+    expect(readFileSync(result.backup!, "utf8")).not.toContain("keep-secret");
+  });
   it("keeps SMTP/templates separate from auth policy and preserves unrelated settings", async () => {
     const current = {
       mailer_autoconfirm: true,

@@ -39,6 +39,35 @@ describe("environment-file rendering", () => {
 });
 
 describe("TOML rendering", () => {
+  it("generates boolean policies and numeric limits while preserving comments and templates", () => {
+    const original =
+      '[auth.email]\nenable_confirmations = false # policy\n[auth.rate_limit]\nemail_sent = 2 # limit\n[auth.email.template.confirmation]\ncontent_path = "./confirmation.html"\n';
+    const definition = {
+      path: "supabase/config.toml",
+      format: "toml" as const,
+      mappings: {
+        "auth.email.enable_confirmations": "VERIFY",
+        "auth.rate_limit.email_sent": "LIMIT",
+      },
+    };
+    expect(
+      renderTomlFile(original, { VERIFY: "true", LIMIT: "30" }, definition),
+    ).toBe(
+      original
+        .replace("false # policy", "true # policy")
+        .replace("2 # limit", "30 # limit"),
+    );
+    expect(() =>
+      renderTomlFile(original, { VERIFY: "yes", LIMIT: "30" }, definition),
+    ).toThrow("expected true or false");
+    expect(() =>
+      renderTomlFile(
+        original,
+        { VERIFY: "true", LIMIT: "secret-bad-number" },
+        definition,
+      ),
+    ).toThrow("expected a number");
+  });
   it("updates mapped values without reformatting the document", () => {
     const original = [
       'project_id = "old-project" # keep this comment',

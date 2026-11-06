@@ -55,6 +55,7 @@ config/*.ts
 !config/_example/**
 
 # Config file backups
+.local/
 *.toml.previous
 *.json.previous
 *.yaml.previous
