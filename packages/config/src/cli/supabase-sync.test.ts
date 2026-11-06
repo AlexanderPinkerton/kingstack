@@ -3,230 +3,226 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readdirSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parse } from "@iarna/toml";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { syncCommand } from "./sync";
-import {
-  resolveSupabaseAuthSettings,
-  type SupabaseAuthServiceConfig,
-} from "../supabase-auth";
 
-const { run, request, token } = vi.hoisted(() => ({
-  run: vi.fn(),
-  request: vi.fn(),
-  token: vi.fn(),
-}));
+const { run } = vi.hoisted(() => ({ run: vi.fn() }));
 vi.mock("node:child_process", () => ({ spawnSync: run }));
-vi.mock("./supabase-management", () => ({
-  authManagementRequest: request,
-  supabaseManagementToken: token,
-}));
-
-const service: SupabaseAuthServiceConfig = {
-  provider: "supabase-auth",
-  description: "Hosted auth",
-  projectRef: "PROJECT",
-  mappings: {
-    site_url: "SITE",
-    smtp_host: "HOST",
-    smtp_port: "PORT",
-    smtp_pass: "SECRET",
-    rate_limit_email_sent: "LIMIT",
-    mailer_autoconfirm: "AUTO",
-    mailer_secure_email_change_enabled: "DOUBLE",
-  },
-};
-const values = {
-  PROJECT: "abcdefghijklmnopqrst",
-  SITE: "https://example.com",
-  HOST: "smtp.resend.com",
-  PORT: "465",
-  SECRET: "re_private_fixture",
-  LIMIT: "30",
-  AUTO: "false",
-  DOUBLE: "false",
-};
 const directories: string[] = [];
-let state: Record<string, unknown>;
 beforeEach(() => {
   run.mockReset();
-  request.mockReset();
-  token.mockReset();
-  token.mockReturnValue("sbp_fixture");
   vi.spyOn(console, "log").mockImplementation(() => undefined);
   vi.spyOn(console, "error").mockImplementation(() => undefined);
-  state = {
-    smtp_pass: "old_private",
-    mailer_autoconfirm: true,
-    external_google_enabled: true,
-    mailer_templates_confirmation_content: "KEEP TEMPLATE",
-    uri_allow_list: "https://keep.example/callback",
-  };
-  request.mockImplementation((_project, _token, patch) => {
-    if (patch) state = { ...state, ...patch };
-    return Promise.resolve({ ...state });
-  });
 });
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const directory of directories.splice(0))
-    rmSync(directory, { recursive: true, force: true });
+  for (const cwd of directories.splice(0))
+    rmSync(cwd, { recursive: true, force: true });
 });
-
 function fixture(
-  overrides: Partial<typeof values> = {},
-  mapping = service,
-  mode = "hosted",
+  options: { email?: boolean; mode?: string; provider?: boolean } = {},
 ) {
-  const cwd = mkdtempSync(join(tmpdir(), "king-config-auth-"));
+  const cwd = mkdtempSync(join(tmpdir(), "king-config-supabase-test-"));
   directories.push(cwd);
   mkdirSync(join(cwd, "config"));
+  mkdirSync(join(cwd, "supabase"));
+  const schema = {
+    environments: {
+      production: { mode: options.mode ?? "hosted", sync: true },
+    },
+    core: {
+      PROJECT: { required: true },
+      VERIFY: { default: "true" },
+      ...(options.email ? { RESEND_API_KEY: { required: true } } : {}),
+    },
+    envfiles: {},
+    configs: {
+      supabase: {
+        path: "supabase/config.toml",
+        format: "toml",
+        mappings: {
+          project_id: "PROJECT",
+          "auth.email.enable_confirmations": "VERIFY",
+        },
+      },
+    },
+    services:
+      options.provider === false
+        ? { github: { description: "GitHub", keys: ["PROJECT"] } }
+        : {
+            supabase: {
+              provider: "supabase",
+              description: "Supabase CLI",
+              projectRef: "PROJECT",
+              configFile: "supabase",
+            },
+          },
+  };
   writeFileSync(
     join(cwd, "config/schema.ts"),
-    `export const schema = ${JSON.stringify({ environments: { production: { mode, sync: true } }, core: Object.fromEntries(Object.keys(values).map((key) => [key, { required: true }])), envfiles: {}, services: { supabase: mapping } }).replace('"envfiles":{}', '"computed":()=>({}),"envfiles":{}')};`,
+    `export const schema = { ...${JSON.stringify(schema)}, computed: () => ({}) };`,
   );
   writeFileSync(
     join(cwd, "config/production.ts"),
-    `export const values = ${JSON.stringify({ ...values, ...overrides })};`,
+    `export const values = ${JSON.stringify({ PROJECT: "abcdefghijklmnopqrst", ...(options.email ? { RESEND_API_KEY: "private-fixture" } : {}) })};`,
   );
-  return cwd;
+  let content =
+    'project_id = "local-project"\n[api]\nenabled = false\n[auth.email]\nenable_confirmations = false\n';
+  if (options.email) {
+    mkdirSync(join(cwd, "emails"));
+    writeFileSync(
+      join(cwd, "emails/confirmation.html"),
+      "<p>Verify fixture</p>",
+    );
+    content +=
+      '[auth.email.smtp]\nenabled = true\npass = "env(RESEND_API_KEY)"\n[auth.email.template.confirmation]\nsubject = "Verify fixture"\ncontent_path = "./emails/confirmation.html"\n';
+  }
+  writeFileSync(join(cwd, "supabase/config.toml"), content);
+  writeFileSync(join(cwd, ".env"), "RESEND_API_KEY=stale-local-key\n");
+  writeFileSync(
+    join(cwd, "supabase/.env"),
+    "RESEND_API_KEY=stale-supabase-key\n",
+  );
+  return { cwd, content };
 }
-
-describe("Supabase Auth in normal config sync", () => {
-  it("includes the declared provider by default and never changes templates or unmapped settings", async () => {
-    const cwd = fixture();
-    expect(await syncCommand({ cwd, env: "production" })).toBe(true);
-    const patch = request.mock.calls[1]?.[2];
-    expect(patch).toMatchObject({
-      smtp_pass: values.SECRET,
-      smtp_port: "465",
-      rate_limit_email_sent: 30,
-      mailer_autoconfirm: false,
-      mailer_secure_email_change_enabled: false,
+describe("Supabase CLI configuration sync", () => {
+  it("includes the provider by default and ships selected settings and templates without switching local files", async () => {
+    const { cwd, content } = fixture({ email: true });
+    let temporary = "";
+    run.mockImplementation((command, args, options) => {
+      expect(command).toBe("supabase");
+      temporary = args[args.indexOf("--workdir") + 1];
+      expect(args).toEqual([
+        "config",
+        "push",
+        "--workdir",
+        temporary,
+        "--project-ref",
+        "abcdefghijklmnopqrst",
+        "--yes",
+      ]);
+      expect(options.env.RESEND_API_KEY).toBe("private-fixture");
+      expect(args.join(" ")).not.toContain("private-fixture");
+      const rendered = readFileSync(
+        join(temporary, "supabase/config.toml"),
+        "utf8",
+      );
+      expect(parse(rendered)).toMatchObject({
+        project_id: "abcdefghijklmnopqrst",
+        api: { enabled: false },
+        auth: {
+          email: {
+            enable_confirmations: true,
+            smtp: { pass: "env(RESEND_API_KEY)" },
+            template: { confirmation: { subject: "Verify fixture" } },
+          },
+        },
+      });
+      expect(rendered).not.toContain("private-fixture");
+      expect(
+        readFileSync(join(temporary, "emails/confirmation.html"), "utf8"),
+      ).toBe("<p>Verify fixture</p>");
+      expect(existsSync(join(temporary, ".env"))).toBe(false);
+      expect(existsSync(join(temporary, "supabase/.env"))).toBe(false);
+      expect(readFileSync(join(cwd, "supabase/config.toml"), "utf8")).toBe(
+        content,
+      );
+      return { status: 0 };
     });
-    expect(Object.keys(patch)).toEqual(Object.keys(service.mappings));
-    expect(state.mailer_templates_confirmation_content).toBe("KEEP TEMPLATE");
-    expect(state.external_google_enabled).toBe(true);
-    expect(state.uri_allow_list).toBe("https://keep.example/callback");
-    expect(run).not.toHaveBeenCalled();
-    const directory = join(cwd, ".local/config-backups");
-    const backup = join(
-      directory,
-      readdirSync(directory).find((name) => name.endsWith(".json"))!,
+    expect(await syncCommand({ cwd, env: "production" })).toBe(true);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(existsSync(temporary)).toBe(false);
+    expect(readFileSync(join(cwd, ".env"), "utf8")).toContain(
+      "stale-local-key",
     );
-    expect(readFileSync(join(directory, ".gitignore"), "utf8")).toContain("*");
-    expect(statSync(backup).mode & 0o777).toBe(0o600);
-    const saved = JSON.parse(readFileSync(backup, "utf8"));
-    expect(saved.settings.smtp_pass).toBe("old_private");
-    expect(saved.settings).not.toHaveProperty(
-      "mailer_templates_confirmation_content",
-    );
-    const output = [
-      ...vi.mocked(console.log).mock.calls,
-      ...vi.mocked(console.error).mock.calls,
-    ]
-      .flat()
-      .join("\n");
-    for (const secret of [values.SECRET, "old_private", "sbp_fixture"])
-      expect(output).not.toContain(secret);
-    expect(output).toContain("Management API");
-    expect(output).toContain("templates are published separately");
   });
-  it("keeps dry runs offline without reading credentials or writing backups", async () => {
-    const cwd = fixture();
+  it("supports a fresh project with no email package, custom templates, SMTP, or Resend credentials", async () => {
+    const { cwd } = fixture();
+    run.mockImplementation((_command, args, options) => {
+      const directory = args[args.indexOf("--workdir") + 1];
+      const rendered = readFileSync(
+        join(directory, "supabase/config.toml"),
+        "utf8",
+      );
+      expect(rendered).not.toContain("smtp");
+      expect(rendered).not.toContain("template");
+      expect(options.env.RESEND_API_KEY).toBe(process.env.RESEND_API_KEY);
+      return { status: 0 };
+    });
+    expect(await syncCommand({ cwd, env: "production" })).toBe(true);
+  });
+  it("never invokes Supabase for schemas that have not declared that service", async () => {
+    const { cwd } = fixture({ provider: false });
     expect(await syncCommand({ cwd, env: "production", dryRun: true })).toBe(
       true,
     );
-    expect(request).not.toHaveBeenCalled();
-    expect(token).not.toHaveBeenCalled();
     expect(run).not.toHaveBeenCalled();
-    expect(existsSync(join(cwd, ".local"))).toBe(false);
-    const output = vi.mocked(console.log).mock.calls.flat().join("\n");
-    expect(output).toContain("mailer_autoconfirm: false");
-    expect(output).toContain("rate_limit_email_sent: 30");
-    expect(output).not.toContain(values.SECRET);
   });
-  it.each([
-    { AUTO: "yes" },
-    { LIMIT: "-1" },
-    { PORT: "70000" },
-    { PROJECT: "not-a-project" },
-    { SITE: "http://example.com" },
-  ])(
-    "rejects invalid settings before any provider mutation: %j",
-    async (overrides) => {
+  it("preserves configured notification templates relative to the Supabase directory", async () => {
+    const { cwd, content } = fixture();
+    mkdirSync(join(cwd, "supabase/templates"));
+    writeFileSync(
+      join(cwd, "supabase/templates/security.html"),
+      "<p>Security notification</p>",
+    );
+    writeFileSync(
+      join(cwd, "supabase/config.toml"),
+      content +
+        '[auth.email.notification.password_changed]\nenabled = true\ncontent_path = "templates/security.html"\n',
+    );
+    run.mockImplementation((_command, args) => {
+      const directory = args[args.indexOf("--workdir") + 1];
       expect(
-        await syncCommand({ cwd: fixture(overrides), env: "production" }),
-      ).toBe(false);
-      expect(request).not.toHaveBeenCalled();
-      expect(run).not.toHaveBeenCalled();
-    },
-  );
-  it("refuses template fields in the config provider", async () => {
-    const unsafe = {
-      ...service,
-      mappings: {
-        ...service.mappings,
-        mailer_templates_confirmation_content: "SECRET",
-      },
-    };
-    expect(
-      await syncCommand({ cwd: fixture({}, unsafe), env: "production" }),
-    ).toBe(false);
-    expect(request).not.toHaveBeenCalled();
-  });
-  it("refuses hosted sync for a local environment", async () => {
-    expect(
-      await syncCommand({
-        cwd: fixture({}, service, "local"),
-        env: "production",
-      }),
-    ).toBe(false);
-    expect(request).not.toHaveBeenCalled();
-  });
-  it("reports failed verification instead of a successful sync", async () => {
-    request.mockResolvedValue({});
-    expect(await syncCommand({ cwd: fixture(), env: "production" })).toBe(
-      false,
-    );
-    expect(vi.mocked(console.error).mock.calls.flat().join("\n")).toContain(
-      "Saved Auth setting did not match",
-    );
-  });
-  it("requires login explicitly and never reports success after a provider error", async () => {
-    token.mockImplementation(() => {
-      throw new Error("Run yarn supabase login");
+        readFileSync(
+          join(directory, "supabase/templates/security.html"),
+          "utf8",
+        ),
+      ).toBe("<p>Security notification</p>");
+      return { status: 0 };
     });
-    expect(await syncCommand({ cwd: fixture(), env: "production" })).toBe(
-      false,
+    expect(await syncCommand({ cwd, env: "production" })).toBe(true);
+  });
+  it("keeps previews offline and leaves generated files unchanged", async () => {
+    const { cwd, content } = fixture({ email: true });
+    expect(await syncCommand({ cwd, env: "production", dryRun: true })).toBe(
+      true,
     );
-    expect(request).not.toHaveBeenCalled();
-    expect(vi.mocked(console.error).mock.calls.flat().join("\n")).toContain(
-      "supabase login",
+    expect(run).not.toHaveBeenCalled();
+    expect(readFileSync(join(cwd, "supabase/config.toml"), "utf8")).toBe(
+      content,
+    );
+    expect(vi.mocked(console.log).mock.calls.flat().join("\n")).toContain(
+      "1 configured email templates",
     );
   });
-  it("refuses SMTP changes when a send-email hook owns delivery", async () => {
-    state.hook_send_email_enabled = true;
-    expect(await syncCommand({ cwd: fixture(), env: "production" })).toBe(
-      false,
-    );
-    expect(request).toHaveBeenCalledTimes(1);
+  it("fails before any provider writes when a referenced template is missing", async () => {
+    const { cwd } = fixture({ email: true });
+    rmSync(join(cwd, "emails/confirmation.html"));
+    expect(await syncCommand({ cwd, env: "production" })).toBe(false);
+    expect(run).not.toHaveBeenCalled();
   });
-  it("converts exact string booleans and permits an explicit empty redirect allowlist", () => {
-    expect(
-      resolveSupabaseAuthSettings(
-        {
-          ...service,
-          mappings: { uri_allow_list: "URLS", mailer_autoconfirm: "AUTO" },
-        },
-        { ...values, URLS: "" },
-      ).settings,
-    ).toEqual({ uri_allow_list: "", mailer_autoconfirm: false });
+  it("refuses local targets", async () => {
+    const { cwd } = fixture({ mode: "local" });
+    expect(await syncCommand({ cwd, env: "production" })).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+  });
+  it("propagates CLI failures and cleans up temporary configuration", async () => {
+    const { cwd, content } = fixture();
+    let temporary = "";
+    run.mockImplementation((_command, args) => {
+      temporary = args[args.indexOf("--workdir") + 1];
+      return { status: 1 };
+    });
+    expect(await syncCommand({ cwd, env: "production" })).toBe(false);
+    expect(existsSync(temporary)).toBe(false);
+    expect(readFileSync(join(cwd, "supabase/config.toml"), "utf8")).toBe(
+      content,
+    );
   });
 });

@@ -1,10 +1,6 @@
 /**
  * Pure schema resolution and validation for the configuration system.
  */
-import {
-  supabaseAuthSettingTypes,
-  type SupabaseAuthServiceConfig,
-} from "./supabase-auth";
 
 export enum EnvironmentMode {
   Local = "local",
@@ -71,6 +67,15 @@ export interface ServiceConfig {
   optionalKeys?: string[];
 }
 
+export interface SupabaseServiceConfig {
+  provider: "supabase";
+  description: string;
+  /** Resolved configuration key containing the hosted project reference. */
+  projectRef: string;
+  /** Name of the supabase/config.toml mapping under schema.configs. */
+  configFile: string;
+}
+
 export interface ConfigSchema {
   /** Canonical environment names and their behavior. */
   environments?: Record<string, EnvironmentDefinition>;
@@ -83,7 +88,7 @@ export interface ConfigSchema {
   ) => Record<string, string>;
   envfiles: Record<string, EnvFileConfig>;
   configs?: Record<string, ConfigFileMapping>;
-  services?: Record<string, ServiceConfig | SupabaseAuthServiceConfig>;
+  services?: Record<string, ServiceConfig | SupabaseServiceConfig>;
 }
 
 export type ConfigValues = Record<string, string>;
@@ -412,7 +417,7 @@ export function validateSchemaMappings(
   }
 
   for (const [serviceName, service] of Object.entries(schema.services ?? {})) {
-    if (service.provider === "supabase-auth") {
+    if (service.provider === "supabase") {
       validateReferencedKey(
         knownKeys,
         service.projectRef,
@@ -420,26 +425,16 @@ export function validateSchemaMappings(
         `Service "${serviceName}"`,
         errors,
       );
-      if (Object.keys(service.mappings).length === 0)
+      const output = schema.configs?.[service.configFile];
+      if (
+        !output ||
+        output.path !== "supabase/config.toml" ||
+        output.format !== "toml"
+      )
         errors.push({
-          key: `services.${serviceName}.mappings`,
-          message: "Supabase Auth sync requires at least one mapping",
+          key: `services.${serviceName}.configFile`,
+          message: "Reference a supabase/config.toml output mapping",
         });
-      for (const [field, key] of Object.entries(service.mappings)) {
-        if (!Object.hasOwn(supabaseAuthSettingTypes, field))
-          errors.push({
-            key: `services.${serviceName}.${field}`,
-            message:
-              "Unsupported Supabase Auth setting; publish email templates separately",
-          });
-        validateReferencedKey(
-          knownKeys,
-          key,
-          `services.${serviceName}.${field}`,
-          `Service "${serviceName}"`,
-          errors,
-        );
-      }
       continue;
     }
     const seen = new Set<string>();

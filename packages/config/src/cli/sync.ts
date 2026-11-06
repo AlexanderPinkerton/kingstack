@@ -9,8 +9,7 @@ import {
 import { inspectEnvironment } from "./check";
 import { loadUserSchema } from "./utils";
 import { renderJsonFile } from "../render";
-import { resolveSupabaseAuthSettings } from "../supabase-auth";
-import { syncToSupabaseAuth } from "./supabase-sync";
+import { prepareSupabaseSync, syncToSupabase } from "./supabase-sync";
 
 export async function syncCommand(options: {
   cwd?: string;
@@ -29,12 +28,12 @@ export async function syncCommand(options: {
     const service = schema.services?.[target];
     if (!service) throw new Error(`No services.${target} mapping is defined`);
     if (
-      service.provider !== "supabase-auth" &&
+      service.provider !== "supabase" &&
       target !== "github" &&
       target !== "vercel"
     )
       throw new Error(
-        `Unknown sync target "${target}"; expected github, vercel, or a service with provider: supabase-auth`,
+        `Unknown sync target "${target}"; expected github, vercel, or a service with provider: supabase`,
       );
   }
   const environments = options.env
@@ -57,14 +56,14 @@ export async function syncCommand(options: {
   );
   const supabasePlans = new Map<
     string,
-    ReturnType<typeof resolveSupabaseAuthSettings>
+    ReturnType<typeof prepareSupabaseSync>
   >();
   for (const inspection of inspections) {
     const { context } = getResolveContext(schema, inspection.environment);
     if (inspection.errors.length) continue;
     for (const target of targets) {
       const service = schema.services![target];
-      if (service.provider !== "supabase-auth") continue;
+      if (service.provider !== "supabase") continue;
       if (
         context.mode === EnvironmentMode.Local ||
         context.definition?.sync === false
@@ -79,7 +78,13 @@ export async function syncCommand(options: {
       try {
         supabasePlans.set(
           `${inspection.environment}:${target}`,
-          resolveSupabaseAuthSettings(service, inspection.config.all),
+          prepareSupabaseSync(
+            service,
+            schema,
+            inspection.config.all,
+            inspection.environment,
+            cwd,
+          ),
         );
       } catch (error) {
         inspection.errors.push({
@@ -87,7 +92,7 @@ export async function syncCommand(options: {
           message:
             error instanceof Error
               ? error.message
-              : "Invalid Supabase Auth configuration",
+              : "Invalid Supabase configuration",
         });
       }
     }
@@ -122,15 +127,15 @@ export async function syncCommand(options: {
 
     for (const syncTarget of targets) {
       const service = schema.services![syncTarget];
-      if (service.provider === "supabase-auth") {
+      if (service.provider === "supabase") {
         const plan = supabasePlans.get(`${environment}:${syncTarget}`)!;
         if (
-          !(await syncToSupabaseAuth({
-            ...plan,
-            environment,
+          !syncToSupabase({
+            plan,
+            config: inspection.config.all,
             cwd,
             dryRun: isDryRun,
-          }))
+          })
         )
           failed = true;
         continue;

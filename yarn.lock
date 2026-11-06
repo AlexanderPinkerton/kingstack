@@ -2767,13 +2767,10 @@ __metadata:
     typescript: "npm:5.9.3"
     vitest: "npm:^3.1.4"
   peerDependencies:
-    "@kingstack/config": ">=0.3.1 <0.6"
     react: ^18.3.1 || ^19.0.0
     react-dom: ^18.3.1 || ^19.0.0
     react-email: ">=6.11.3 <7"
   peerDependenciesMeta:
-    "@kingstack/config":
-      optional: true
     react-email:
       optional: true
   bin:

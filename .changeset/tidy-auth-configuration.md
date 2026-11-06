@@ -4,15 +4,15 @@
 "@kingstack/create-kingstack": patch
 ---
 
-Add a Supabase Auth provider to the normal configuration sync workflow. Declared
-SMTP, sender, URL, rate-limit, and verification settings are validated, applied
-through the Management API, backed up privately, and verified without changing
-email templates. Dry runs remain offline. TOML generation now supports existing
-boolean and numeric settings as well as strings and ports.
+Sync supported Supabase settings and configured email templates through the
+existing Supabase CLI in normal configuration sync. Render the selected
+environment into temporary files without switching the running application's
+configuration. SMTP and templates remain optional for new projects. Add boolean
+and numeric TOML generation and drift checks.
 
-Add `king-email auth templates` and `syncAuthTemplates` for publishing subjects
-and HTML without changing delivery settings or account policy. Keep the previous
-combined sync and verification commands available with deprecation guidance.
+Remove the email package's separate hosted Management API sync engine. In 0.2,
+auth sync/policy commands direct users to normal config sync; hosted programmatic
+helpers and environment adapters are removed. Local rendering, preview, template
+export, and application delivery remain available without KingStack config.
 
-Generate new projects with config 0.5.x so they can declare Supabase Auth as a
-normal hosted configuration target.
+Generate new projects with config 0.5.x and the Supabase CLI sync service.

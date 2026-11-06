@@ -206,75 +206,57 @@ passed through stdin instead of interpolated into shell commands.
 
 An actual sync requires authenticated `gh` and/or `vercel` CLIs on `PATH`.
 
-### Supabase Auth configuration
+### Supabase configuration and templates
 
-Declare a service with `provider: "supabase-auth"` to include Auth settings in
-the same sync command. It uses the Supabase Management API because Auth settings
-are stored in Supabase, not in the application's environment variables.
-Authenticate with `yarn supabase login` (macOS CLI Keychain or legacy token file)
-or supply `SUPABASE_ACCESS_TOKEN`. The application anon/service-role keys cannot
-authorize project configuration changes.
+Declare a Supabase service to include its supported hosted settings and any
+configured email templates in normal sync. KingStack renders the selected
+environment's existing TOML mapping and calls the installed Supabase CLI's
+`config push`. Authenticate with `yarn supabase login` or
+`SUPABASE_ACCESS_TOKEN`; KingStack does not implement another Management API client.
 
-```typescript
+```ts
 services: {
-  // Keep existing github/vercel services here.
   supabase: {
-    provider: "supabase-auth",
-    description: "Hosted Auth configuration",
+    provider: "supabase",
+    description: "Hosted Supabase configuration",
     projectRef: "SUPABASE_PROJECT_REF",
-    mappings: {
-      site_url: "SUPABASE_AUTH_SITE_URL",
-      smtp_host: "SMTP_HOST",
-      smtp_port: "SMTP_PORT",
-      smtp_user: "SMTP_USER",
-      smtp_pass: "RESEND_API_KEY",
-      smtp_admin_email: "EMAIL_FROM_ADDRESS",
-      smtp_sender_name: "EMAIL_FROM_NAME",
-      rate_limit_email_sent: "AUTH_EMAIL_HOURLY_LIMIT",
-      mailer_autoconfirm: "AUTH_AUTOCONFIRM",
-      mailer_allow_unverified_email_sign_ins: "ALLOW_UNVERIFIED_SIGN_INS",
-      mailer_secure_email_change_enabled: "CONFIRM_OLD_EMAIL",
-    },
+    configFile: "supabase", // schema.configs.supabase: supabase/config.toml
   },
 }
 ```
 
-Mapping values reference declared core/computed keys. Boolean inputs must be
-`"true"` or `"false"`; limits use integer strings. Exported
-`SupabaseAuthSetting` lists the supported settings. Unknown fields, including
-template content, fail validation before any provider is contacted. Only mapped
-fields are updated. Local environments cannot target hosted Auth.
+The CLI receives a temporary copy of the Supabase directory with TOML rendered
+for the requested environment. The original TOML, app env files, and selected
+local environment stay unchanged. Environment references such as
+`env(RESEND_API_KEY)` use resolved configuration passed to the child process;
+stale local dotenv files are not copied. Keep other referenced Supabase assets
+inside the Supabase directory. Project-relative email templates outside that
+directory are copied too. Temporary files are removed after success or failure.
 
-Use the same source keys in `configs` mappings for local Supabase settings.
-TOML generation preserves existing boolean/numeric/string types and comments.
-For example, derive `AUTH_AUTOCONFIRM` from `REQUIRE_VERIFICATION` and map the
-latter to `auth.email.enable_confirmations`. Keep custom SMTP disabled locally
-to use Mailpit. A TOML SMTP password can use `env(RESEND_API_KEY)`; supply its
-value through an ignored `.env` output rather than writing the secret into a
-committed TOML file.
+Email setup is optional. With no SMTP section or template sections, no custom
+SMTP credentials or email package is needed and those hosted fields remain
+unchanged. An explicit `smtp.enabled = false` disables hosted custom SMTP;
+omitting the section leaves it alone. Configured template paths must exist.
+Render changed email components with `king-email auth export` before sync.
 
 ```sh
 bun king-config sync --env production --dry-run
 bun king-config sync --env production
-# Optional: only the declared Supabase service
+# Same engine, limited to Supabase:
 bun king-config sync --env production --target supabase
 ```
 
-An apply reads current Auth settings, saves affected prior values with mode
-0600 under `.local/config-backups/`, patches the configured fields, and verifies
-nonsecret values afterward. **Ignore `.local/` in Git**: backups can contain SMTP
-credentials. A masked old password requires the original credential to restore.
-The backup directory also gets a Git ignore rule. Dry runs show policy and
-limit values while keeping credentials and string settings redacted.
-The desired SMTP password is reapplied because the API can conceal its value.
-An enabled Send Email hook blocks SMTP changes. Authentication, API, and
-verification failures produce a failed command, not a successful partial result;
-other providers may already have applied their independent changes.
+Dry runs validate KingStack mappings and referenced template files offline;
+they are not a remote diff or a substitute for Supabase CLI validation. Apply
+pushes every hosted setting supported by that CLI, including configured
+templates. CLI failures make sync fail; independent providers may already have
+completed. Roll back by restoring configuration/template files and syncing again.
 
-Email HTML and subjects are outside this provider. Render/check them with
-`king-email auth export` and publish them with `king-email auth templates`.
-For an initial rollout, configure delivery with verification disabled, publish
-and test the templates, then enable verification in config and sync again.
+Use the same input keys for generated local settings and hosted sync. TOML
+booleans, numbers, strings, comments, and template blocks are preserved. Disable
+custom SMTP locally to retain Mailpit. For an initial rollout, configure delivery
+and templates with verification disabled, test, then enable verification in the
+same configuration and sync again.
 
 With Vercel CLI 65.10.x, valid Stripe publishable keys (`pk_test_...` or
 `pk_live_...`) mapped to `NEXT_PUBLIC_` variables are explicitly synced with

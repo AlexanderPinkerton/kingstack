@@ -1,5 +1,4 @@
 export * from "./core";
-export * from "./supabase-auth";
 export * from "./environment-file";
 export {
   assertEnvironmentName,

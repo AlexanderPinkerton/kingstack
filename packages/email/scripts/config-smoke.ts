@@ -3,41 +3,28 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-const packageRoot = resolve(__dirname, "..");
+const root = resolve(__dirname, "..");
 const temporary = mkdtempSync(join(tmpdir(), "king-email-config-pack-"));
-
-function run(command: string, args: string[], cwd: string): string {
+function run(command: string, args: string[], cwd: string) {
   const result = spawnSync(command, args, {
     cwd,
     encoding: "utf8",
     env: { ...process.env, YARN_ENABLE_IMMUTABLE_INSTALLS: "false" },
   });
-  if (result.error) throw result.error;
-  if (result.status !== 0)
-    throw new Error(
-      `${command} ${args.join(" ")} failed:\n${result.stdout}${result.stderr}`,
-    );
+  if (result.error || result.status !== 0)
+    throw new Error(`${command} failed:\n${result.stdout}${result.stderr}`);
   return result.stdout;
 }
-
 try {
   const emailArchive = join(temporary, "email.tgz");
-  run("yarn", ["pack", "--out", emailArchive], packageRoot);
-  let configArchive = process.env.KINGSTACK_CONFIG_ARCHIVE;
-  if (configArchive) {
-    configArchive = resolve(configArchive);
-  } else {
-    configArchive = join(temporary, "config.tgz");
-    run(
-      "yarn",
-      ["pack", "--out", configArchive],
-      resolve(packageRoot, "../config"),
-    );
-  }
-
+  run("yarn", ["pack", "--out", emailArchive], root);
+  const configArchive =
+    process.env.KINGSTACK_CONFIG_ARCHIVE || join(temporary, "config.tgz");
+  if (!process.env.KINGSTACK_CONFIG_ARCHIVE)
+    run("yarn", ["pack", "--out", configArchive], resolve(root, "../config"));
   const cwd = join(temporary, "consumer");
-  mkdirSync(join(cwd, "config"), { recursive: true });
-  mkdirSync(join(cwd, "supabase"));
+  for (const directory of ["config", "supabase", "bin"])
+    mkdirSync(join(cwd, directory), { recursive: true });
   writeFileSync(
     join(cwd, "package.json"),
     JSON.stringify({
@@ -52,88 +39,64 @@ try {
     }),
   );
   writeFileSync(join(cwd, ".yarnrc.yml"), "nodeLinker: node-modules\n");
-  const installation = run("yarn", ["install", "--mode=skip-build"], cwd);
-  if (/YN0060[^\n]*@kingstack\/config/.test(installation))
-    throw new Error(
-      "Packed config version does not satisfy email's peer range.",
-    );
+  run("yarn", ["install", "--mode=skip-build"], cwd);
   writeFileSync(
     join(cwd, "email.config.ts"),
     `import { defineEmailConfig } from '@kingstack/email';
-export default defineEmailConfig({brand:{name:'Packed app'},from:{email:'support@example.com'}});
-`,
+export default defineEmailConfig({brand:{name:'Packed app'},from:{email:'support@example.com'}});`,
   );
   writeFileSync(
     join(cwd, "supabase/config.toml"),
-    'project_id = "package-smoke"\n[auth.email]\nenable_confirmations = true\n',
-  );
-  writeFileSync(
-    join(cwd, "project-only.config.ts"),
-    `import config from './email.config';
-export default { ...config, tooling: { resolveEnvironment: async () => ({ projectRef: 'abcdefghijklmnopqrst' }) } };
-`,
+    'project_id = "local-project"\n[auth.email]\nenable_confirmations = true\n',
   );
   writeFileSync(
     join(cwd, "config/schema.ts"),
     `import { defineSchema, EnvironmentMode } from '@kingstack/config';
 export const schema = defineSchema({
   environments: { production: { mode: EnvironmentMode.Hosted } },
-  core: {
-    SUPABASE_PROJECT_REF: { required: true },
-    NEXT_URL: { required: true },
-    RESEND_API_KEY: { required: true }
-  },
-  computed: () => ({}),
-  envfiles: {}
-});
-`,
+  core: { PROJECT: { required: true } }, computed: () => ({}), envfiles: {},
+  configs: { supabase: { path: 'supabase/config.toml', format: 'toml', mappings: { project_id: 'PROJECT' } } },
+  services: { supabase: { provider: 'supabase', description: 'Supabase CLI', projectRef: 'PROJECT', configFile: 'supabase' } }
+});`,
   );
   writeFileSync(
     join(cwd, "config/production.ts"),
-    `export const values = {
-  SUPABASE_PROJECT_REF: 'abcdefghijklmnopqrst',
-  NEXT_URL: 'https://example.com',
-  RESEND_API_KEY: 're_fixture-secret'
-};
+    "export const values = { PROJECT: 'abcdefghijklmnopqrst' };\n",
+  );
+  writeFileSync(
+    join(cwd, "bin/supabase"),
+    `#!/usr/bin/env bun
+import assert from 'node:assert/strict';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+const directory = process.argv[process.argv.indexOf('--workdir') + 1];
+const toml = readFileSync(join(directory, 'supabase/config.toml'), 'utf8');
+assert.ok(toml.includes('project_id = "abcdefghijklmnopqrst"'));
+assert.ok(!toml.includes('[auth.email.smtp]'));
+if (process.env.EXPECT_TEMPLATES === 'true') {
+  assert.ok(toml.includes('[auth.email.template.confirmation]'));
+  assert.ok(existsSync(join(directory, 'supabase/templates/confirmation.html')));
+} else assert.ok(!toml.includes('[auth.email.template.'));
 `,
+    { mode: 0o755 },
   );
   writeFileSync(
     join(cwd, "check.ts"),
     `import assert from 'node:assert/strict';
 import { dirname, join } from 'node:path';
+import { readFileSync } from 'node:fs';
 const { runCli } = require(join(dirname(require.resolve('@kingstack/email')), 'cli.js'));
-const configVersion = require('@kingstack/config/package.json').version;
-process.env.SUPABASE_ACCESS_TOKEN = 'sbp_fixture';
-let requests = 0;
-globalThis.fetch = async (url, options) => {
-  assert.equal(url, 'https://api.supabase.com/v1/projects/abcdefghijklmnopqrst/config/auth');
-  assert.equal(options.method, 'GET');
-  requests++;
-  return Response.json({ uri_allow_list: '', rate_limit_email_sent: 2 });
-};
+const { syncCommand } = require(join(dirname(require.resolve('@kingstack/config')), 'cli/sync.js'));
+process.env.PATH = join(process.cwd(), 'bin') + ':' + process.env.PATH;
+globalThis.fetch = async () => { throw new Error('Unexpected network request'); };
+assert.equal(await syncCommand({ cwd: process.cwd(), env: 'production' }), true);
 await runCli(['auth', 'export']);
-const output = [];
-const log = console.log;
-console.log = (line) => output.push(String(line));
-try {
-  await runCli(['auth', 'sync', '--env', 'production']);
-  await runCli(['auth', 'policy', '--env', 'production', '--require-verification']);
-  await runCli(['auth', 'templates', '--env', 'production', '--config', 'project-only.config.ts']);
-} finally {
-  console.log = log;
-}
-assert.equal(requests, 3);
-const plans = output.map(line => JSON.parse(line));
-assert.equal(plans[0].project, 'abcdefghijklmnopqrst');
-assert.equal(plans[0].apply, false);
-assert.equal(plans[0].settings.site_url, 'https://example.com');
-assert.equal(plans[0].settings.smtp_host, 'smtp.resend.com');
-assert.equal(plans[0].settings.mailer_autoconfirm, undefined);
-assert.equal(plans[1].settings.mailer_autoconfirm, false);
-assert.equal(Object.keys(plans[2].settings).length, 12);
-assert.ok(Object.keys(plans[2].settings).every(key => key.startsWith('mailer_subjects_') || key.startsWith('mailer_templates_')));
-assert.ok(!output.join('').includes('re_fixture-secret'));
-console.log('Packed config ' + configVersion + ': template-only publishing and legacy command compatibility passed with mocked network access.');
+await runCli(['auth', 'export', '--check']);
+process.env.EXPECT_TEMPLATES = 'true';
+assert.equal(await syncCommand({ cwd: process.cwd(), env: 'production' }), true);
+assert.ok(readFileSync('supabase/config.toml', 'utf8').includes('project_id = "local-project"'));
+await assert.rejects(runCli(['auth', 'sync', '--env', 'production']), /king-config sync/);
+console.log('Packed config/email: fresh project and exported templates deploy through one fake Supabase CLI; no SMTP credentials or hosted writes.');
 `,
   );
   console.log(run("bun", ["check.ts"], cwd));

@@ -1,94 +1,161 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { randomUUID } from "node:crypto";
-import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import {
-  authManagementRequest,
-  supabaseManagementToken,
-} from "./supabase-management";
-import type { SupabaseAuthPatch } from "../supabase-auth";
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { parse } from "@iarna/toml";
+import type { ConfigSchema, SupabaseServiceConfig } from "../core";
+import { configOutputApplies, renderTomlFile } from "../render";
 
-export async function syncToSupabaseAuth(options: {
-  project: string;
-  settings: SupabaseAuthPatch;
-  environment: string;
+export function prepareSupabaseSync(
+  service: SupabaseServiceConfig,
+  schema: ConfigSchema,
+  config: Record<string, string>,
+  environment: string,
+  cwd: string,
+) {
+  const project = config[service.projectRef];
+  if (!/^[a-z0-9]{20}$/.test(project ?? ""))
+    throw new Error(
+      `Supabase sync requires a hosted project reference in ${service.projectRef}`,
+    );
+  const definition = schema.configs?.[service.configFile];
+  if (
+    !definition ||
+    definition.format !== "toml" ||
+    definition.path !== "supabase/config.toml" ||
+    !configOutputApplies(definition, environment)
+  )
+    throw new Error(
+      "Supabase sync requires an applicable supabase/config.toml output mapping",
+    );
+  const content = renderTomlFile(
+    readFileSync(resolve(cwd, definition.path), "utf8"),
+    config,
+    definition,
+  );
+  const document = parse(content) as {
+    project_id?: string;
+    auth?: {
+      email?: {
+        template?: Record<string, { content_path?: string }>;
+        notification?: Record<
+          string,
+          { content_path?: string; enabled?: boolean }
+        >;
+      };
+    };
+  };
+  if (document.project_id !== project)
+    throw new Error(
+      "Generated Supabase project_id does not match the selected environment",
+    );
+  const templates = document.auth?.email?.template ?? {};
+  const notifications = document.auth?.email?.notification ?? {};
+  const assets: string[] = [];
+  for (const template of [
+    ...Object.values(templates),
+    ...Object.values(notifications)
+      .filter((item) => item.enabled)
+      .map((item) => ({
+        ...item,
+        // Supabase CLI 2.x resolves notification paths from supabase/.
+        content_path: item.content_path
+          ? join("supabase", item.content_path)
+          : undefined,
+      })),
+  ]) {
+    if (!template.content_path) continue;
+    const path = template.content_path;
+    if (isAbsolute(path) || relative(cwd, resolve(cwd, path)).startsWith(".."))
+      throw new Error("Email template paths must stay inside the project");
+    if (!existsSync(resolve(cwd, path)))
+      throw new Error(
+        `Missing email template: ${path}. Render templates before syncing.`,
+      );
+    assets.push(path);
+  }
+  return {
+    project,
+    content,
+    assets,
+    templateCount: Object.keys(templates).length,
+  };
+}
+
+export function syncToSupabase(options: {
+  plan: ReturnType<typeof prepareSupabaseSync>;
+  config: Record<string, string>;
   cwd: string;
   dryRun: boolean;
-}): Promise<boolean> {
-  const { project, settings, environment, cwd, dryRun } = options;
-  console.log(`\nSupabase Auth project: ${project}`);
+}): boolean {
+  const { plan, config, cwd, dryRun } = options;
+  console.log(`\nSupabase project: ${plan.project}`);
   console.log(
-    "   Uses the Supabase Management API; email templates are published separately.",
+    `   Supabase CLI config push: supported settings and ${plan.templateCount} configured email templates.`,
   );
-  console.log(
-    `   Managed settings: ${Object.keys(settings).join(", ")} (values redacted)`,
-  );
-  for (const [field, value] of Object.entries(settings)) {
-    if (typeof value === "boolean" || typeof value === "number")
-      console.log(`   ${field}: ${value}`);
-  }
   if (dryRun) {
     console.log(
-      "   Would read current settings, save a private rollback snapshot, apply changes, and verify. No network requests made.",
+      "   Offline plan only; CLI validation and remote comparison happen on apply. No files or hosted settings changed.",
     );
     return true;
   }
+  // Isolate the selected environment from the running app's generated files.
+  // Secrets go through the CLI environment, never command arguments.
+  const directory = mkdtempSync(join(tmpdir(), "king-config-supabase-"));
   try {
-    const token = supabaseManagementToken();
-    const current = await authManagementRequest(project, token);
-    if (
-      current.hook_send_email_enabled === true &&
-      Object.keys(settings).some((key) => key.startsWith("smtp_"))
-    )
-      throw new Error(
-        "A Send Email hook is enabled; review it before configuring SMTP.",
-      );
-    const patch: SupabaseAuthPatch = {};
-    for (const [key, value] of Object.entries(settings)) {
-      // The API can conceal the current SMTP password. Reapply the configured
-      // secret; never infer its removal or expose it in diagnostics.
-      if (key === "smtp_pass" || current[key] !== value) patch[key] = value;
+    cpSync(join(cwd, "supabase"), join(directory, "supabase"), {
+      recursive: true,
+      filter: (source) =>
+        !/(^|[/\\])(\.temp|\.branches|\.env(?:\.[^/\\]*)?)($|[/\\])/.test(
+          relative(join(cwd, "supabase"), source),
+        ),
+    });
+    for (const asset of plan.assets) {
+      const destination = resolve(directory, asset);
+      mkdirSync(dirname(destination), { recursive: true });
+      cpSync(resolve(cwd, asset), destination);
     }
-    if (Object.keys(patch).length === 0) {
-      console.log("   Auth settings already match configuration.");
-      return true;
-    }
-    const directory = resolve(cwd, ".local/config-backups");
-    mkdirSync(directory, { recursive: true, mode: 0o700 });
-    // Protect credential-bearing snapshots even in consumers that do not
-    // already ignore .local. Preserve any consumer-owned ignore rules.
-    writeFileSync(resolve(directory, ".gitignore"), "\n*\n", {
-      flag: "a",
+    writeFileSync(join(directory, "supabase/config.toml"), plan.content, {
       mode: 0o600,
     });
-    const backup = resolve(
-      directory,
-      `supabase-${environment}-${Date.now()}-${randomUUID()}.json`,
+    const result = spawnSync(
+      "supabase",
+      [
+        "config",
+        "push",
+        "--workdir",
+        directory,
+        "--project-ref",
+        plan.project,
+        "--yes",
+      ],
+      {
+        cwd,
+        env: { ...process.env, ...config },
+        stdio: "inherit",
+        shell: false,
+      },
     );
-    const previous = Object.fromEntries(
-      Object.keys(patch).map((key) => [key, current[key] ?? null]),
-    );
-    writeFileSync(
-      backup,
-      JSON.stringify({ project, settings: previous }, null, 2),
-      { mode: 0o600, flag: "wx" },
-    );
-    console.log(
-      `   Private rollback snapshot: ${backup} (may contain credentials).`,
-    );
-    await authManagementRequest(project, token, patch);
-    const saved = await authManagementRequest(project, token);
-    for (const [key, value] of Object.entries(settings)) {
-      if (key !== "smtp_pass" && saved[key] !== value)
-        throw new Error(`Saved Auth setting did not match: ${key}`);
-    }
-    console.log(
-      "   Auth settings applied and verified. Templates and unrelated settings were not changed.",
-    );
+    if (result.error || result.status !== 0)
+      throw new Error(
+        "Supabase CLI config push failed. Review the CLI output; authenticate with yarn supabase login if needed.",
+      );
+    console.log("   Supabase configuration and configured templates synced.");
     return true;
   } catch (error) {
     console.error(
-      `   Supabase Auth sync failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `   ${error instanceof Error ? error.message : "Supabase config push failed"}`,
     );
     return false;
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 }

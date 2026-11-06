@@ -39,16 +39,6 @@ export interface AuthEmailTemplateProps {
   actionUrl: string;
   code: string;
 }
-export interface HostedAuthEnvironment {
-  projectRef: string;
-  siteUrl?: string;
-  resendApiKey?: string;
-}
-/** Delivery credentials required only by the legacy combined SMTP/template sync. */
-export interface HostedEmailEnvironment extends HostedAuthEnvironment {
-  siteUrl: string;
-  resendApiKey: string;
-}
 export interface EmailConfig {
   brand: EmailBrand;
   from: EmailAddress;
@@ -61,17 +51,12 @@ export interface EmailConfig {
     templates?: Partial<
       Record<AuthEmailKind, ComponentType<AuthEmailTemplateProps>>
     >;
-    callbackPaths?: string[];
   };
   tooling?: {
     templatesDirectory?: string;
     supabaseConfigPath?: string;
     previewDirectory?: string;
     reactEmailDirectory?: string;
-    resolveEnvironment?: (
-      environment: string,
-      cwd: string,
-    ) => Promise<HostedAuthEnvironment>;
   };
 }
 export type RenderedAuthEmails = Record<
