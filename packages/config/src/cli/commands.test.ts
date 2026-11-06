@@ -68,6 +68,28 @@ describe("configuration CLI commands", () => {
     expect(existsSync(join(cwd, ".vercel"))).toBe(false);
   });
 
+  it("recognizes generated boolean policies and numeric limits as up to date", async () => {
+    const cwd = createFixture({ PORT: "3000" });
+    writeFileSync(
+      join(cwd, "config.toml"),
+      "[auth.email]\nenable_confirmations = false\n[auth.rate_limit]\nemail_sent = 2\n",
+    );
+    appendFileSync(
+      join(cwd, "config/schema.ts"),
+      `\nschema.core.VERIFY = { default: "true" }; schema.core.LIMIT = { default: "30" }; schema.configs = { auth: { path: "config.toml", format: "toml", mappings: { "auth.email.enable_confirmations": "VERIFY", "auth.rate_limit.email_sent": "LIMIT" } } };`,
+    );
+    expect(await generateCommand("local", { cwd })).toBe(true);
+    expect(await diffCommand("local", { cwd })).toBe(true);
+    writeFileSync(
+      join(cwd, "config.toml"),
+      "[auth.email]\nenable_confirmations = false\n[auth.rate_limit]\nemail_sent = 30\n",
+    );
+    expect(await diffCommand("local", { cwd })).toBe(false);
+    expect(vi.mocked(console.log).mock.calls.flat().join("\n")).toContain(
+      "auth.email.enable_confirmations (changed)",
+    );
+  });
+
   it("generates hosted project links, preserves metadata, and detects drift without touching local links", async () => {
     const cwd = createFixture({ PORT: "3000" });
     appendFileSync(

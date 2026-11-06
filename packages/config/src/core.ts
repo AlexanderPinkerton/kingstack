@@ -60,10 +60,20 @@ export interface ConfigFileMapping {
 }
 
 export interface ServiceConfig {
+  provider?: never;
   description: string;
   keys: string[];
   /** Sync these keys when populated; leave existing remote values alone when empty. */
   optionalKeys?: string[];
+}
+
+export interface SupabaseServiceConfig {
+  provider: "supabase";
+  description: string;
+  /** Resolved configuration key containing the hosted project reference. */
+  projectRef: string;
+  /** Name of the supabase/config.toml mapping under schema.configs. */
+  configFile: string;
 }
 
 export interface ConfigSchema {
@@ -78,7 +88,7 @@ export interface ConfigSchema {
   ) => Record<string, string>;
   envfiles: Record<string, EnvFileConfig>;
   configs?: Record<string, ConfigFileMapping>;
-  services?: Record<string, ServiceConfig>;
+  services?: Record<string, ServiceConfig | SupabaseServiceConfig>;
 }
 
 export type ConfigValues = Record<string, string>;
@@ -407,6 +417,26 @@ export function validateSchemaMappings(
   }
 
   for (const [serviceName, service] of Object.entries(schema.services ?? {})) {
+    if (service.provider === "supabase") {
+      validateReferencedKey(
+        knownKeys,
+        service.projectRef,
+        `services.${serviceName}.projectRef`,
+        `Service "${serviceName}"`,
+        errors,
+      );
+      const output = schema.configs?.[service.configFile];
+      if (
+        !output ||
+        output.path !== "supabase/config.toml" ||
+        output.format !== "toml"
+      )
+        errors.push({
+          key: `services.${serviceName}.configFile`,
+          message: "Reference a supabase/config.toml output mapping",
+        });
+      continue;
+    }
     const seen = new Set<string>();
     for (const key of [...service.keys, ...(service.optionalKeys ?? [])]) {
       validateReferencedKey(

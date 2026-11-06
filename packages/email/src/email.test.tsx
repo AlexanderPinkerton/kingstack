@@ -17,16 +17,7 @@ import { defineEmailConfig, authEmailKinds, type EmailConfig } from "./index";
 import { renderAuthEmails } from "./auth";
 import { EmailLayout } from "./react";
 import { createMailer } from "./server";
-import {
-  exportAuthEmails,
-  authEmailSettings,
-  authVerificationPolicy,
-  authEmailPlan,
-  syncAuthEmails,
-  setAuthVerificationPolicy,
-  type AuthPatch,
-  type AuthRequest,
-} from "./supabase";
+import { exportAuthEmails } from "./supabase";
 import { runCli } from "./cli";
 
 const provider = vi.hoisted(() => ({ send: vi.fn(), constructed: vi.fn() }));
@@ -43,11 +34,6 @@ const config = defineEmailConfig({
   from: { name: "Example Studio", email: "support@example.com" },
   replyTo: "help@example.com",
 });
-const hosted = {
-  projectRef: "abcdefghijklmnopqrst",
-  siteUrl: "https://example.com",
-  resendApiKey: "re_fixture-private-key",
-};
 const directories: string[] = [];
 function temporary() {
   const directory = mkdtempSync(join(tmpdir(), "king-email-test-"));
@@ -300,7 +286,7 @@ describe("delivery", () => {
     const mailer = createMailer({
       config,
       environment: "production",
-      delivery: { type: "resend", apiKey: hosted.resendApiKey },
+      delivery: { type: "resend", apiKey: "re_fixture-private-key" },
     });
     expect(
       await mailer.send({
@@ -333,7 +319,7 @@ describe("delivery", () => {
     const mailer = createMailer({
       config,
       environment: "production",
-      delivery: { type: "resend", apiKey: hosted.resendApiKey },
+      delivery: { type: "resend", apiKey: "re_fixture-private-key" },
     });
     await expect(
       mailer.send({
@@ -357,7 +343,7 @@ describe("delivery", () => {
     const mailer = createMailer({
       config,
       environment: "production",
-      delivery: { type: "resend", apiKey: hosted.resendApiKey },
+      delivery: { type: "resend", apiKey: "re_fixture-private-key" },
     });
     await expect(
       mailer.send({ to: [], subject: "Hello", html: "Hi" }),
@@ -416,176 +402,20 @@ describe("local export", () => {
   });
 });
 
-describe("hosted settings", () => {
-  it("keeps SMTP/templates separate from auth policy and preserves unrelated settings", async () => {
-    const current = {
-      mailer_autoconfirm: true,
-      external_google_enabled: true,
-      uri_allow_list: "https://old.example.com",
-      rate_limit_email_sent: 100,
-    };
-    const patch = authEmailSettings(
-      current,
-      config,
-      hosted,
-      await renderAuthEmails(config),
-    );
-    expect(patch).not.toHaveProperty("mailer_autoconfirm");
-    expect(patch).not.toHaveProperty("mailer_allow_unverified_email_sign_ins");
-    expect(patch).not.toHaveProperty("external_google_enabled");
-    expect(patch.uri_allow_list).toContain("https://old.example.com");
-    expect(patch.uri_allow_list).toContain(
-      "https://example.com/auth/callback?**",
-    );
-    expect(patch.rate_limit_email_sent).toBe(100);
-    expect(authVerificationPolicy()).toEqual({
-      mailer_autoconfirm: false,
-      mailer_allow_unverified_email_sign_ins: false,
-    });
-    expect(JSON.stringify(authEmailPlan(patch))).not.toContain(
-      hosted.resendApiKey,
-    );
-    expect(JSON.stringify(authEmailPlan(patch))).not.toContain("<!DOCTYPE");
-  });
-  it("refuses unsafe site URLs, callback paths, and enabled email hooks", async () => {
-    const templates = await renderAuthEmails(config);
-    for (const siteUrl of [
-      "http://example.com",
-      "https://user:secret@example.com",
-      "https://example.com/path",
-      "https://example.com/?next=evil",
-    ]) {
-      expect(() =>
-        authEmailSettings({}, config, { ...hosted, siteUrl }, templates),
-      ).toThrow("canonical HTTPS");
-    }
-    expect(() =>
-      authEmailSettings(
-        {},
-        { ...config, auth: { callbackPaths: ["//evil.example.com"] } },
-        hosted,
-        templates,
-      ),
-    ).toThrow("literal paths");
-    expect(() =>
-      authEmailSettings(
-        { hook_send_email_enabled: true },
-        config,
-        hosted,
-        templates,
-      ),
-    ).toThrow("Send Email hook");
-  });
-  it("defaults to read-only and does not create backups or write provider settings", async () => {
-    const cwd = temporary();
-    const request = vi.fn<AuthRequest>().mockResolvedValue({});
-    const output = vi.fn();
-    await syncAuthEmails({
-      config,
-      hosted,
-      projectRef: hosted.projectRef,
-      environment: "production",
-      cwd,
-      token: "test-token",
-      request,
-      output,
-    });
-    expect(request).toHaveBeenCalledTimes(1);
-    expect(request).toHaveBeenCalledWith(hosted.projectRef, "test-token");
-    expect(existsSync(join(cwd, ".local"))).toBe(false);
-    expect(JSON.stringify(output.mock.calls)).not.toContain(
-      hosted.resendApiKey,
-    );
-  });
-  it("backs up only affected settings privately and verifies an explicit apply", async () => {
-    const cwd = temporary();
-    let state: Record<string, unknown> = {
-      smtp_pass: "old-private",
-      external_google_enabled: true,
-      mailer_autoconfirm: true,
-    };
-    const request = vi
-      .fn<AuthRequest>()
-      .mockImplementation((_project, _token, patch) => {
-        if (patch) state = { ...state, ...patch };
-        return Promise.resolve(state);
-      });
-    const output = vi.fn();
-    const result = await syncAuthEmails({
-      config,
-      hosted,
-      projectRef: hosted.projectRef,
-      environment: "production",
-      cwd,
-      token: "test-token",
-      request,
-      output,
-      apply: true,
-    });
-    expect(request).toHaveBeenCalledTimes(3);
-    expect(state.mailer_autoconfirm).toBe(true);
-    expect(state.external_google_enabled).toBe(true);
-    expect(result.backup).toBeDefined();
-    const backup = JSON.parse(readFileSync(result.backup!, "utf8"));
-    expect(backup.settings.smtp_pass).toBe("old-private");
-    expect(backup.settings).not.toHaveProperty("external_google_enabled");
-    expect(statSync(result.backup!).mode & 0o777).toBe(0o600);
-    expect(JSON.stringify(output.mock.calls)).not.toContain("old-private");
-    expect(JSON.stringify(output.mock.calls)).not.toContain(
-      hosted.resendApiKey,
-    );
-  });
-  it("applies verification policy without modifying delivery or templates", async () => {
-    let state: Record<string, unknown> = {
-      smtp_host: "existing.example.com",
-      mailer_autoconfirm: true,
-    };
-    let applied: AuthPatch | undefined;
-    const request: AuthRequest = (_project, _token, patch) => {
-      if (patch) {
-        applied = patch;
-        state = { ...state, ...patch };
+describe("hosted command migration", () => {
+  it.each(["sync", "policy", "templates"])(
+    "redirects retired auth %s commands before loading config or making requests",
+    async (action) => {
+      const fetch = vi.fn();
+      vi.stubGlobal("fetch", fetch);
+      try {
+        await expect(
+          runCli(["auth", action, "--env", "production", "--apply"]),
+        ).rejects.toThrow("king-config sync");
+        expect(fetch).not.toHaveBeenCalled();
+      } finally {
+        vi.unstubAllGlobals();
       }
-      return Promise.resolve(state);
-    };
-    await setAuthVerificationPolicy({
-      environment: "production",
-      projectRef: hosted.projectRef,
-      cwd: temporary(),
-      token: "test-token",
-      request,
-      output: vi.fn(),
-      apply: true,
-      requireVerification: true,
-    });
-    expect(applied).toEqual(authVerificationPolicy());
-    expect(state.smtp_host).toBe("existing.example.com");
-  });
-  it("reports saved-setting mismatches instead of declaring success", async () => {
-    const request = vi.fn<AuthRequest>().mockResolvedValue({});
-    await expect(
-      setAuthVerificationPolicy({
-        environment: "production",
-        projectRef: hosted.projectRef,
-        cwd: temporary(),
-        token: "test-token",
-        request,
-        output: vi.fn(),
-        apply: true,
-        requireVerification: true,
-      }),
-    ).rejects.toThrow("did not match");
-  });
-  it.each([
-    ["auth", "sync"],
-    ["auth", "export", "--apply"],
-    ["auth", "sync", "--env", "production", "--require-verification"],
-    ["auth", "policy", "--env", "production"],
-    ["auth", "sync", "--env", "production", "--unknown"],
-  ])(
-    "rejects incomplete or ambiguous CLI arguments %j before touching configuration",
-    async (...args) => {
-      await expect(runCli(args)).rejects.toThrow();
     },
   );
 });

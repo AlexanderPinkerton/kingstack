@@ -146,11 +146,11 @@ function diffConfigFiles(
     )) {
       const sourceValue = config[sourceKey];
       if (sourceValue === undefined) continue;
+      const actual = getNestedValue(parsed, destination);
       const expected =
         definition.format === "json"
           ? sourceValue
-          : coerceTomlValue(destination, sourceValue);
-      const actual = getNestedValue(parsed, destination);
+          : coerceTomlValue(destination, sourceValue, actual);
       if (actual !== expected) {
         differences.push({
           key: `${definition.path}:${destination}`,

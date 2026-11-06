@@ -61,7 +61,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json --incremental false",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src scripts",
     "lint:fix": "eslint src scripts --fix",
@@ -76,15 +76,11 @@
     "resend": "6.5.2"
   },
   "peerDependencies": {
-    "@kingstack/config": ">=0.3.1 <0.5",
     "react": "^18.3.1 || ^19.0.0",
     "react-dom": "^18.3.1 || ^19.0.0",
     "react-email": ">=6.11.3 <7"
   },
   "peerDependenciesMeta": {
-    "@kingstack/config": {
-      "optional": true
-    },
     "react-email": {
       "optional": true
     }

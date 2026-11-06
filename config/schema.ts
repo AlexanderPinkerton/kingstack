@@ -383,6 +383,13 @@ export const schema = defineSchema({
   // Service Mappings (Which Values Sync to External Services)
   // ============================================================================
   services: {
+    supabase: {
+      provider: "supabase",
+      description:
+        "Hosted Supabase configuration and any configured email templates",
+      projectRef: "SUPABASE_PROJECT_REF",
+      configFile: "supabase",
+    },
     github: {
       description: "GitHub environment secrets for CI/CD workflows",
       keys: [

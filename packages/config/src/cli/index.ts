@@ -84,9 +84,14 @@ environmentProgram
 
 program
   .command("sync")
-  .description("Sync secrets to external services")
+  .description(
+    "Sync configuration and secrets to all declared external services",
+  )
   .option("--env <env>", "Environment to sync")
-  .option("--target <target>", "Target service (github, vercel)")
+  .option(
+    "--target <target>",
+    "One declared service (for example github, vercel, supabase)",
+  )
   .option("--dry-run", "Preview changes without applying")
   .option("--cwd <path>", "Working directory", process.cwd())
   .action(

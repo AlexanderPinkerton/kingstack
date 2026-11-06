@@ -1,6 +1,6 @@
 # @kingstack/config
 
-TypeScript configuration management for projects that need validated per-environment values, computed values, generated `.env`/TOML/JSON files, and remote secret synchronization.
+TypeScript configuration management for projects that need validated per-environment values, computed values, generated `.env`/TOML/JSON files, and remote configuration/secret synchronization.
 
 ## Mental model
 
@@ -198,9 +198,65 @@ bun king-config sync --env development --dry-run
 bun king-config sync --env development
 ```
 
-When `--env` is omitted, synchronization uses environments marked `sync: true`. Dry runs perform no writes and do not require provider CLIs. GitHub and Vercel values are passed through stdin instead of interpolated into shell commands.
+When `--env` is omitted, synchronization uses environments marked `sync: true`.
+All services declared in `schema.services` are included by default; `--target`
+selects one declared service. Dry runs perform no writes, credential lookups, or
+network requests and do not require provider CLIs. GitHub and Vercel values are
+passed through stdin instead of interpolated into shell commands.
 
 An actual sync requires authenticated `gh` and/or `vercel` CLIs on `PATH`.
+
+### Supabase configuration and templates
+
+Declare a Supabase service to include its supported hosted settings and any
+configured email templates in normal sync. KingStack renders the selected
+environment's existing TOML mapping and calls the installed Supabase CLI's
+`config push`. Authenticate with `yarn supabase login` or
+`SUPABASE_ACCESS_TOKEN`; KingStack does not implement another Management API client.
+
+```ts
+services: {
+  supabase: {
+    provider: "supabase",
+    description: "Hosted Supabase configuration",
+    projectRef: "SUPABASE_PROJECT_REF",
+    configFile: "supabase", // schema.configs.supabase: supabase/config.toml
+  },
+}
+```
+
+The CLI receives a temporary copy of the Supabase directory with TOML rendered
+for the requested environment. The original TOML, app env files, and selected
+local environment stay unchanged. Environment references such as
+`env(RESEND_API_KEY)` use resolved configuration passed to the child process;
+stale local dotenv files are not copied. Keep other referenced Supabase assets
+inside the Supabase directory. Project-relative email templates outside that
+directory are copied too. Temporary files are removed after success or failure.
+
+Email setup is optional. With no SMTP section or template sections, no custom
+SMTP credentials or email package is needed and those hosted fields remain
+unchanged. An explicit `smtp.enabled = false` disables hosted custom SMTP;
+omitting the section leaves it alone. Configured template paths must exist.
+Render changed email components with `king-email auth export` before sync.
+
+```sh
+bun king-config sync --env production --dry-run
+bun king-config sync --env production
+# Same engine, limited to Supabase:
+bun king-config sync --env production --target supabase
+```
+
+Dry runs validate KingStack mappings and referenced template files offline;
+they are not a remote diff or a substitute for Supabase CLI validation. Apply
+pushes every hosted setting supported by that CLI, including configured
+templates. CLI failures make sync fail; independent providers may already have
+completed. Roll back by restoring configuration/template files and syncing again.
+
+Use the same input keys for generated local settings and hosted sync. TOML
+booleans, numbers, strings, comments, and template blocks are preserved. Disable
+custom SMTP locally to retain Mailpit. For an initial rollout, configure delivery
+and templates with verification disabled, test, then enable verification in the
+same configuration and sync again.
 
 With Vercel CLI 65.10.x, valid Stripe publishable keys (`pk_test_...` or
 `pk_live_...`) mapped to `NEXT_PUBLIC_` variables are explicitly synced with

@@ -6,7 +6,6 @@ export type {
   AuthEmailKind,
   AuthEmailCopy,
   AuthEmailTemplateProps,
-  HostedEmailEnvironment,
   RenderedAuthEmails,
 } from "./types";
 export { authEmailKinds } from "./types";

@@ -17,7 +17,7 @@ yarn add -D react-email@6.11.3 @react-email/ui@6.11.3
 Declare dependencies in the workspace that imports them. Projects that import
 `@react-email/components` in their own templates should declare it themselves.
 Resend and the render/component libraries are ordinary dependencies. React and
-React DOM are peers; KingStack config and the preview CLI are optional peers.
+React DOM are peers; the preview CLI is optional. KingStack config is not an email runtime dependency.
 The package's root export is configuration/types only. `/server`, `/auth`, and
 `/supabase` belong in backend or tooling code, never a browser bundle.
 
@@ -42,7 +42,6 @@ export default defineEmailConfig({
         body: "Verify your email to finish setting up your account.",
       },
     },
-    callbackPaths: ["/auth/callback", "/auth/confirm"],
   },
 });
 ```
@@ -128,52 +127,45 @@ configuration never silently becomes a successful send. Ignore `.local/` in Git.
 
 ## Supabase authentication emails
 
-Authentication email stays with Supabase, which generates and verifies the
-credentials and delivers through Resend SMTP. It does not call your mailer.
+Supabase generates and verifies authentication tokens. This package renders
+subjects and HTML; hosted deployment belongs to the project's config workflow.
 
-1. Verify a sending domain in Resend, keeping existing inbound mailbox DNS.
-   Disable click tracking for auth links and create a sending-only API key.
-2. Configure `SUPABASE_PROJECT_REF`, `NEXT_URL` (canonical HTTPS origin), and
-   `RESEND_API_KEY` through `@kingstack/config` for each hosted environment.
-   Keep secrets out of `email.config.ts` and browser variables.
-3. Run `supabase init` if the project has no local Supabase configuration.
-   Set `[auth.email] enable_confirmations = true` explicitly if desired.
-   Export templates, preview them, and restart local Supabase to reload them.
-4. Authenticate with `supabase login` or supply a Management API
-   `SUPABASE_ACCESS_TOKEN`. The CLI supports macOS CLI Keychain credentials and
-   the legacy token file. Other platforms can provide the environment variable.
-5. Preview the hosted changes, then apply intentionally:
+1. Configure branding, components, copy, and action URLs in `email.config.ts`.
+2. Export HTML files and their subject/path entries into `supabase/config.toml`.
+3. Configure SMTP, Auth URLs, and verification policy through normal config.
+   KingStack config 0.5+ supports a `provider: "supabase"` service using the
+   existing TOML mapping. Keep SMTP secrets in environment references.
+4. Authenticate with `yarn supabase login` or `SUPABASE_ACCESS_TOKEN` and run
+   normal sync. The Supabase CLI ships templates and supported settings together.
 
 ```sh
 king-email preview
 king-email auth export
 king-email auth export --check
-king-email auth sync --env production
-king-email auth sync --env production --apply
-
-# Separate policy choice, also read-only until --apply:
-king-email auth policy --env production --require-verification
-king-email auth policy --env production --require-verification --apply
+king-config sync --env production --dry-run
+king-config sync --env production
 ```
 
-Sync installs SMTP, sender, templates, site URL, callback allowlist additions,
-and an hourly auth email limit of at least 30 (preserving higher values). It
-preserves confirmation policy and unrelated settings. An enabled Send Email
-hook blocks SMTP sync for review. Policy only enables required confirmation;
-it cannot retroactively verify existing automatically confirmed accounts.
+Custom templates and custom SMTP are independently optional. A new KingStack
+project needs neither this package nor Resend credentials to sync configuration.
+When adding Resend, verify the sending domain and configure SMTP deliberately.
+Test delivery and callbacks before requiring verification. Already confirmed
+accounts are not retroactively verified by changing policy.
 
-Apply writes affected prior settings to `.local/auth-email-backups/` with mode
-0600 before the update and reads back nonsecret fields afterward. Backups can
-contain SMTP passwords; never commit them. If the provider masks a password,
-restoring the old provider requires the original secret as well as the backup.
-Plan output redacts SMTP secrets and hashes HTML instead of printing it.
+### Migrating from 0.1
+
+Version 0.2 removes hosted deployment from the email package. Replace `auth sync`
+and `auth policy` with normal config sync; retired commands fail with guidance
+before making changes. Programmatic Management API helpers, `syncAuthEmails`,
+`setAuthVerificationPolicy`, hosted-environment types, `tooling.resolveEnvironment`,
+and `auth.callbackPaths` are removed. Put canonical URLs and allowed callbacks in
+the Supabase config mapping. `/supabase` still exports local `exportAuthEmails`.
 
 Local Supabase sends auth email to its captured inbox (Mailpit); the application's
 capture adapter writes files. Neither should send local fixture addresses to a
 live provider. The initial setup still requires real signup/reset smoke tests
-with an inbox you control. Open verification in the browser where signup began;
-test recovery when a link opens in a different browser already signed into
-another account. Token-hash callback URLs can support cross-browser verification;
+with an inbox you control. Test recovery and verification when a link opens in
+a different browser already signed into another account. Token-hash callback URLs can support cross-browser verification;
 validate that behavior with the consuming application's callback implementation. The consuming app owns callback routes and session handling.
 
 `king-email preview` writes static safe examples with nonfunctional links;
@@ -181,7 +173,7 @@ validate that behavior with the consuming application's callback implementation.
 `tooling.reactEmailDirectory` defaults to `emails`; provide preview components
 there. No preview server is required for export, sync, or sending.
 
-## Paths and environment adapters
+## Output paths
 
 All CLI commands accept `--cwd` and `--config`. Tooling defaults:
 
@@ -195,16 +187,9 @@ All CLI commands accept `--cwd` and `--config`. Tooling defaults:
 Local export updates only a marked template block and refuses unmanaged
 template definitions. It leaves all other TOML settings/comments intact.
 
-If your project uses different environment keys or a different config system,
-provide `tooling.resolveEnvironment(environment, cwd)` returning
-`{ projectRef, siteUrl, resendApiKey }`. That removes the need for the optional
-`@kingstack/config` peer. Programmatic `/supabase` exports provide rendering,
-export, redacted plans, synchronization, and explicit policy changes.
+## Development and validation
 
-## First release and validation
-
-This new package starts at version `0.0.0`; its changeset prepares `0.1.0`.
-Before a registry release, build and distribute a portable tarball:
+Before a registry release, validate a portable tarball in an isolated consumer:
 
 ```sh
 yarn workspace @kingstack/config build
@@ -212,18 +197,17 @@ yarn workspace @kingstack/email build
 yarn workspace @kingstack/email test
 yarn workspace @kingstack/email test:pack
 yarn workspace @kingstack/email pack --out /tmp/kingstack-email.tgz
-# In a consuming workspace, store the archive in the repo and install its path:
-yarn add @kingstack/email@file:./vendor/kingstack-email.tgz
+# In an isolated consuming checkout:
+yarn add @kingstack/email@file:/tmp/kingstack-email.tgz
 ```
 
 `test:pack` installs the actual archive in isolated React 18 and React 19
 consumers, checks CommonJS/ESM imports, legacy/NodeNext TypeScript resolution,
 and runs local export/preview without optional peers or real email delivery.
-Register the new package's trusted publisher using the repository's
-`yarn package:bootstrap @kingstack/email` workflow before its first Changesets
-release. Once published, replace archive dependencies with the registry version.
+Normal releases use Changesets and the configured trusted publisher. Use the
+published registry version for application commits; temporary archive paths are
+only for release-candidate validation.
 
-Config integration supports @kingstack/config 0.3.1 and 0.4.x. Run
-`yarn test:config` from this package to check the packed workspace config. Set
-`KINGSTACK_CONFIG_ARCHIVE` to an absolute archive path to check a release candidate;
-Auth network calls are mocked and no emails or hosted writes occur.
+Run `yarn test:config` from this package to validate packed config/email integration.
+It checks a fresh project without email setup and a project with exported templates
+through a fake Supabase CLI. No emails or hosted writes occur.
